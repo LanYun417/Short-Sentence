@@ -71,7 +71,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SearchForm: typeof import('./src/components/SearchForm/index.vue')['default']
-    VditorEditor: typeof import('./src/components/VditorEditor/index.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

@@ -30,8 +30,6 @@ export default [
       // 前端自动生成的类型声明（unplugin-auto-import / unplugin-vue-components，格式由插件决定）
       'admin/auto-imports.d.ts',
       'admin/components.d.ts',
-      // Vditor 自托管供应商静态资源，保持上游原样，不 lint 不格式化
-      'admin/public/vditor/**',
       // 后端：Prisma 生成客户端（构建产物）与运行时数据目录
       'api/src/generated/**',
       // 后端：接口文档数据（由 scripts/gen-api-docs.mjs 生成）

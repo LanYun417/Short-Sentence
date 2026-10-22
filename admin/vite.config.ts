@@ -83,7 +83,6 @@ export default defineConfig(({ mode }) => {
            * 稳定的第三方 vendor chunk 拆分：把体积大、几乎不随业务改动的基础库单独成块，
            * 提升浏览器长缓存命中率（业务代码发布时不必让整包 vendor 失效）。
            * - echarts（+zrender）：图表，体量最大，独立成块
-           * - vditor：富文本编辑器，独立成块
            * - element-plus：UI 组件库，独立成块
            * - vue-vendor：vue / vue-router / pinia / @vueuse 等核心运行时，独立成块
            * - vendor：其余 node_modules（floating-ui、dayjs、lodash 等稳定小依赖）兜底
@@ -91,7 +90,6 @@ export default defineConfig(({ mode }) => {
           manualChunks(id: string): string | undefined {
             if (!id.includes('node_modules')) return undefined;
             if (/[\\/]node_modules[\\/](echarts|zrender)[\\/]/.test(id)) return 'echarts';
-            if (/[\\/]node_modules[\\/]vditor[\\/]/.test(id)) return 'vditor';
             if (/[\\/]node_modules[\\/]element-plus[\\/]/.test(id)) return 'element-plus';
             if (/[\\/]node_modules[\\/](vue|vue-router|pinia|@vueuse|@vue|vue-demi)[\\/]/.test(id)) {
               return 'vue-vendor';

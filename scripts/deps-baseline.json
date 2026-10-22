@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T06:12:17.577Z",
+  "generatedAt": "2026-10-22T06:56:53.962Z",
   "packages": {
     "package.json": {
       "dependencies": {},
@@ -83,7 +83,6 @@
         "nprogress": "^0.2.0",
         "pinia": "^4.0.3",
         "pinia-plugin-persistedstate": "^4.7.1",
-        "vditor": "^4.0.0",
         "vue": "^3.5.43",
         "vue-i18n": "^11.4.16",
         "vue-router": "^5.4.0"

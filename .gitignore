@@ -10,13 +10,6 @@ dist-*/
 build/
 *.local
 
-# 例外：Vditor 自托管静态资源必须入库 —— 否则他人 clone 后构建产物中缺少该目录，
-# 编辑器将无法离线渲染（emoji / 内容主题 / 代码高亮 / KaTeX / mermaid）。
-# 注意：仅否定目录不够，*.min.js / *.min.css 全局规则仍会命中其中的压缩产物，
-# 必须再整树否定一次（后面的否定规则优先于先前的忽略规则）。
-!admin/public/vditor/dist/
-!admin/public/vditor/dist/**
-
 # Nuxt 客户端（client/）生成产物与运行时数据
 .nuxt/
 .output/
@@ -31,6 +24,11 @@ android/.idea/
 android/android/.gradle/
 android/android/local.properties
 android/*.iml
+# Flutter 工具链生成物（.flutter-plugins 由 `flutter pub get` 依本机插件生成，与本机环境相关）
+android/.flutter-plugins
+android/.flutter-plugins-dependencies
+# Android Studio / Gradle 的本机工程文件（flutter create 会生成 .iml，属 IDE 私有配置）
+android/android/*.iml
 
 # Logs（运行时日志目录用精确路径：`logs/` 通配会误伤 src/modules/logs/ 源码目录，
 # 使 ripgrep / 编辑器全局搜索跳过整个日志模块）

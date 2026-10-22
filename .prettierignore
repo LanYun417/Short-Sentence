@@ -18,9 +18,6 @@ package-lock.json
 admin/auto-imports.d.ts
 admin/components.d.ts
 
-# Vditor 自托管供应商静态资源，保持上游原样，不格式化
-admin/public/vditor/
-
 # 新后端：Prisma 生成客户端与运行时数据目录
 api/src/generated/
 # 后端：接口文档数据（由 scripts/gen-api-docs.mjs 生成，格式由生成器决定）

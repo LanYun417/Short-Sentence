@@ -4,8 +4,8 @@
  * Windows 适配（重要）：暂存文件量大时（典型场景：目录更名一次性带入数百个文件），
  * 把全部路径拼进单条命令会超出 Windows CreateProcess 约 32KB 的命令行上限，
  * 报「参数太长」导致 pre-commit 失败。因此本配置：
- *   1) 先用函数语法过滤掉供应商资源与生成产物（Vditor、Prisma 生成客户端、
- *      自动导入声明、Nuxt .nuxt/.output 等，范围与 .prettierignore / eslint ignores 保持一致），
+ *   1) 先用函数语法过滤掉生成产物（Prisma 生成客户端、自动导入声明、
+ *      Nuxt .nuxt/.output 等，范围与 .prettierignore / eslint ignores 保持一致），
  *      工具根本不会收到它们——既避免 eslint 的 "File ignored" 警告，也缩短参数；
  *   2) 再把剩余文件按 CHUNK 大小切批，逐批执行，保证任意批次都不超限。
  */
@@ -26,8 +26,6 @@ const IGNORED_PATTERNS = [
   // Nuxt 客户端生成产物（.nuxt 自动导入类型 / .output 构建产物）
   '**/.nuxt/**',
   '**/.output/**',
-  // Vditor 自托管供应商静态资源（保持上游原样）
-  '**/admin/public/vditor/**',
   // 前端自动生成的类型声明（格式由 unplugin 插件决定）
   '**/admin/auto-imports.d.ts',
   '**/admin/components.d.ts',
