@@ -42,19 +42,19 @@
 
 英文小写，可省略；cz-git 支持逗号分隔多 scope（`feat(api,client):`）。
 
-| scope     | 对应范围                                   |
-| --------- | ------------------------------------------ |
-| `api`     | 后端整体（`api/`）                         |
-| `admin`   | 中后台前端（`admin/`，旧约定写作 `web`）   |
-| `client`  | 用户端（`client/`，Nuxt）                  |
-| `android` | Flutter App（`android/`，暂缓）            |
-| `gen`     | 代码生成器（前后端模板与落盘）             |
-| `docs`    | `docs/`、`knowledge/`、`README.md`         |
-| `config`  | 根工程配置（eslint / tsconfig / prettier） |
-| `deps`    | 依赖与锁文件                               |
-| `tooling` | `scripts/`、husky 钩子                     |
-| `release` | 发版                                       |
-| `root`    | 跨端且无法归入以上类别                     |
+| scope     | 对应范围                                        |
+| --------- | ----------------------------------------------- |
+| `api`     | 后端整体（`api/`）                              |
+| `admin`   | 中后台前端（`admin/`，旧约定写作 `web`）        |
+| `client`  | 用户端（`client/`，Nuxt）                       |
+| `android` | Flutter App（`android/`，骨架已入库、业务暂缓） |
+| `gen`     | 代码生成器（前后端模板与落盘）                  |
+| `docs`    | `docs/`、`knowledge/`、`README.md`              |
+| `config`  | 根工程配置（eslint / tsconfig / prettier）      |
+| `deps`    | 依赖与锁文件                                    |
+| `tooling` | `scripts/`、husky 钩子                          |
+| `release` | 发版                                            |
+| `root`    | 跨端且无法归入以上类别                          |
 
 后端也可直接写模块名（`fix(users):`、`feat(sentence):`），前端可写页面域（`fix(login):`）。
 

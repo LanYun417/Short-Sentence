@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            /* echarts / vditor / element-plus / vue-vendor / vendor 拆分 */
+            /* echarts / element-plus / vue-vendor / vendor 拆分 */
           },
         },
       },
@@ -85,7 +85,7 @@ ESM 标准写法，避免 `__dirname`（ESM 中不存在）。该别名必须与
 
 ### 6. vendor 拆分
 
-`manualChunks` 把 `echarts` / `vditor` / `element-plus` / 核心运行时（vue/vue-router/pinia/@vueuse）单独成块，提升浏览器长缓存命中；`chunkSizeWarningLimit` 调低至 600 kB，避免超大 chunk 被静默放行。
+`manualChunks` 把 `echarts` / `element-plus` / 核心运行时（vue/vue-router/pinia/@vueuse）单独成块，提升浏览器长缓存命中；`chunkSizeWarningLimit` 调低至 600 kB，避免超大 chunk 被静默放行。
 
 ## 最佳实践
 

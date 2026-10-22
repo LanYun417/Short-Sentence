@@ -34,7 +34,7 @@ module.exports = {
 };
 ```
 
-> 实际配置采用函数语法：先过滤 Vditor 供应商资源、Prisma 生成客户端、自动导入声明等产物，再按 40 个文件一批执行，避免 Windows 约 32KB 的命令行长度上限。过滤范围与 `.prettierignore` / ESLint ignores 保持一致。
+> 实际配置采用函数语法：先过滤 Prisma 生成客户端、自动导入声明等产物，再按 40 个文件一批执行，避免 Windows 约 32KB 的命令行长度上限。过滤范围与 `.prettierignore` / ESLint ignores 保持一致。
 
 ## 团队约定
 
