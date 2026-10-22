@@ -23,11 +23,19 @@ import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
 
-/** 单批生题的最大条数（单次输出过长会被截断，300 条必须分批要）。 */
-const TEXT_CHUNK = 40;
+/**
+ * 单批生题的最大条数。
+ *
+ * 40 条时单次请求要让模型输出约 4k completion tokens，实测耗时 83~150s，
+ * 逼近 180s 超时阈值（约 1/4 的批次直接超时并重试）；降到 20 条后单次约 40~70s，留足余量。
+ */
+const TEXT_CHUNK = 20;
 
 /** 连续多少批零净增即停止（全部重复时的死循环保护）。 */
 const MAX_EMPTY_CHUNKS = 3;
+
+/** 连续多少批请求失败即放弃生题（已入库题目仍会继续生图，不会白跑）。 */
+const MAX_FAILED_CHUNKS = 5;
 
 /** cron 任务名（SchedulerRegistry 键）。 */
 const CRON_JOB_NAME = 'sentence-daily-gen';
@@ -144,6 +152,43 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
     let imageDone = 0;
     let failCount = 0;
 
+    // 生图队列与生题**并行**推进：每批题目入库后立即排产配图，
+    // 首批题在一两分钟内即可 ready，用户不必等 300 条题全部生成完
+    // （否则首屏可用时间被拉长到十几分钟，期间前端一直显示「暂无可用题目」）。
+    const imageSemaphore = new Semaphore(config.ai.imageConcurrency);
+    const imageJobs: Promise<boolean>[] = [];
+    const queuedIds = new Set<string>();
+    const imageRetry = {
+      // 生图上游（Agnes）限流恢复较慢：实测并发 6 会持续 429，退避必须比生题宽得多
+      // （10s → 20s → 40s，累计约 70s），否则重试只是把 429 再打一遍。
+      maxAttempts: Math.max(config.ai.maxAttempts, 4),
+      baseDelayMs: 10_000,
+      maxDelayMs: 120_000,
+    };
+
+    /** 把本批次尚未排队的待配图题目推入生图队列（非阻塞）。 */
+    const enqueuePendingImages = async (): Promise<void> => {
+      const pending = await this.prisma.sentence.findMany({
+        where: { genTaskId: taskId, status: 'pending_image' },
+        select: { id: true, scenePrompt: true },
+      });
+      for (const sentence of pending) {
+        const key = String(sentence.id);
+        if (queuedIds.has(key)) {
+          continue;
+        }
+        queuedIds.add(key);
+        imageJobs.push(imageSemaphore.run(() => this.generateImage(sentence, imageRetry)));
+      }
+    };
+
+    /** 收尾：等待生图队列全部结束并汇总成功数。 */
+    const drainImageQueue = async (): Promise<void> => {
+      const results = await Promise.all(imageJobs);
+      imageDone = results.filter(Boolean).length;
+      failCount += results.length - imageDone;
+    };
+
     try {
       const task = await this.prisma.sentenceGenTask.update({
         where: { id: taskId },
@@ -151,7 +196,7 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         select: { targetCount: true },
       });
 
-      // ---------- 1. 生题（分批 + 信号量 + 重试） ----------
+      // ---------- 1. 生题（分批 + 信号量 + 重试；每批入库后立即排入生图） ----------
       const theme = await this.currentTheme();
       const textSemaphore = new Semaphore(config.ai.textConcurrency);
       const retry = {
@@ -160,6 +205,7 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         maxDelayMs: 30_000,
       };
       let emptyChunks = 0;
+      let failedChunks = 0;
       while (textDone < task.targetCount) {
         const need = Math.min(TEXT_CHUNK, task.targetCount - textDone);
         if (need <= 0) {
@@ -169,18 +215,23 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         try {
           drafts = await textSemaphore.run(() => withRetry(() => this.sentenceGen.generateBatch(theme, need), retry));
         } catch (error) {
-          // 单批失败不中断整轮：计数后继续下一批（上游限流时的常见形态）
+          // 单批失败（多为上游超时）不中断整轮：计数后继续下一批。
+          // 与「零净增」分开计数——请求超时并不代表题库重复，混用会误触发停止条件。
           failCount += 1;
+          failedChunks += 1;
           this.logger.error(`[SentenceGen] 生题批次失败（还需 ${need} 条）: ${this.errText(error)}`);
-          emptyChunks += 1;
-          if (emptyChunks >= MAX_EMPTY_CHUNKS) {
-            throw error;
+          if (failedChunks >= MAX_FAILED_CHUNKS) {
+            this.logger.warn(`[SentenceGen] 生题连续失败 ${failedChunks} 批，放弃继续生题，转入生图`);
+            break;
           }
           continue;
         }
+        failedChunks = 0;
         const inserted = await this.persistDrafts(drafts, taskId);
         textDone += inserted;
         await this.prisma.sentenceGenTask.update({ where: { id: taskId }, data: { textDone } });
+        // 入库即排产：让生图与生题重叠
+        await enqueuePendingImages();
         if (inserted === 0) {
           emptyChunks += 1;
           if (emptyChunks >= MAX_EMPTY_CHUNKS) {
@@ -192,44 +243,8 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
-      // ---------- 2. 生图（信号量 + 重试 + webp + 入库） ----------
-      const pending = await this.prisma.sentence.findMany({
-        where: { genTaskId: taskId, status: 'pending_image' },
-        select: { id: true, scenePrompt: true },
-      });
-      const imageSemaphore = new Semaphore(config.ai.imageConcurrency);
-      const imageRetry = { ...retry, baseDelayMs: 2000 };
-      const results = await Promise.all(
-        pending.map((sentence) =>
-          imageSemaphore.run(async () => {
-            try {
-              const image = await withRetry(
-                () =>
-                  this.imageGen.generate(sentence.scenePrompt, {
-                    size: config.sentence.imageSize,
-                    ratio: config.sentence.imageRatio,
-                  }),
-                imageRetry,
-              );
-              const webp = await sharp(image.buffer)
-                .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
-                .webp({ quality: config.sentence.imageQuality })
-                .toBuffer();
-              const saved = await this.fileService.save(`${Number(sentence.id)}.webp`, 'image/webp', webp, null);
-              await this.prisma.sentence.update({
-                where: { id: sentence.id },
-                data: { imageFileId: BigInt(saved.file.id), status: 'ready' },
-              });
-              return true;
-            } catch (error) {
-              this.logger.error(`[SentenceGen] 生图失败（sentence ${sentence.id}）: ${this.errText(error)}`);
-              return false;
-            }
-          }),
-        ),
-      );
-      imageDone = results.filter(Boolean).length;
-      failCount += results.length - imageDone;
+      // ---------- 2. 生图收尾 ----------
+      await drainImageQueue();
 
       // ---------- 3. 终态 ----------
       // 有净增题目或图片即算成功（部分失败进 failCount，供运营按补跑按钮处理）
@@ -247,13 +262,21 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
       });
       this.logger.log(`[SentenceGen] 批次 ${taskId} 完成：题目 +${textDone}，图片 +${imageDone}，失败 ${failCount}`);
     } catch (error) {
+      // 生题阶段整体异常（DB 抖动 / 意外抛出）也不能让已入库题目没有配图，
+      // 否则整批白跑、前台始终无题可刷。
       const message = this.errText(error);
-      this.logger.error(`[SentenceGen] 批次 ${taskId} 整体失败: ${message}`);
+      this.logger.error(`[SentenceGen] 批次 ${taskId} 生题阶段异常: ${message}`);
+      try {
+        await enqueuePendingImages();
+        await drainImageQueue();
+      } catch (imageError) {
+        this.logger.error(`[SentenceGen] 异常后的补救生图失败: ${this.errText(imageError)}`);
+      }
       await this.prisma.sentenceGenTask
         .update({
           where: { id: taskId },
           data: {
-            status: 'failed',
+            status: imageDone > 0 ? 'success' : 'failed',
             textDone,
             imageDone,
             failCount: failCount + 1,
@@ -264,6 +287,36 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         .catch(() => undefined);
     } finally {
       this.running = false;
+    }
+  }
+
+  /** 生成单题配图：生图 → 转 webp → 入库 → 置 ready（失败只记日志，不影响其它题）。 */
+  private async generateImage(
+    sentence: { id: bigint; scenePrompt: string },
+    retry: { maxAttempts: number; baseDelayMs: number; maxDelayMs: number },
+  ): Promise<boolean> {
+    try {
+      const image = await withRetry(
+        () =>
+          this.imageGen.generate(sentence.scenePrompt, {
+            size: config.sentence.imageSize,
+            ratio: config.sentence.imageRatio,
+          }),
+        retry,
+      );
+      const webp = await sharp(image.buffer)
+        .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
+        .webp({ quality: config.sentence.imageQuality })
+        .toBuffer();
+      const saved = await this.fileService.save(`${Number(sentence.id)}.webp`, 'image/webp', webp, null);
+      await this.prisma.sentence.update({
+        where: { id: sentence.id },
+        data: { imageFileId: BigInt(saved.file.id), status: 'ready' },
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(`[SentenceGen] 生图失败（sentence ${sentence.id}）: ${this.errText(error)}`);
+      return false;
     }
   }
 

@@ -85,10 +85,16 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       }
 
       const body = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
+        choices?: Array<{
+          message?: { content?: string | null; reasoning_content?: string | null };
+        }>;
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
-      const content = body.choices?.[0]?.message?.content ?? '';
+      const message = body.choices?.[0]?.message;
+      // content 为空时回退 reasoning_content：NVIDIA 上的 deepseek-v4.1-flash 属推理模型，
+      // 会把全部输出（含目标 JSON）放进 reasoning_content，而 content 为 null。
+      // 只读 content 会拿到空串，表现为「接口 200 正常，却每批零净增、题库始终为空」。
+      const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
       const usage: ChatUsage = {
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
@@ -126,13 +132,21 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
     }
   }
 
-  /** 解析模型输出为草稿数组（容忍 ```json 围栏与字段缺失）。 */
+  /** 解析模型输出为草稿数组（容忍 ```json 围栏、思考文字夹带与字段缺失）。 */
   private parseDrafts(content: string): SentenceDraft[] {
     let text = content.trim();
     const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
     const matched = fence.exec(text);
     if (matched) {
       text = matched[1].trim();
+    }
+    // 兜底：输出可能夹带思考/解释文字（推理模型尤其常见），截取首个 { 到末个 } 之间的片段再解析
+    if (!text.startsWith('{') && !text.startsWith('[')) {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        text = text.slice(start, end + 1);
+      }
     }
     let parsed: unknown;
     try {
