@@ -5,6 +5,7 @@
  * 正面不出答案；背面只在提交后渲染正确答案（由后端 answer 响应驱动）。
  */
 import type { AnswerResult, NextQuestion } from '~/types';
+import { withUploadToken } from '~/utils/upload-token';
 
 const props = defineProps<{
   /** 当前题目（sentenceId 变化即换卡） */
@@ -105,7 +106,7 @@ function onSubmit(): void {
         <div class="aspect-video overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-700">
           <img
             v-if="question.imageUrl"
-            :src="question.imageUrl"
+            :src="withUploadToken(question.imageUrl)"
             :alt="question.translationZh"
             class="h-full w-full object-cover"
             loading="lazy"
