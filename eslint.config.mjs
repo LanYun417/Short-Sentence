@@ -6,7 +6,8 @@ import prettierRecommended from 'eslint-plugin-prettier/recommended';
 
 /**
  * LYAdmin 根目录 ESLint 扁平配置（flat config）。
- * 统一覆盖新后端 ly-admin-api 与前端 ly-admin-web 的 TypeScript / Vue 源码。
+ * 统一覆盖后端 api/ 与前端 admin/（Vue3 中后台）、client/（Nuxt 用户端）的
+ * TypeScript / Vue 源码；android/（Flutter/Dart）不在 ESLint 管辖范围。
  * 注意：注释内不可出现连续星号加斜杠的 glob 写法，否则会提前闭合块注释。
  */
 export default [
@@ -19,22 +20,26 @@ export default [
       '**/dist-*/**',
       '**/build/**',
       '**/coverage/**',
-      // 前端构建产物映射目录（由 ly-admin-web 构建输出、同源部署时后端托管，非源码）
-      'ly-admin-api/web/**',
+      // Nuxt 客户端生成产物与输出目录（.nuxt 类型/自动导入、.output 构建产物、.data 数据目录）
+      '**/.nuxt/**',
+      '**/.output/**',
+      '**/.data/**',
+      // 前端构建产物映射目录（由 admin 构建输出、同源部署时后端托管，非源码）
+      'api/web/**',
       '**/*.min.js',
       // 前端自动生成的类型声明（unplugin-auto-import / unplugin-vue-components，格式由插件决定）
-      'ly-admin-web/auto-imports.d.ts',
-      'ly-admin-web/components.d.ts',
+      'admin/auto-imports.d.ts',
+      'admin/components.d.ts',
       // Vditor 自托管供应商静态资源，保持上游原样，不 lint 不格式化
-      'ly-admin-web/public/vditor/**',
+      'admin/public/vditor/**',
       // 后端：Prisma 生成客户端（构建产物）与运行时数据目录
-      'ly-admin-api/src/generated/**',
+      'api/src/generated/**',
       // 后端：接口文档数据（由 scripts/gen-api-docs.mjs 生成）
-      'ly-admin-api/src/modules/docs/api-docs.generated.ts',
-      'ly-admin-api/src/modules/docs/openapi.generated.ts',
-      'ly-admin-api/uploads/**',
-      'ly-admin-api/logs/**',
-      'ly-admin-api/cache/**',
+      'api/src/modules/docs/api-docs.generated.ts',
+      'api/src/modules/docs/openapi.generated.ts',
+      'api/uploads/**',
+      'api/logs/**',
+      'api/cache/**',
     ],
   },
 
@@ -74,9 +79,9 @@ export default [
     },
   },
 
-  // 前端浏览器环境
+  // 前端浏览器环境（admin 中后台 + client Nuxt 用户端）
   {
-    files: ['ly-admin-web/**/*.{ts,vue,js,mjs}'],
+    files: ['admin/**/*.{ts,vue,js,mjs}', 'client/**/*.{ts,vue,js,mjs}'],
     languageOptions: {
       globals: {
         window: 'readonly',
@@ -108,9 +113,9 @@ export default [
     },
   },
 
-  // 后端 Node 环境（纯 ESM，ly-admin-api/，无 __dirname/module/require）
+  // 后端 Node 环境（纯 ESM，api/，无 __dirname/module/require）
   {
-    files: ['ly-admin-api/**/*.ts'],
+    files: ['api/**/*.ts'],
     languageOptions: {
       globals: {
         process: 'readonly',

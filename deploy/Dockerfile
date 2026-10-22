@@ -1,6 +1,6 @@
 # LYAdmin 镜像（多阶段：web 构建 → api 构建 → 生产运行时）
 #
-# 构建（在仓库根目录执行，构建上下文必须是根目录，因为要同时拿 ly-admin-api 与 ly-admin-web）：
+# 构建（在仓库根目录执行，构建上下文必须是根目录，因为要同时拿 api 与 admin）：
 #   docker build -f deploy/Dockerfile -t ly-admin:latest .
 # 或直接用 deploy/docker-compose.yml（它已配好 context 与 target）。
 #
@@ -11,24 +11,24 @@
 
 ############################ 1. 前端构建 ############################
 FROM node:24-alpine AS web-builder
-WORKDIR /build/ly-admin-web
+WORKDIR /build/admin
 
 # 先只拷依赖清单：依赖未变时可命中缓存，改源码不会触发重新 npm ci
-COPY ly-admin-web/package.json ly-admin-web/package-lock.json ./
+COPY admin/package.json admin/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-COPY ly-admin-web/ ./
+COPY admin/ ./
 # 用 build:only 跳过 vue-tsc：类型检查由 CI 单独把关，镜像构建只求产物
 RUN npm run build:only
 
 ############################ 2. 后端构建 ############################
 FROM node:24-bookworm-slim AS api-builder
-WORKDIR /build/ly-admin-api
+WORKDIR /build/api
 
-COPY ly-admin-api/package.json ly-admin-api/package-lock.json ./
+COPY api/package.json api/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-COPY ly-admin-api/ ./
+COPY api/ ./
 # prebuild 会自动跑 docs:gen（接口文档产物），确保镜像内文档与实现一致
 RUN npm run build
 
@@ -46,15 +46,15 @@ WORKDIR /app
 # 生产依赖只装 dependencies；package.json 同时也承担「ESM 类型声明」的作用 ——
 # 后端是纯 ESM（dist/main.js 为 ESM），Node 需要最近的 package.json 里 type: module 才能解析，
 # 漏拷这一步启动即报 "Cannot use import statement outside a module"。
-COPY ly-admin-api/package.json ly-admin-api/package-lock.json ./
+COPY api/package.json api/package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
-COPY --from=api-builder /build/ly-admin-api/dist ./dist
+COPY --from=api-builder /build/api/dist ./dist
 # 迁移与 schema：migrate 服务要用（运行时不需要，但同镜像保留可省一层 base）
-COPY ly-admin-api/prisma ./prisma
-COPY ly-admin-api/prisma.config.ts ./prisma.config.ts
+COPY api/prisma ./prisma
+COPY api/prisma.config.ts ./prisma.config.ts
 # 前端产物：后端同源托管（history 回退 + 预压缩副本）
-COPY --from=web-builder /build/ly-admin-web/dist ./web
+COPY --from=web-builder /build/admin/dist ./web
 
 # 运行期目录：uploads / logs / cache 需持久化，compose 里以卷挂载
 RUN mkdir -p uploads logs cache

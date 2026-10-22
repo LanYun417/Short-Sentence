@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ly-admin-web/src/assets/logo.svg" alt="LYAdmin 蓝云后台管理系统" width="480">
+  <img src="admin/src/assets/logo.svg" alt="LYAdmin 蓝云后台管理系统" width="480">
 </p>
 
 <p align="center"><em>开箱即用的通用后台管理基座</em></p>
@@ -112,17 +112,18 @@ LYAdmin 面向企业内部运营 / 管理场景，提供一套可直接二次开
 ## 目录结构
 
 ```
-ly-admin/
-├─ ly-admin-web/              # 前端工程（Vue3 + Vite + Element Plus）
-├─ ly-admin-api/              # 后端工程（NestJS 12 + Prisma 7）
-│  ├─ web/                    # 前端构建产物映射目录（同源部署时由后端托管，产物不入库）
-│  ├─ uploads/                # 上传文件目录（内容不入库）
-│  ├─ cache/                  # 图片处理缓存（运行时产物，不入库）
-│  └─ logs/                   # 日志文件目录
-├─ .husky/                    # Git Hooks（pre-commit / commit-msg / pre-push）
+short-sentence/
+├─ api/                      # 后端工程（NestJS 12 + Prisma 7，含 admin 中后台 + client 用户端两套接口域）
+├─ admin/                    # 中后台前端（Vue3 + Vite + Element Plus，即 ly-admin-web）
+├─ client/                   # 「短句」用户端（Nuxt 4 + Reka UI + Tailwind，规范见 docs/client-nuxt-规范.md）
+├─ android/                  # Flutter App（暂缓开发，等确认后启动）
+├─ deploy/                   # Docker 部署（compose / Dockerfile / nginx 示例）
+├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
+├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
+├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
 ├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（相对导入可解析）/ check-locale-keys（语言包 key 一致）
-├─ package.json               # 根脚本：lint / format / commit / dev（并行启动）
-├─ eslint.config.mjs          # ESLint flat config（覆盖 ly-admin-web + ly-admin-api）
+├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
+├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client）
 ├─ .prettierrc.json           # Prettier 规则
 ├─ .stylelintrc.json          # Stylelint 规则
 ├─ commitlint.config.cjs      # 约定式提交校验规则
@@ -132,10 +133,10 @@ ly-admin/
 └─ README.md
 ```
 
-**前端 `ly-admin-web/src`**
+**前端 `admin/src`**
 
 ```
-ly-admin-web/src/
+admin/src/
 ├─ api/          # axios 实例(request.ts) + 各模块接口(auth/user/role/menu/dept/dict/config/log/file/gen/dashboard/profile/docs/notice/monitor)
 ├─ assets/       # 静态资源
 ├─ components/   # 通用组件：BasicDialog / ColumnSettings / ErrorPage / IconPicker / MenuTree / Pagination / SearchForm / VditorEditor
@@ -153,10 +154,10 @@ ly-admin-web/src/
 └─ main.ts       # 入口：样式引入顺序、注册 Pinia/Router/指令
 ```
 
-**后端 `ly-admin-api/`**
+**后端 `api/`**
 
 ```
-ly-admin-api/
+api/
 ├─ prisma/
 │  ├─ schema/                 # 数据模型（目录式 schema，按域拆分；/// 是库内 COMMENT 的唯一来源）
 │  │  ├─ base.prisma          #   公共约定 + generator + datasource
@@ -213,14 +214,14 @@ CREATE DATABASE IF NOT EXISTS `ly_admin`
 
 ```bash
 npm install                        # 根目录
-cd ly-admin-api && npm install     # 后端（NestJS 12 + Prisma 7）
-cd ../ly-admin-web && npm install  # 前端（Vue 3 + Vite）
+cd api && npm install     # 后端（NestJS 12 + Prisma 7）
+cd ../admin && npm install  # 前端（Vue 3 + Vite）
 ```
 
 ### 3. 配置环境变量
 
 ```bash
-cd ly-admin-api
+cd api
 cp .env.example .env
 ```
 
@@ -238,7 +239,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ### 4. 同步表结构并写入种子数据
 
 ```bash
-cd ly-admin-api
+cd api
 npm run prisma:push       # 建表 / 同步表结构（首次必执行；Prisma 7 启动时不自动建表）
 npm run prisma:comments   # 把 schema 里的 /// 文档注释同步为表/字段 COMMENT（幂等）
 npm run seed              # 写入默认数据（可选：服务启动时也会自动幂等执行）
@@ -270,8 +271,8 @@ npm run dev -- --fresh   # 忽略已在运行的后端，强制新起一个
 或分别启动：
 
 ```bash
-npm run dev:api    # 后端 http://localhost:3000（等价 cd ly-admin-api && npm run start:dev）
-npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm run dev）
+npm run dev:api    # 后端 http://localhost:3000（等价 cd api && npm run start:dev）
+npm run dev:web   # 前端 http://localhost:5173（等价 cd admin && npm run dev）
 ```
 
 启动后可访问：
@@ -315,7 +316,7 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 | `npm run commit`            | cz-git 交互式生成规范提交                                  |
 | `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                |
 
-### 前端 `ly-admin-web/`
+### 前端 `admin/`
 
 | 命令                 | 说明                             |
 | -------------------- | -------------------------------- |
@@ -325,7 +326,7 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 | `npm run preview`    | 本地预览构建产物                 |
 | `npm run type-check` | 仅类型检查（`vue-tsc --noEmit`） |
 
-### 后端 `ly-admin-api/`
+### 后端 `api/`
 
 | 命令                            | 说明                                                       |
 | ------------------------------- | ---------------------------------------------------------- |
@@ -351,11 +352,11 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 
 ## 环境变量
 
-> **单一事实源**：模板以 `ly-admin-api/.env.example` 为准，逐项说明见
+> **单一事实源**：模板以 `api/.env.example` 为准，逐项说明见
 > [后端开发规范/03-环境与配置](./knowledge/后端开发规范/03-环境与配置.md)。
 > 下表是「必填 + 高频」清单，新增变量请同步这三处（本表曾因三份清单并存而漂移）。
 
-### 后端 `ly-admin-api/.env`
+### 后端 `api/.env`
 
 | 变量                                | 示例值                  | 说明                                                                                                                                 |
 | ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -375,7 +376,7 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 | `CAPTCHA_ENABLED`                   | `true`                  | 是否启用登录图形验证码                                                                                                               |
 | `CAPTCHA_TTL_MS` / `CAPTCHA_LENGTH` | `300000` / `4`          | 验证码有效期（ms）/ 字符数                                                                                                           |
 | `TRUST_PROXY`                       | `1`                     | 反向代理信任跳数（仅部署在代理后设置）                                                                                               |
-| `UPLOAD_DIR`                        | `uploads`               | 上传根目录（相对 `ly-admin-api/`）                                                                                                   |
+| `UPLOAD_DIR`                        | `uploads`               | 上传根目录（相对 `api/`）                                                                                                            |
 | `UPLOAD_MAX_SIZE`                   | `10485760`              | 单文件上限（字节，10MB）                                                                                                             |
 | `UPLOAD_MAX_COUNT`                  | `10`                    | 单次最多文件数                                                                                                                       |
 | `UPLOAD_USER_QUOTA_MB`              | `512`                   | 单用户累计上传配额（MB），`0` = 不限                                                                                                 |
@@ -396,13 +397,13 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 | `IP2REGION_DB_PATH`                 | `data/ip2region_v4.xdb` | IP 归属地离线库路径（文件缺失时静默降级为空串）                                                                                      |
 | `REDIS_HOST` / `REDIS_PORT`         | `127.0.0.1` / `6379`    | Redis 地址（留空 `REDIS_HOST` 即视为不启用）                                                                                         |
 | `REDIS_PASSWORD` / `REDIS_DB`       | 空 / `0`                | Redis 密码 / 库号                                                                                                                    |
-| `WEB_DIST_DIR`                      | `web`                   | 前端产物托管目录（相对 `ly-admin-api/`；不存在则跳过托管）                                                                           |
+| `WEB_DIST_DIR`                      | `web`                   | 前端产物托管目录（相对 `api/`；不存在则跳过托管）                                                                                    |
 | `SECURITY_HSTS`                     | 跟随 production         | 是否下发 HSTS 头（默认 `NODE_ENV=production` 时开启）                                                                                |
 | `CSP_POLICY`                        | 空                      | Content-Security-Policy 内容；留空不下发（SPA 需按实际配置）                                                                         |
 | `APP_VERSION` / `GIT_COMMIT`        | `dev` / 空              | 版本与提交号，出现在 `/api` 与 `/api/health/live` 响应里                                                                             |
 | `NET_DEV_PATH`                      | 空                      | 网卡计数文件路径覆盖（默认 Linux 读 `/proc/net/dev`）。用于非 Linux 集成测试，或容器使用 host 网络命名空间时指向挂载进来的宿主机文件 |
 
-### 前端 `ly-admin-web/.env.development` / `.env.production`
+### 前端 `admin/.env.development` / `.env.production`
 
 | 变量                   | 示例值             | 说明                              |
 | ---------------------- | ------------------ | --------------------------------- |
@@ -418,18 +419,18 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd ly-admin-web && npm
 前端产物直接构建进后端目录，由后端一并托管：
 
 ```bash
-cd ly-admin-web
-# 产物必须落在 ly-admin-api/web/：后端按 path.resolve(ROOT_DIR, 'web') 读取（ROOT_DIR 即 ly-admin-api/），
+cd admin
+# 产物必须落在 api/web/：后端按 path.resolve(ROOT_DIR, 'web') 读取（ROOT_DIR 即 api/），
 # 写到仓库根 web/ 会导致后端找不到产物、跳过静态托管。
-npm run build:only -- --outDir ../ly-admin-api/web --emptyOutDir
+npm run build:only -- --outDir ../api/web --emptyOutDir
 
-cd ../ly-admin-api
+cd ../api
 npm run build
 NODE_ENV=production node dist/main.js
 ```
 
 - 后端启动时若 `web/` 存在，会自动托管该目录，并对前端 history 路由做 `index.html` 回退。
-- 产物目录可用 `WEB_DIST_DIR` 覆盖（相对 `ly-admin-api/`）。
+- 产物目录可用 `WEB_DIST_DIR` 覆盖（相对 `api/`）。
 - 同源部署下静态资源的防盗链「同源放行」天然成立，无需配置 `UPLOAD_ALLOWED_REFERERS`。
 - 后端已内置响应压缩与静态缓存：构建产物优先返回 `.br` / `.gz`（1 年 immutable），上传文件缓存 30 天，`index.html` 每次校验；无需再为预压缩单独配置 Nginx。
 
@@ -450,7 +451,7 @@ NODE_ENV=production node dist/main.js
 - **鉴权**：除登录 / 刷新令牌 / 验证码等公开接口外，均需在请求头携带 `Authorization: Bearer <accessToken>`。
 - **静态资源**：`GET /static/:filename`（启用防盗链与图片按需缩放）。
 
-接口清单以代码为准：后端各模块的 `src/modules/*/*.controller.ts`，前端调用见 `ly-admin-web/src/api/*.ts`。
+接口清单以代码为准：后端各模块的 `src/modules/*/*.controller.ts`，前端调用见 `admin/src/api/*.ts`。
 
 在线接口文档：`GET /api/docs` 返回结构化接口清单（公开接口），前端「接口文档」页可视化检索浏览。
 清单由控制器源码自动生成（详见 [后端开发规范/14-接口文档](./knowledge/后端开发规范/14-接口文档.md)）。
@@ -470,8 +471,8 @@ NODE_ENV=production node dist/main.js
    npm run stylelint         # Stylelint
    npm run guard:deps        # 依赖基线
    npm run guard:locale      # 语言包 key / 占位符一致
-   (cd ly-admin-api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
-   (cd ly-admin-web && npm run type-check)
+   (cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
+   (cd admin && npm run type-check)
    ```
 
 5. **PR**：说明背景与改动点，关联相关 Issue，并确保上述检查通过。
@@ -486,34 +487,34 @@ NODE_ENV=production node dist/main.js
 ## 常见问题
 
 **Q1：端口被占用（3000 / 5173）？**
-后端改 `ly-admin-api/.env` 的 `PORT`；前端改 `ly-admin-web/.env.development` 的 `VITE_PORT`（`vite.config.ts` 为 `strictPort: true`，端口占用会直接报错而非自动切换）；同时同步 `vite.config.ts` 中 proxy 的 `target` 端口。
+后端改 `api/.env` 的 `PORT`；前端改 `admin/.env.development` 的 `VITE_PORT`（`vite.config.ts` 为 `strictPort: true`，端口占用会直接报错而非自动切换）；同时同步 `vite.config.ts` 中 proxy 的 `target` 端口。
 
 **Q2：启动即报 JWT 相关错误？**
-`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` 为**必填**且需互不相同。按[第 3 步](#3-配置环境变量)生成随机值填入 `ly-admin-api/.env`。
+`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` 为**必填**且需互不相同。按[第 3 步](#3-配置环境变量)生成随机值填入 `api/.env`。
 
 **Q3：数据库连不上（`ECONNREFUSED` / `Access denied` / `Unknown database`）？**
-确认 MySQL 已启动、`ly_admin` 库已创建；核对 `ly-admin-api/.env` 的 `DB_*`（或 `DATABASE_URL`）。库不存在时执行[第 1 步](#1-准备数据库)的建库 SQL。
+确认 MySQL 已启动、`ly_admin` 库已创建；核对 `api/.env` 的 `DB_*`（或 `DATABASE_URL`）。库不存在时执行[第 1 步](#1-准备数据库)的建库 SQL。
 
 **Q4：报缺表 / `Table 'ly_admin.xxx' doesn't exist`？**
-Prisma 7 不在启动时建表。执行 `cd ly-admin-api && npm run prisma:push`（表结构同步后如需恢复注释，再跑 `npm run prisma:comments`）。
+Prisma 7 不在启动时建表。执行 `cd api && npm run prisma:push`（表结构同步后如需恢复注释，再跑 `npm run prisma:comments`）。
 
 **Q5：登录 / 鉴权正常，但登出黑名单、登录限流没生效？**
 这两项依赖 Redis。未配置 `REDIS_HOST` 时视为不启用，主流程不受影响但增强失效。需要时启动 Redis 并配置 `REDIS_*`。
 
 **Q6：Tailwind 样式不生效？**
-本项目 Tailwind 采用 v4 的 CSS 优先配置，**刻意不引入 preflight**（避免破坏 Element Plus），**不做全局重置**属预期行为。若工具类整体失效，检查 `ly-admin-web/src/styles/index.css` 是否含 `@import url('tailwindcss/utilities.css')`、是否在 `main.ts` 末尾引入。改动 `@theme` 令牌后建议重启一次 dev server 确保产物刷新。
+本项目 Tailwind 采用 v4 的 CSS 优先配置，**刻意不引入 preflight**（避免破坏 Element Plus），**不做全局重置**属预期行为。若工具类整体失效，检查 `admin/src/styles/index.css` 是否含 `@import url('tailwindcss/utilities.css')`、是否在 `main.ts` 末尾引入。改动 `@theme` 令牌后建议重启一次 dev server 确保产物刷新。
 
 **Q7：提交时 husky 钩子不执行？**
-在**根目录**执行 `npm install`（会触发 `prepare` → `husky`），确认 `.husky/` 下存在 `pre-commit` 与 `commit-msg`。只在 `ly-admin-web/` 或 `ly-admin-api/` 装依赖不会装配钩子。
+在**根目录**执行 `npm install`（会触发 `prepare` → `husky`），确认 `.husky/` 下存在 `pre-commit` 与 `commit-msg`。只在 `admin/` 或 `api/` 装依赖不会装配钩子。
 
 **Q8：登录成功但菜单为空？**
-菜单由后端按当前用户角色下发。`super_admin` 仍为空说明种子未写入，执行 `cd ly-admin-api && npm run seed`（幂等）；普通角色请在「角色管理 → 菜单授权」中勾选。
+菜单由后端按当前用户角色下发。`super_admin` 仍为空说明种子未写入，执行 `cd api && npm run seed`（幂等）；普通角色请在「角色管理 → 菜单授权」中勾选。
 
 **Q9：上传文件后访问 404？**
-确认 `ly-admin-api/uploads/` 存在且可写；确保后端已启动、前端代理已转发 `/static`。分离部署时还需把前端 origin 配进 `UPLOAD_ALLOWED_REFERERS`。
+确认 `api/uploads/` 存在且可写；确保后端已启动、前端代理已转发 `/static`。分离部署时还需把前端 origin 配进 `UPLOAD_ALLOWED_REFERERS`。
 
 **Q10：接口 401 且反复跳登录？**
-accessToken 过期会由前端自动刷新（`ly-admin-web/src/api/request.ts`）；refreshToken 也失效则登出。检查 `JWT_*` 配置一致性与服务器时间是否准确。
+accessToken 过期会由前端自动刷新（`admin/src/api/request.ts`）；refreshToken 也失效则登出。检查 `JWT_*` 配置一致性与服务器时间是否准确。
 
 ## 许可
 

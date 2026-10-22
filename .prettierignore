@@ -1,28 +1,33 @@
 node_modules
 dist
 build
-# 前端构建产物映射目录（由 ly-admin-web 构建输出、同源部署时后端托管，非源码）
-ly-admin-api/web
+# 前端构建产物映射目录（由 admin 构建输出、同源部署时后端托管，非源码）
+api/web
 coverage
 pnpm-lock.yaml
 package-lock.json
 *.min.js
 *.min.css
 
+# Nuxt 客户端生成产物（格式由 Nuxt 决定）
+.nuxt
+.output
+.data
+
 # 自动生成的类型声明（由 unplugin-auto-import / unplugin-vue-components 生成，格式由插件决定）
-ly-admin-web/auto-imports.d.ts
-ly-admin-web/components.d.ts
+admin/auto-imports.d.ts
+admin/components.d.ts
 
 # Vditor 自托管供应商静态资源，保持上游原样，不格式化
-ly-admin-web/public/vditor/
+admin/public/vditor/
 
 # 新后端：Prisma 生成客户端与运行时数据目录
-ly-admin-api/src/generated/
+api/src/generated/
 # 后端：接口文档数据（由 scripts/gen-api-docs.mjs 生成，格式由生成器决定）
-ly-admin-api/src/modules/docs/api-docs.generated.ts
-ly-admin-api/src/modules/docs/openapi.generated.ts
-ly-admin-api/uploads
-ly-admin-api/logs
-ly-admin-api/cache
+api/src/modules/docs/api-docs.generated.ts
+api/src/modules/docs/openapi.generated.ts
+api/uploads
+api/logs
+api/cache
 
 .agents/

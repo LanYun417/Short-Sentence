@@ -1,7 +1,7 @@
 /**
  * 纯 TypeScript ZIP 写出工具（STORE 法，不压缩）。
  * 模块职责：把若干文件字节流打包为合法的 ZIP 归档（零第三方依赖），
- * 供代码生成下载接口使用（ly-admin-api 未安装任何 zip 库）。
+ * 供代码生成下载接口使用（api 未安装任何 zip 库）。
  */
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);

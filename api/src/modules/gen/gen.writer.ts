@@ -1,10 +1,10 @@
 /**
  * 代码生成落盘服务。
- * 模块职责：把生成的源码文件按固定映射写入真实项目目录（ly-admin-api/src 与 ly-admin-web/src），
+ * 模块职责：把生成的源码文件按固定映射写入真实项目目录（api/src 与 admin/src），
  * 并自动完成「Nest 模块注册」「Prisma 模型」「菜单节点」三处接线；同名文件默认拒绝覆盖（409）。
  *
  * 接线实现（重要）：
- * - Nest 模块：向 `ly-admin-api/src/app.module.ts` 插入 import 行并把类加进 `imports: [...]`。
+ * - Nest 模块：向 `api/src/app.module.ts` 插入 import 行并把类加进 `imports: [...]`。
  * - Prisma 模型 / 菜单节点：这两个文件结构复杂（DSL / 嵌套树），靠语法匹配易错，故在各文件
  *   放置显式锚点注释 `// [GEN-ANCHOR] …`，生成器只在该锚点**之前**插入新内容；
  *   锚点缺失时**跳过该文件并不做半截修改**（交由人工处理，并在 manualSteps 中提示）。
@@ -41,11 +41,11 @@ const GEN_ANCHOR = '[GEN-ANCHOR]';
 /**
  * 代码生成器写入 Prisma 模型的**目标文件**（相对项目根）。
  *
- * schema 是目录式的（划分见 `ly-admin-api/prisma/schema/base.prisma` 的「文件划分」一节），
+ * schema 是目录式的（划分见 `api/prisma/schema/base.prisma` 的「文件划分」一节），
  * 生成物统一落在 `generated.prisma`：这样自动插入的 diff 不会混进业务模型文件，
  * 接手方 review「自己改的模型」时也不会被生成块干扰。
  */
-const PRISMA_GENERATED_SCHEMA = 'ly-admin-api/prisma/schema/generated.prisma';
+const PRISMA_GENERATED_SCHEMA = 'api/prisma/schema/generated.prisma';
 
 /** 自动插入结果。 */
 type InjectionResult = 'injected' | 'exists' | 'no-anchor';
@@ -54,7 +54,7 @@ type InjectionResult = 'injected' | 'exists' | 'no-anchor';
 let cachedProjectRoot: string | null = null;
 
 /**
- * 解析项目根目录（同时包含 ly-admin-web/src 与 ly-admin-api/src 的目录）。
+ * 解析项目根目录（同时包含 admin/src 与 api/src 的目录）。
  * @returns 项目根绝对路径
  */
 function resolveProjectRoot(): string {
@@ -63,7 +63,7 @@ function resolveProjectRoot(): string {
   }
   let dir = process.cwd();
   for (let depth = 0; depth < 5; depth += 1) {
-    if (existsSync(join(dir, 'ly-admin-web', 'src')) && existsSync(join(dir, 'ly-admin-api', 'src'))) {
+    if (existsSync(join(dir, 'admin', 'src')) && existsSync(join(dir, 'api', 'src'))) {
       cachedProjectRoot = dir;
       return dir;
     }
@@ -73,7 +73,7 @@ function resolveProjectRoot(): string {
     }
     dir = parent;
   }
-  throw new AppException('无法定位项目根目录（需同时存在 ly-admin-web/src 与 ly-admin-api/src）', 500, 500);
+  throw new AppException('无法定位项目根目录（需同时存在 admin/src 与 api/src）', 500, 500);
 }
 
 /**
@@ -93,22 +93,22 @@ function mapGenPath(relPath: string): { absolute: string; display: string } | nu
   }
   if (normalized.startsWith('backend/seed/')) {
     // 字典种子片段：落到 prisma/ 目录、紧挨 seed.ts（该目录不参与 tsc 编译，需人工合并进 DICT_SEEDS）
-    targetDir = join(root, 'ly-admin-api', 'prisma');
+    targetDir = join(root, 'api', 'prisma');
     rest = normalized.slice('backend/seed/'.length);
   } else if (normalized.startsWith('backend/')) {
     // 新后端 NestJS + Prisma 源码目录
-    targetDir = join(root, 'ly-admin-api', 'src');
+    targetDir = join(root, 'api', 'src');
     rest = normalized.slice('backend/'.length);
   } else if (normalized.startsWith('frontend/')) {
-    // 前端 Vue3 源码目录（原 admin/ 已更名为 ly-admin-web/）
-    targetDir = join(root, 'ly-admin-web', 'src');
+    // 前端 Vue3 源码目录（admin/，中后台）
+    targetDir = join(root, 'admin', 'src');
     rest = normalized.slice('frontend/'.length);
   } else {
     // README 等说明文件不落盘
     return null;
   }
   const absolute = resolve(join(targetDir, rest));
-  // 双重防御：目标必须位于 ly-admin-api/src 或 ly-admin-web/src 之内
+  // 双重防御：目标必须位于 api/src 或 admin/src 之内
   if (!absolute.startsWith(targetDir + sep)) {
     throw new AppException(`生成目标路径非法：${relPath}`, 400, 400);
   }
@@ -139,13 +139,13 @@ function insertAfterLastMatch(lines: string[], pattern: RegExp, insertLine: stri
 }
 
 /**
- * 自动接线：把新模块注册进 `ly-admin-api/src/app.module.ts`（import 行 + imports 数组）。
+ * 自动接线：把新模块注册进 `api/src/app.module.ts`（import 行 + imports 数组）。
  * @param className 模块类名（PascalCase + Module，如 `ArticleModule`）
  * @param importPath 相对 app.module.ts 的导入路径（含 `.js`，如 `./modules/article/article.module.js`）
  * @returns 插入结果
  */
 function injectNestModule(className: string, importPath: string): InjectionResult {
-  const file = join(resolveProjectRoot(), 'ly-admin-api', 'src', 'app.module.ts');
+  const file = join(resolveProjectRoot(), 'api', 'src', 'app.module.ts');
   if (!existsSync(file)) {
     return 'no-anchor';
   }
@@ -181,7 +181,7 @@ function injectNestModule(className: string, importPath: string): InjectionResul
  * - 幂等：目标内容已包含 `idempotencyToken` 时视为已接入，返回 `exists`，不重复插入；
  * - 锚点缺失：返回 `no-anchor`，**不做任何修改**（沿用「不半截改」约定，交由人工处理）。
  *
- * @param relPath 目标文件相对项目根的路径（如 `ly-admin-api/prisma/schema/generated.prisma`）
+ * @param relPath 目标文件相对项目根的路径（如 `api/prisma/schema/generated.prisma`）
  * @param block 待插入源码（多行；缩进/引号需符合 prettier / Prisma 格式）
  * @param idempotencyToken 幂等令牌（目标文件已含有该子串即视为已插入）
  * @returns 插入结果
@@ -212,7 +212,7 @@ function injectBeforeAnchor(relPath: string, block: string, idempotencyToken: st
  * @returns 顶层最大 sort；读取失败时返回 0
  */
 function readMaxTopLevelMenuSort(): number {
-  const file = join(resolveProjectRoot(), 'ly-admin-api', 'src', 'prisma', 'seed.service.ts');
+  const file = join(resolveProjectRoot(), 'api', 'src', 'prisma', 'seed.service.ts');
   if (!existsSync(file)) {
     return 0;
   }
@@ -330,7 +330,7 @@ export class GenWriter {
     // 三处接线：Nest 模块 / Prisma 模型 / 菜单节点
     const wiring: Array<{ path: string; result: InjectionResult }> = [
       {
-        path: 'ly-admin-api/src/app.module.ts',
+        path: 'api/src/app.module.ts',
         result: injectNestModule(`${cls}Module`, `./modules/${name}/${name}.module.js`),
       },
       {
@@ -340,9 +340,9 @@ export class GenWriter {
           : 'no-anchor',
       },
       {
-        path: 'ly-admin-api/src/prisma/seed.service.ts',
+        path: 'api/src/prisma/seed.service.ts',
         result: injectBeforeAnchor(
-          'ly-admin-api/src/prisma/seed.service.ts',
+          'api/src/prisma/seed.service.ts',
           buildMenuSeedBlock(config.moduleName, businessName, cnName, readMaxTopLevelMenuSort() + 1),
           `key: '${config.moduleName}:${businessName}',`,
         ),

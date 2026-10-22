@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const LOCALES_DIR = path.join(ROOT, 'ly-admin-web/src/locales');
+const LOCALES_DIR = path.join(ROOT, 'admin/src/locales');
 const BASE_LOCALE = 'zh-CN';
 const OTHER_LOCALES = ['en-US'];
 

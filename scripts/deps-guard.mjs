@@ -4,11 +4,11 @@
  * 模块职责：把「零第三方运行时依赖」这条项目身份约束从「口头约定」变成「可执行校验」——
  * 任何人 `npm i` 一个包即被拦截。
  *
- * 校验对象：项目根 / ly-admin-api / ly-admin-web 三处 `package.json`。
+ * 校验对象：项目根 / api / admin / client 四处 `package.json`。
  * 校验规则：
  * - `dependencies`（运行时依赖）新增 / 移除 / 版本变更 → 校验失败（退出码 1），逐条列出哪个包、哪处 package.json；
  * - `devDependencies` 变化 → 仅告警（退出码 0），因为测试/工具类依赖不破坏运行时零依赖约束；
- * - `--update`：显式把当前三处 package.json 的依赖写入基线（用于确实需要变更依赖时的显式动作，
+ * - `--update`：显式把当前各处 package.json 的依赖写入基线（用于确实需要变更依赖时的显式动作，
  *   而非静默通过）；执行更新本身不应隐式被 CI 使用。
  *
  * 依赖基线文件：`scripts/deps-baseline.json`（与脚本同目录）。
@@ -31,8 +31,8 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 /** 基线快照文件绝对路径。 */
 const BASELINE_PATH = path.join(__dirname, 'deps-baseline.json');
 
-/** 待校验的三处 package.json（相对项目根目录，顺序即输出顺序）。 */
-const TARGETS = ['package.json', 'ly-admin-api/package.json', 'ly-admin-web/package.json'];
+/** 待校验的四处 package.json（相对项目根目录，顺序即输出顺序）。 */
+const TARGETS = ['package.json', 'api/package.json', 'admin/package.json', 'client/package.json'];
 
 /**
  * 读取并解析 JSON 文件。

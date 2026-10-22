@@ -5,7 +5,7 @@
  * 把全部路径拼进单条命令会超出 Windows CreateProcess 约 32KB 的命令行上限，
  * 报「参数太长」导致 pre-commit 失败。因此本配置：
  *   1) 先用函数语法过滤掉供应商资源与生成产物（Vditor、Prisma 生成客户端、
- *      自动导入声明等，范围与 .prettierignore / eslint ignores 保持一致），
+ *      自动导入声明、Nuxt .nuxt/.output 等，范围与 .prettierignore / eslint ignores 保持一致），
  *      工具根本不会收到它们——既避免 eslint 的 "File ignored" 警告，也缩短参数；
  *   2) 再把剩余文件按 CHUNK 大小切批，逐批执行，保证任意批次都不超限。
  */
@@ -14,8 +14,8 @@ const picomatch = require('picomatch');
 /** 不参与 lint / format 的供应商资源与生成产物。
  *
  * ⚠️ 模式必须以通配目录前缀（两个星号 + 斜杠）开头：lint-staged 传给任务函数的是
- * 绝对路径（如 C:/Users/x/ly-admin/ly-admin-api/src/generated/prisma/models/User.ts），
- * 若按仓库相对路径书写（ly-admin-api/src/generated 这种形式）将永远匹配不上、静默失效。
+ * 绝对路径（如 C:/Users/x/short-sentence/api/src/generated/prisma/models/User.ts），
+ * 若按仓库相对路径书写（api/src/generated 这种形式）将永远匹配不上、静默失效。
  */
 const IGNORED_PATTERNS = [
   '**/node_modules/**',
@@ -23,20 +23,23 @@ const IGNORED_PATTERNS = [
   '**/dist-*/**',
   '**/build/**',
   '**/coverage/**',
+  // Nuxt 客户端生成产物（.nuxt 自动导入类型 / .output 构建产物）
+  '**/.nuxt/**',
+  '**/.output/**',
   // Vditor 自托管供应商静态资源（保持上游原样）
-  '**/ly-admin-web/public/vditor/**',
+  '**/admin/public/vditor/**',
   // 前端自动生成的类型声明（格式由 unplugin 插件决定）
-  '**/ly-admin-web/auto-imports.d.ts',
-  '**/ly-admin-web/components.d.ts',
+  '**/admin/auto-imports.d.ts',
+  '**/admin/components.d.ts',
   // Prisma 生成客户端（构建产物）
-  '**/ly-admin-api/src/generated/**',
+  '**/api/src/generated/**',
   // 接口文档数据（由 scripts/gen-api-docs.mjs 生成）
-  '**/ly-admin-api/src/modules/docs/api-docs.generated.ts',
-  '**/ly-admin-api/src/modules/docs/openapi.generated.ts',
+  '**/api/src/modules/docs/api-docs.generated.ts',
+  '**/api/src/modules/docs/openapi.generated.ts',
   // 运行时数据目录
-  '**/ly-admin-api/uploads/**',
-  '**/ly-admin-api/logs/**',
-  '**/ly-admin-api/cache/**',
+  '**/api/uploads/**',
+  '**/api/logs/**',
+  '**/api/cache/**',
 ];
 
 /** 单批最大文件数（经验值：40 条路径 × 最长约 120 字符 ≈ 5KB，远低于 32KB 上限）。 */

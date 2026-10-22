@@ -113,7 +113,7 @@ services:
       - logs:/app/logs
       - cache:/app/cache
       # ip2region 离线库（约 10MB，不入库）：存在即生效，缺失则归属地静默降级为空
-      - ../ly-admin-api/data:/app/data:ro
+      - ../api/data:/app/data:ro
     depends_on:
       mysql:
         condition: service_healthy

@@ -13,8 +13,8 @@ name: CI
 
 on:
   push:
-    # 主分支已由 master 更名为 main（2026-10）；只保留 main，避免 workflow 里挂着不存在的分支
-    branches: [main]
+    # 主分支为 main（本地仓库历史上曾用 master；两个都监听，避免更名后流水线静默失联）
+    branches: [main, master]
   pull_request:
 
 # 同一分支只保留最新一次运行，避免连续 push 排队
@@ -90,33 +90,33 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: ly-admin-api/package-lock.json
+          cache-dependency-path: api/package-lock.json
       - name: 安装后端依赖
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm ci --no-audit --no-fund
       - name: 类型检查
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run typecheck
       - name: lint
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run lint
       - name: 单测
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run test
       - name: 应用迁移（同时验证迁移文件可执行）
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run migrate:deploy
       # 必须先应用再检查：Prisma 生成的 migration.sql **不含 COMMENT 语句**
       # （注释由 scripts/prisma-comments.ts 单独维护），全新库里一条注释都没有，
       # 直接 check 必然报差异 —— 这一步等价于"部署后补齐注释"。
       - name: 应用表/字段注释
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run prisma:comments
       - name: 表/字段注释与 schema 一致性
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run prisma:comments:check
       - name: 契约 e2e（真实 MySQL + Redis）
-        working-directory: ly-admin-api
+        working-directory: api
         run: npm run test:e2e
 
   web:
@@ -128,18 +128,35 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: ly-admin-web/package-lock.json
+          cache-dependency-path: admin/package-lock.json
       - name: 安装前端依赖
-        working-directory: ly-admin-web
+        working-directory: admin
         run: npm ci --no-audit --no-fund
       - name: 类型检查
-        working-directory: ly-admin-web
+        working-directory: admin
         run: npm run type-check
       - name: 单测
-        working-directory: ly-admin-web
+        working-directory: admin
         run: npm run test
       - name: 构建产物
-        working-directory: ly-admin-web
+        working-directory: admin
+        run: npm run build
+
+  client:
+    name: Nuxt 客户端（类型 / 构建）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: 安装客户端依赖（postinstall 自动执行 nuxt prepare）
+        working-directory: client
+        run: npm ci --no-audit --no-fund
+      - name: 构建产物（Nuxt 构建内含类型检查）
+        working-directory: client
         run: npm run build
 
   docker:

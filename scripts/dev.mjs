@@ -23,8 +23,8 @@
  *   npm run dev -- --help    # 查看帮助
  *
  * 可用环境变量：
- *   API_PORT              后端端口（默认 3000，需与 ly-admin-api/.env 的 PORT 一致）
- *   WEB_PORT              前端端口（默认 5173，需与 ly-admin-web/.env 的 VITE_PORT 一致）
+ *   API_PORT              后端端口（默认 3000，需与 api/.env 的 PORT 一致）
+ *   WEB_PORT              前端端口（默认 5173，需与 admin/.env 的 VITE_PORT 一致）
  *   DEV_WAIT_TIMEOUT_MS   等待后端就绪的超时（默认 180000）
  *   DEV_WAIT_INTERVAL_MS  健康检查轮询间隔（默认 500）
  *   NO_COLOR              置任意值即关闭彩色前缀
@@ -37,10 +37,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** 后端端口：与 ly-admin-api/.env 的 PORT 保持一致，可用 API_PORT 覆盖。 */
+/** 后端端口：与 api/.env 的 PORT 保持一致，可用 API_PORT 覆盖。 */
 const API_PORT = Number(process.env.API_PORT ?? 3000);
 
-/** 前端端口：与 ly-admin-web/.env 的 VITE_PORT 保持一致，可用 WEB_PORT 覆盖。 */
+/** 前端端口：与 admin/.env 的 VITE_PORT 保持一致，可用 WEB_PORT 覆盖。 */
 const WEB_PORT = Number(process.env.WEB_PORT ?? 5173);
 
 /** 存活探针地址（只证明进程可响应；就绪探针另行软校验）。 */
@@ -76,12 +76,12 @@ const TASKS = {
   api: {
     label: 'api',
     color: USE_COLOR ? '\x1b[34m' : '',
-    command: 'npm --prefix ly-admin-api run start:dev',
+    command: 'npm --prefix api run start:dev',
   },
   web: {
     label: 'web',
     color: USE_COLOR ? '\x1b[32m' : '',
-    command: 'npm --prefix ly-admin-web run dev',
+    command: 'npm --prefix admin run dev',
   },
 };
 

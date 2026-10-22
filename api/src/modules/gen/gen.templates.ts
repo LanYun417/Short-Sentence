@@ -1,7 +1,7 @@
 /**
  * 代码生成模板（NestJS 12 + Prisma 7 + Vue3）。
  * 模块职责：根据表结构渲染出前后端 CRUD 代码文本，后端风格对齐 `modules/dict`，
- * 前端风格对齐 `ly-admin-web/src/api` 与 `views/system/dict`。
+ * 前端风格对齐 `admin/src/api` 与 `views/system/dict`。
  *
  * 生成物是「可直接落地的骨架」，不追求覆盖全部业务细节：
  * - 后端：Prisma model 片段 + NestJS module/controller/service + class-validator DTO；
@@ -400,7 +400,7 @@ function renderPrismaField(col: GenColumn): string[] {
 }
 
 /**
- * 渲染 Prisma model 片段（供追加进 `ly-admin-api/prisma/schema/generated.prisma`）。
+ * 渲染 Prisma model 片段（供追加进 `api/prisma/schema/generated.prisma`）。
  *
  * - 主键：`BigInt @id @default(autoincrement()) @db.BigInt`；
  * - 表名 → PascalCase model 名 + `@@map("原表名")`；
@@ -1474,7 +1474,7 @@ function renderFrontendView(config: GenConfig, columns: GenColumn[]): string {
  * 渲染「字典种子」片段，仅在用到**自定义**字典时生成。
  *
  * 状态类字段用的是内置 `sys_common_status`，无需新建字典；只有用户指定了别的
- * 字典类型时才需要准备。片段供合并进 `ly-admin-api/prisma/seed.ts`（或 `src/prisma/seed.service.ts`）
+ * 字典类型时才需要准备。片段供合并进 `api/prisma/seed.ts`（或 `src/prisma/seed.service.ts`）
  * 的字典种子数组，字典项是**占位示例**，需按实际业务替换。
  * @returns 片段文本；无需新建字典时返回 null
  */
@@ -1493,7 +1493,7 @@ function renderDictSeedSnippet(config: GenConfig, columns: GenColumn[]): string 
     `/**`,
     ` * 字典种子片段（由代码生成器生成）。`,
     ` *`,
-    ` * 用法：把下面数组里的各项合并进 \`ly-admin-api/prisma/seed.ts\` 的字典种子（DICT_SEEDS），再重启服务`,
+    ` * 用法：把下面数组里的各项合并进 \`api/prisma/seed.ts\` 的字典种子（DICT_SEEDS），再重启服务`,
     ` *（种子幂等：已存在的类型/项会跳过，不会覆盖界面上改过的内容）。`,
     ` *`,
     ` * ⚠️ 字典项内容是**占位示例**，请按实际业务改成真实的选项与取值。`,
@@ -1547,17 +1547,17 @@ function renderReadme(config: GenConfig, columns: GenColumn[], tableComment: str
 
   // 接线步骤：前 3 步固定，字典 / 树形 / 未知类型按实际情况追加，末尾补一条控件核对
   const stepBodies: string[] = [
-    `**同步表结构**：把 \`backend/prisma/${config.tableName}.model.prisma\` 的 model 追加进 \`ly-admin-api/prisma/schema/generated.prisma\` ` +
+    `**同步表结构**：把 \`backend/prisma/${config.tableName}.model.prisma\` 的 model 追加进 \`api/prisma/schema/generated.prisma\` ` +
       `（用「生成到项目」时已自动插入 \`[GEN-ANCHOR]\` 锚点之前），然后执行 \`npm run prisma:push\``,
-    `**注册模块**：\`ly-admin-api/src/app.module.ts\`（自动：import 与 \`imports\` 数组加入 \`${toPascal(config.businessName)}Module\`）`,
-    `**菜单与权限码**：\`ly-admin-api/src/prisma/seed.service.ts\`（自动：目录 / MENU 与 4 个按钮节点，权限码依次为 ${perm}:list、:query、:add、:edit、:remove）；重启服务即自动幂等种子`,
+    `**注册模块**：\`api/src/app.module.ts\`（自动：import 与 \`imports\` 数组加入 \`${toPascal(config.businessName)}Module\`）`,
+    `**菜单与权限码**：\`api/src/prisma/seed.service.ts\`（自动：目录 / MENU 与 4 个按钮节点，权限码依次为 ${perm}:list、:query、:add、:edit、:remove）；重启服务即自动幂等种子`,
     `**角色授权**：超管（menuKeys: 'ALL'）自动可见；其它角色请在「系统管理-角色管理-菜单授权」中勾选`,
     `**前端路由**：无需手改（路由由菜单动态生成，页面已落到 \`frontend/views/${config.moduleName}/${name}/index.vue\`）`,
   ];
   if (customDictTypes.length > 0) {
     stepBodies.push(
       `**字典准备**：本次用到了自定义字典（${customDictTypes.join('、')}），请把 \`backend/seed/dict.seed.snippet.ts\` ` +
-        `合并进 \`ly-admin-api/prisma/seed.ts\` 的字典种子后重启服务（种子幂等，已存在的会跳过）`,
+        `合并进 \`api/prisma/seed.ts\` 的字典种子后重启服务（种子幂等，已存在的会跳过）`,
     );
   } else if (dictTypes.length > 0) {
     stepBodies.push(`**字典准备**：字典字段用的是内置 \`${BUILTIN_STATUS_DICT}\`，库中已有，无需新建`);
