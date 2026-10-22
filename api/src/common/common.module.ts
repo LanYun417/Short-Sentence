@@ -10,6 +10,7 @@ import { SessionService } from './auth/session.service.js';
 import { TokenBlacklistService } from './auth/token-blacklist.service.js';
 import { AuthCacheService } from './auth/auth-cache.service.js';
 import { AuthUserService } from './auth/auth-user.service.js';
+import { ClientAuthService } from './auth/client-auth.service.js';
 import { CaptchaService } from './auth/captcha.service.js';
 import { DataScopeService } from './auth/data-scope.service.js';
 import { LoginRateLimiterService } from './auth/login-rate-limit.service.js';
@@ -33,6 +34,8 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     SessionService,
     AuthCacheService,
     AuthUserService,
+    // 客户端用户查询（守卫 client 分支 + 客户端登录注册共用；与 AuthUserService 对应）
+    ClientAuthService,
     CaptchaService,
     DataScopeService,
     LoginRateLimiterService,
@@ -58,6 +61,7 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     SessionService,
     AuthCacheService,
     AuthUserService,
+    ClientAuthService,
     CaptchaService,
     DataScopeService,
     LoginRateLimiterService,
