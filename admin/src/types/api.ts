@@ -881,3 +881,65 @@ export interface TaskRunResult {
   startedAt: string;
   finishedAt: string;
 }
+
+/** 句子状态（与后端 SENTENCE_STATUS 对齐） */
+export type SentenceStatus = 'pending_image' | 'ready' | 'offline';
+
+/** 题库列表条目 */
+export interface SentenceItem {
+  id: number;
+  categoryId: number;
+  categoryName: string | null;
+  sentenceEn: string;
+  translationZh: string;
+  ipa: string | null;
+  scenePrompt: string;
+  difficulty: number;
+  imageFileId: number;
+  imageUrl: string | null;
+  source: string;
+  status: SentenceStatus;
+  genTaskId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 题库查询参数 */
+export interface SentenceQuery extends PageQuery {
+  status?: SentenceStatus;
+  categoryId?: number;
+  difficulty?: number;
+  keyword?: string;
+}
+
+/** 保存题目入参 */
+export interface SentenceSavePayload {
+  categoryId: number;
+  sentenceEn: string;
+  translationZh: string;
+  ipa?: string;
+  scenePrompt?: string;
+  difficulty?: number;
+  status?: SentenceStatus;
+}
+
+/** 生成批次列表条目 */
+export interface GenTaskItem {
+  id: number;
+  bizDate: string;
+  targetCount: number;
+  textDone: number;
+  imageDone: number;
+  failCount: number;
+  status: string;
+  triggerType: string;
+  errorMessage: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+}
+
+/** 生成批次查询参数 */
+export interface GenTaskQuery extends PageQuery {
+  status?: string;
+}
