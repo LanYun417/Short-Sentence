@@ -24,7 +24,8 @@ const emit = defineEmits<{
 
 /** 用户输入 */
 const answer = ref('');
-const inputRef = ref<HTMLInputElement | null>(null);
+/** @nuxt/ui 的 UInput 暴露 inputRef，用于换卡后自动聚焦 */
+const inputRef = ref<{ inputRef?: HTMLInputElement } | null>(null);
 
 /** 翻转态（有结果即翻转） */
 const flipped = computed(() => props.result !== null);
@@ -32,17 +33,22 @@ const flipped = computed(() => props.result !== null);
 /** 难度文案 */
 const difficultyText = computed(() => ['', '基础', '进阶', '挑战'][props.question.difficulty] ?? '');
 
+/** 聚焦输入框。 */
+function focusInput(): void {
+  void nextTick(() => inputRef.value?.inputRef?.focus());
+}
+
 // 换卡重置输入并聚焦
 watch(
   () => props.question.sentenceId,
   () => {
     answer.value = '';
-    nextTick(() => inputRef.value?.focus());
+    focusInput();
   },
 );
 
 onMounted(() => {
-  nextTick(() => inputRef.value?.focus());
+  focusInput();
   window.addEventListener('keydown', onKeydown);
 });
 onBeforeUnmount(() => {
@@ -55,7 +61,7 @@ function onKeydown(event: KeyboardEvent): void {
     return;
   }
   // 输入框内回车由表单 submit 处理，避免双触发
-  if (document.activeElement === inputRef.value && !flipped.value) {
+  if (document.activeElement === inputRef.value?.inputRef && !flipped.value) {
     return;
   }
   event.preventDefault();
@@ -86,16 +92,13 @@ function onSubmit(): void {
       <div
         class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
-        <div class="mb-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span v-if="question.categoryName" class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700">
+        <div class="mb-3 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <UBadge v-if="question.categoryName" color="neutral" variant="subtle" size="sm">
             {{ question.categoryName }}
-          </span>
-          <span
-            v-if="difficultyText"
-            class="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-          >
+          </UBadge>
+          <UBadge v-if="difficultyText" color="warning" variant="subtle" size="sm">
             {{ difficultyText }}
-          </span>
+          </UBadge>
           <span class="ml-auto">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
         </div>
 
@@ -115,24 +118,21 @@ function onSubmit(): void {
         </div>
 
         <form class="mt-4 flex gap-2" @submit.prevent="onSubmit">
-          <input
+          <UInput
             ref="inputRef"
             v-model="answer"
             type="text"
+            size="lg"
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
             placeholder="输入对应的英文句子"
-            class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base outline-none transition focus:border-sky-400 focus:bg-white dark:border-slate-600 dark:bg-slate-900 dark:focus:border-sky-500"
+            class="flex-1"
             :disabled="submitting"
           />
-          <button
-            type="submit"
-            class="rounded-xl bg-sky-600 px-6 py-3 text-base font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
-            :disabled="submitting || !answer.trim()"
-          >
+          <UButton type="submit" size="lg" color="primary" :loading="submitting" :disabled="!answer.trim()">
             {{ submitting ? '判定中' : '确定' }}
-          </button>
+          </UButton>
         </form>
       </div>
 
@@ -142,24 +142,22 @@ function onSubmit(): void {
       >
         <div class="flex h-full flex-col">
           <div class="mb-2 flex items-center gap-2">
-            <span
-              class="rounded-full px-3 py-1 text-sm font-medium"
-              :class="
-                result?.isCorrect
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
-              "
+            <UBadge
+              :color="result?.isCorrect ? 'success' : 'error'"
+              variant="subtle"
+              size="lg"
+              class="text-sm font-medium"
             >
               {{ result?.isCorrect ? '答对了' : '再想想' }}
-            </span>
-            <button
-              class="ml-auto rounded-full p-2 text-lg transition hover:bg-slate-100 dark:hover:bg-slate-700"
-              :class="result?.favorited ? 'text-amber-500' : 'text-slate-400'"
+            </UBadge>
+            <UButton
+              variant="ghost"
+              class="ml-auto"
+              icon="i-lucide-star"
+              :class="result?.favorited ? 'text-amber-500 [&_svg]:fill-current' : 'text-slate-400'"
               title="收藏"
               @click="emit('favorite')"
-            >
-              {{ result?.favorited ? '★' : '☆' }}
-            </button>
+            />
           </div>
 
           <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
@@ -179,12 +177,7 @@ function onSubmit(): void {
 
           <div class="mt-auto flex items-center justify-between pt-4 text-xs text-slate-400">
             <span>按 回车 或点击按钮继续</span>
-            <button
-              class="rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500"
-              @click="emit('next')"
-            >
-              下一题
-            </button>
+            <UButton color="primary" variant="solid" size="sm" @click="emit('next')"> 下一题 </UButton>
           </div>
         </div>
       </div>

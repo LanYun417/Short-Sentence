@@ -25,7 +25,9 @@ export default defineNuxtConfig({
     '@nuxt/icon/module',
     '@nuxt/fonts',
     '@nuxt/image',
-    'reka-ui/nuxt',
+    // UI 组件层统一走 @nuxt/ui（Reka UI 已移除：它只被注册过、代码中零引用，
+    // 且与 @nuxt/ui 的组件体系重复）
+    '@nuxt/ui',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@vueuse/nuxt/module',

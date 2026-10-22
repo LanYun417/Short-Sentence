@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* @nuxt/ui 的设计令牌与组件样式（Tailwind v4 模式，必须放在 tailwindcss 之后） */
+@import '@nuxt/ui';
+
 /* 暗色模式跟随 color-mode 的 .dark class（class 策略） */
 @custom-variant dark (&:where(.dark, .dark *));
 

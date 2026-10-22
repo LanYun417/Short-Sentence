@@ -1,11 +1,15 @@
 # 用户端规范（client/ · Nuxt 4 「短句」App）
 
-适用于 `client/`（Nuxt 4 + Reka UI + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、输入英文、提交后 3D 翻转看答案。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
+适用于 `client/`（Nuxt 4 + Nuxt UI v4 + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、输入英文、提交后 3D 翻转看答案。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
 
 ## 1. 硬性约定
 
 - 包管理器仅 npm；`package-lock.json` 入库；Node >= 24；
-- 组合式 API + `<script setup lang="ts">`；Reka UI 承担组件层（按钮/输入框/对话框/提示），**不引 Element Plus**（那是 admin 中后台的栈）；
+- 组合式 API + `<script setup lang="ts">`；**Nuxt UI v4 承担组件层**（`UButton` / `UInput` / `UFormField` / `UCard` / `UAlert` / `UTabs` / `UBadge` / `USelect` / `UTextarea` / `UAvatar` / `USkeleton` / `UApp`），**不引 Element Plus**（那是 admin 中后台的栈）；
+- **不直接依赖 `reka-ui`**：它只是 Nuxt UI 的内部实现细节，业务代码一律用 `U*` 前缀组件，避免和 Nuxt UI 的版本绑死；
+- 根组件必须包一层 `<UApp>`：Toast / Modal / Tooltip 等覆盖层依赖它提供的上下文；
+- 语义色在 `app/app.config.ts` 的 `ui.colors` 配置（当前 `primary=sky`、`neutral=slate`）。**该文件必须放在 `app/` 目录内**（Nuxt 4 的 srcDir 是 `app/`，放仓库根不生效，表现为 primary 仍是默认的 green）；
+- 图标用 `i-lucide-*`，本地由 `@iconify-json/lucide`（devDependency）打包，不走运行时 CDN；勿新增图标集除非确有需要；
 - 样式用 Tailwind 工具类；主题令牌走 Nuxt color-mode（亮/暗）；
 - 新增运行时依赖默认禁止，确需新增（如 html2canvas）走 `npm run guard:deps -- --update` 并在评审说明；
 - **API Key 与 AI 调用只在服务端**：前端永远只打 `api/` 的 `client` 域接口。
@@ -27,14 +31,17 @@
 
 ```
 client/
-├─ app.vue                # 根组件（NuxtLayout/NuxtPage）
-├─ pages/                 # 路由页面：index / login / register / profile / favorites / review
-├─ components/            # QuestionCard（翻转卡）/ AnswerInput / PosterCanvas / AppNavbar …
-├─ composables/           # useAuth / useQuestionSession / useSse / usePoster
-├─ stores/                # Pinia：auth（持久化）
-├─ utils/                 # answer-normalize（比对规范化）/ date
-├─ types/                 # 接口 DTO
-├─ nuxt.config.ts         # 端口、devProxy、runtimeConfig
+├─ app/
+│  ├─ app.vue             # 根组件（UApp 外壳 + 顶部导航 + NuxtPage）
+│  ├─ app.config.ts       # Nuxt UI 语义色（primary / neutral …），必须在此目录内
+│  ├─ pages/              # 路由页面：index / login / register / profile / favorites / review / ai
+│  ├─ components/         # QuestionCard（翻转卡）/ SentenceLibraryList / PosterCanvas
+│  ├─ composables/        # useApi / useQuestionSession / useSse / usePoster
+│  ├─ stores/             # Pinia：auth（持久化）
+│  ├─ middleware/         # auth（未登录跳登录并带 redirect）
+│  ├─ utils/              # answer-normalize（比对规范化）/ upload-token（图片令牌）
+│  └─ types/              # 接口 DTO
+├─ nuxt.config.ts         # 端口、devProxy、modules
 └─ .env                   # 可选：NUXT_PUBLIC_API_BASE_URL / NUXT_API_TARGET
 ```
 

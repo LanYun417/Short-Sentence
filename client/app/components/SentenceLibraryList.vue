@@ -70,53 +70,51 @@ onMounted(() => {
     </p>
 
     <!-- 错误态 -->
-    <div v-if="errorMessage && items.length === 0" class="rounded-2xl bg-rose-50 p-6 text-center dark:bg-rose-900/20">
-      <p class="text-rose-600 dark:text-rose-300">{{ errorMessage }}</p>
-      <button class="mt-3 rounded-xl bg-rose-600 px-5 py-2 text-sm text-white" @click="loadMore">重试</button>
-    </div>
+    <UAlert
+      v-if="errorMessage && items.length === 0"
+      color="error"
+      variant="subtle"
+      :description="errorMessage"
+      class="mb-4"
+    >
+      <template #actions>
+        <UButton size="sm" color="error" variant="outline" @click="loadMore">重试</UButton>
+      </template>
+    </UAlert>
 
     <!-- 首屏加载中 -->
-    <p v-else-if="!loaded" class="py-16 text-center text-slate-400">加载中…</p>
+    <div v-else-if="!loaded" class="py-16 text-center text-slate-400">加载中…</div>
 
     <!-- 空态 -->
-    <p v-else-if="items.length === 0" class="py-16 text-center text-slate-400">
+    <div v-else-if="items.length === 0" class="py-16 text-center text-slate-400">
       {{ isReview ? '暂无到期错题，保持住' : '还没有收藏，刷题时点 ☆ 收藏' }}
-    </p>
+    </div>
 
     <div class="space-y-3">
-      <article
-        v-for="item in items"
-        :key="`${item.sentenceId}-${item.createdAt}`"
-        class="flex gap-3 rounded-2xl bg-white p-3 shadow-sm dark:bg-slate-800"
-      >
-        <div class="h-20 w-36 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700">
-          <img
-            v-if="item.imageUrl"
-            :src="withUploadToken(item.imageUrl)"
-            class="h-full w-full object-cover"
-            loading="lazy"
-          />
+      <UCard v-for="item in items" :key="`${item.sentenceId}-${item.createdAt}`" :ui="{ body: 'p-3' }">
+        <div class="flex gap-3">
+          <div class="h-20 w-36 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700">
+            <img
+              v-if="item.imageUrl"
+              :src="withUploadToken(item.imageUrl)"
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-slate-800 dark:text-slate-100">{{ item.sentenceEn }}</p>
+            <p class="font-mono text-xs text-slate-400">{{ item.ipa || '—' }}</p>
+            <p class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{{ item.translationZh }}</p>
+            <UBadge v-if="isReview && item.reviewLevel !== undefined" color="warning" variant="subtle" size="sm">
+              已答对 {{ item.reviewLevel }} 次
+            </UBadge>
+          </div>
         </div>
-        <div class="min-w-0 flex-1">
-          <p class="truncate font-medium text-slate-800 dark:text-slate-100">{{ item.sentenceEn }}</p>
-          <p class="font-mono text-xs text-slate-400">{{ item.ipa || '—' }}</p>
-          <p class="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{{ item.translationZh }}</p>
-          <p v-if="isReview && item.reviewLevel !== undefined" class="mt-1 text-xs text-amber-500">
-            已答对 {{ item.reviewLevel }} 次
-          </p>
-        </div>
-      </article>
+      </UCard>
     </div>
 
     <div class="py-6 text-center">
-      <button
-        v-if="hasMore"
-        class="rounded-xl bg-slate-100 px-6 py-2.5 text-sm text-slate-600 transition hover:bg-slate-200 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-300"
-        :disabled="loading"
-        @click="loadMore"
-      >
-        {{ loading ? '加载中…' : '加载更多' }}
-      </button>
+      <UButton v-if="hasMore" color="neutral" variant="soft" :loading="loading" @click="loadMore"> 加载更多 </UButton>
       <p v-else-if="items.length > 0" class="text-sm text-slate-400">共 {{ total }} 条</p>
     </div>
   </div>

@@ -57,16 +57,24 @@ async function onCheckin(): Promise<void> {
     </p>
 
     <!-- 错误态 -->
-    <div
+    <UAlert
       v-if="errorMessage && !question"
-      class="mx-auto max-w-xl rounded-2xl bg-rose-50 p-6 text-center dark:bg-rose-900/20"
+      color="error"
+      variant="subtle"
+      :description="errorMessage"
+      class="mx-auto max-w-xl"
     >
-      <p class="text-rose-600 dark:text-rose-300">{{ errorMessage }}</p>
-      <button class="mt-3 rounded-xl bg-rose-600 px-5 py-2 text-sm text-white" @click="loadNext">重试</button>
-    </div>
+      <template #actions>
+        <UButton size="sm" color="error" variant="outline" @click="loadNext">重试</UButton>
+      </template>
+    </UAlert>
 
     <!-- 加载态 -->
-    <div v-else-if="loading && !question" class="mx-auto max-w-xl py-20 text-center text-slate-400">加载中…</div>
+    <div v-else-if="loading && !question" class="mx-auto max-w-xl space-y-4 py-10">
+      <USkeleton class="h-8 w-full rounded-2xl" />
+      <USkeleton class="aspect-video w-full rounded-2xl" />
+      <USkeleton class="h-12 w-full rounded-2xl" />
+    </div>
 
     <!-- 闪卡 -->
     <template v-else-if="question">
@@ -82,13 +90,16 @@ async function onCheckin(): Promise<void> {
 
       <!-- 达标 → 打卡海报入口 -->
       <div v-if="goalReached" class="mx-auto mt-5 max-w-xl text-center">
-        <button
-          class="rounded-xl bg-linear-to-r from-amber-500 to-orange-500 px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-orange-500/20 transition hover:opacity-90 disabled:opacity-60"
-          :disabled="generating"
+        <UButton
+          color="warning"
+          variant="solid"
+          size="lg"
+          class="bg-linear-to-r from-amber-500 to-orange-500 shadow-lg shadow-orange-500/20"
+          :loading="generating"
           @click="onCheckin"
         >
           {{ generating ? '生成中…' : checkinData ? '重新生成海报' : '今日目标已完成，生成打卡海报' }}
-        </button>
+        </UButton>
       </div>
     </template>
 

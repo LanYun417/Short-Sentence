@@ -7,7 +7,14 @@ import { streamSse } from '~/composables/useSse';
 
 definePageMeta({ middleware: ['auth'] });
 
-const activeTab = ref<'expand' | 'word-root'>('expand');
+/** 当前 Tab。宽度按 string 声明：UTabs 的 v-model 类型是 string | number。 */
+const activeTab = ref('expand');
+
+/** Tab 配置（slot 字段指定内容插槽名，与模板中的 #expand / #word-root 对应）。 */
+const TABS = [
+  { label: '场景造句', value: 'expand', slot: 'expand' },
+  { label: '词根拆解', value: 'word-root', slot: 'word-root' },
+];
 
 const expandInput = ref('');
 const expandOutput = ref('');
@@ -83,93 +90,62 @@ onBeforeUnmount(() => {
   <div class="mx-auto max-w-2xl px-4 py-8">
     <h1 class="mb-6 text-2xl font-bold text-slate-800 dark:text-slate-100">AI 拓展</h1>
 
-    <div class="mb-5 flex gap-2">
-      <button
-        class="rounded-full px-4 py-2 text-sm font-medium transition"
-        :class="
-          activeTab === 'expand'
-            ? 'bg-sky-600 text-white'
-            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-        "
-        @click="activeTab = 'expand'"
-      >
-        场景造句
-      </button>
-      <button
-        class="rounded-full px-4 py-2 text-sm font-medium transition"
-        :class="
-          activeTab === 'word-root'
-            ? 'bg-sky-600 text-white'
-            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-        "
-        @click="activeTab = 'word-root'"
-      >
-        词根拆解
-      </button>
-    </div>
+    <UTabs v-model="activeTab" :items="TABS" variant="pill" class="mb-5">
+      <!-- 场景造句 -->
+      <template #expand>
+        <div class="flex gap-2">
+          <UInput
+            v-model="expandInput"
+            type="text"
+            size="lg"
+            placeholder="输入想表达的中文，如「我想约她周末吃饭」"
+            class="flex-1"
+            :disabled="expandRunning"
+            @keydown.enter.prevent="runExpand"
+          />
+          <UButton
+            size="lg"
+            color="primary"
+            :loading="expandRunning"
+            :disabled="!expandInput.trim()"
+            @click="runExpand"
+          >
+            生成
+          </UButton>
+          <UButton v-if="expandRunning" size="lg" color="neutral" variant="soft" @click="expandAbort?.()">
+            停止
+          </UButton>
+        </div>
+        <UCard v-if="expandOutput" :ui="{ body: 'p-4' }" class="mt-4">
+          <p class="whitespace-pre-wrap text-base leading-relaxed text-slate-700 dark:text-slate-200">
+            {{ expandOutput }}
+          </p>
+        </UCard>
+      </template>
 
-    <!-- 场景造句 -->
-    <div v-if="activeTab === 'expand'">
-      <div class="flex gap-2">
-        <input
-          v-model="expandInput"
-          type="text"
-          placeholder="输入想表达的中文，如「我想约她周末吃饭」"
-          class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-800"
-          :disabled="expandRunning"
-          @keydown.enter.prevent="runExpand"
-        />
-        <button
-          class="rounded-xl bg-sky-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
-          :disabled="expandRunning || !expandInput.trim()"
-          @click="runExpand"
-        >
-          生成
-        </button>
-        <button
-          v-if="expandRunning"
-          class="rounded-xl bg-slate-200 px-4 py-3 text-sm text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-          @click="expandAbort?.()"
-        >
-          停止
-        </button>
-      </div>
-      <pre
-        v-if="expandOutput"
-        class="mt-4 whitespace-pre-wrap rounded-2xl bg-white p-4 font-sans text-base leading-relaxed text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200"
-        >{{ expandOutput }}</pre>
-    </div>
-
-    <!-- 词根拆解 -->
-    <div v-else>
-      <div class="flex gap-2">
-        <input
-          v-model="wordInput"
-          type="text"
-          placeholder="输入要拆解的单词，如 unavoidable"
-          class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-800"
-          :disabled="wordRunning"
-          @keydown.enter.prevent="runWordRoot"
-        />
-        <button
-          class="rounded-xl bg-sky-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
-          :disabled="wordRunning || !wordInput.trim()"
-          @click="runWordRoot"
-        >
-          拆解
-        </button>
-        <button
-          v-if="wordRunning"
-          class="rounded-xl bg-slate-200 px-4 py-3 text-sm text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-          @click="wordAbort?.()"
-        >
-          停止
-        </button>
-      </div>
-      <pre
-        v-if="wordOutput"
-        class="mt-4 whitespace-pre-wrap rounded-2xl bg-white p-4 font-sans text-base leading-relaxed text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200"
-        >{{ wordOutput }}</pre>
-    </div>
+      <!-- 词根拆解 -->
+      <template #word-root>
+        <div class="flex gap-2">
+          <UInput
+            v-model="wordInput"
+            type="text"
+            size="lg"
+            placeholder="输入要拆解的单词，如 unavoidable"
+            class="flex-1"
+            :disabled="wordRunning"
+            @keydown.enter.prevent="runWordRoot"
+          />
+          <UButton size="lg" color="primary" :loading="wordRunning" :disabled="!wordInput.trim()" @click="runWordRoot">
+            拆解
+          </UButton>
+          <UButton v-if="wordRunning" size="lg" color="neutral" variant="soft" @click="wordAbort?.()"> 停止 </UButton>
+        </div>
+        <UCard v-if="wordOutput" :ui="{ body: 'p-4' }" class="mt-4">
+          <p class="whitespace-pre-wrap text-base leading-relaxed text-slate-700 dark:text-slate-200">
+            {{ wordOutput }}
+          </p>
+        </UCard>
+      </template>
+    </UTabs>
   </div>
 </template>

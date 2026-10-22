@@ -81,13 +81,9 @@ async function onChangePassword(): Promise<void> {
 
 <template>
   <div class="mx-auto max-w-xl px-4 py-8">
-    <div class="rounded-3xl bg-white p-6 shadow-sm dark:bg-slate-800">
+    <UCard :ui="{ body: 'p-6' }">
       <div class="mb-6 flex items-center gap-4">
-        <div
-          class="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-xl font-bold text-sky-600 dark:bg-sky-900/40"
-        >
-          {{ (auth.user?.nickname ?? '?').slice(0, 1) }}
-        </div>
+        <UAvatar size="xl" color="primary" variant="soft" :text="(auth.user?.nickname ?? '?').slice(0, 1)" />
         <div>
           <p class="text-lg font-semibold text-slate-800 dark:text-slate-100">{{ auth.user?.nickname }}</p>
           <p class="text-sm text-slate-400">{{ auth.user?.email }}</p>
@@ -109,73 +105,40 @@ async function onChangePassword(): Promise<void> {
         </div>
       </div>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">昵称</label>
-      <input
-        v-model="nickname"
-        maxlength="50"
-        class="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
+      <UFormField label="昵称">
+        <UInput v-model="nickname" maxlength="50" class="w-full" />
+      </UFormField>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">出生年月日</label>
-      <input
-        v-model="birthday"
-        type="date"
-        class="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
+      <UFormField label="出生年月日">
+        <UInput v-model="birthday" type="date" class="w-full" />
+      </UFormField>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">性别</label>
-      <select
-        v-model="gender"
-        class="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      >
-        <option v-for="item in GENDERS" :key="item.value" :value="item.value">{{ item.label }}</option>
-      </select>
+      <UFormField label="性别">
+        <USelect v-model="gender" :items="GENDERS" value-key="value" label-key="label" class="w-full" />
+      </UFormField>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">个性签名</label>
-      <textarea
-        v-model="signature"
-        rows="3"
-        maxlength="200"
-        class="mb-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
+      <UFormField label="个性签名">
+        <UTextarea v-model="signature" rows="3" maxlength="200" autoresize class="w-full" />
+      </UFormField>
 
-      <div class="flex items-center gap-3">
-        <button
-          class="rounded-xl bg-sky-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
-          :disabled="saving"
-          @click="onSave"
-        >
-          {{ saving ? '保存中…' : '保存资料' }}
-        </button>
+      <div class="mt-4 flex items-center gap-3">
+        <UButton color="primary" :loading="saving" @click="onSave">保存资料</UButton>
         <span v-if="saveMessage" class="text-sm text-slate-400">{{ saveMessage }}</span>
       </div>
-    </div>
+    </UCard>
 
-    <div class="mt-6 rounded-3xl bg-white p-6 shadow-sm dark:bg-slate-800">
+    <UCard :ui="{ body: 'p-6' }" class="mt-6">
       <h2 class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100">修改密码</h2>
-      <input
-        v-model="oldPassword"
-        type="password"
-        placeholder="原密码"
-        autocomplete="current-password"
-        class="mb-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
-      <input
-        v-model="newPassword"
-        type="password"
-        placeholder="新密码（6~32 位，字母+数字）"
-        autocomplete="new-password"
-        class="mb-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
-      <div class="flex items-center gap-3">
-        <button
-          class="rounded-xl bg-slate-700 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-slate-600"
-          @click="onChangePassword"
-        >
-          修改密码
-        </button>
+      <UFormField label="原密码">
+        <UInput v-model="oldPassword" type="password" autocomplete="current-password" class="w-full" />
+      </UFormField>
+      <UFormField label="新密码" help="6~32 位，需同时包含字母和数字">
+        <UInput v-model="newPassword" type="password" autocomplete="new-password" class="w-full" />
+      </UFormField>
+      <div class="mt-4 flex items-center gap-3">
+        <UButton color="neutral" variant="solid" @click="onChangePassword">修改密码</UButton>
         <span v-if="passwordMessage" class="text-sm text-slate-400">{{ passwordMessage }}</span>
       </div>
-    </div>
+    </UCard>
   </div>
 </template>

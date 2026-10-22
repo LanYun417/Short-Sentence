@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T06:56:53.962Z",
+  "generatedAt": "2026-10-22T10:01:19.860Z",
   "packages": {
     "package.json": {
       "dependencies": {},
@@ -112,23 +112,42 @@
         "@nuxt/fonts": "^1.0.1",
         "@nuxt/icon": "^2.5.1",
         "@nuxt/image": "^2.2.0",
+        "@nuxt/ui": "^4.12.0",
         "@nuxtjs/color-mode": "^4.0.1",
         "@nuxtjs/i18n": "^10.6.0",
         "@nuxtjs/robots": "^7.0.2",
         "@nuxtjs/seo": "^6.0.1",
         "@nuxtjs/sitemap": "^9.1.0",
         "@pinia/nuxt": "^1.0.3",
+        "@tiptap/core": "^3.32.0",
+        "@tiptap/extension-bubble-menu": "^3.32.0",
+        "@tiptap/extension-code": "^3.32.0",
+        "@tiptap/extension-collaboration": "^3.32.0",
+        "@tiptap/extension-drag-handle": "^3.32.0",
+        "@tiptap/extension-drag-handle-vue-3": "^3.32.0",
+        "@tiptap/extension-floating-menu": "^3.32.0",
+        "@tiptap/extension-horizontal-rule": "^3.32.0",
+        "@tiptap/extension-image": "^3.32.0",
+        "@tiptap/extension-mention": "^3.32.0",
+        "@tiptap/extension-node-range": "^3.32.0",
+        "@tiptap/extension-placeholder": "^3.32.0",
+        "@tiptap/markdown": "^3.32.0",
+        "@tiptap/pm": "^3.32.0",
+        "@tiptap/starter-kit": "^3.32.0",
+        "@tiptap/suggestion": "^3.32.0",
+        "@tiptap/vue-3": "^3.32.0",
         "@vueuse/nuxt": "^15.0.0",
         "html2canvas": "^1.4.1",
         "nuxt": "^4.6.2",
         "pinia": "^4.1.0",
-        "reka-ui": "^2.11.0",
         "vue": "^3.5.44",
         "vue-router": "^5.4.0"
       },
       "devDependencies": {
+        "@iconify-json/lucide": "^1.2.147",
         "@tailwindcss/vite": "^4.3.3",
-        "tailwindcss": "^4.3.3"
+        "tailwindcss": "^4.3.3",
+        "typescript": "^6.0.3"
       }
     }
   }

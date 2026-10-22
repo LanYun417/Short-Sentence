@@ -35,42 +35,39 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 dark:bg-slate-900">
-    <form class="w-full max-w-sm rounded-3xl bg-white p-8 shadow-xl dark:bg-slate-800" @submit.prevent="onSubmit">
-      <h1 class="mb-1 text-2xl font-bold text-slate-800 dark:text-slate-100">登录短句</h1>
-      <p class="mb-6 text-sm text-slate-400">每天 20 句，看图学地道英语</p>
+    <UCard class="w-full max-w-sm" :ui="{ body: 'p-8' }">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">登录短句</h1>
+        <p class="mt-1 text-sm text-slate-400">每天 20 句，看图学地道英语</p>
+      </div>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">邮箱</label>
-      <input
-        v-model="email"
-        type="email"
-        required
-        autocomplete="email"
-        class="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
+      <form class="space-y-4" @submit.prevent="onSubmit">
+        <UFormField label="邮箱">
+          <UInput v-model="email" type="email" required autocomplete="email" size="lg" class="w-full" />
+        </UFormField>
 
-      <label class="mb-1 block text-sm text-slate-500 dark:text-slate-400">密码</label>
-      <input
-        v-model="password"
-        type="password"
-        required
-        autocomplete="current-password"
-        class="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-900"
-      />
+        <UFormField label="密码">
+          <UInput
+            v-model="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            size="lg"
+            class="w-full"
+          />
+        </UFormField>
 
-      <p v-if="errorMessage" class="mb-3 text-sm text-rose-500">{{ errorMessage }}</p>
+        <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
-      <button
-        type="submit"
-        class="mt-2 w-full rounded-xl bg-sky-600 py-3 font-medium text-white transition hover:bg-sky-500 disabled:opacity-50"
-        :disabled="submitting || !email || !password"
-      >
-        {{ submitting ? '登录中…' : '登录' }}
-      </button>
+        <UButton type="submit" block size="lg" :loading="submitting" :disabled="!email || !password">
+          {{ submitting ? '登录中…' : '登录' }}
+        </UButton>
+      </form>
 
       <p class="mt-4 text-center text-sm text-slate-400">
         还没有账号？
         <NuxtLink to="/register" class="text-sky-600 hover:underline dark:text-sky-400">注册</NuxtLink>
       </p>
-    </form>
+    </UCard>
   </div>
 </template>
