@@ -1,0 +1,154 @@
+<script setup lang="ts">
+/** 登录日志页。模块职责：按账号、结果与时间范围查询登录记录并导出 CSV。 */
+
+import { ElMessage } from '@/utils/element';
+import { deleteLoginLogApi, deleteLoginLogsApi, exportLoginLogsApi, getLoginLogsApi } from '@/api/log';
+import { useTable } from '@/composables/useTable';
+import { useBatchDelete } from '@/composables/useBatchDelete';
+import { formatDate, formatDateTime } from '@/utils/format';
+import { downloadBlob } from '@/utils/download';
+import type { LoginLog } from '@/types/api';
+import Pagination from '@/components/Pagination/index.vue';
+import SearchForm from '@/components/SearchForm/index.vue';
+
+defineOptions({ name: 'LogLogin' });
+
+const exporting = ref(false);
+const dateRange = ref<string[]>([]);
+
+const { loading, list, total, query, getList, search, reset, changePage, changePageSize } = useTable(
+  (p) =>
+    getLoginLogsApi({
+      page: p.page,
+      pageSize: p.pageSize,
+      username: p.username || undefined,
+      status: p.status,
+      startTime: dateRange.value[0] || undefined,
+      endTime: dateRange.value[1] || undefined,
+    }),
+  { username: '', status: undefined as number | undefined },
+);
+
+/** 单条 / 多选删除（二次确认、删除后回退空页） */
+const { selected, deleting, handleSelectionChange, removeOne, removeSelected } = useBatchDelete<LoginLog>({
+  batchApi: deleteLoginLogsApi,
+  singleApi: deleteLoginLogApi,
+  // 批量删除的确认与跳过大小时按业务名词提示
+  noun: '日志',
+  list,
+  query,
+  getList,
+});
+
+/** 导出登录日志（P2）：按当前筛选条件导出，不带分页参数 */
+async function handleExport(): Promise<void> {
+  if (exporting.value) {
+    return;
+  }
+  exporting.value = true;
+  try {
+    const blob = await exportLoginLogsApi({
+      username: query.username || undefined,
+      status: query.status,
+      startTime: dateRange.value[0] || undefined,
+      endTime: dateRange.value[1] || undefined,
+    });
+    downloadBlob(blob, `登录日志_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
+    ElMessage.success('导出成功');
+  } catch {
+    ElMessage.error('导出失败');
+  } finally {
+    exporting.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="log-login-page">
+    <SearchForm @search="search" @reset="reset">
+      <el-form-item label="账号">
+        <el-input v-model="query.username" placeholder="请输入账号" clearable @keyup.enter="search" />
+      </el-form-item>
+      <el-form-item label="结果">
+        <el-select v-model="query.status" placeholder="全部" clearable style="width: 140px">
+          <el-option label="成功" :value="1" />
+          <el-option label="失败" :value="0" />
+        </el-select>
+      </el-form-item>
+      <template #advanced>
+        <el-form-item label="登录时间">
+          <el-date-picker
+            v-model="dateRange"
+            type="datetimerange"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+          />
+        </el-form-item>
+      </template>
+    </SearchForm>
+
+    <el-card shadow="never">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">登录日志</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button @click="getList">
+            <template #icon><i class="bi bi-arrow-clockwise" /></template>刷新</el-button
+          >
+          <el-button v-permission="'log:login:export'" type="primary" :loading="exporting" @click="handleExport">
+            <template #icon><i class="bi bi-download" /></template>
+            导出
+          </el-button>
+          <el-button
+            v-permission="'log:login:remove'"
+            type="danger"
+            plain
+            :loading="deleting"
+            :disabled="selected.length === 0"
+            @click="removeSelected"
+          >
+            <template #icon><i class="bi bi-trash" /></template>
+            删除{{ selected.length > 0 ? `（${selected.length}）` : '' }}
+          </el-button>
+        </div>
+      </div>
+
+      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="48" align="center" />
+        <el-table-column prop="username" label="账号" min-width="120" />
+        <el-table-column prop="ip" label="IP 地址" width="140" />
+        <el-table-column prop="location" label="归属地" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.location || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="userAgent" label="User-Agent" min-width="220" show-overflow-tooltip />
+        <el-table-column label="结果" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '成功' : '失败' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="message" label="描述" min-width="160" show-overflow-tooltip />
+        <el-table-column label="登录时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button v-permission="'log:login:remove'" type="danger" link @click="removeOne(row as LoginLog)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <Pagination
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        @size-change="changePageSize"
+        @current-change="changePage"
+      />
+    </el-card>
+  </div>
+</template>

@@ -1,0 +1,143 @@
+/**
+ * Element Plus 主题 / 尺寸微调。
+ * 约定：仅做带命名空间的覆盖，不使用 !important 强行改写组件内部外观。
+ */
+
+.el-menu {
+  border-right: none;
+}
+
+/* ============================================================
+ * 侧边栏菜单项高亮优化
+ * 默认 Element Plus 仅用字体颜色表示选中，视觉偏弱。
+ * 这里增加：激活项主色浅底 + 左侧竖条指示（带出现动画）+ 加粗，
+ * 以及 hover 浅底。全部基于 Element Plus 主题变量，亮/暗色自动适配。
+ * 仅作用于侧边栏（.sidebar），不影响其它 el-menu。
+ * ========================================================== */
+.sidebar {
+  .el-menu-item,
+  .el-sub-menu__title {
+    position: relative;
+    height: 48px;
+    margin: 0;
+    line-height: 48px;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  /* hover：浅底提示，不抢选中态 */
+  .el-menu-item:not(.is-active):hover,
+  .el-sub-menu__title:hover {
+    background-color: var(--el-fill-color-light);
+  }
+
+  /* 左侧竖条指示器：默认收起，激活时展开 */
+  .el-menu-item::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 3px;
+    height: 22px;
+    content: '';
+    background-color: var(--el-color-primary);
+    border-radius: 0 3px 3px 0;
+    transform: translateY(-50%) scaleY(0);
+    transition: transform 0.25s ease;
+  }
+
+  .el-menu-item.is-active::before {
+    transform: translateY(-50%) scaleY(1);
+  }
+
+  /* 激活项：主色浅底 + 主色文字 + 加粗 + 图标同步主色 */
+  .el-menu-item.is-active {
+    font-weight: 600;
+    color: var(--el-color-primary);
+    background-color: var(--el-color-primary-light-9);
+
+    .el-icon {
+      color: var(--el-color-primary);
+    }
+  }
+}
+
+/* 多级菜单展开顺滑化（消除展开时的“抖动感”）：
+ * 1) transform: translateZ(0) 把 max-height 动画的反复重排/重绘
+ *    隔离到独立合成层，避免牵动整页掉帧；
+ * 2) display: flow-root 建立 BFC，让展开动画期间容器高度测量稳定，
+ *    消除动画结束时的跳动；
+ * 3) 仅作用于侧边栏，不影响其它 el-menu。 */
+.sidebar .el-menu--inline {
+  display: flow-root;
+  margin: 0;
+
+  /* 二级菜单：浅灰面板与白色一级菜单形成层次感（亮/暗主题自适应） */
+  background-color: var(--el-fill-color);
+  transform: translateZ(0);
+}
+
+/* 二级菜单项 hover：用比面板更深的灰，保证在灰底上可见 */
+.sidebar .el-menu--inline .el-menu-item:not(.is-active):hover {
+  background-color: var(--el-fill-color-dark);
+}
+
+/* 展开/收起过渡改用更自然的缓动曲线，减少“突跳”观感 */
+.sidebar .el-collapse-transition-enter-active,
+.sidebar .el-collapse-transition-leave-active {
+  transition:
+    max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding-top 0.3s ease,
+    padding-bottom 0.3s ease;
+}
+
+/* 侧边栏折叠宽度统一 */
+.el-menu--collapse {
+  width: 64px;
+}
+
+/* 卡片默认内边距微调 */
+.el-card {
+  --el-card-padding: 16px;
+}
+
+/* 卡片标题加粗，层级更清晰 */
+.el-card__header {
+  font-weight: 600;
+}
+
+/* ============================================================
+ * 数据表格整体美化（全站 el-table 生效）
+ * 表头：浅灰底 + 主文字色 + 加粗；悬停：主色浅蓝高亮；
+ * 行距：10px 上下更透气；边框：柔化。不使用斑马纹。
+ * ========================================================== */
+
+/* 双写类名提升优先级：EP 自身在 .el-table 上定义同名变量且加载更晚，
+   同优先级会覆盖本文件 */
+.el-table.el-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-header-text-color: var(--el-text-color-primary);
+  --el-table-border-color: var(--el-border-color-lighter);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+
+  th.el-table__cell {
+    font-weight: 600;
+  }
+
+  .el-table__cell {
+    padding: 10px 0;
+  }
+}
+
+/* 表格操作列按钮间距 */
+.table-action .el-button + .el-button {
+  margin-left: 8px;
+}
+
+/* 搜索表单区域 */
+.search-form {
+  padding: 16px 16px 0;
+  margin-bottom: 12px;
+  background-color: var(--el-bg-color);
+  border-radius: 4px;
+}

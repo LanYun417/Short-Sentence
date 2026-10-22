@@ -1,0 +1,116 @@
+<script setup lang="ts">
+/**
+ * 个人中心页。
+ * 模块职责：展示当前用户信息与头像上传，并编排「修改资料 / 修改密码」两个子表单。
+ */
+
+import { ElMessage } from '@/utils/element';
+import type { UploadRequestOptions } from 'element-plus';
+import { uploadAvatarApi } from '@/api/profile';
+import { useDict } from '@/composables/useDict';
+import { useUserStore } from '@/store/modules/user';
+import ProfileForm from './components/ProfileForm.vue';
+import PasswordForm from './components/PasswordForm.vue';
+import { withUploadToken } from '@/utils/uploadToken';
+
+defineOptions({ name: 'Profile' });
+
+const userStore = useUserStore();
+const uploading = ref(false);
+
+const avatar = computed(() => userStore.avatar);
+const nickname = computed(() => userStore.nickname);
+const username = computed(() => userStore.userInfo?.username ?? '');
+const roles = computed(() => userStore.roles.join('、') || '-');
+
+/** 性别字典（字典管理 → 用户性别 sys_user_sex），把存储值渲染成标签 */
+const { labelOf: genderLabel } = useDict('sys_user_sex');
+
+/** 头像上传前校验 */
+function beforeAvatarUpload(file: File): boolean {
+  const isImage = file.type.startsWith('image/');
+  if (!isImage) {
+    ElMessage.error('头像必须是图片格式');
+    return false;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('头像大小不能超过 2MB');
+    return false;
+  }
+  return true;
+}
+
+/** 自定义头像上传 */
+async function handleAvatarUpload(options: UploadRequestOptions): Promise<void> {
+  uploading.value = true;
+  try {
+    const res = await uploadAvatarApi(options.file as unknown as File);
+    if (userStore.userInfo) {
+      userStore.userInfo.avatar = res.avatar;
+    }
+    ElMessage.success('头像更新成功');
+    options.onSuccess?.(res);
+  } catch (error) {
+    options.onError?.(error as Parameters<NonNullable<UploadRequestOptions['onError']>>[0]);
+  } finally {
+    uploading.value = false;
+  }
+}
+</script>
+
+<template>
+  <div class="profile-page">
+    <el-row :gutter="16">
+      <el-col :xs="24" :md="8">
+        <el-card shadow="never">
+          <template #header>个人信息</template>
+          <div class="py-2 flex flex-col items-center">
+            <el-upload
+              class="cursor-pointer"
+              :show-file-list="false"
+              accept="image/*"
+              :before-upload="beforeAvatarUpload"
+              :http-request="handleAvatarUpload"
+            >
+              <el-avatar v-loading="uploading" :size="100" :src="withUploadToken(avatar)">
+                <el-icon aria-hidden="true"><i class="bi bi-plus" /></el-icon>
+              </el-avatar>
+            </el-upload>
+            <div class="mt-2 text-xs text-muted">点击更换头像</div>
+            <p class="mt-3 text-base font-semibold text-ink">{{ nickname }}</p>
+            <p class="text-[13px] text-muted">@{{ username }}</p>
+          </div>
+          <el-descriptions :column="1" border class="mt-4">
+            <el-descriptions-item label="账号">{{ username }}</el-descriptions-item>
+            <el-descriptions-item label="昵称">{{ nickname }}</el-descriptions-item>
+            <el-descriptions-item label="角色">{{ roles }}</el-descriptions-item>
+            <!-- 部门由管理员在「用户管理」中分配，此处只读展示；未分配时显示 - -->
+            <el-descriptions-item label="所属部门 / 岗位">
+              {{ userStore.userInfo?.deptName || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              {{ userStore.userInfo?.email || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="手机号">
+              {{ userStore.userInfo?.phone || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="性别">
+              {{ genderLabel(userStore.userInfo?.gender) || '-' }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :md="16">
+        <el-card shadow="never">
+          <template #header>修改资料</template>
+          <ProfileForm />
+        </el-card>
+        <el-card shadow="never" class="mt-4">
+          <template #header>修改密码</template>
+          <PasswordForm />
+        </el-card>
+      </el-col>
+    </el-row>
+  </div>
+</template>

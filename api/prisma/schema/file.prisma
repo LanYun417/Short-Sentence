@@ -1,0 +1,39 @@
+// use prisma-next
+// ↑ 首行不可删：VS Code 的 Prisma 扩展**按文件**判定是否启用 Prisma 7 语言服务，
+//   缺失会回落到 v6 语义并误报 `Argument "url" is missing in data source block "db"`。
+//
+// 文件管理
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+/// 文件表
+model File {
+  /// 主键
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 原始文件名
+  originName String   @map("origin_name") @db.VarChar(255)
+  /// 存储相对路径（扩展名分组/文件名）
+  fileName   String   @map("file_name") @db.VarChar(255)
+  /// 磁盘相对路径
+  filePath   String   @map("file_path") @db.VarChar(500)
+  /// 访问 URL
+  fileUrl    String   @map("file_url") @db.VarChar(500)
+  /// MIME（媒体类型）
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  /// 字节
+  size       Int      @default(0) @db.Int
+  /// SHA-256 内容哈希（秒传/去重依据）
+  hash       String?  @db.VarChar(64)
+  /// 上传人 id
+  uploaderId BigInt?  @map("uploader_id") @db.BigInt
+  /// 业务类型（归属模块，如 avatar / notice / contract；空 = 无业务归属）
+  bizType    String?  @map("biz_type") @db.VarChar(50)
+  /// 业务主键（关联业务表 id；空 = 未指定）
+  bizId      BigInt?  @map("biz_id") @db.BigInt
+  /// 创建时间
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([hash])
+  @@index([uploaderId])
+  /// 按业务归属查询（如"某公告的全部附件"）
+  @@index([bizType, bizId])
+  @@map("sys_file")
+}

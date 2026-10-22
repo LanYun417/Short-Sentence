@@ -1,0 +1,147 @@
+// use prisma-next
+// ↑ 首行不可删：VS Code 的 Prisma 扩展**按文件**判定是否启用 Prisma 7 语言服务，
+//   缺失会回落到 v6 语义并误报 `Argument "url" is missing in data source block "db"`。
+//
+// 日志：登录 / 操作 / HTTP 访问
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+/// 登录日志表
+model LoginLog {
+  /// 主键
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 登录账号
+  username  String   @db.VarChar(50)
+  /// 客户端 IP
+  ip        String?  @db.VarChar(50)
+  /// User-Agent（用户代理）
+  userAgent String?  @map("user_agent") @db.VarChar(500)
+  /// IP 归属地（ip2region 离线解析：国家 省份 城市 运营商）
+  location  String?  @db.VarChar(100)
+  /// 1 成功 / 0 失败
+  status    Int      @db.TinyInt
+  /// 结果描述
+  message   String?  @db.VarChar(255)
+  /// 登录时间
+  loginAt   DateTime @default(now()) @map("login_at")
+
+  @@index([loginAt])
+  @@map("sys_login_log")
+}
+
+/// 操作日志表
+model OperationLog {
+  /// 主键
+  id           BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 操作人 id
+  userId       BigInt?  @map("user_id") @db.BigInt
+  /// 操作人账号
+  username     String?  @db.VarChar(50)
+  /// 模块
+  module       String   @db.VarChar(50)
+  /// 动作
+  action       String   @db.VarChar(50)
+  /// HTTP 方法
+  method       String   @db.VarChar(10)
+  /// 请求 URL
+  url          String   @db.VarChar(255)
+  /// 请求参数（密码脱敏）
+  params       String?  @db.Text
+  /// 变更前数据（JSON 文本；敏感字段已脱敏、超长已截断，仅支持的写操作会写）
+  beforeData   String?  @map("before_data") @db.VarChar(2000)
+  /// 变更后数据（JSON 文本；口径同 before_data）
+  afterData    String?  @map("after_data") @db.VarChar(2000)
+  /// 耗时 ms
+  duration     Int      @default(0)
+  /// 1 成功 / 0 失败
+  result       Int      @db.TinyInt
+  /// 失败信息
+  errorMessage String?  @map("error_message") @db.VarChar(500)
+  /// 客户端 IP
+  ip           String?  @db.VarChar(50)
+  /// IP 归属地（ip2region 离线解析：国家 省份 城市 运营商）
+  location     String?  @db.VarChar(100)
+  /// 创建时间
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("sys_operation_log")
+}
+
+/// HTTP 访问日志表（页面查询用；操作者为写入时快照，不与 sys_user 建外键）
+model HttpLog {
+  /// 主键
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 请求完成时间（本地时区 +08:00）
+  time       DateTime @db.DateTime(3)
+  /// HTTP 方法
+  method     String   @db.VarChar(10)
+  /// 请求 URL（含 query）
+  url        String   @db.VarChar(1024)
+  /// HTTP 状态码
+  statusCode Int      @map("status_code") @db.SmallInt
+  /// 耗时 ms
+  duration   Int      @default(0) @db.Int
+  /// 客户端 IP
+  ip         String?  @db.VarChar(64)
+  /// IP 归属地（ip2region 离线解析：国家 省份 城市 运营商）
+  location   String?  @db.VarChar(100)
+  /// User-Agent（用户代理）
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  /// 操作用户 id（0 为匿名/未登录）
+  userId     BigInt   @default(0) @map("user_id") @db.BigInt
+  /// 操作账号（快照）
+  username   String?  @db.VarChar(50)
+  /// 所属部门 id 快照（0 为无）
+  deptId     BigInt   @default(0) @map("dept_id") @db.BigInt
+  /// 所属部门名称（快照）
+  deptName   String?  @map("dept_name") @db.VarChar(50)
+  /// 查询参数（已脱敏）
+  query      Json?
+  /// 请求体（已脱敏、截断 2KB）
+  reqBody    String?  @map("req_body") @db.Text
+  /// 响应内容（截断 2KB；二进制为占位）
+  resBody    String?  @map("res_body") @db.Text
+
+  @@index([time])
+  @@index([method])
+  @@index([statusCode])
+  @@index([method, time])
+  // 操作者筛选索引：显式声明，保证每一次全新部署都带 idx_user_id / idx_dept_id
+  @@index([userId])
+  @@index([deptId])
+  // 操作者前缀检索索引（列表按 username startsWith 过滤）
+  @@index([username])
+  @@map("sys_http_log")
+}
+
+/**
+ * 站内通知（每个接收人一条记录）。
+ * 刻意用「每人一条」而不是「公告一条 + 已读关联表」：
+ * 收件人规模可控（后台用户），而按人存能直接支持未读数、逐条已读与个人通知（强制下线、改密提醒），
+ * 不需要额外的已读关联表与联表查询。
+ */
+model Notice {
+  /// 主键
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 接收人 id
+  userId     BigInt   @map("user_id") @db.BigInt
+  /// 标题
+  title      String   @db.VarChar(200)
+  /// 正文（纯文本，渲染时按纯文本处理，不接受 HTML）
+  content    String   @db.Text
+  /// 类型：1 系统通知 / 2 公告 / 3 安全提醒
+  noticeType Int      @default(1) @map("notice_type") @db.TinyInt
+  /// 点击跳转的前端路由（空 = 不跳转）
+  link       String?  @db.VarChar(255)
+  /// 0 未读 / 1 已读
+  isRead     Int      @default(0) @map("is_read") @db.TinyInt
+  /// 阅读时间
+  readAt     DateTime? @map("read_at")
+  /// 创建人 id（系统自动通知可为空）
+  createdBy  BigInt?  @map("created_by") @db.BigInt
+  /// 创建时间
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  /// 个人收件箱列表：按人 + 未读优先 + 时间倒序
+  @@index([userId, isRead, createdAt])
+  @@map("sys_notice")
+}
