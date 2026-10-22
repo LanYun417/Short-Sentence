@@ -86,6 +86,46 @@ export type HttpLog = Prisma.HttpLogModel
  */
 export type Notice = Prisma.NoticeModel
 /**
+ * Model ClientUser
+ * 客户端用户（与后台 sys_user 彻底隔离，独立鉴权体系）
+ */
+export type ClientUser = Prisma.ClientUserModel
+/**
+ * Model SentenceCategory
+ * 场景分类（题目的主题归类，如「咖啡店点单」「机场通关」）
+ */
+export type SentenceCategory = Prisma.SentenceCategoryModel
+/**
+ * Model Sentence
+ * 句子题库（图片由定时任务预生成，status=ready 才下发用户端）
+ */
+export type Sentence = Prisma.SentenceModel
+/**
+ * Model SentenceGenTask
+ * 每日生成批次（一条 = 一天的批量任务）
+ */
+export type SentenceGenTask = Prisma.SentenceGenTaskModel
+/**
+ * Model SentenceRecord
+ * 答题记录（一行 = 一次作答；复习池由 isCorrect=0 且 nextReviewAt<=now 派生，不另建表）
+ */
+export type SentenceRecord = Prisma.SentenceRecordModel
+/**
+ * Model SentenceFavorite
+ * 收藏夹
+ */
+export type SentenceFavorite = Prisma.SentenceFavoriteModel
+/**
+ * Model UserCheckin
+ * 每日打卡（一行 = 一个用户一天的完成记录）
+ */
+export type UserCheckin = Prisma.UserCheckinModel
+/**
+ * Model AiCallLog
+ * AI 调用日志（生题/生图/造句/词根，计费与排障依据）
+ */
+export type AiCallLog = Prisma.AiCallLogModel
+/**
  * Model User
  * 用户表
  */
@@ -130,13 +170,11 @@ export type RoleDept = Prisma.RoleDeptModel
 export type UserMenu = Prisma.UserMenuModel
 /**
  * Model TaskLog
- * *
- *  * 定时任务执行记录表。
- *  *
- *  * 每次执行（自动触发或手动触发）落一条记录，是「定时任务管理」页的历史轨迹来源。
- *  * 刻意只记录**执行结果**而不记录任务定义（cron 表达式、启停状态）：
- *  * 任务定义在代码里（见 src/modules/task/task.service.ts），是唯一事实来源；
- *  * 若把定义也存进库，就会出现「库里的 cron」与「代码里的 cron」两套口径，
- *  * 改动其中一处就会漂移——这正是本项目在角色授权上踩过的坑。
+ * 定时任务执行记录表
+ * 每次执行（自动触发或手动触发）落一条记录，是「定时任务管理」页的历史轨迹来源。
+ * 刻意只记录**执行结果**而不记录任务定义（cron 表达式、启停状态）：
+ * 任务定义在代码里（见 src/modules/task/task.service.ts），是唯一事实来源；
+ * 若把定义也存进库，就会出现「库里的 cron」与「代码里的 cron」两套口径，
+ * 改动其中一处就会漂移——这正是本项目在角色授权上踩过的坑。
  */
 export type TaskLog = Prisma.TaskLogModel

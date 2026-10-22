@@ -32,7 +32,8 @@ export class JwtService {
    *
    * 载荷形状：顶层直接放 `userId` / `username`，
    * 外加 jose 自动写入的 `iat` / `exp`（鉴权判定依赖 `iat`）；
-   * `sid` 存在时会话可被在线用户页强制下线，缺省表示该令牌不参与会话管理。
+   * `sid` 存在时会话可被在线用户页强制下线，缺省表示该令牌不参与会话管理；
+   * `tokenType` 区分后台（admin）与客户端（client）两套用户体系，缺省按 admin 处理（向后兼容）。
    */
   async signAccessToken(payload: JwtUserPayload, sid?: string): Promise<string> {
     return this.sign(payload, this.accessKey, config.jwt.accessExpiresIn, sid);
@@ -45,7 +46,11 @@ export class JwtService {
 
   /** 统一签发：三处（access / refresh）只有密钥与有效期不同，抽出来避免各写一遍 sid 处理。 */
   private async sign(payload: JwtUserPayload, key: Uint8Array, expiresIn: string, sid?: string): Promise<string> {
-    const claims: Record<string, unknown> = { userId: payload.userId, username: payload.username };
+    const claims: Record<string, unknown> = {
+      userId: payload.userId,
+      username: payload.username,
+      tokenType: payload.tokenType ?? 'admin',
+    };
     if (sid) {
       claims.sid = sid;
     }
@@ -66,6 +71,7 @@ export class JwtService {
     return {
       userId: Number(payload.userId),
       username: typeof payload.username === 'string' ? payload.username : '',
+      tokenType: payload.tokenType === 'client' ? 'client' : 'admin',
       iat: Number(payload.iat ?? 0),
       exp: Number(payload.exp ?? 0),
       sid: typeof payload.sid === 'string' ? payload.sid : undefined,
@@ -81,6 +87,7 @@ export class JwtService {
     return {
       userId: Number(payload.userId),
       username: typeof payload.username === 'string' ? payload.username : '',
+      tokenType: payload.tokenType === 'client' ? 'client' : 'admin',
       iat: Number(payload.iat ?? 0),
       exp: Number(payload.exp ?? 0),
       sid: typeof payload.sid === 'string' ? payload.sid : undefined,

@@ -632,6 +632,67 @@ const MENU_TREE: MenuSeedNode[] = [
     visible: Status.DISABLED,
     keepAlive: 1,
   },
+  {
+    key: 'sentence',
+    menuName: '短句管理',
+    menuType: MenuType.DIRECTORY,
+    path: '/sentence',
+    icon: 'chat-quote',
+    sort: 7,
+    visible: Status.ENABLED,
+    redirect: '/sentence/list',
+    children: [
+      {
+        key: 'sentence:list',
+        menuName: '题库管理',
+        menuType: MenuType.MENU,
+        path: '/sentence/list',
+        component: 'sentence/index',
+        icon: 'card-text',
+        permission: 'sentence:list',
+        sort: 1,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:query',
+            menuName: '查询题目',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:query',
+            sort: 1,
+          },
+          {
+            key: 'sentence:add',
+            menuName: '新增题目',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:add',
+            sort: 2,
+          },
+          {
+            key: 'sentence:edit',
+            menuName: '编辑题目',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:edit',
+            sort: 3,
+          },
+          {
+            key: 'sentence:remove',
+            menuName: '下架题目',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:remove',
+            sort: 4,
+          },
+          {
+            key: 'sentence:gen',
+            menuName: '生成题库',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:gen',
+            sort: 5,
+          },
+        ],
+      },
+    ],
+  },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）
 ];
 
@@ -1198,8 +1259,42 @@ export async function runSeed(prisma: PrismaService): Promise<void> {
 
   await seedDict(prisma);
   await seedConfig(prisma);
+  await seedSentenceCategories(prisma);
 
   logger.log('种子数据初始化完成');
+}
+
+/* --------------------------------- 短句分类种子 -------------------------------- */
+
+/** 默认场景分类（幂等；名称为唯一业务键）。 */
+const SENTENCE_CATEGORY_SEEDS: Array<{ name: string; nameEn: string; icon: string; sort: number }> = [
+  { name: '日常生活', nameEn: 'Daily Life', icon: 'house', sort: 1 },
+  { name: '职场办公', nameEn: 'Workplace', icon: 'briefcase', sort: 2 },
+  { name: '旅行出行', nameEn: 'Travel', icon: 'airplane', sort: 3 },
+  { name: '餐饮美食', nameEn: 'Dining', icon: 'cup-hot', sort: 4 },
+  { name: '社交闲聊', nameEn: 'Social', icon: 'people', sort: 5 },
+  { name: '学习成长', nameEn: 'Learning', icon: 'book', sort: 6 },
+];
+
+/** 写入场景分类（幂等：按 name 去重）。 */
+async function seedSentenceCategories(prisma: PrismaService): Promise<void> {
+  let created = 0;
+  for (const seed of SENTENCE_CATEGORY_SEEDS) {
+    const existing = await prisma.sentenceCategory.findFirst({ where: { name: seed.name }, select: { id: true } });
+    if (!existing) {
+      await prisma.sentenceCategory.create({
+        data: {
+          name: seed.name,
+          nameEn: seed.nameEn,
+          icon: seed.icon,
+          sort: seed.sort,
+          status: Status.ENABLED,
+        },
+      });
+      created += 1;
+    }
+  }
+  logger.log(`短句分类数据完成，共 ${SENTENCE_CATEGORY_SEEDS.length} 个（新建 ${created} 个）`);
 }
 
 /**

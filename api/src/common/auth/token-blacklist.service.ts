@@ -8,12 +8,18 @@
  * - 无需改动 JWT 结构（不引入 `jti`），后端鉴权链路改动最小；
  * - 判定式：`payload.iat * 1000 < 登出时间` → 失效（与 `passwordChangedAt` 检查同构）。
  *
+ * scope 命名空间：后台（admin）与客户端（client）两套用户表的 id 空间相互独立，
+ * 黑名单键必须带 scope，否则客户端用户 id 会与后台用户 id 互相误杀。
+ *
  * 降级：Redis 不可用/未配置时，读返回「未失效」、写静默跳过，绝不阻断主流程。
  */
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
 
-/** 黑名单键前缀（按用户维度）。 */
+/** 令牌体系（与 JWT 的 tokenType 一致）。 */
+export type TokenScope = 'admin' | 'client';
+
+/** 黑名单键前缀（按体系 + 用户维度）。 */
 const LOGOUT_KEY_PREFIX = 'auth:logout:';
 
 /**
@@ -29,9 +35,11 @@ export class TokenBlacklistService {
   /**
    * 记录用户登出时间（登出即令其旧令牌失效）。
    * 失败静默（降级：不影响接口返回）。
+   * @param userId 用户 ID
+   * @param scope 令牌体系（默认 admin；客户端用户登出传 'client'）
    */
-  async recordLogout(userId: number): Promise<void> {
-    await this.redis.set(`${LOGOUT_KEY_PREFIX}${userId}`, String(Date.now()), LOGOUT_TTL_MS);
+  async recordLogout(userId: number, scope: TokenScope = 'admin'): Promise<void> {
+    await this.redis.set(`${LOGOUT_KEY_PREFIX}${scope}:${userId}`, String(Date.now()), LOGOUT_TTL_MS);
   }
 
   /**
@@ -42,8 +50,8 @@ export class TokenBlacklistService {
    * 新令牌会被判定为已失效——用户刚登录就被踢，且现象难以复现（只在同一秒内发生）。
    * 登录成功即代表该用户重新建立了会话，清掉旧标记即可。
    */
-  async clearLogout(userId: number): Promise<void> {
-    await this.redis.del(`${LOGOUT_KEY_PREFIX}${userId}`);
+  async clearLogout(userId: number, scope: TokenScope = 'admin'): Promise<void> {
+    await this.redis.del(`${LOGOUT_KEY_PREFIX}${scope}:${userId}`);
   }
 
   /**
@@ -51,10 +59,11 @@ export class TokenBlacklistService {
    *
    * @param userId 用户 ID
    * @param iat 令牌签发时间（秒，JWT 标准 claims）
+   * @param scope 令牌体系（默认 admin）
    * @returns `true`=已失效（应拒绝）；Redis 不可用时返回 `false`（降级放行）
    */
-  async isTokenRevoked(userId: number, iat: number): Promise<boolean> {
-    const ts = await this.redis.get(`${LOGOUT_KEY_PREFIX}${userId}`);
+  async isTokenRevoked(userId: number, iat: number, scope: TokenScope = 'admin'): Promise<boolean> {
+    const ts = await this.redis.get(`${LOGOUT_KEY_PREFIX}${scope}:${userId}`);
     if (!ts) {
       return false;
     }

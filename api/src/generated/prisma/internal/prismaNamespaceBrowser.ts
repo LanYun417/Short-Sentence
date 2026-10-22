@@ -59,6 +59,14 @@ export const ModelName = {
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
   Notice: 'Notice',
+  ClientUser: 'ClientUser',
+  SentenceCategory: 'SentenceCategory',
+  Sentence: 'Sentence',
+  SentenceGenTask: 'SentenceGenTask',
+  SentenceRecord: 'SentenceRecord',
+  SentenceFavorite: 'SentenceFavorite',
+  UserCheckin: 'UserCheckin',
+  AiCallLog: 'AiCallLog',
   User: 'User',
   Role: 'Role',
   Menu: 'Menu',
@@ -218,6 +226,132 @@ export const NoticeScalarFieldEnum = {
 } as const
 
 export type NoticeScalarFieldEnum = (typeof NoticeScalarFieldEnum)[keyof typeof NoticeScalarFieldEnum]
+
+
+export const ClientUserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  password: 'password',
+  nickname: 'nickname',
+  avatarFileId: 'avatarFileId',
+  birthday: 'birthday',
+  gender: 'gender',
+  signature: 'signature',
+  status: 'status',
+  lastLoginAt: 'lastLoginAt',
+  passwordChangedAt: 'passwordChangedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ClientUserScalarFieldEnum = (typeof ClientUserScalarFieldEnum)[keyof typeof ClientUserScalarFieldEnum]
+
+
+export const SentenceCategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  nameEn: 'nameEn',
+  icon: 'icon',
+  sort: 'sort',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type SentenceCategoryScalarFieldEnum = (typeof SentenceCategoryScalarFieldEnum)[keyof typeof SentenceCategoryScalarFieldEnum]
+
+
+export const SentenceScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  difficulty: 'difficulty',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  ipa: 'ipa',
+  scenePrompt: 'scenePrompt',
+  imageFileId: 'imageFileId',
+  source: 'source',
+  status: 'status',
+  genTaskId: 'genTaskId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SentenceScalarFieldEnum = (typeof SentenceScalarFieldEnum)[keyof typeof SentenceScalarFieldEnum]
+
+
+export const SentenceGenTaskScalarFieldEnum = {
+  id: 'id',
+  bizDate: 'bizDate',
+  targetCount: 'targetCount',
+  textDone: 'textDone',
+  imageDone: 'imageDone',
+  failCount: 'failCount',
+  status: 'status',
+  triggerType: 'triggerType',
+  errorMessage: 'errorMessage',
+  startedAt: 'startedAt',
+  finishedAt: 'finishedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SentenceGenTaskScalarFieldEnum = (typeof SentenceGenTaskScalarFieldEnum)[keyof typeof SentenceGenTaskScalarFieldEnum]
+
+
+export const SentenceRecordScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceId: 'sentenceId',
+  userAnswer: 'userAnswer',
+  isCorrect: 'isCorrect',
+  elapsedMs: 'elapsedMs',
+  reviewLevel: 'reviewLevel',
+  nextReviewAt: 'nextReviewAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SentenceRecordScalarFieldEnum = (typeof SentenceRecordScalarFieldEnum)[keyof typeof SentenceRecordScalarFieldEnum]
+
+
+export const SentenceFavoriteScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceId: 'sentenceId',
+  createdAt: 'createdAt'
+} as const
+
+export type SentenceFavoriteScalarFieldEnum = (typeof SentenceFavoriteScalarFieldEnum)[keyof typeof SentenceFavoriteScalarFieldEnum]
+
+
+export const UserCheckinScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  checkinDate: 'checkinDate',
+  doneCount: 'doneCount',
+  goalCount: 'goalCount',
+  streak: 'streak',
+  posterFileId: 'posterFileId',
+  createdAt: 'createdAt'
+} as const
+
+export type UserCheckinScalarFieldEnum = (typeof UserCheckinScalarFieldEnum)[keyof typeof UserCheckinScalarFieldEnum]
+
+
+export const AiCallLogScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  provider: 'provider',
+  model: 'model',
+  bizId: 'bizId',
+  promptTokens: 'promptTokens',
+  completionTokens: 'completionTokens',
+  latencyMs: 'latencyMs',
+  status: 'status',
+  errorMessage: 'errorMessage',
+  createdAt: 'createdAt'
+} as const
+
+export type AiCallLogScalarFieldEnum = (typeof AiCallLogScalarFieldEnum)[keyof typeof AiCallLogScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -481,6 +615,73 @@ export const NoticeOrderByRelevanceFieldEnum = {
 } as const
 
 export type NoticeOrderByRelevanceFieldEnum = (typeof NoticeOrderByRelevanceFieldEnum)[keyof typeof NoticeOrderByRelevanceFieldEnum]
+
+
+export const ClientUserOrderByRelevanceFieldEnum = {
+  email: 'email',
+  password: 'password',
+  nickname: 'nickname',
+  gender: 'gender',
+  signature: 'signature'
+} as const
+
+export type ClientUserOrderByRelevanceFieldEnum = (typeof ClientUserOrderByRelevanceFieldEnum)[keyof typeof ClientUserOrderByRelevanceFieldEnum]
+
+
+export const SentenceCategoryOrderByRelevanceFieldEnum = {
+  name: 'name',
+  nameEn: 'nameEn',
+  icon: 'icon'
+} as const
+
+export type SentenceCategoryOrderByRelevanceFieldEnum = (typeof SentenceCategoryOrderByRelevanceFieldEnum)[keyof typeof SentenceCategoryOrderByRelevanceFieldEnum]
+
+
+export const SentenceOrderByRelevanceFieldEnum = {
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  ipa: 'ipa',
+  scenePrompt: 'scenePrompt',
+  source: 'source',
+  status: 'status'
+} as const
+
+export type SentenceOrderByRelevanceFieldEnum = (typeof SentenceOrderByRelevanceFieldEnum)[keyof typeof SentenceOrderByRelevanceFieldEnum]
+
+
+export const SentenceGenTaskOrderByRelevanceFieldEnum = {
+  bizDate: 'bizDate',
+  status: 'status',
+  triggerType: 'triggerType',
+  errorMessage: 'errorMessage'
+} as const
+
+export type SentenceGenTaskOrderByRelevanceFieldEnum = (typeof SentenceGenTaskOrderByRelevanceFieldEnum)[keyof typeof SentenceGenTaskOrderByRelevanceFieldEnum]
+
+
+export const SentenceRecordOrderByRelevanceFieldEnum = {
+  userAnswer: 'userAnswer'
+} as const
+
+export type SentenceRecordOrderByRelevanceFieldEnum = (typeof SentenceRecordOrderByRelevanceFieldEnum)[keyof typeof SentenceRecordOrderByRelevanceFieldEnum]
+
+
+export const UserCheckinOrderByRelevanceFieldEnum = {
+  checkinDate: 'checkinDate'
+} as const
+
+export type UserCheckinOrderByRelevanceFieldEnum = (typeof UserCheckinOrderByRelevanceFieldEnum)[keyof typeof UserCheckinOrderByRelevanceFieldEnum]
+
+
+export const AiCallLogOrderByRelevanceFieldEnum = {
+  type: 'type',
+  provider: 'provider',
+  model: 'model',
+  status: 'status',
+  errorMessage: 'errorMessage'
+} as const
+
+export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevanceFieldEnum)[keyof typeof AiCallLogOrderByRelevanceFieldEnum]
 
 
 export const UserOrderByRelevanceFieldEnum = {

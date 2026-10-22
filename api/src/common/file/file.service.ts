@@ -117,6 +117,12 @@ export class FileService {
     return { duplicated: false, file: this.toFileItem(record) };
   }
 
+  /** 按 id 查文件（供「封面图/头像」等按 id 取 URL 的业务使用）。 */
+  async findById(id: number): Promise<FileItem | null> {
+    const record = await this.prisma.file.findUnique({ where: { id: BigInt(id) } });
+    return record ? this.toFileItem(record) : null;
+  }
+
   /** 分页查询文件列表。 */
   async list(query: {
     skip: number;

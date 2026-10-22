@@ -1,0 +1,52 @@
+/**
+ * 刷题控制器（/api/client/questions）。
+ * 权限口径：需登录（client 令牌）；不使用权限码，数据按 userId 隔离。
+ */
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
+import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
+import { IdParamDto } from '../../../common/dto/id-param.dto.js';
+import type { ClientUserContext } from '../../../common/types.js';
+import { QuestionsService } from './questions.service.js';
+import { AnswerSentenceDto } from './dto.js';
+
+@Controller('client/questions')
+export class QuestionsController {
+  constructor(private readonly questions: QuestionsService) {}
+
+  /** 下一张卡（8:2 新题/复习混抽；不含答案）。 */
+  @Get('next')
+  next(@CurrentClientUser() user: ClientUserContext) {
+    return this.questions.next(user.userId);
+  }
+
+  /** 提交答案（返回正确答案，用于翻转面）。 */
+  @Post(':id/answer')
+  async answer(
+    @CurrentClientUser() user: ClientUserContext,
+    @Param() params: IdParamDto,
+    @Body() dto: AnswerSentenceDto,
+  ) {
+    return this.questions.answer(user.userId, params.id, dto);
+  }
+
+  /** 收藏 / 取消收藏。 */
+  @Post(':id/favorite')
+  async favorite(
+    @CurrentClientUser() user: ClientUserContext,
+    @Param() params: IdParamDto,
+  ): Promise<ResponseEnvelope<{ favorited: boolean }>> {
+    const result = await this.questions.toggleFavorite(user.userId, params.id);
+    return { __raw: true, data: result, message: result.favorited ? '已收藏' : '已取消收藏' };
+  }
+
+  /** 取消收藏（显式 DELETE，语义优先）。 */
+  @Delete(':id/favorite')
+  async unfavorite(
+    @CurrentClientUser() user: ClientUserContext,
+    @Param() params: IdParamDto,
+  ): Promise<ResponseEnvelope<{ favorited: boolean }>> {
+    const result = await this.questions.toggleFavorite(user.userId, params.id);
+    return { __raw: true, data: result, message: '已取消收藏' };
+  }
+}

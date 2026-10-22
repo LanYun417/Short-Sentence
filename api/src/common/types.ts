@@ -7,6 +7,12 @@
 export interface JwtUserPayload {
   userId: number;
   username: string;
+  /**
+   * 令牌归属体系：admin = 后台管理用户（sys_user）；client = 客户端用户（client_user）。
+   * 两套用户表共用同一对签发密钥，必须靠该字段区分——否则客户端 userId 会
+   * 撞上后台 userId 造成越权（客户端 id=5 冒充后台 id=5）。
+   */
+  tokenType?: 'admin' | 'client';
 }
 
 /** 解码后的 JWT 载荷（含签发/过期时间戳，单位秒）。 */
@@ -33,6 +39,16 @@ export interface AuthUserContext extends JwtUserPayload {
   deptId: number;
   /** 当前用户所属部门名称（未分配为 null），用于个人中心展示与 HTTP 日志快照 */
   deptName: string | null;
+  /** 令牌签发时间（秒），用于登出黑名单与改密失效判定 */
+  tokenIat?: number;
+}
+
+/** 客户端用户上下文（client 令牌鉴权后挂载到 req.clientUser，与后台用户互斥）。 */
+export interface ClientUserContext {
+  userId: number;
+  email: string;
+  nickname: string;
+  status: number;
   /** 令牌签发时间（秒），用于登出黑名单与改密失效判定 */
   tokenIat?: number;
 }

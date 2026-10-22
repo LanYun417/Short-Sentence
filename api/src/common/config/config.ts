@@ -274,6 +274,55 @@ export const config = {
     /** 分批取数大小（默认 1000，兼顾查询次数与单批内存） */
     batchSize: Math.min(Math.max(toNumber(process.env.EXPORT_BATCH_SIZE, 1000), 100), 5000),
   },
+  /**
+   * AI 能力（「短句」题库生成 + 用户端造句/词根）。
+   * 密钥缺失时相关功能整体禁用（接口返回明确错误），**不阻断服务启动**——
+   * 与 JWT 的 fail-fast 区别：JWT 缺失等于鉴权体系不可用，AI 缺失只是增值功能不可用。
+   */
+  ai: {
+    nvidia: {
+      /** NVIDIA integrate（OpenAI 兼容）入口，DeepSeek 生题走这里 */
+      baseUrl: process.env.AI_NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1',
+      apiKey: process.env.AI_NVIDIA_API_KEY ?? '',
+      model: process.env.AI_NVIDIA_MODEL ?? 'deepseek-ai/deepseek-v4.1-flash',
+    },
+    agnes: {
+      /** Agnes AI 生图入口 */
+      baseUrl: process.env.AI_AGNES_BASE_URL ?? 'https://api.agnes-ai.cn/v1',
+      apiKey: process.env.AI_AGNES_API_KEY ?? '',
+      model: process.env.AI_AGNES_MODEL ?? 'agnes-image-2.5-flash',
+    },
+    /** 生题并发上限（NVIDIA 约 40 RPM，保守取 2） */
+    textConcurrency: Math.max(1, toNumber(process.env.AI_TEXT_CONCURRENCY, 2)),
+    /** 生图并发上限（Agnes 限流未知，保守取 3） */
+    imageConcurrency: Math.max(1, toNumber(process.env.AI_IMAGE_CONCURRENCY, 3)),
+    /** 瞬时错误最大重试次数 */
+    maxAttempts: Math.max(1, toNumber(process.env.AI_MAX_ATTEMPTS, 3)),
+    /** 单次 AI 请求超时（生图可能数十秒，官方建议 60s~360s） */
+    requestTimeoutMs: Math.max(1000, toNumber(process.env.AI_REQUEST_TIMEOUT_MS, 180_000)),
+  },
+  /** 「短句」业务配置 */
+  sentence: {
+    /** 每日批量生成目标题数 */
+    dailyTarget: Math.max(1, toNumber(process.env.SENTENCE_DAILY_TARGET, 300)),
+    /** 用户每日目标题数（打卡完成线） */
+    dailyGoal: Math.max(1, toNumber(process.env.SENTENCE_DAILY_GOAL, 20)),
+    /** 是否启用每日定时生成 */
+    cronEnabled: toBoolean(process.env.SENTENCE_CRON_ENABLED, true),
+    /** 定时生成时刻（本地时间，默认 00:30，避开 00:05 日志归档与 00:10 保留清理） */
+    cronHour: toNumber(process.env.SENTENCE_CRON_HOUR, 0),
+    cronMinute: toNumber(process.env.SENTENCE_CRON_MINUTE, 30),
+    /** 配图尺寸档位与宽高比（16:9 卡片图，2K 档输出 2624x1472） */
+    imageSize: process.env.SENTENCE_IMAGE_SIZE ?? '2K',
+    imageRatio: process.env.SENTENCE_IMAGE_RATIO ?? '16:9',
+    /** 入库前缩放上限（宽 px）与 webp 质量 */
+    imageMaxWidth: toNumber(process.env.SENTENCE_IMAGE_MAX_WIDTH, 1280),
+    imageQuality: Math.min(100, Math.max(1, toNumber(process.env.SENTENCE_IMAGE_QUALITY, 80))),
+    /** 抽题时未做过的新题占比（其余按比例从复习池混入） */
+    newRatio: Math.min(1, Math.max(0, toNumber(process.env.SENTENCE_NEW_RATIO, 0.8))),
+    /** 防重窗口：最近 N 次答过的题不再出现（0 = 不启用） */
+    antiRepeatWindow: Math.max(0, toNumber(process.env.SENTENCE_ANTI_REPEAT_WINDOW, 10)),
+  },
 } as const;
 
 export type AppConfig = typeof config;

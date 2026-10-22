@@ -15,11 +15,15 @@ import { RedisService } from '../redis/redis.service.js';
 // 必须为**值导入**（非 import type）：Nest 依赖注入需要运行时的构造函数引用，
 // 用 import type 会在 emitDecoratorMetadata 下退化为 Function，导致无法解析依赖。
 import { AuthUserService } from './auth-user.service.js';
-import type { AuthContext, AuthUserContext } from '../types.js';
+import { ClientAuthService } from './client-auth.service.js';
+import type { AuthContext, AuthUserContext, ClientUserContext, JwtPayload } from '../types.js';
 
 /** 请求对象扩展：挂载鉴权上下文。 */
 export interface AuthenticatedRequest extends Request {
+  /** 后台管理用户上下文（admin 令牌） */
   user?: AuthUserContext;
+  /** 客户端用户上下文（client 令牌；与 user 互斥，不会同时存在） */
+  clientUser?: ClientUserContext;
   /** 已加载的完整鉴权上下文，供控制器复用避免重复查库 */
   authContext?: AuthContext | null;
   tokenIat?: number;
@@ -49,26 +53,16 @@ export function extractToken(req: Request): string | null {
 }
 
 /**
- * 执行鉴权核心逻辑，返回用户上下文；失败抛 AppException。
- * 供守卫与静态资源中间件复用。
+ * 提取并校验 accessToken，返回解码载荷；失败抛 AppException。
+ * 守卫的 admin / client 两条分支共用（避免同一请求验两遍签）。
  */
-export async function authenticateRequest(
-  req: Request,
-  jwtService: JwtService,
-  blacklist: TokenBlacklistService,
-  authUserService: AuthUserService,
-  sessionService: SessionService,
-  redis: RedisService,
-  sidHolder: { value?: string } = {},
-): Promise<{ user: AuthUserContext; context: AuthContext | null }> {
+export async function decodeAccessToken(req: Request, jwtService: JwtService): Promise<JwtPayload> {
   const token = extractToken(req);
   if (!token) {
     throw AppException.unauthorized('未提供访问令牌');
   }
-
-  let payload;
   try {
-    payload = await jwtService.verifyAccessToken(token);
+    return await jwtService.verifyAccessToken(token);
   } catch (error) {
     if (jwtService.isExpiredError(error)) {
       throw AppException.unauthorized('登录已过期，请重新登录');
@@ -81,6 +75,32 @@ export async function authenticateRequest(
     // 兜底：任何其它解析异常同样按 401 处理（而非 500），避免泄露实现细节
     throw AppException.unauthorized('访问令牌无效');
   }
+}
+
+/**
+ * 执行 admin 体系鉴权核心逻辑，返回用户上下文；失败抛 AppException。
+ * 供守卫与静态资源中间件复用。
+ *
+ * @param req 请求对象
+ * @param jwtService JWT 服务
+ * @param blacklist 黑名单服务
+ * @param authUserService 后台用户查询服务
+ * @param sessionService 会话服务
+ * @param redis Redis 服务
+ * @param sidHolder  sid 出参容器
+ * @param preloadedPayload 已由调用方验签的载荷（守卫主流程传入，避免重复验签）
+ */
+export async function authenticateRequest(
+  req: Request,
+  jwtService: JwtService,
+  blacklist: TokenBlacklistService,
+  authUserService: AuthUserService,
+  sessionService: SessionService,
+  redis: RedisService,
+  sidHolder: { value?: string } = {},
+  preloadedPayload?: JwtPayload,
+): Promise<{ user: AuthUserContext; context: AuthContext | null }> {
+  const payload = preloadedPayload ?? (await decodeAccessToken(req, jwtService));
 
   const context = await authUserService.loadAuthUser(Number(payload.userId));
   if (!context) {
@@ -133,6 +153,11 @@ export async function authenticateRequest(
 /**
  * 全局鉴权守卫（APP_GUARD）。
  * 默认全部接口需鉴权，`@Public()` 显式放行（登录、验证码、健康检查、接口文档）。
+ *
+ * 双体系分流：accessToken 携带 `tokenType` claim——
+ * - `admin`：走后台用户链路（loadAuthUser + 会话/黑名单校验），挂 `req.user`；
+ * - `client`：走客户端用户链路（loadClientUser + 黑名单校验），挂 `req.clientUser`。
+ * 两套用户表 id 空间独立，client 令牌**不可能**通过 admin 链路校验（反之亦然），从根上防越权。
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -141,6 +166,7 @@ export class AuthGuard implements CanActivate {
     private readonly jwtService: JwtService,
     private readonly blacklist: TokenBlacklistService,
     private readonly authUserService: AuthUserService,
+    private readonly clientAuthService: ClientAuthService,
     private readonly sessionService: SessionService,
     private readonly redis: RedisService,
   ) {}
@@ -156,6 +182,14 @@ export class AuthGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const sidHolder: { value?: string } = {};
+    // 先验签拿到载荷，再按 tokenType 分流（同一请求只验一次签）
+    const payload = await decodeAccessToken(req, this.jwtService);
+
+    if (payload.tokenType === 'client') {
+      await this.authenticateClient(req, payload);
+      return true;
+    }
+
     const { user, context: authContext } = await authenticateRequest(
       req,
       this.jwtService,
@@ -164,12 +198,44 @@ export class AuthGuard implements CanActivate {
       this.sessionService,
       this.redis,
       sidHolder,
+      payload,
     );
     req.user = user;
     req.tokenIat = user.tokenIat;
     req.tokenSid = sidHolder.value;
     req.authContext = authContext;
     return true;
+  }
+
+  /** client 体系鉴权：查库校验状态、改密失效与登出黑名单，挂载 req.clientUser。 */
+  private async authenticateClient(req: AuthenticatedRequest, payload: JwtPayload): Promise<void> {
+    const clientUser = await this.clientAuthService.loadClientUser(payload.userId);
+    if (!clientUser) {
+      throw AppException.unauthorized('用户不存在');
+    }
+    // 账号禁用即失效
+    if (clientUser.status !== Status.ENABLED) {
+      throw AppException.unauthorized(ERROR_MESSAGE.ACCOUNT_DISABLED);
+    }
+    // 改密后旧 Token 失效
+    if (clientUser.passwordChangedAt) {
+      const changedAt = new Date(clientUser.passwordChangedAt).getTime();
+      if (payload.iat * 1000 < changedAt) {
+        throw AppException.unauthorized(ERROR_MESSAGE.PASSWORD_CHANGED);
+      }
+    }
+    // 登出后旧 Token 失效（Redis 黑名单，scope=client 与后台隔离）
+    if (await this.blacklist.isTokenRevoked(clientUser.userId, payload.iat, 'client')) {
+      throw AppException.unauthorized(ERROR_MESSAGE.LOGOUT_INVALIDATED);
+    }
+    req.clientUser = {
+      userId: clientUser.userId,
+      email: clientUser.email,
+      nickname: clientUser.nickname,
+      status: clientUser.status,
+      tokenIat: payload.iat,
+    };
+    req.tokenIat = payload.iat;
   }
 }
 
@@ -181,6 +247,17 @@ export const CurrentUser = createParamDecorator((_data: unknown, context: Execut
   }
   return req.user;
 });
+
+/** 参数装饰器：读取当前登录的客户端用户（仅 client 体系控制器使用）。 */
+export const CurrentClientUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): ClientUserContext => {
+    const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (!req.clientUser) {
+      throw AppException.unauthorized();
+    }
+    return req.clientUser;
+  },
+);
 
 /** 参数装饰器：读取已加载的鉴权上下文（含角色码/权限码），供控制器复用避免重复查库。 */
 export const ReqAuthContext = createParamDecorator((_data: unknown, context: ExecutionContext) => {

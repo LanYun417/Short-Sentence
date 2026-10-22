@@ -31,6 +31,8 @@ import { HealthModule } from './modules/health/health.module.js';
 import { MonitorModule } from './modules/monitor/monitor.module.js';
 import { NoticeModule } from './modules/notice/notice.module.js';
 import { TaskModule } from './modules/task/task.module.js';
+import { ClientModule } from './modules/client/client.module.js';
+import { SentenceModule } from './modules/sentence/sentence.module.js';
 
 @Module({
   imports: [
@@ -57,6 +59,9 @@ import { TaskModule } from './modules/task/task.module.js';
     LogsModule,
     DocsModule,
     TaskModule,
+    // 「短句」：客户端用户体系（/api/client/*）与题库管理（/api/sentences，含每日生成流水线）
+    ClientModule,
+    SentenceModule,
   ],
   providers: [
     // 守卫顺序：先鉴权（挂 req.user），再校验权限码
