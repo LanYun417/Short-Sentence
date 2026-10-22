@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/* 暗色模式跟随 color-mode 的 .dark class（class 策略） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 正文中文字体走浏览器默认回退（不引入 @theme 字体声明，
+   避免 @nuxt/fonts 把系统字体名当可下载字体解析而构建失败） */
+
+/* 闪卡 3D 翻转所需的透视容器 */
+.card-scene {
+  perspective: 1600px;
+}
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-3d.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  backface-visibility: hidden;
+}
+
+.card-face--back {
+  transform: rotateY(180deg);
+}

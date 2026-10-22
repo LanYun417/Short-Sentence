@@ -1,0 +1,97 @@
+/**
+ * SSE 流式消费（fetch + ReadableStream，不用 EventSource——需要 POST 与 Authorization 头）。
+ *
+ * 用法：
+ *   const { abort } = await streamSse('/client/ai/expand', { chinese }, {
+ *     onChunk: (text) => { output.value += text },
+ *     onDone: () => { done.value = true },
+ *     onError: (msg) => { error.value = msg },
+ *   })
+ *
+ * 客户端断开（组件卸载/点击停止）必须调用 abort()，服务端随即中止上游请求。
+ */
+import { getToken } from '~/composables/useApi';
+
+/** 流式回调。 */
+export interface SseHandlers {
+  onChunk?: (text: string) => void;
+  onDone?: () => void;
+  onError?: (message: string) => void;
+}
+
+/**
+ * 发起 SSE 请求并逐段解析。
+ * @param path 接口路径（如 `/client/ai/expand`）
+ * @param body 请求体
+ * @param handlers 回调
+ * @returns abort 函数（终止连接）
+ */
+export async function streamSse(path: string, body: unknown, handlers: SseHandlers): Promise<{ abort: () => void }> {
+  const config = useRuntimeConfig();
+  const controller = new AbortController();
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  void (async () => {
+    try {
+      const response = await fetch(`${config.public.apiBaseUrl}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      if (!response.ok || !response.body) {
+        handlers.onError?.('AI 服务暂时不可用，请稍后重试');
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        // SSE 分帧：空行分隔；最后一段可能是半包
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const raw of events) {
+          const lines = raw.split('\n');
+          let eventName = 'message';
+          let data = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              data += line.slice(5).trim();
+            }
+          }
+          if (eventName === 'done') {
+            handlers.onDone?.();
+            return;
+          }
+          if (eventName === 'error') {
+            handlers.onError?.(data || 'AI 服务暂时不可用');
+            return;
+          }
+          if (data && eventName === 'message') {
+            handlers.onChunk?.(data);
+          }
+        }
+      }
+      handlers.onDone?.();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+      handlers.onError?.('AI 服务暂时不可用，请稍后重试');
+    }
+  })();
+
+  return { abort: () => controller.abort() };
+}
