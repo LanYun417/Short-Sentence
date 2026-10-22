@@ -12,7 +12,10 @@ build/
 
 # 例外：Vditor 自托管静态资源必须入库 —— 否则他人 clone 后构建产物中缺少该目录，
 # 编辑器将无法离线渲染（emoji / 内容主题 / 代码高亮 / KaTeX / mermaid）。
+# 注意：仅否定目录不够，*.min.js / *.min.css 全局规则仍会命中其中的压缩产物，
+# 必须再整树否定一次（后面的否定规则优先于先前的忽略规则）。
 !admin/public/vditor/dist/
+!admin/public/vditor/dist/**
 
 # Nuxt 客户端（client/）生成产物与运行时数据
 .nuxt/
