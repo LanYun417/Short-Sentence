@@ -61,6 +61,7 @@ async function onCheckin(): Promise<void> {
       v-if="errorMessage && !question"
       color="error"
       variant="subtle"
+      orientation="vertical"
       :description="errorMessage"
       class="mx-auto max-w-xl"
     >

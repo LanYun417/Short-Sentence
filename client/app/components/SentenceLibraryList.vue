@@ -74,6 +74,7 @@ onMounted(() => {
       v-if="errorMessage && items.length === 0"
       color="error"
       variant="subtle"
+      orientation="vertical"
       :description="errorMessage"
       class="mb-4"
     >
