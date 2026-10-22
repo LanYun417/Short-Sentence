@@ -10,6 +10,19 @@
 - 新增运行时依赖默认禁止，确需新增（如 html2canvas）走 `npm run guard:deps -- --update` 并在评审说明；
 - **API Key 与 AI 调用只在服务端**：前端永远只打 `api/` 的 `client` 域接口。
 
+### 开发端口（不得随意改）
+
+| 端     | 端口 | 配置位置                                        |
+| ------ | ---- | ----------------------------------------------- |
+| api    | 3000 | `api/.env` 的 `PORT`（Dockerfile / nginx 契约） |
+| admin  | 5173 | `admin/.env.development` 的 `VITE_PORT`         |
+| client | 3001 | `client/nuxt.config.ts` 的 `NUXT_DEV_PORT`      |
+
+- Nuxt 默认端口就是 3000，与后端**硬冲突**：两者同起必有一端启动失败，且 `devProxy` 会把 `/api` 代理回自己形成自环。故此处固定 3001。
+- `vite.server.strictPort = true`：端口被占直接报错，**不允许静默 +1 漂移**（CORS 与防盗链白名单按端口配置，漂移后图片会被判外链）。
+- `devProxy` 必须同时代理 `/api` 与 `/static`：后端返回的图片地址是 `/static/...` 相对路径，漏配会 404，打卡海报（html2canvas）也会因图裂失败。
+- 若确需改端口，三处同步：`nuxt.config.ts` 的 `NUXT_DEV_PORT`、`api/.env` 的 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`、根 `scripts/dev.mjs` 的 `CLIENT_PORT`。
+
 ## 2. 目录约定
 
 ```
@@ -21,8 +34,8 @@ client/
 ├─ stores/                # Pinia：auth（持久化）
 ├─ utils/                 # answer-normalize（比对规范化）/ date
 ├─ types/                 # 接口 DTO
-├─ nuxt.config.ts
-└─ .env / .env.production  # VITE_API_BASE_URL 等
+├─ nuxt.config.ts         # 端口、devProxy、runtimeConfig
+└─ .env                   # 可选：NUXT_PUBLIC_API_BASE_URL / NUXT_API_TARGET
 ```
 
 - API 层统一经 `composables/useApi.ts` 的 `$fetch` 封装（baseURL、Bearer 注入、401 跳登录）；

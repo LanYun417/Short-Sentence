@@ -20,6 +20,7 @@
     "commit": "cz",
     "dev:api": "npm --prefix api run start:dev",
     "dev:web": "npm --prefix admin run dev",
+    "dev:client": "npm --prefix client run dev",
     "dev": "node scripts/dev.mjs"
   },
   "devDependencies": {

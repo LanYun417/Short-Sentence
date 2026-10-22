@@ -192,8 +192,11 @@ export const config = {
     password: process.env.REDIS_PASSWORD ?? '',
     db: toNumber(process.env.REDIS_DB, 0),
   },
-  /** 跨域允许来源 */
-  corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  /**
+   * 跨域允许来源（逗号分隔）。默认覆盖开发期两个前端：
+   * admin `:5173`（Vite）与 client `:3001`（Nuxt，见 client/nuxt.config.ts）。
+   */
+  corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:3001',
   /** ip2region 离线 IP 库配置（IP 归属地解析；数据文件缺失时自动降级关闭，不影响启动） */
   ip2region: {
     /** xdb 数据文件路径（绝对路径），默认 <root>/data/ip2region_v4.xdb */

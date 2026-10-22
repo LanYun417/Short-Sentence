@@ -253,9 +253,17 @@ npm run seed              # 写入默认数据（可选：服务启动时也会�
 ### 5. 启动
 
 ```bash
-# 根目录：有序启动前后端（后端 :3000，前端 :5173）
+# 根目录：有序启动后端与 admin 中后台（后端 :3000，admin :5173）
 npm run dev
+
+# 需要一并启动「短句」用户端时（client :3001）
+npm run dev -- --client
 ```
+
+> **三端端口互不重叠**：api `3000`、admin `5173`、client `3001`。
+> Nuxt 默认端口也是 3000，与后端硬冲突（且 devProxy 会把 `/api` 代理回自己），
+> 故 `client/nuxt.config.ts` 已固定为 3001 并开启 `strictPort`；改端口时须同步
+> `api/.env` 的 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`，否则接口跨域、图片被判外链。
 
 `npm run dev` 由 `scripts/dev.mjs` 编排（零第三方依赖），**保证前端一定在后端就绪之后才启动**：
 
@@ -271,18 +279,21 @@ npm run dev -- --fresh   # 忽略已在运行的后端，强制新起一个
 或分别启动：
 
 ```bash
-npm run dev:api    # 后端 http://localhost:3000（等价 cd api && npm run start:dev）
-npm run dev:web   # 前端 http://localhost:5173（等价 cd admin && npm run dev）
+npm run dev:api       # 后端 http://localhost:3000（等价 cd api && npm run start:dev）
+npm run dev:web       # admin 中后台 http://localhost:5173（等价 cd admin && npm run dev）
+npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd client && npm run dev）
 ```
 
 启动后可访问：
 
-- 前端页面：<http://localhost:5173>
+- admin 中后台：<http://localhost:5173>
+- 「短句」用户端：<http://localhost:3001>
 - 健康检查（探针）：`GET http://localhost:3000/api/health/live`（只证明进程可响应）、
   `GET http://localhost:3000/api/health/ready`（探测 MySQL / Redis，MySQL 不可用返回 503）
 - 根探活：`GET http://localhost:3000/api`（返回服务名、状态、版本、uptime）
 
-> 前端 dev server 通过 Vite 代理把 `/api`、`/static` 转发到 `http://localhost:3000`，开发期同源、无跨域。
+> 两个前端 dev server 都把 `/api`、`/static` 代理到 `http://localhost:3000`，开发期同源、无跨域；
+> `/static` 不可省——后端返回的图片地址是 `/static/...` 相对路径，不代理会 404（打卡海报也会因图裂失败）。
 
 ## 默认账号
 
@@ -298,23 +309,25 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd admin && npm run de
 
 ### 根目录
 
-| 命令                        | 说明                                                       |
-| --------------------------- | ---------------------------------------------------------- |
-| `npm run dev`               | 有序启动前后端（后端就绪后才起前端，见 `scripts/dev.mjs`） |
-| `npm run dev:api`           | 仅启动后端                                                 |
-| `npm run dev:web`           | 仅启动前端                                                 |
-| `npm run lint`              | 全仓 ESLint 检查（`--max-warnings 0`）                     |
-| `npm run lint:fix`          | 全仓 ESLint 自动修复                                       |
-| `npm run format`            | 全仓 Prettier 格式化                                       |
-| `npm run format:check`      | 全仓 Prettier 格式校验（不写文件）                         |
-| `npm run stylelint`         | 全仓 Stylelint 检查                                        |
-| `npm run stylelint:fix`     | 全仓 Stylelint 自动修复                                    |
-| `npm run guard:deps`        | 校验三处 `package.json` 的运行时依赖与基线一致             |
-| `npm run guard:deps:update` | 依赖基线有变更时，先生成新基线再提交                       |
-| `npm run guard:imports`     | 校验已入库文件的相对导入可解析（干净克隆可构建）           |
-| `npm run guard:locale`      | 校验 zh-CN / en-US 语言包 key 与占位符一致                 |
-| `npm run commit`            | cz-git 交互式生成规范提交                                  |
-| `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                |
+| 命令                        | 说明                                                             |
+| --------------------------- | ---------------------------------------------------------------- |
+| `npm run dev`               | 有序启动后端与 admin（后端就绪后才起前端，见 `scripts/dev.mjs`） |
+| `npm run dev -- --client`   | 同上，并额外启动「短句」用户端 client（:3001）                   |
+| `npm run dev:api`           | 仅启动后端                                                       |
+| `npm run dev:web`           | 仅启动 admin 中后台                                              |
+| `npm run dev:client`        | 仅启动「短句」用户端                                             |
+| `npm run lint`              | 全仓 ESLint 检查（`--max-warnings 0`）                           |
+| `npm run lint:fix`          | 全仓 ESLint 自动修复                                             |
+| `npm run format`            | 全仓 Prettier 格式化                                             |
+| `npm run format:check`      | 全仓 Prettier 格式校验（不写文件）                               |
+| `npm run stylelint`         | 全仓 Stylelint 检查                                              |
+| `npm run stylelint:fix`     | 全仓 Stylelint 自动修复                                          |
+| `npm run guard:deps`        | 校验三处 `package.json` 的运行时依赖与基线一致                   |
+| `npm run guard:deps:update` | 依赖基线有变更时，先生成新基线再提交                             |
+| `npm run guard:imports`     | 校验已入库文件的相对导入可解析（干净克隆可构建）                 |
+| `npm run guard:locale`      | 校验 zh-CN / en-US 语言包 key 与占位符一致                       |
+| `npm run commit`            | cz-git 交互式生成规范提交                                        |
+| `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                      |
 
 ### 前端 `admin/`
 
@@ -358,50 +371,50 @@ npm run dev:web   # 前端 http://localhost:5173（等价 cd admin && npm run de
 
 ### 后端 `api/.env`
 
-| 变量                                | 示例值                  | 说明                                                                                                                                 |
-| ----------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `NODE_ENV`                          | `development`           | 运行环境                                                                                                                             |
-| `PORT`                              | `3000`                  | 后端端口                                                                                                                             |
-| `DB_HOST` / `DB_PORT`               | `localhost` / `3306`    | MySQL 主机 / 端口                                                                                                                    |
-| `DB_NAME` / `DB_USER`               | `ly_admin` / `root`     | 数据库名 / 账号                                                                                                                      |
-| `DB_PASSWORD`                       | `your_password`         | 数据库密码（改成实际值）                                                                                                             |
-| `DATABASE_URL`                      | `mysql://…`             | 可选。Prisma CLI 用的完整连接串（优先于 `DB_*` 拼装）                                                                                |
-| `DB_LOGGING`                        | `true`                  | 是否订阅 Prisma 查询事件（慢 SQL 日志 `db-*.log`）                                                                                   |
-| `DB_CONNECTION_LIMIT`               | `10`                    | 数据库连接池上限（1~100）                                                                                                            |
-| `JWT_ACCESS_SECRET`                 | `<32 字节随机 hex>`     | accessToken 密钥（**必填**，无默认值）                                                                                               |
-| `JWT_REFRESH_SECRET`                | `<32 字节随机 hex>`     | refreshToken 密钥（**必填**，须与上方不同）                                                                                          |
-| `JWT_ACCESS_EXPIRES_IN`             | `2h`                    | accessToken 有效期                                                                                                                   |
-| `JWT_REFRESH_EXPIRES_IN`            | `7d`                    | refreshToken 有效期                                                                                                                  |
-| `SEED_ADMIN_PASSWORD`               | 空                      | 超管初始口令；留空用开发默认弱口令（production 打 warn 提示）                                                                        |
-| `CAPTCHA_ENABLED`                   | `true`                  | 是否启用登录图形验证码                                                                                                               |
-| `CAPTCHA_TTL_MS` / `CAPTCHA_LENGTH` | `300000` / `4`          | 验证码有效期（ms）/ 字符数                                                                                                           |
-| `TRUST_PROXY`                       | `1`                     | 反向代理信任跳数（仅部署在代理后设置）                                                                                               |
-| `UPLOAD_DIR`                        | `uploads`               | 上传根目录（相对 `api/`）                                                                                                            |
-| `UPLOAD_MAX_SIZE`                   | `10485760`              | 单文件上限（字节，10MB）                                                                                                             |
-| `UPLOAD_MAX_COUNT`                  | `10`                    | 单次最多文件数                                                                                                                       |
-| `UPLOAD_USER_QUOTA_MB`              | `512`                   | 单用户累计上传配额（MB），`0` = 不限                                                                                                 |
-| `UPLOAD_CACHE_DIR`                  | `cache/images`          | 图片缩放缓存目录（须位于 `UPLOAD_DIR` 之外）                                                                                         |
-| `UPLOAD_ALLOWED_REFERERS`           | `http://localhost:5173` | 防盗链 Referer 白名单（逗号分隔；同源部署无需配置）                                                                                  |
-| `CORS_ORIGIN`                       | `http://localhost:5173` | 允许的跨域来源                                                                                                                       |
-| `LOG_DIR`                           | `logs`                  | 日志目录                                                                                                                             |
-| `LOG_ARCHIVE_DIR`                   | `logs/archive`          | 归档根目录（默认 `<LOG_DIR>/archive`）                                                                                               |
-| `LOG_ARCHIVE_HOUR/MINUTE`           | `0` / `5`               | 日志归档时刻（本地时间）                                                                                                             |
-| `LOG_ARCHIVE_KEEP_SOURCE`           | `false`                 | 归档后是否保留源 `.log`                                                                                                              |
-| `LOG_SLOW_SQL_MS`                   | `200`                   | 慢 SQL 阈值（ms）                                                                                                                    |
-| `LOG_HTTP_RETENTION_DAYS`           | `7`                     | HTTP 访问日志保留天数                                                                                                                |
-| `LOG_OPERATION_RETENTION_DAYS`      | `180`                   | 操作日志保留天数                                                                                                                     |
-| `LOG_LOGIN_RETENTION_DAYS`          | `180`                   | 登录日志保留天数                                                                                                                     |
-| `LOG_RETENTION_HOUR/MINUTE`         | `0` / `10`              | 保留清理触发时刻                                                                                                                     |
-| `LOG_RETENTION_ENABLED`             | `true`                  | 是否启用日志保留清理                                                                                                                 |
-| `TAR_BIN`                           | `tar`                   | 自定义 tar 可执行文件（默认取 PATH）                                                                                                 |
-| `IP2REGION_DB_PATH`                 | `data/ip2region_v4.xdb` | IP 归属地离线库路径（文件缺失时静默降级为空串）                                                                                      |
-| `REDIS_HOST` / `REDIS_PORT`         | `127.0.0.1` / `6379`    | Redis 地址（留空 `REDIS_HOST` 即视为不启用）                                                                                         |
-| `REDIS_PASSWORD` / `REDIS_DB`       | 空 / `0`                | Redis 密码 / 库号                                                                                                                    |
-| `WEB_DIST_DIR`                      | `web`                   | 前端产物托管目录（相对 `api/`；不存在则跳过托管）                                                                                    |
-| `SECURITY_HSTS`                     | 跟随 production         | 是否下发 HSTS 头（默认 `NODE_ENV=production` 时开启）                                                                                |
-| `CSP_POLICY`                        | 空                      | Content-Security-Policy 内容；留空不下发（SPA 需按实际配置）                                                                         |
-| `APP_VERSION` / `GIT_COMMIT`        | `dev` / 空              | 版本与提交号，出现在 `/api` 与 `/api/health/live` 响应里                                                                             |
-| `NET_DEV_PATH`                      | 空                      | 网卡计数文件路径覆盖（默认 Linux 读 `/proc/net/dev`）。用于非 Linux 集成测试，或容器使用 host 网络命名空间时指向挂载进来的宿主机文件 |
+| 变量                                | 示例值                                        | 说明                                                                                                                                 |
+| ----------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `NODE_ENV`                          | `development`                                 | 运行环境                                                                                                                             |
+| `PORT`                              | `3000`                                        | 后端端口                                                                                                                             |
+| `DB_HOST` / `DB_PORT`               | `localhost` / `3306`                          | MySQL 主机 / 端口                                                                                                                    |
+| `DB_NAME` / `DB_USER`               | `ly_admin` / `root`                           | 数据库名 / 账号                                                                                                                      |
+| `DB_PASSWORD`                       | `your_password`                               | 数据库密码（改成实际值）                                                                                                             |
+| `DATABASE_URL`                      | `mysql://…`                                   | 可选。Prisma CLI 用的完整连接串（优先于 `DB_*` 拼装）                                                                                |
+| `DB_LOGGING`                        | `true`                                        | 是否订阅 Prisma 查询事件（慢 SQL 日志 `db-*.log`）                                                                                   |
+| `DB_CONNECTION_LIMIT`               | `10`                                          | 数据库连接池上限（1~100）                                                                                                            |
+| `JWT_ACCESS_SECRET`                 | `<32 字节随机 hex>`                           | accessToken 密钥（**必填**，无默认值）                                                                                               |
+| `JWT_REFRESH_SECRET`                | `<32 字节随机 hex>`                           | refreshToken 密钥（**必填**，须与上方不同）                                                                                          |
+| `JWT_ACCESS_EXPIRES_IN`             | `2h`                                          | accessToken 有效期                                                                                                                   |
+| `JWT_REFRESH_EXPIRES_IN`            | `7d`                                          | refreshToken 有效期                                                                                                                  |
+| `SEED_ADMIN_PASSWORD`               | 空                                            | 超管初始口令；留空用开发默认弱口令（production 打 warn 提示）                                                                        |
+| `CAPTCHA_ENABLED`                   | `true`                                        | 是否启用登录图形验证码                                                                                                               |
+| `CAPTCHA_TTL_MS` / `CAPTCHA_LENGTH` | `300000` / `4`                                | 验证码有效期（ms）/ 字符数                                                                                                           |
+| `TRUST_PROXY`                       | `1`                                           | 反向代理信任跳数（仅部署在代理后设置）                                                                                               |
+| `UPLOAD_DIR`                        | `uploads`                                     | 上传根目录（相对 `api/`）                                                                                                            |
+| `UPLOAD_MAX_SIZE`                   | `10485760`                                    | 单文件上限（字节，10MB）                                                                                                             |
+| `UPLOAD_MAX_COUNT`                  | `10`                                          | 单次最多文件数                                                                                                                       |
+| `UPLOAD_USER_QUOTA_MB`              | `512`                                         | 单用户累计上传配额（MB），`0` = 不限                                                                                                 |
+| `UPLOAD_CACHE_DIR`                  | `cache/images`                                | 图片缩放缓存目录（须位于 `UPLOAD_DIR` 之外）                                                                                         |
+| `UPLOAD_ALLOWED_REFERERS`           | `http://localhost:5173,http://localhost:3001` | 防盗链 Referer 白名单（逗号分隔；同源部署无需配置）                                                                                  |
+| `CORS_ORIGIN`                       | `http://localhost:5173,http://localhost:3001` | 允许的跨域来源（开发期含 admin :5173 与 client :3001）                                                                               |
+| `LOG_DIR`                           | `logs`                                        | 日志目录                                                                                                                             |
+| `LOG_ARCHIVE_DIR`                   | `logs/archive`                                | 归档根目录（默认 `<LOG_DIR>/archive`）                                                                                               |
+| `LOG_ARCHIVE_HOUR/MINUTE`           | `0` / `5`                                     | 日志归档时刻（本地时间）                                                                                                             |
+| `LOG_ARCHIVE_KEEP_SOURCE`           | `false`                                       | 归档后是否保留源 `.log`                                                                                                              |
+| `LOG_SLOW_SQL_MS`                   | `200`                                         | 慢 SQL 阈值（ms）                                                                                                                    |
+| `LOG_HTTP_RETENTION_DAYS`           | `7`                                           | HTTP 访问日志保留天数                                                                                                                |
+| `LOG_OPERATION_RETENTION_DAYS`      | `180`                                         | 操作日志保留天数                                                                                                                     |
+| `LOG_LOGIN_RETENTION_DAYS`          | `180`                                         | 登录日志保留天数                                                                                                                     |
+| `LOG_RETENTION_HOUR/MINUTE`         | `0` / `10`                                    | 保留清理触发时刻                                                                                                                     |
+| `LOG_RETENTION_ENABLED`             | `true`                                        | 是否启用日志保留清理                                                                                                                 |
+| `TAR_BIN`                           | `tar`                                         | 自定义 tar 可执行文件（默认取 PATH）                                                                                                 |
+| `IP2REGION_DB_PATH`                 | `data/ip2region_v4.xdb`                       | IP 归属地离线库路径（文件缺失时静默降级为空串）                                                                                      |
+| `REDIS_HOST` / `REDIS_PORT`         | `127.0.0.1` / `6379`                          | Redis 地址（留空 `REDIS_HOST` 即视为不启用）                                                                                         |
+| `REDIS_PASSWORD` / `REDIS_DB`       | 空 / `0`                                      | Redis 密码 / 库号                                                                                                                    |
+| `WEB_DIST_DIR`                      | `web`                                         | 前端产物托管目录（相对 `api/`；不存在则跳过托管）                                                                                    |
+| `SECURITY_HSTS`                     | 跟随 production                               | 是否下发 HSTS 头（默认 `NODE_ENV=production` 时开启）                                                                                |
+| `CSP_POLICY`                        | 空                                            | Content-Security-Policy 内容；留空不下发（SPA 需按实际配置）                                                                         |
+| `APP_VERSION` / `GIT_COMMIT`        | `dev` / 空                                    | 版本与提交号，出现在 `/api` 与 `/api/health/live` 响应里                                                                             |
+| `NET_DEV_PATH`                      | 空                                            | 网卡计数文件路径覆盖（默认 Linux 读 `/proc/net/dev`）。用于非 Linux 集成测试，或容器使用 host 网络命名空间时指向挂载进来的宿主机文件 |
 
 ### 前端 `admin/.env.development` / `.env.production`
 
