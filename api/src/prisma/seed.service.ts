@@ -596,18 +596,6 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
-      {
-        key: 'tool:vditor',
-        menuName: 'Vditor 编辑器',
-        menuType: MenuType.MENU,
-        path: '/tool/vditor',
-        component: 'tool/vditor/index',
-        icon: 'pencil',
-        permission: 'tool:vditor:list',
-        sort: 2,
-        visible: Status.ENABLED,
-        keepAlive: 1,
-      },
     ],
   },
   {
@@ -824,9 +812,6 @@ const ROLE_SEEDS: RoleSeed[] = [
       'tool:gen',
       'tool:gen:preview',
       'tool:gen:download',
-      // Vditor 编辑器示例页（纯前端，只读的查看类权限）
-      // 注意：此处为**菜单节点的 key**（非权限码），写错会导致该角色拿不到授权
-      'tool:vditor',
       // 接口文档（纯只读的查看类菜单，无按钮权限码）
       'docs',
       'profile',
@@ -1185,6 +1170,42 @@ async function cleanupObsoleteConfigs(prisma: PrismaService): Promise<void> {
 }
 
 /**
+ * 清理废弃的菜单节点（及其角色 / 用户级关联）。
+ *
+ * 背景：Vditor 编辑器示例页已整体移除（前端组件、静态资源、依赖均已删除），
+ * 对应的菜单节点不再属于种子定义。种子只增不删，既有库中残留的菜单不会自动消失，
+ * 会导致后台左侧菜单仍显示「Vditor 编辑器」，点击后路由找不到对应组件而白屏。
+ *
+ * 这里按 `permission` 精确匹配删除（`tool:vditor:list`），并先清理
+ * `sys_role_menu` / `sys_user_menu` 关联——两张表对 menu 都有外键，
+ * 直接删菜单会触发约束错误。
+ *
+ * 幂等：库中没有该节点时不做任何事，重复执行安全。
+ */
+async function cleanupObsoleteMenus(prisma: PrismaService): Promise<void> {
+  const OBSOLETE_MENU_PERMISSIONS = ['tool:vditor:list'];
+
+  const obsolete = await prisma.menu.findMany({
+    where: { permission: { in: OBSOLETE_MENU_PERMISSIONS } },
+    select: { id: true, menuName: true },
+  });
+  if (obsolete.length === 0) {
+    return;
+  }
+
+  const menuIds = obsolete.map((item) => item.id);
+  // 先删关联再删菜单：sys_role_menu / sys_user_menu 对 menu 有外键约束
+  await prisma.roleMenu.deleteMany({ where: { menuId: { in: menuIds } } });
+  await prisma.userMenu.deleteMany({ where: { menuId: { in: menuIds } } });
+  await prisma.menu.deleteMany({ where: { id: { in: menuIds } } });
+
+  logger.log(
+    `已清理废弃菜单 ${obsolete.length} 项：${obsolete.map((item) => item.menuName).join('、')}` +
+      `（关联的角色 / 用户授权同步移除）`,
+  );
+}
+
+/**
  * 组件名无法直接推导的图标别名。
  *
  * 原生类名的数字连字符规则**不一致**：`diagram-3` 对应 `BIconDiagram3`（数字前有连字符），
@@ -1238,11 +1259,12 @@ async function normalizeMenuIcons(prisma: PrismaService): Promise<void> {
 
 /**
  * 执行全部种子（幂等）。
- * 顺序：先做既有库数据归一（清理废弃参数、归一化图标名），
+ * 顺序：先做既有库数据归一（清理废弃参数、清理废弃菜单、归一化图标名），
  * 再按 菜单 → 角色 → 用户 → 字典 → 系统参数 写入种子数据。
  */
 export async function runSeed(prisma: PrismaService): Promise<void> {
   await cleanupObsoleteConfigs(prisma);
+  await cleanupObsoleteMenus(prisma);
   await normalizeMenuIcons(prisma);
 
   const menuIdMap = await seedMenu(prisma);

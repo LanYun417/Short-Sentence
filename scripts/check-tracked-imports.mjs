@@ -23,8 +23,12 @@ const SKIP_PATTERNS = [
 ];
 
 const files = execSync('git ls-files -z', { encoding: 'utf8' }).split('\0').filter(Boolean);
-const tracked = new Set(files);
-const codeFiles = files.filter(
+// 索引里有、但磁盘上已不存在 = 「已删除但尚未 git add」的文件（删除动作还没进索引）。
+// 这类文件在提交后会从索引消失，读取它们必然 ENOENT 崩溃；直接跳过，
+// 让守卫在「删除提交之前」的中间态也能正常运行。
+const presentFiles = files.filter((file) => fs.existsSync(file));
+const tracked = new Set(presentFiles);
+const codeFiles = presentFiles.filter(
   (file) => /\.(ts|mts|vue|mjs|cjs|js)$/.test(file) && !SKIP_PATTERNS.some((pattern) => pattern.test(file)),
 );
 
