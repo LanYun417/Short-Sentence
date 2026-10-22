@@ -37,6 +37,16 @@ const MAX_EMPTY_CHUNKS = 3;
 /** 连续多少批请求失败即放弃生题（已入库题目仍会继续生图，不会白跑）。 */
 const MAX_FAILED_CHUNKS = 5;
 
+/**
+ * 配图风格后缀（统一追加到场景提示词末尾）。
+ *
+ * 产品定位是「视觉场景英语闪卡」，全站统一扁平卡通插画风格。
+ * 在服务层统一追加而不是只靠模型输出的 scenePrompt：模型偶尔会写成写实/3D/照片风格，
+ * 同一批题里混入不同画风会显得很乱，这里兜住风格下限。
+ */
+const IMAGE_STYLE_SUFFIX =
+  'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
+
 /** cron 任务名（SchedulerRegistry 键）。 */
 const CRON_JOB_NAME = 'sentence-daily-gen';
 
@@ -298,7 +308,7 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
     try {
       const image = await withRetry(
         () =>
-          this.imageGen.generate(sentence.scenePrompt, {
+          this.imageGen.generate(`${sentence.scenePrompt}, ${IMAGE_STYLE_SUFFIX}`, {
             size: config.sentence.imageSize,
             ratio: config.sentence.imageRatio,
           }),

@@ -51,7 +51,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       '严格要求：',
       '1. 只输出 JSON，形状为 {"items": [...]}，不要任何解释文字；',
       '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（精准中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难）、categoryName（中文分类名，与主题一致或更细）；',
-      '3. scenePrompt 必须是「两个人在具体场景中对话」的画面描述：人物身份、动作、环境、光线，16:9 构图，不要图内文字；',
+      '3. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
       '4. 句子口语化、实用、避免生僻词；难度分布均匀；',
       `5. 当次生成 ${count} 条，主题：${theme}。`,
     ].join('\n');
