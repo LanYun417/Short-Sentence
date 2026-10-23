@@ -6077,6 +6077,39 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "GET",
+        "path": "/api/client/sentence-card/today",
+        "summary": "今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/today?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client/sentence-card/claim",
         "summary": "领取今日句签（完成每日目标且今日句签就绪时返回；否则 null）",

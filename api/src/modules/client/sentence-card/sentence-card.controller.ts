@@ -22,4 +22,10 @@ export class SentenceCardController {
   async mine(@CurrentClientUser() user: ClientUserContext): Promise<SentenceCardView[]> {
     return this.sentenceCard.listMine(user.userId);
   }
+
+  /** 今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）。 */
+  @Get('today')
+  async today(@CurrentClientUser() user: ClientUserContext): Promise<{ obtained: boolean; bizDate: string }> {
+    return this.sentenceCard.todayStatus(user.userId);
+  }
 }

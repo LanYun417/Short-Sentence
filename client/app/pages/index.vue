@@ -55,17 +55,64 @@ const doneDisplay = useCountUp(todayDone);
 
 /* ------------------------------ 今日 AI 句签 ------------------------------ */
 
-const sentenceCard = ref<SentenceCard | null>(null);
+const { status: todayCard, markObtained } = useTodayCard();
+
+/** 领取中的 loading 态。 */
 const claiming = ref(false);
+/** 庆祝弹层：领取成功后播放一次（卡片居中 → 光束飞向头像 → 自动关闭）。 */
+const celebrating = ref(false);
+const celebrationCard = ref<SentenceCard | null>(null);
+const beamStyle = ref<Record<string, string>>({});
+const cardAnchorRef = useTemplateRef<HTMLElement>('cardAnchor');
+let closeTimer: ReturnType<typeof setTimeout> | 0 = 0;
+
+/** 关闭庆祝层。 */
+function closeCelebration(): void {
+  clearTimeout(closeTimer);
+  celebrating.value = false;
+}
+
+/** 播放领取庆祝：卡片居中放大 → 光束飞向导航头像 → 自动收起。 */
+function startCelebration(card: SentenceCard): void {
+  celebrationCard.value = card;
+  celebrating.value = true;
+  nextTick(() => {
+    // 量出卡片中心与头像中心，作为光束的起止点
+    const anchor = cardAnchorRef.value;
+    const avatar = document.querySelector('[data-avatar]');
+    if (!anchor || !avatar) {
+      return;
+    }
+    const from = anchor.getBoundingClientRect();
+    const to = avatar.getBoundingClientRect();
+    beamStyle.value = {
+      '--from-x': `${from.left + from.width / 2}px`,
+      '--from-y': `${from.top + from.height / 2}px`,
+      '--to-x': `${to.left + to.width / 2}px`,
+      '--to-y': `${to.top + to.height / 2}px`,
+    };
+  });
+  clearTimeout(closeTimer);
+  closeTimer = setTimeout(closeCelebration, 2600);
+}
 
 /** 领取今日句签（达标后自动调用；幂等，失败静默不影响刷题）。 */
 async function claimSentenceCard(): Promise<void> {
   if (claiming.value || !goalReached.value) {
     return;
   }
+  // 今日已获得（刷新进入等）：补一次幂等领取即可，不重复播特效
+  if (todayCard.value.obtained) {
+    void apiFetch<SentenceCard | null>('/client/sentence-card/claim', { method: 'POST' }).catch(() => null);
+    return;
+  }
   claiming.value = true;
   try {
-    sentenceCard.value = await apiFetch<SentenceCard | null>('/client/sentence-card/claim', { method: 'POST' });
+    const card = await apiFetch<SentenceCard | null>('/client/sentence-card/claim', { method: 'POST' });
+    if (card) {
+      markObtained(card.bizDate);
+      startCelebration(card);
+    }
   } catch {
     // 静默：句签领取失败不打扰用户（下次达标/进入页面会再试）
   } finally {
@@ -75,7 +122,7 @@ async function claimSentenceCard(): Promise<void> {
 
 // 达标瞬间自动领取（提交答案跨过目标线时触发）
 watch(goalReached, (reached) => {
-  if (reached && !sentenceCard.value) {
+  if (reached) {
     void claimSentenceCard();
   }
 });
@@ -89,6 +136,10 @@ onMounted(() => {
   if (goalReached.value) {
     void claimSentenceCard();
   }
+});
+
+onBeforeUnmount(() => {
+  clearTimeout(closeTimer);
 });
 
 /** 提交答案。 */
@@ -213,26 +264,47 @@ function onFavorite(): void {
         />
       </div>
 
-      <!-- 达标 → 今日 AI 句签（自动领取并展示） -->
+      <!-- 达标提示（句签已收入囊中，庆祝特效播完即收起，不再常驻展示） -->
       <div v-if="goalReached" class="anim-pop mt-5">
-        <!-- 已领取：3D 视差句签卡 -->
-        <SentenceCard v-if="sentenceCard" :card="sentenceCard" />
-
-        <!-- 领取中 / 今日句签尚未生成 -->
         <div
-          v-else
-          class="flex flex-col items-center gap-3 rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5 text-center dark:border-amber-500/20 dark:bg-amber-500/10"
+          class="flex flex-col items-center gap-2 rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5 text-center dark:border-amber-500/20 dark:bg-amber-500/10"
         >
           <div class="anim-float flex items-center gap-2 text-amber-700 dark:text-amber-300">
             <UIcon name="i-lucide-party-popper" class="h-5 w-5" />
             <span class="font-semibold">今日目标已完成！</span>
           </div>
           <p class="text-sm text-amber-700/80 dark:text-amber-200/80">
-            {{ claiming ? '正在为你解锁今日句签…' : '今日句签还在准备中，稍后再来看看' }}
+            {{
+              claiming
+                ? '正在为你解锁今日句签…'
+                : todayCard.obtained
+                  ? '今日句签已收入囊中，头像已点亮 ✨'
+                  : '今日句签还在准备中，稍后再来看看'
+            }}
           </p>
           <UIcon v-if="claiming" name="i-lucide-loader-circle" class="h-5 w-5 animate-spin text-amber-500" />
         </div>
       </div>
     </template>
+
+    <!-- 领取句签的庆祝层：卡片居中 → 光束飞向导航头像 → 自动关闭 -->
+    <Teleport to="body">
+      <Transition name="ss-celebrate">
+        <div
+          v-if="celebrating"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]"
+          @click.self="closeCelebration"
+        >
+          <div ref="cardAnchor" class="ss-celebrate-card relative w-[min(90vw,24rem)]">
+            <SentenceCard v-if="celebrationCard" :card="celebrationCard" />
+          </div>
+          <p class="absolute bottom-[14%] text-center text-sm font-medium text-white/90 drop-shadow-sm">
+            今日句签已收入囊中
+          </p>
+        </div>
+      </Transition>
+      <!-- 光束：盖在遮罩之上，飞向右上角头像 -->
+      <span v-if="celebrating" class="ss-beam" :style="beamStyle" />
+    </Teleport>
   </div>
 </template>

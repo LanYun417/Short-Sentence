@@ -123,6 +123,30 @@
   }
 }
 
+/* 句签光束：从卡片飞向导航头像（--from-x/--from-y → --to-x/--to-y） */
+@keyframes ss-beam-fly {
+  0% {
+    opacity: 0;
+    transform: translate(var(--from-x), var(--from-y)) translate(-50%, -50%) scale(0.3) rotate(0deg);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--to-x), var(--to-y)) translate(-50%, -50%) scale(0.18) rotate(45deg);
+  }
+}
+
+/* 今日句签已获得：头像常驻光环 */
+@keyframes ss-halo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 工具类 */
 .anim-in {
   animation: ss-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -153,6 +177,46 @@
 .anim-stagger {
   animation: ss-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--d, 0ms);
+}
+
+/* 领取句签后飞向头像的光束（位置由 --from-x/--from-y/--to-x/--to-y 决定） */
+.ss-beam {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff 0%, #fbbf24 42%, rgb(251 191 36 / 0%) 72%);
+  border-radius: 9999px;
+  box-shadow: 0 0 26px 10px rgb(251 191 36 / 50%);
+  animation: ss-beam-fly 1.15s cubic-bezier(0.42, 0, 0.25, 1) forwards;
+}
+
+/* 今日句签已获得：头像常驻光环 */
+.ss-avatar-halo {
+  background: conic-gradient(from 0deg, #fbbf24, #38bdf8, #a78bfa, #fbbf24);
+  animation: ss-halo-spin 4.5s linear infinite;
+}
+
+/* 领取句签的庆祝遮罩：淡入淡出 + 卡片弹入 */
+.ss-celebrate-enter-active,
+.ss-celebrate-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.ss-celebrate-enter-from,
+.ss-celebrate-leave-to {
+  opacity: 0;
+}
+
+.ss-celebrate-enter-active .ss-celebrate-card {
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ss-celebrate-enter-from .ss-celebrate-card {
+  transform: scale(0.86) translateY(18px);
 }
 
 /* 悬停微交互（卡片轻微抬起） */
@@ -206,5 +270,10 @@
 
   .hover-lift:hover {
     transform: none;
+  }
+
+  .ss-beam,
+  .ss-avatar-halo {
+    animation: none !important;
   }
 }

@@ -168,6 +168,19 @@ export class SentenceCardService {
     );
   }
 
+  /**
+   * 今日句签是否已获得（导航头像常驻特效用）。
+   * 轻量查询：只判断「今天这张是否已入账」，不返回卡片内容。
+   */
+  async todayStatus(userId: number): Promise<{ obtained: boolean; bizDate: string }> {
+    const bizDate = this.today();
+    const row = await this.prisma.userSentenceCard.findFirst({
+      where: { userId: BigInt(userId), sentenceCard: { bizDate } },
+      select: { id: true },
+    });
+    return { obtained: row !== null, bizDate };
+  }
+
   /** 组装视图。 */
   private toView(
     card: {

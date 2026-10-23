@@ -103,9 +103,22 @@ const { data: ssrSentenceCards } = await useSsrApi<SentenceCard[]>('ss:sentenceC
 /** 我的句签（SSR 预取首屏；客户端进入时异步到位后再更新）。 */
 const sentenceCards = ref<SentenceCard[]>(ssrSentenceCards.value ?? []);
 
-/** 句签图片地址（/static 需带令牌）。 */
+/** 句签图片地址（/static 资源，防盗链按 Referer 白名单放行）。 */
 function sentenceCardImg(url: string | null): string | undefined {
   return url ?? undefined;
+}
+
+/** 预览中的句签（点缩略图放大看 3D 视差效果）。 */
+const previewCard = ref<SentenceCard | null>(null);
+
+/** 打开预览。 */
+function openPreview(card: SentenceCard): void {
+  previewCard.value = card;
+}
+
+/** 关闭预览。 */
+function closePreview(): void {
+  previewCard.value = null;
 }
 
 if (ssrUser.value) {
@@ -394,27 +407,35 @@ async function onChangePassword(): Promise<void> {
             class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
           >
             <div v-if="sentenceCards.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div
+              <button
                 v-for="item in sentenceCards"
                 :key="item.id"
-                class="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200/70 dark:bg-slate-800 dark:ring-slate-700/70"
+                type="button"
+                class="group overflow-hidden rounded-2xl bg-slate-50 text-left ring-1 ring-slate-200/70 transition hover:ring-amber-300 dark:bg-slate-800 dark:ring-slate-700/70 dark:hover:ring-amber-500/40"
+                @click="openPreview(item)"
               >
-                <div class="aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
+                <div class="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
                   <img
                     v-if="item.imageUrl"
                     :src="sentenceCardImg(item.imageUrl)"
                     :alt="item.title"
-                    class="h-full w-full object-cover"
+                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div v-else class="flex h-full items-center justify-center text-slate-300 dark:text-slate-600">
                     <UIcon name="i-lucide-image-off" class="h-6 w-6" />
                   </div>
+                  <span
+                    class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
+                  >
+                    <UIcon name="i-lucide-expand" class="h-3 w-3" />
+                    3D 预览
+                  </span>
                 </div>
                 <div class="p-3">
                   <p class="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{{ item.titleZh }}</p>
                   <p class="truncate text-xs text-slate-400">{{ item.bizDate }}</p>
                 </div>
-              </div>
+              </button>
             </div>
             <div v-else class="flex flex-col items-center gap-2 py-10 text-center text-slate-400">
               <UIcon name="i-lucide-sparkles" class="h-8 w-8" />
@@ -424,5 +445,29 @@ async function onChangePassword(): Promise<void> {
         </template>
       </UTabs>
     </section>
+
+    <!-- 句签预览：3D 视差大图 -->
+    <Teleport to="body">
+      <Transition name="ss-celebrate">
+        <div
+          v-if="previewCard"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          @click.self="closePreview"
+        >
+          <div class="w-[min(92vw,26rem)]">
+            <SentenceCard :card="previewCard" />
+          </div>
+          <button
+            type="button"
+            class="absolute right-4 top-4 grid size-9 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25"
+            aria-label="关闭预览"
+            @click="closePreview"
+          >
+            <UIcon name="i-lucide-x" class="h-5 w-5" />
+          </button>
+          <p class="absolute bottom-[8%] text-center text-xs text-white/70">移动鼠标可看到 3D 视差效果</p>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

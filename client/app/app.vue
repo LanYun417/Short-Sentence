@@ -21,6 +21,19 @@ if (ssrUser.value) {
 }
 
 /**
+ * SSR 预取「今日句签是否已获得」：导航头像的常驻特效据此点亮。
+ * 未登录 / 预取失败都按「未获得」处理（接口返回 obtained=false）。
+ */
+const { status: todayCard } = useTodayCard();
+const { data: ssrTodayCard } = await useSsrApi<{ obtained: boolean; bizDate: string }>(
+  'ss:today-card',
+  '/client/sentence-card/today',
+);
+if (ssrTodayCard.value) {
+  todayCard.value = ssrTodayCard.value;
+}
+
+/**
  * 结构化数据（JSON-LD）：让搜索引擎直接理解「这是什么产品」，是富媒体摘要的前提。
  * 放在外壳而非单个页面：任何入口被收录时都带着它。
  */
@@ -165,12 +178,23 @@ function onLogout(): void {
               <!-- 刻意不用 UAvatar/NuxtImg：它会把 /static 当本地文件解析走 /_ipx 代理，
                    而配图实际在 API 侧（devProxy 只对 HTTP 请求生效），导致 IPX_FILE_NOT_FOUND。
                    这里用裸 <img>，与 profile 页头像一致。 -->
-              <NuxtLink to="/profile" class="ml-1" aria-label="个人中心">
+              <NuxtLink to="/profile" class="relative ml-1" aria-label="个人中心" data-avatar>
+                <!-- 今日句签已获得：常驻光环 + 角标（光束飞行的落点） -->
                 <span
-                  class="grid size-8 place-items-center overflow-hidden rounded-full bg-linear-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white transition-transform duration-200 hover:scale-110"
+                  v-if="todayCard.obtained"
+                  class="ss-avatar-halo pointer-events-none absolute -inset-[3px] rounded-full opacity-90"
+                />
+                <span
+                  class="relative grid size-8 place-items-center overflow-hidden rounded-full bg-linear-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white transition-transform duration-200 hover:scale-110"
                 >
                   <img v-if="avatarSrc" :src="avatarSrc" alt="头像" class="h-full w-full object-cover" />
                   <span v-else>{{ avatarText }}</span>
+                </span>
+                <span
+                  v-if="todayCard.obtained"
+                  class="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-amber-400 text-white shadow-sm ring-2 ring-white dark:ring-slate-900"
+                >
+                  <UIcon name="i-lucide-sparkles" class="h-2.5 w-2.5" />
                 </span>
               </NuxtLink>
             </template>
