@@ -61,12 +61,19 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  // 图标：服务端直接内联 SVG。
-  // 默认行为下 SSR 只输出 <span class="iconify"> 占位，图标要等客户端 hydration 才出现，
-  // 首屏会闪一下空白，个别情况下还会「看不到」（曾出现修改密码按钮图标不显示）。
-  // 'local' = 把本地安装的集合（lucide）打进服务端包，SSR 直接渲染 <svg>。
+  // 图标：服务端直接内联 SVG + 客户端静态包内置全部应用图标。
+  // 默认行为下 SSR 只输出 <span class="iconify"> 占位，且 clientBundle 默认不扫描源码，
+  // 导致应用自身的 i-lucide-* 不在客户端静态包里，只能运行时 fetch（本地端点 → 外网
+  // api.iconify.design）。外网 API 在国内不可达，fetch 慢/失败时图标就渲染不出来
+  // （曾反复出现「修改密码按钮图标不显示」）。
+  // - serverBundle: 'local' 把本地 lucide 集合打进服务端包，SSR 渲染 <svg>；
+  // - clientBundle.scan: true 构建期扫描源码，把所有用到的图标也打进客户端静态包，
+  //   首屏即渲染、彻底摆脱对外网 API 的依赖。
   icon: {
     serverBundle: 'local',
+    clientBundle: {
+      scan: true,
+    },
   },
 
   // Tailwind v4 走 vite 插件（与 admin 工程一致，避免 postcss 模式）

@@ -362,7 +362,7 @@ async function onChangePassword(): Promise<void> {
             </div>
 
             <div class="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <UButton color="neutral" variant="outline" icon="i-lucide-key" @click="onChangePassword">
+              <UButton color="neutral" variant="outline" icon="i-lucide-key-round" @click="onChangePassword">
                 修改密码
               </UButton>
               <span v-if="passwordMessage" class="text-sm text-slate-400">{{ passwordMessage }}</span>
