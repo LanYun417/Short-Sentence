@@ -8,6 +8,9 @@
 - 组合式 API + `<script setup lang="ts">`；**Nuxt UI v4 承担组件层**（`UButton` / `UInput` / `UFormField` / `UCard` / `UAlert` / `UTabs` / `UBadge` / `USelect` / `UTextarea` / `UAvatar` / `USkeleton` / `UApp`），**不引 Element Plus**（那是 admin 中后台的栈）；
 - **不直接依赖 `reka-ui`**：它只是 Nuxt UI 的内部实现细节，业务代码一律用 `U*` 前缀组件，避免和 Nuxt UI 的版本绑死；
 - 根组件必须包一层 `<UApp>`：Toast / Modal / Tooltip 等覆盖层依赖它提供的上下文；
+- **布局只有一个入口**：根组件固定写成 `<UApp><NuxtLayout><NuxtPage /></NuxtLayout></UApp>`。顶栏、内容滚动区与移动端底部 Tab 属于 `layouts/default.vue`；登录 / 注册这类要独占视口的页面用 `layouts/auth.vue`（只渲染页面本身，不含外壳）。
+  - **禁止用 `definePageMeta({ layout: false })` 表达「不要外壳」**：外壳若写在根组件里，`layout: false` 去不掉它（页面仍被顶栏占去 64px，`h-dvh` 分栏因此溢出、底部被裁）；更严重的是在 Nuxt 中页面级 `layout` 元信息必须由 `<NuxtLayout>` 消费，缺少它时两个 `layout: false` 页面之间做 SPA 导航会出现「路由已切换（`matched` / `name` 都正确）但 `<NuxtPage>` 不重新渲染」，表现就是**内容区一片空白**。
+  - 认证页（登录 / 注册）结构同构，共用 `components/AuthShell.vue`（左品牌栏 + 右表单列），页面只通过插槽填标题与表单。
 - 语义色在 `app/app.config.ts` 的 `ui.colors` 配置（当前 `primary=sky`、`neutral=slate`）。**该文件必须放在 `app/` 目录内**（Nuxt 4 的 srcDir 是 `app/`，放仓库根不生效，表现为 primary 仍是默认的 green）；
 - 图标用 `i-lucide-*`，本地由 `@iconify-json/lucide`（devDependency）打包，不走运行时 CDN；勿新增图标集除非确有需要；
 - 样式用 Tailwind 工具类；主题令牌走 Nuxt color-mode（亮/暗）；
@@ -32,15 +35,22 @@
 ```
 client/
 ├─ app/
-│  ├─ app.vue             # 根组件（UApp 外壳 + 顶部导航 + NuxtPage）
+│  ├─ app.vue             # 根组件：UApp + NuxtLayout + NuxtPage，仅承担全局职责
+│  │                      #   （SSR 预取当前用户/今日句签、JSON-LD），不渲染任何外壳
 │  ├─ app.config.ts       # Nuxt UI 语义色（primary / neutral …），必须在此目录内
+│  ├─ layouts/
+│  │  ├─ default.vue      # 应用外壳：顶栏 + AppScrollArea + 移动端底部 Tab
+│  │  └─ auth.vue         # 认证页布局：独占视口的全屏画布，无外壳
 │  ├─ pages/              # 路由页面：index / login / register / profile / favorites / review / ai
-│  ├─ components/         # QuestionCard（翻转卡）/ SentenceLibraryList / PosterCanvas
-│  ├─ composables/        # useApi / useQuestionSession / useSse / usePoster
-│  ├─ stores/             # Pinia：auth（持久化）
+│  ├─ components/         # AppScrollArea（悬浮滚动条）/ AuthShell（认证页骨架）/
+│  │                      #   QuestionCard（翻转卡）/ SentenceCard / SentenceLibraryList /
+│  │                      #   BirthdayPicker / GrowthPanel
+│  ├─ composables/        # useApi / useSsrApi（SSR 取数）/ useQuestionSession / useSse /
+│  │                      #   useTodayCard / usePageSeo / useCountUp
+│  ├─ stores/             # Pinia：auth（令牌走 Cookie，资料在挂载后从 localStorage 恢复）
 │  ├─ middleware/         # auth（未登录跳登录并带 redirect）
-│  ├─ utils/              # answer-normalize（比对规范化）/ upload-token（图片令牌）
-│  └─ types/              # 接口 DTO
+│  ├─ utils/              # answer-normalize（比对规范化）/ auth-cookie（令牌 Cookie 读写）
+│  └─ types/              # 接口 DTO 与跨页共享的 UI 类型
 ├─ nuxt.config.ts         # 端口、devProxy、modules
 └─ .env                   # 可选：NUXT_PUBLIC_API_BASE_URL / NUXT_API_TARGET
 ```
