@@ -1,0 +1,29 @@
+// use prisma-next
+
+// 「短句」词根词典：用户搜索的词根解析缓存 + 每日批量入库。
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+
+/// 单词词根解析（AI 生成，按单词唯一：命中缓存直接返回，未命中再实时解析）
+model WordRoot {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 单词（统一小写，唯一业务键）
+  word String @unique @db.VarChar(64)
+  /// 音标（如 /ˌʌnəˈvɔɪdəbl/）
+  phonetic String? @db.VarChar(120)
+  /// 中文释义（含词性）
+  meaning String? @db.VarChar(300)
+  /// 结构化解析：{ parts: [{type,text,meaning}], explanation, related[] }
+  analysis Json @db.Json
+  /// 来源：ai 实时解析 / daily 每日批量
+  source String @default("ai") @db.VarChar(20)
+  /// 被搜索次数（热度排序用）
+  searchCount Int @default(0) @map("search_count") @db.Int
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([searchCount])
+  @@map("word_root")
+}

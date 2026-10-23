@@ -1,0 +1,63 @@
+// use prisma-next
+
+// 「短句」游戏化域：经验账本 / 成就定义 / 用户成就。
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+//
+// 三条设计红线（与产品「轻量、隐形、正反馈、不焦虑」理念一致）：
+// 1. **服务端权威**：XP 只由后端按真实事件发放，客户端只上报「发生了什么」，不传经验值；
+// 2. **幂等**：client_xp_log.event_key 唯一，网络重试 / 重复请求不会重复发奖；
+// 3. **只加不减**：没有任何扣减、衰减、断签清空机制——一旦会「失去」，用户就会焦虑然后流失。
+
+/// 经验值账本（一行 = 一次成功发放；event_key 唯一即幂等保证）
+model ClientXpLog {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 幂等键（answer:{eventId} / favorite:{userId}:{sentenceId} / daily_goal:{userId}:{date} / achievement:{userId}:{code} / backfill:{userId}）
+  eventKey String @unique @map("event_key") @db.VarChar(160)
+  /// 用户 id
+  userId BigInt @map("user_id") @db.BigInt
+  /// 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill
+  eventType String @map("event_type") @db.VarChar(32)
+  /// 本次发放经验值（恒为正：本体系只奖励、不扣减）
+  amount Int @db.Int
+  /// 发放时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("client_xp_log")
+}
+
+/// 成就定义（由种子写入；code 为稳定业务键，勿随意改动）
+model Achievement {
+  /// 成就编码（如 streak_7 / collector_50 / night_owl）
+  code String @id @db.VarChar(64)
+  /// 成就名称
+  name String @db.VarChar(50)
+  /// 达成条件描述（展示给用户）
+  description String @db.VarChar(200)
+  /// 图标（lucide 图标名，前端直接拼 i-lucide-*）
+  icon String @db.VarChar(100)
+  /// 分组：persist 坚持 / behavior 行为 / luck 运气
+  category String @db.VarChar(20)
+  /// 解锁奖励经验值
+  rewardXp Int @default(0) @map("reward_xp") @db.Int
+  /// 排序（升序）
+  sort Int @default(0)
+  @@map("achievement")
+}
+
+/// 用户已解锁成就（userId + code 唯一，重复解锁被唯一键拦截）
+model UserAchievement {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 用户 id
+  userId BigInt @map("user_id") @db.BigInt
+  /// 成就编码（不建外键：成就定义是随发布演进的种子数据，历史解锁记录须保留）
+  achievementCode String @map("achievement_code") @db.VarChar(64)
+  /// 解锁时间
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  @@unique([userId, achievementCode])
+  @@index([userId])
+  @@map("user_achievement")
+}

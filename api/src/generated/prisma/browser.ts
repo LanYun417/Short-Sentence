@@ -38,6 +38,21 @@ export type SysConfig = Prisma.SysConfigModel
  */
 export type File = Prisma.FileModel
 /**
+ * Model ClientXpLog
+ * 经验值账本（一行 = 一次成功发放；event_key 唯一即幂等保证）
+ */
+export type ClientXpLog = Prisma.ClientXpLogModel
+/**
+ * Model Achievement
+ * 成就定义（由种子写入；code 为稳定业务键，勿随意改动）
+ */
+export type Achievement = Prisma.AchievementModel
+/**
+ * Model UserAchievement
+ * 用户已解锁成就（userId + code 唯一，重复解锁被唯一键拦截）
+ */
+export type UserAchievement = Prisma.UserAchievementModel
+/**
  * Model LoginLog
  * 登录日志表
  */
@@ -154,3 +169,8 @@ export type UserMenu = Prisma.UserMenuModel
  * 改动其中一处就会漂移——这正是本项目在角色授权上踩过的坑。
  */
 export type TaskLog = Prisma.TaskLogModel
+/**
+ * Model WordRoot
+ * 单词词根解析（AI 生成，按单词唯一：命中缓存直接返回，未命中再实时解析）
+ */
+export type WordRoot = Prisma.WordRootModel

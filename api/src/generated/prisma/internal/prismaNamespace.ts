@@ -401,6 +401,9 @@ export const ModelName = {
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
   File: 'File',
+  ClientXpLog: 'ClientXpLog',
+  Achievement: 'Achievement',
+  UserAchievement: 'UserAchievement',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -421,7 +424,8 @@ export const ModelName = {
   RoleMenu: 'RoleMenu',
   RoleDept: 'RoleDept',
   UserMenu: 'UserMenu',
-  TaskLog: 'TaskLog'
+  TaskLog: 'TaskLog',
+  WordRoot: 'WordRoot'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -437,7 +441,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "loginLog" | "operationLog" | "httpLog" | "notice" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog"
+    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -702,6 +706,204 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.FileCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.FileCountAggregateOutputType> | number
+        }
+      }
+    }
+    ClientXpLog: {
+      payload: Prisma.$ClientXpLogPayload<ExtArgs>
+      fields: Prisma.ClientXpLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClientXpLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClientXpLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        findFirst: {
+          args: Prisma.ClientXpLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClientXpLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        findMany: {
+          args: Prisma.ClientXpLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>[]
+        }
+        create: {
+          args: Prisma.ClientXpLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        createMany: {
+          args: Prisma.ClientXpLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ClientXpLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        update: {
+          args: Prisma.ClientXpLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClientXpLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClientXpLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ClientXpLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientXpLogPayload>
+        }
+        aggregate: {
+          args: Prisma.ClientXpLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClientXpLog>
+        }
+        groupBy: {
+          args: Prisma.ClientXpLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientXpLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClientXpLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientXpLogCountAggregateOutputType> | number
+        }
+      }
+    }
+    Achievement: {
+      payload: Prisma.$AchievementPayload<ExtArgs>
+      fields: Prisma.AchievementFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AchievementFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AchievementFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        findFirst: {
+          args: Prisma.AchievementFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AchievementFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        findMany: {
+          args: Prisma.AchievementFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>[]
+        }
+        create: {
+          args: Prisma.AchievementCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        createMany: {
+          args: Prisma.AchievementCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.AchievementDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        update: {
+          args: Prisma.AchievementUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        deleteMany: {
+          args: Prisma.AchievementDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AchievementUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.AchievementUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AchievementPayload>
+        }
+        aggregate: {
+          args: Prisma.AchievementAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAchievement>
+        }
+        groupBy: {
+          args: Prisma.AchievementGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AchievementGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AchievementCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AchievementCountAggregateOutputType> | number
+        }
+      }
+    }
+    UserAchievement: {
+      payload: Prisma.$UserAchievementPayload<ExtArgs>
+      fields: Prisma.UserAchievementFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserAchievementFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserAchievementFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        findFirst: {
+          args: Prisma.UserAchievementFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserAchievementFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        findMany: {
+          args: Prisma.UserAchievementFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>[]
+        }
+        create: {
+          args: Prisma.UserAchievementCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        createMany: {
+          args: Prisma.UserAchievementCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.UserAchievementDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        update: {
+          args: Prisma.UserAchievementUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserAchievementDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserAchievementUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.UserAchievementUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserAchievementPayload>
+        }
+        aggregate: {
+          args: Prisma.UserAchievementAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserAchievement>
+        }
+        groupBy: {
+          args: Prisma.UserAchievementGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserAchievementGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserAchievementCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserAchievementCountAggregateOutputType> | number
         }
       }
     }
@@ -2091,6 +2293,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    WordRoot: {
+      payload: Prisma.$WordRootPayload<ExtArgs>
+      fields: Prisma.WordRootFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WordRootFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WordRootFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        findFirst: {
+          args: Prisma.WordRootFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WordRootFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        findMany: {
+          args: Prisma.WordRootFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>[]
+        }
+        create: {
+          args: Prisma.WordRootCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        createMany: {
+          args: Prisma.WordRootCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.WordRootDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        update: {
+          args: Prisma.WordRootUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        deleteMany: {
+          args: Prisma.WordRootDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WordRootUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.WordRootUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WordRootPayload>
+        }
+        aggregate: {
+          args: Prisma.WordRootAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWordRoot>
+        }
+        groupBy: {
+          args: Prisma.WordRootGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WordRootGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WordRootCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WordRootCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2188,6 +2456,41 @@ export const FileScalarFieldEnum = {
 } as const
 
 export type FileScalarFieldEnum = (typeof FileScalarFieldEnum)[keyof typeof FileScalarFieldEnum]
+
+
+export const ClientXpLogScalarFieldEnum = {
+  id: 'id',
+  eventKey: 'eventKey',
+  userId: 'userId',
+  eventType: 'eventType',
+  amount: 'amount',
+  createdAt: 'createdAt'
+} as const
+
+export type ClientXpLogScalarFieldEnum = (typeof ClientXpLogScalarFieldEnum)[keyof typeof ClientXpLogScalarFieldEnum]
+
+
+export const AchievementScalarFieldEnum = {
+  code: 'code',
+  name: 'name',
+  description: 'description',
+  icon: 'icon',
+  category: 'category',
+  rewardXp: 'rewardXp',
+  sort: 'sort'
+} as const
+
+export type AchievementScalarFieldEnum = (typeof AchievementScalarFieldEnum)[keyof typeof AchievementScalarFieldEnum]
+
+
+export const UserAchievementScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  achievementCode: 'achievementCode',
+  unlockedAt: 'unlockedAt'
+} as const
+
+export type UserAchievementScalarFieldEnum = (typeof UserAchievementScalarFieldEnum)[keyof typeof UserAchievementScalarFieldEnum]
 
 
 export const LoginLogScalarFieldEnum = {
@@ -2518,6 +2821,21 @@ export const TaskLogScalarFieldEnum = {
 export type TaskLogScalarFieldEnum = (typeof TaskLogScalarFieldEnum)[keyof typeof TaskLogScalarFieldEnum]
 
 
+export const WordRootScalarFieldEnum = {
+  id: 'id',
+  word: 'word',
+  phonetic: 'phonetic',
+  meaning: 'meaning',
+  analysis: 'analysis',
+  source: 'source',
+  searchCount: 'searchCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WordRootScalarFieldEnum = (typeof WordRootScalarFieldEnum)[keyof typeof WordRootScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2532,6 +2850,13 @@ export const NullableJsonNullValueInput = {
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const NullsOrder = {
@@ -2582,6 +2907,32 @@ export const FileOrderByRelevanceFieldEnum = {
 } as const
 
 export type FileOrderByRelevanceFieldEnum = (typeof FileOrderByRelevanceFieldEnum)[keyof typeof FileOrderByRelevanceFieldEnum]
+
+
+export const ClientXpLogOrderByRelevanceFieldEnum = {
+  eventKey: 'eventKey',
+  eventType: 'eventType'
+} as const
+
+export type ClientXpLogOrderByRelevanceFieldEnum = (typeof ClientXpLogOrderByRelevanceFieldEnum)[keyof typeof ClientXpLogOrderByRelevanceFieldEnum]
+
+
+export const AchievementOrderByRelevanceFieldEnum = {
+  code: 'code',
+  name: 'name',
+  description: 'description',
+  icon: 'icon',
+  category: 'category'
+} as const
+
+export type AchievementOrderByRelevanceFieldEnum = (typeof AchievementOrderByRelevanceFieldEnum)[keyof typeof AchievementOrderByRelevanceFieldEnum]
+
+
+export const UserAchievementOrderByRelevanceFieldEnum = {
+  achievementCode: 'achievementCode'
+} as const
+
+export type UserAchievementOrderByRelevanceFieldEnum = (typeof UserAchievementOrderByRelevanceFieldEnum)[keyof typeof UserAchievementOrderByRelevanceFieldEnum]
 
 
 export const LoginLogOrderByRelevanceFieldEnum = {
@@ -2774,6 +3125,16 @@ export const TaskLogOrderByRelevanceFieldEnum = {
 } as const
 
 export type TaskLogOrderByRelevanceFieldEnum = (typeof TaskLogOrderByRelevanceFieldEnum)[keyof typeof TaskLogOrderByRelevanceFieldEnum]
+
+
+export const WordRootOrderByRelevanceFieldEnum = {
+  word: 'word',
+  phonetic: 'phonetic',
+  meaning: 'meaning',
+  source: 'source'
+} as const
+
+export type WordRootOrderByRelevanceFieldEnum = (typeof WordRootOrderByRelevanceFieldEnum)[keyof typeof WordRootOrderByRelevanceFieldEnum]
 
 
 
@@ -2985,6 +3346,9 @@ export type GlobalOmitConfig = {
   dictItem?: Prisma.DictItemOmit
   sysConfig?: Prisma.SysConfigOmit
   file?: Prisma.FileOmit
+  clientXpLog?: Prisma.ClientXpLogOmit
+  achievement?: Prisma.AchievementOmit
+  userAchievement?: Prisma.UserAchievementOmit
   loginLog?: Prisma.LoginLogOmit
   operationLog?: Prisma.OperationLogOmit
   httpLog?: Prisma.HttpLogOmit
@@ -3006,6 +3370,7 @@ export type GlobalOmitConfig = {
   roleDept?: Prisma.RoleDeptOmit
   userMenu?: Prisma.UserMenuOmit
   taskLog?: Prisma.TaskLogOmit
+  wordRoot?: Prisma.WordRootOmit
 }
 
 /* Types for Logging */

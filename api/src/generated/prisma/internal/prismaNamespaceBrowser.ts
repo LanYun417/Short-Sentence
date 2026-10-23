@@ -55,6 +55,9 @@ export const ModelName = {
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
   File: 'File',
+  ClientXpLog: 'ClientXpLog',
+  Achievement: 'Achievement',
+  UserAchievement: 'UserAchievement',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -75,7 +78,8 @@ export const ModelName = {
   RoleMenu: 'RoleMenu',
   RoleDept: 'RoleDept',
   UserMenu: 'UserMenu',
-  TaskLog: 'TaskLog'
+  TaskLog: 'TaskLog',
+  WordRoot: 'WordRoot'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -152,6 +156,41 @@ export const FileScalarFieldEnum = {
 } as const
 
 export type FileScalarFieldEnum = (typeof FileScalarFieldEnum)[keyof typeof FileScalarFieldEnum]
+
+
+export const ClientXpLogScalarFieldEnum = {
+  id: 'id',
+  eventKey: 'eventKey',
+  userId: 'userId',
+  eventType: 'eventType',
+  amount: 'amount',
+  createdAt: 'createdAt'
+} as const
+
+export type ClientXpLogScalarFieldEnum = (typeof ClientXpLogScalarFieldEnum)[keyof typeof ClientXpLogScalarFieldEnum]
+
+
+export const AchievementScalarFieldEnum = {
+  code: 'code',
+  name: 'name',
+  description: 'description',
+  icon: 'icon',
+  category: 'category',
+  rewardXp: 'rewardXp',
+  sort: 'sort'
+} as const
+
+export type AchievementScalarFieldEnum = (typeof AchievementScalarFieldEnum)[keyof typeof AchievementScalarFieldEnum]
+
+
+export const UserAchievementScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  achievementCode: 'achievementCode',
+  unlockedAt: 'unlockedAt'
+} as const
+
+export type UserAchievementScalarFieldEnum = (typeof UserAchievementScalarFieldEnum)[keyof typeof UserAchievementScalarFieldEnum]
 
 
 export const LoginLogScalarFieldEnum = {
@@ -482,6 +521,21 @@ export const TaskLogScalarFieldEnum = {
 export type TaskLogScalarFieldEnum = (typeof TaskLogScalarFieldEnum)[keyof typeof TaskLogScalarFieldEnum]
 
 
+export const WordRootScalarFieldEnum = {
+  id: 'id',
+  word: 'word',
+  phonetic: 'phonetic',
+  meaning: 'meaning',
+  analysis: 'analysis',
+  source: 'source',
+  searchCount: 'searchCount',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WordRootScalarFieldEnum = (typeof WordRootScalarFieldEnum)[keyof typeof WordRootScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -496,6 +550,13 @@ export const NullableJsonNullValueInput = {
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const NullsOrder = {
@@ -546,6 +607,32 @@ export const FileOrderByRelevanceFieldEnum = {
 } as const
 
 export type FileOrderByRelevanceFieldEnum = (typeof FileOrderByRelevanceFieldEnum)[keyof typeof FileOrderByRelevanceFieldEnum]
+
+
+export const ClientXpLogOrderByRelevanceFieldEnum = {
+  eventKey: 'eventKey',
+  eventType: 'eventType'
+} as const
+
+export type ClientXpLogOrderByRelevanceFieldEnum = (typeof ClientXpLogOrderByRelevanceFieldEnum)[keyof typeof ClientXpLogOrderByRelevanceFieldEnum]
+
+
+export const AchievementOrderByRelevanceFieldEnum = {
+  code: 'code',
+  name: 'name',
+  description: 'description',
+  icon: 'icon',
+  category: 'category'
+} as const
+
+export type AchievementOrderByRelevanceFieldEnum = (typeof AchievementOrderByRelevanceFieldEnum)[keyof typeof AchievementOrderByRelevanceFieldEnum]
+
+
+export const UserAchievementOrderByRelevanceFieldEnum = {
+  achievementCode: 'achievementCode'
+} as const
+
+export type UserAchievementOrderByRelevanceFieldEnum = (typeof UserAchievementOrderByRelevanceFieldEnum)[keyof typeof UserAchievementOrderByRelevanceFieldEnum]
 
 
 export const LoginLogOrderByRelevanceFieldEnum = {
@@ -738,4 +825,14 @@ export const TaskLogOrderByRelevanceFieldEnum = {
 } as const
 
 export type TaskLogOrderByRelevanceFieldEnum = (typeof TaskLogOrderByRelevanceFieldEnum)[keyof typeof TaskLogOrderByRelevanceFieldEnum]
+
+
+export const WordRootOrderByRelevanceFieldEnum = {
+  word: 'word',
+  phonetic: 'phonetic',
+  meaning: 'meaning',
+  source: 'source'
+} as const
+
+export type WordRootOrderByRelevanceFieldEnum = (typeof WordRootOrderByRelevanceFieldEnum)[keyof typeof WordRootOrderByRelevanceFieldEnum]
 
