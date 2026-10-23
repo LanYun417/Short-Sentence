@@ -9436,7 +9436,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "题库管理"
         ],
-        "summary": "手动触发批量生成（异步执行，进度看批次列表）",
+        "summary": "手动触发批量生成（异步执行，进度看批次列表）。 传 difficulty 则本批全部出该难度（定向补某一档），否则按自然分布",
         "operationId": "post__api_sentences_gen_batch",
         "requestBody": {
           "required": true,
@@ -12760,6 +12760,11 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "count": {
             "type": "number",
             "description": "本次目标数量（缺省取配置 SENTENCE_DAILY_TARGET）",
+            "example": 1
+          },
+          "difficulty": {
+            "type": "number",
+            "description": "强制本批全部为该难度（1 易 / 2 中 / 3 难；省略则按 40/40/20 自然分布）。 用于「某一档题目不够用」时定向补题，例如基础档被抽空。",
             "example": 1
           }
         }

@@ -2,7 +2,7 @@
  * 题库管理 DTO（管理端）。
  */
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 /** 句子状态（与 schema 注释一致）。 */
 export const SENTENCE_STATUS = {
@@ -56,6 +56,17 @@ export class TriggerGenDto {
   @IsInt({ message: '目标数量必须为整数' })
   @Min(1, { message: '目标数量至少为 1' })
   count?: number;
+
+  /**
+   * 强制本批全部为该难度（1 易 / 2 中 / 3 难；省略则按 40/40/20 自然分布）。
+   * 用于「某一档题目不够用」时定向补题，例如基础档被抽空。
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '难度必须为整数' })
+  @Min(1, { message: '难度最小为 1' })
+  @Max(3, { message: '难度最大为 3' })
+  difficulty?: number;
 }
 
 /** 场景分类保存入参。 */

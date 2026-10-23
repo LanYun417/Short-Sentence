@@ -53,6 +53,12 @@ export class SentenceGenService {
   private readonly logger = new Logger(SentenceGenService.name);
   /** 进程内互斥标志。 */
   private running = false;
+  /**
+   * 本批强制难度（1/2/3；null = 按自然分布）。
+   * 只由手动触发指定，用于运营补某一档题目（例如「基础档数量不够」）。
+   * 批次表没有这个字段，用进程内变量传递——`running` 已保证同时只有一批在跑。
+   */
+  private focusDifficulty: number | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -94,8 +100,12 @@ export class SentenceGenService {
     void this.execute(task.id);
   }
 
-  /** 手动触发（管理端调试/补跑用）。 */
-  async triggerManual(count?: number): Promise<{ taskId: number }> {
+  /**
+   * 手动触发（管理端调试 / 补跑 / 补某一档题目用）。
+   * @param count 本批目标题数
+   * @param difficulty 强制本批全部为该难度（1/2/3；省略则按 40/40/20 自然分布）
+   */
+  async triggerManual(count?: number, difficulty?: number): Promise<{ taskId: number }> {
     if (this.running) {
       throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
     }
@@ -125,6 +135,7 @@ export class SentenceGenService {
           data: { bizDate, targetCount: target, triggerType: 'manual', status: 'pending' },
           select: { id: true },
         });
+    this.focusDifficulty = difficulty ?? null;
     void this.execute(task.id);
     return { taskId: Number(task.id) };
   }
@@ -198,7 +209,9 @@ export class SentenceGenService {
         }
         let drafts: SentenceDraft[] = [];
         try {
-          drafts = await textSemaphore.run(() => withRetry(() => this.sentenceGen.generateBatch(theme, need), retry));
+          drafts = await textSemaphore.run(() =>
+            withRetry(() => this.sentenceGen.generateBatch(theme, need, this.focusDifficulty ?? undefined), retry),
+          );
         } catch (error) {
           // 单批失败（多为上游超时）不中断整轮：计数后继续下一批。
           // 与「零净增」分开计数——请求超时并不代表题库重复，混用会误触发停止条件。
@@ -272,6 +285,8 @@ export class SentenceGenService {
         .catch(() => undefined);
     } finally {
       this.running = false;
+      // 难度焦点只对当前批次有效，不能泄漏到下一次（含定时任务）
+      this.focusDifficulty = null;
     }
   }
 

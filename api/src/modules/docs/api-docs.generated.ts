@@ -5429,7 +5429,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "POST",
         "path": "/api/sentences/gen/batch",
-        "summary": "手动触发批量生成（异步执行，进度看批次列表）",
+        "summary": "手动触发批量生成（异步执行，进度看批次列表）。 传 difficulty 则本批全部出该难度（定向补某一档），否则按自然分布",
         "permission": [
           "sentence:gen"
         ],
@@ -5443,12 +5443,21 @@ export const API_DOCS: ApiDocGroup[] = [
             "required": false,
             "description": "本次目标数量（缺省取配置 SENTENCE_DAILY_TARGET）",
             "example": 1
+          },
+          {
+            "name": "difficulty",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "强制本批全部为该难度（1 易 / 2 中 / 3 难；省略则按 40/40/20 自然分布）。 用于「某一档题目不够用」时定向补题，例如基础档被抽空。",
+            "example": 1
           }
         ],
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/batch\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"count\": 1\n    }'",
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/batch\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"count\": 1,\n      \"difficulty\": 1\n    }'",
           "requestBody": {
-            "count": 1
+            "count": 1,
+            "difficulty": 1
           }
         }
       },

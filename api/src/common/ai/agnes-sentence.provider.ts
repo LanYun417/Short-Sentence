@@ -51,7 +51,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
    * 提示词策略：system 规定输出 JSON 形状与字段约束；user 给出主题与数量。
    * 要求模型返回 `{"items": [...]}`（json_object 模式必须是对象，不能是裸数组）。
    */
-  async generateBatch(theme: string, count: number): Promise<SentenceDraft[]> {
+  async generateBatch(theme: string, count: number, focusDifficulty?: number): Promise<SentenceDraft[]> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
@@ -60,7 +60,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '你是英语教研专家，为英语学习 App 生成日常对话短句题库。',
       '严格要求：',
       '1. 只输出 JSON，形状为 {"items": [...]}，不要任何解释文字；',
-      '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难）、categoryName（中文分类名，与主题一致或更细）；',
+      '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难，**按下面第 4 条的标准判定，不要凭感觉**）、categoryName（中文分类名，与主题一致或更细）；',
       '3. translationZh 是最容易出问题的字段，三条硬性要求：',
       '   a. 地道中文：符合中文的语序与词语搭配，严禁逐字直译英文语序。' +
         '例：英文 "what the patient earth has grown" 应译作「大地耐心孕育出的（果实）」，' +
@@ -69,10 +69,27 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         '反例：「站台在最后一刻变了。」——读的人不知道站台变成了什么，' +
         '应写成「快到发车时站台临时换了」或「站台在最后一刻改了」；',
       '   c. 成分完整：谁、做什么、在哪等必要信息不能省略到产生歧义；单句 8~25 字为宜；',
-      '4. sentenceEn 要地道、自然，可以是日常口语，但语义必须完整——不要为了「口语化」而省略到含义不清，' +
-        '也不要用生僻词与俚语；难度分布均匀；',
-      '5. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
-      `6. 当次生成 ${count} 条，主题：${theme}。`,
+      '4. 难度由**词汇与语法**决定，不由句子长短决定（长短只是结果，不是判据）：',
+      '   · 1（基础）：词汇全部是最日常的高频词（CEFR A1~A2，如 time / want / help / busy / sure / cold）；' +
+        '语法只用一般现在时、一般过去时、can / must 这类简单情态；单句，无从句、无完成时、无被动、无习语。' +
+        '这类句子自然就是短的（通常 5~8 词），但**不要为了凑短把 2 档的句子硬标成 1**。',
+      '     正例：Could you open the window?（A1 词汇 + 简单请求）｜I will be there at six.（A1 词汇 + 一般将来）｜' +
+        'This coffee is too hot.（A1 词汇 + 主系表）',
+      '     反例（词汇或语法已超出基础档，属于 2 档）：' +
+        "I'm running a bit late, so I'll grab a coffee on the way.（grab 引申义 + so 引导结果）；" +
+        "I've been thinking about starting a new hobby.（现在完成进行时）；" +
+        'Let me know if you need any help with the report.（if 从句 + let me know 固定表达）；',
+      '   · 2（进阶）：出现下列任一即算 2 档——一个超出最高频范围的常用词、一个从句或连接词、' +
+        '进行时 / 完成时 / 被动语态之一、常见短语动词；',
+      '   · 3（挑战）：出现抽象名词、习语或短语动词的引申义、虚拟语气、多重从句、复杂时态组合。',
+      '5. 难度分布：约 40% 标 1、40% 标 2、20% 标 3；' +
+        (focusDifficulty
+          ? `**本批全部为难度 ${focusDifficulty}**，逐条都必须符合第 4 条中该档的词汇与语法标准，` +
+            '不要靠缩短句子来伪装成低难度（例如把复杂时态去掉几个词——那仍然是 2 档）。'
+          : '三档都要有，不要把题目全堆在中档。'),
+      '6. sentenceEn 要地道、自然，可以是日常口语，但语义必须完整——不要为了「口语化」而省略到含义不清，也不要用生僻词与俚语；',
+      '7. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
+      `8. 当次生成 ${count} 条，主题：${theme}。`,
     ].join('\n');
 
     const startedAt = Date.now();

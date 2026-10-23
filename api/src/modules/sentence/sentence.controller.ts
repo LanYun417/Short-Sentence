@@ -114,13 +114,20 @@ export class SentenceController {
     return buildPageResult(list, total, page, pageSize);
   }
 
-  /** 手动触发批量生成（异步执行，进度看批次列表）。 */
+  /**
+   * 手动触发批量生成（异步执行，进度看批次列表）。
+   * 传 difficulty 则本批全部出该难度（定向补某一档），否则按自然分布。
+   */
   @Post('gen/batch')
   @RequirePermissions('sentence:gen')
   @OperationLog('题库管理', '触发生成')
   async triggerGen(@Body() dto: TriggerGenDto): Promise<ResponseEnvelope<{ taskId: number }>> {
-    const result = await this.sentenceGen.triggerManual(dto.count);
-    return { __raw: true, data: result, message: '生成任务已启动' };
+    const result = await this.sentenceGen.triggerManual(dto.count, dto.difficulty);
+    return {
+      __raw: true,
+      data: result,
+      message: dto.difficulty ? `生成任务已启动（本批仅难度 ${dto.difficulty}）` : '生成任务已启动',
+    };
   }
 
   /** 手工创建题目。 */
