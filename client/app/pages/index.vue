@@ -265,28 +265,6 @@ function onFavorite(): void {
           换一题
         </UButton>
       </div>
-
-      <!-- 达标提示（句签已收入囊中，庆祝特效播完即收起，不再常驻展示） -->
-      <div v-if="goalReached" class="anim-pop mt-5">
-        <div
-          class="flex flex-col items-center gap-2 rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5 text-center dark:border-amber-500/20 dark:bg-amber-500/10"
-        >
-          <div class="anim-float flex items-center gap-2 text-amber-700 dark:text-amber-300">
-            <UIcon name="i-lucide-party-popper" class="h-5 w-5" />
-            <span class="font-semibold">今日目标已完成！</span>
-          </div>
-          <p class="text-sm text-amber-700/80 dark:text-amber-200/80">
-            {{
-              claiming
-                ? '正在为你解锁今日句签…'
-                : todayCard.obtained
-                  ? '今日句签已收入囊中，头像已点亮 ✨'
-                  : '今日句签还在准备中，稍后再来看看'
-            }}
-          </p>
-          <UIcon v-if="claiming" name="i-lucide-loader-circle" class="h-5 w-5 animate-spin text-amber-500" />
-        </div>
-      </div>
     </template>
 
     <!-- 领取句签的庆祝层：卡片居中 → 光束飞向导航头像 → 自动关闭 -->
