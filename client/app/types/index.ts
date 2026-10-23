@@ -96,3 +96,26 @@ export interface SentenceCategory {
   nameEn: string | null;
   icon: string | null;
 }
+
+/** 词根构件（前缀 / 词根 / 后缀）。 */
+export interface WordRootPart {
+  /** prefix 前缀 / root 词根 / suffix 后缀 */
+  type: string;
+  /** 文本（如 un-） */
+  text: string;
+  /** 含义 */
+  meaning: string;
+}
+
+/** 词根词条。 */
+export interface WordRootItem {
+  word: string;
+  phonetic: string | null;
+  meaning: string | null;
+  parts: WordRootPart[];
+  explanation: string;
+  related: string[];
+  /** ai 实时解析 / daily 每日批量 */
+  source: string;
+  searchCount: number;
+}

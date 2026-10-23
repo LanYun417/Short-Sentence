@@ -2,7 +2,12 @@
 /**
  * 刷题闪卡（3D 翻转）。
  * 交互状态机：answering →（提交/确定/回车）→ flipped →（下一题/回车）→ 下一张。
- * 正面不出答案；背面只在提交后渲染正确答案（由后端 answer 响应驱动）。
+ *
+ * 翻牌规则：
+ * - 提交答案 → 翻到背面看结果；
+ * - 点「下一题」→ 先保持背面并显示加载态，新题到达后**翻回正面**揭示新题
+ *   （而不是把卡片整个换掉硬切）——所以本组件不能用 :key 强制重建，
+ *   否则 DOM 换新、transition 没有起点，翻牌动画就没了。
  */
 import type { AnswerResult, NextQuestion } from '~/types';
 import { withUploadToken } from '~/utils/upload-token';
@@ -14,6 +19,8 @@ const props = defineProps<{
   result: AnswerResult | null;
   /** 提交请求中（禁用确定按钮） */
   submitting: boolean;
+  /** 正在拉取下一题（背面显示加载态，到达后翻回正面） */
+  loading: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -33,6 +40,10 @@ const flipped = computed(() => props.result !== null);
 /** 难度文案 */
 const difficultyText = computed(() => ['', '基础', '进阶', '挑战'][props.question.difficulty] ?? '');
 
+/** 收藏按钮的「弹一下」反馈（点击后瞬时放大） */
+const favPop = ref(false);
+let favTimer: ReturnType<typeof setTimeout> | 0 = 0;
+
 /** 聚焦输入框。 */
 function focusInput(): void {
   void nextTick(() => inputRef.value?.inputRef?.focus());
@@ -43,7 +54,8 @@ watch(
   () => props.question.sentenceId,
   () => {
     answer.value = '';
-    focusInput();
+    // 等翻牌动画基本结束再聚焦，避免输入法键盘在动画途中弹出
+    window.setTimeout(focusInput, 320);
   },
 );
 
@@ -53,6 +65,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
+  window.clearTimeout(favTimer);
 });
 
 /** 回车双态：输入态=提交，翻转态=下一题。 */
@@ -83,35 +96,51 @@ function onSubmit(): void {
   }
   emit('submit', value);
 }
+
+/** 收藏（带瞬时放大反馈）。 */
+function onFavorite(): void {
+  favPop.value = true;
+  window.clearTimeout(favTimer);
+  favTimer = window.setTimeout(() => {
+    favPop.value = false;
+  }, 400);
+  emit('favorite');
+}
 </script>
 
 <template>
-  <div class="card-scene mx-auto w-full max-w-xl">
+  <div class="card-scene anim-in mx-auto w-full max-w-xl">
     <div class="card-3d relative" :class="{ 'is-flipped': flipped }">
       <!-- 正面：题干 + 场景图 + 输入 -->
       <div
         class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
-        <div class="mb-3 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <UBadge v-if="question.categoryName" color="neutral" variant="subtle" size="sm">
+        <div class="mb-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <UBadge v-if="question.categoryName" color="primary" variant="subtle" size="sm">
             {{ question.categoryName }}
           </UBadge>
           <UBadge v-if="difficultyText" color="warning" variant="subtle" size="sm">
             {{ difficultyText }}
           </UBadge>
-          <span class="ml-auto">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
+          <span class="ml-auto tabular-nums">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
         </div>
 
-        <h2 class="mb-4 text-center text-lg font-semibold text-slate-800 dark:text-slate-100">
-          {{ question.translationZh }}
-        </h2>
+        <!-- 题干 -->
+        <div class="mb-4 rounded-2xl bg-slate-50 px-4 py-3 text-center dark:bg-slate-700/40">
+          <p class="text-[11px] font-medium tracking-wide text-sky-600 dark:text-sky-400">看图，说出英文</p>
+          <h2 class="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+            {{ question.translationZh }}
+          </h2>
+        </div>
 
-        <div class="aspect-video overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-700">
+        <div
+          class="aspect-video overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-black/5 dark:bg-slate-700 dark:ring-white/10"
+        >
           <img
             v-if="question.imageUrl"
             :src="withUploadToken(question.imageUrl)"
             :alt="question.translationZh"
-            class="h-full w-full object-cover"
+            class="anim-fade h-full w-full object-cover transition-transform duration-700 hover:scale-105"
             loading="lazy"
           />
           <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">配图缺失</div>
@@ -130,40 +159,58 @@ function onSubmit(): void {
             class="flex-1"
             :disabled="submitting"
           />
-          <UButton type="submit" size="lg" color="primary" :loading="submitting" :disabled="!answer.trim()">
-            {{ submitting ? '判定中' : '确定' }}
+          <UButton
+            type="submit"
+            size="lg"
+            :loading="submitting"
+            :disabled="!answer.trim()"
+            class="group [&_svg]:transition-transform [&_svg]:group-hover:translate-x-0.5"
+          >
+            确定
+            <template #trailing>
+              <UIcon name="i-lucide-corner-down-left" class="h-4 w-4" />
+            </template>
           </UButton>
         </form>
       </div>
 
-      <!-- 背面：正确答案 -->
+      <!-- 背面：加载中 / 正确答案 -->
       <div
         class="card-face card-face--back absolute inset-0 rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
-        <div class="flex h-full flex-col">
-          <div class="mb-2 flex items-center gap-2">
-            <UBadge
-              :color="result?.isCorrect ? 'success' : 'error'"
-              variant="subtle"
-              size="lg"
-              class="text-sm font-medium"
-            >
-              {{ result?.isCorrect ? '答对了' : '再想想' }}
-            </UBadge>
+        <!-- 加载下一题：保持背面转一会儿，比直接硬切自然 -->
+        <div v-if="loading" class="flex h-full flex-col items-center justify-center gap-3 text-slate-400">
+          <UIcon name="i-lucide-loader-circle" class="h-9 w-9 animate-spin text-sky-500" />
+          <p class="text-sm">加载下一题…</p>
+        </div>
+
+        <div v-else class="flex h-full flex-col">
+          <!-- 结果条 -->
+          <div
+            class="anim-pop mb-3 flex items-center gap-2 rounded-2xl px-3 py-2"
+            :class="
+              result?.isCorrect
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+            "
+          >
+            <UIcon :name="result?.isCorrect ? 'i-lucide-check-circle-2' : 'i-lucide-x-circle'" class="h-5 w-5" />
+            <span class="font-semibold">{{ result?.isCorrect ? '答对了' : '再想想' }}</span>
             <UButton
               variant="ghost"
-              class="ml-auto"
+              class="ml-auto transition-transform duration-200"
+              :class="[favPop && 'scale-125', result?.favorited && '[&_svg]:fill-current']"
+              :color="result?.favorited ? 'warning' : 'neutral'"
               icon="i-lucide-star"
-              :class="result?.favorited ? 'text-amber-500 [&_svg]:fill-current' : 'text-slate-400'"
               title="收藏"
-              @click="emit('favorite')"
+              @click="onFavorite"
             />
           </div>
 
           <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
             {{ result?.sentenceEn }}
           </p>
-          <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-slate-500 dark:text-slate-400">
+          <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
             {{ result.ipa }}
           </p>
           <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -176,8 +223,20 @@ function onSubmit(): void {
           </div>
 
           <div class="mt-auto flex items-center justify-between pt-4 text-xs text-slate-400">
-            <span>按 回车 或点击按钮继续</span>
-            <UButton color="primary" variant="solid" size="sm" @click="emit('next')"> 下一题 </UButton>
+            <span class="flex items-center gap-1.5">
+              <UIcon name="i-lucide-corner-down-left" class="h-3.5 w-3.5" />
+              回车继续
+            </span>
+            <UButton
+              size="sm"
+              class="group [&_svg]:transition-transform [&_svg]:group-hover:translate-x-1"
+              @click="emit('next')"
+            >
+              下一题
+              <template #trailing>
+                <UIcon name="i-lucide-arrow-right" class="h-4 w-4" />
+              </template>
+            </UButton>
           </div>
         </div>
       </div>

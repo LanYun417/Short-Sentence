@@ -13,7 +13,29 @@ const DEV_PORT = Number(process.env.NUXT_DEV_PORT ?? 3001);
 /** 后端地址（devProxy 目标），与 api/.env 的 PORT 保持一致。 */
 const API_TARGET = process.env.NUXT_API_TARGET || 'http://localhost:3000';
 
+/**
+ * 站点名。@nuxtjs/seo 的 %siteName / og:site_name 都取自这里——
+ * 不配它占位符会原样漏进 <title>（曾出现「短句 · 视觉场景英语闪卡 | %siteName」）。
+ */
+const SITE_NAME = '短句';
+
+/** 站点描述（meta description 与分享卡片共用）。 */
+const SITE_DESCRIPTION = '每天 20 句，看图学地道英语口语。场景闪卡 + 间隔重复 + AI 拓展，用完即走。';
+
+/**
+ * 站点绝对地址（canonical / sitemap 用）。
+ * 刻意不给默认值：不传时由运行期从请求头推断（生产环境即真实域名），
+ * 避免把开发地址或臆测域名写进 canonical；需要固定域名时在部署环境注入。
+ */
+const SITE_URL = process.env.NUXT_PUBLIC_SITE_URL || '';
+
 export default defineNuxtConfig({
+  // 保持 SSR（默认开启）。登录态不能只存 localStorage：SSR 时服务端读不到 localStorage，
+  // 路由中间件会把已登录用户误判为未登录、每次刷新被 302 回登录页。
+  // 因此令牌额外写一份 Cookie（见 utils/auth-cookie.ts），服务端守卫以 Cookie 为准；
+  // localStorage 仍保留，供客户端 API 请求注入 Authorization 头。
+  ssr: true,
+
   // 开发服务：固定端口 + strictPort（见下方 vite.server），端口被占直接报错而非静默漂移，
   // 否则 CORS / 防盗链白名单（按端口配置）会在换端口后失效。
   devServer: {
@@ -38,6 +60,14 @@ export default defineNuxtConfig({
   ],
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+
+  // 图标：服务端直接内联 SVG。
+  // 默认行为下 SSR 只输出 <span class="iconify"> 占位，图标要等客户端 hydration 才出现，
+  // 首屏会闪一下空白，个别情况下还会「看不到」（曾出现修改密码按钮图标不显示）。
+  // 'local' = 把本地安装的集合（lucide）打进服务端包，SSR 直接渲染 <svg>。
+  icon: {
+    serverBundle: 'local',
+  },
 
   // Tailwind v4 走 vite 插件（与 admin 工程一致，避免 postcss 模式）
   vite: {
@@ -89,15 +119,66 @@ export default defineNuxtConfig({
     strategy: 'no_prefix',
   },
 
+  // ===== SEO =====
+  // 站点信息：@nuxtjs/seo / sitemap / robots 的共同事实来源。
+  site: {
+    ...(SITE_URL ? { url: SITE_URL } : {}),
+    name: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    defaultLocale: 'zh-CN',
+    indexable: true,
+  },
+
+  // robots：私有页（需登录）一律禁止抓取——它们对爬虫没有内容，进索引只会稀释站点质量。
+  // 「是否收录」仍由环境决定：开发环境自动全站 Disallow，生产才放开。
+  // disallowNonIndexableRoutes 关掉：它会给每个 routeRule 非索引路由生成一个「空 Disallow」组，
+  // 而同名 User-agent 的空组有被解读为「允许全部」的风险，反而削弱上面的规则。
+  robots: {
+    disallowNonIndexableRoutes: false,
+    disallow: ['/ai', '/favorites', '/review', '/profile'],
+  },
+
+  // sitemap：只保留公开入口。模块会自动发现全部路由，不排除就会把私有页也写进去。
+  sitemap: {
+    exclude: ['/ai', '/favorites', '/review', '/profile'],
+    urls: () => [
+      { loc: '/', changefreq: 'daily', priority: 1 },
+      { loc: '/login', changefreq: 'monthly', priority: 0.3 },
+      { loc: '/register', changefreq: 'monthly', priority: 0.5 },
+    ],
+  },
+
   app: {
+    // 页面切换动画（CSS 类见 assets/css/main.css 的 .page-* 定义）
+    pageTransition: { name: 'page', mode: 'out-in' },
     head: {
-      title: '短句 · 视觉场景英语闪卡',
+      // 文档语言：SEO 与读屏软件都依赖它，缺失时只能靠猜
+      htmlAttrs: { lang: 'zh-CN' },
+      // 默认标题（无页面级标题时使用）；页面只写短标题，品牌后缀由 titleTemplate 统一拼
+      title: '视觉场景英语闪卡',
+      titleTemplate: '%s · 短句',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'description', content: '每天 20 句，看图学地道英语口语。' },
+        { name: 'description', content: SITE_DESCRIPTION },
+        // 分享卡片兜底图（页面级 ogImage 会覆盖）
+        { property: 'og:image', content: '/og-image.png' },
+        { property: 'og:image:type', content: 'image/png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:image', content: '/og-image.png' },
+        // 浏览器 / 系统 UI 主题色（跟随亮暗）
+        { name: 'theme-color', content: '#ffffff', media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: '#0f172a', media: '(prefers-color-scheme: dark)' },
       ],
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+      link: [
+        // 矢量 favicon 优先（任意尺寸清晰），.ico 兜底旧浏览器
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/x-icon', sizes: '32x32', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'mask-icon', href: '/favicon.svg', color: '#4f46e5' },
+      ],
     },
   },
 });

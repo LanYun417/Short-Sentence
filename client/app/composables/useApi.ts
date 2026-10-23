@@ -7,6 +7,7 @@
  * - 401 先尝试刷新一次并重放原请求；刷新失败清态并跳登录（带 redirect）。
  */
 import type { ApiEnvelope } from '~/types';
+import { clearTokenCookie, setTokenCookie } from '~/utils/auth-cookie';
 
 /** 业务错误（携带服务端 code/message）。 */
 export class ApiError extends Error {
@@ -77,6 +78,8 @@ async function refreshToken(): Promise<string | null> {
     );
     if (response.code === 200 && response.data?.accessToken) {
       setToken(response.data.accessToken, response.data.refreshToken);
+      // Cookie 同步续期：SSR 守卫读的是 Cookie，不更新会在下次刷新时被判未登录
+      setTokenCookie(response.data.accessToken);
       return response.data.accessToken;
     }
     return null;
@@ -98,6 +101,7 @@ function refreshOnce(): Promise<string | null> {
 /** 鉴权失败统一处理：清态 + 跳登录。 */
 function handleAuthFailure(): void {
   clearToken();
+  clearTokenCookie();
   clearCachedUser();
   if (!window.location.pathname.startsWith('/login')) {
     navigateTo(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
