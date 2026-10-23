@@ -227,6 +227,41 @@
   transition: opacity 0.35s ease;
 }
 
+/* ===== 难度滑块：让渐变本身也能过渡 =====
+   linear-gradient 无法直接 transition——两个渐变之间没有插值定义，所以按档位换渐变类名
+   时颜色是「硬切」的，只有位置在平滑滑动。
+   把两个色标与投影色注册成 <color> 类型的自定义属性后，浏览器就能对颜色本身插值，
+   切换档位时渐变随之平滑过渡。
+   支持 @property 的浏览器（Chrome 85+ / Safari 16.4+ / Firefox 128+）过渡；不支持的
+   会直接换色，退化为改造前的表现，不影响可用性。 */
+@property --tone-from {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #34d399;
+}
+
+@property --tone-to {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #14b8a6;
+}
+
+@property --tone-shadow {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: rgb(16 185 129 / 35%);
+}
+
+.ss-difficulty-slider {
+  background-image: linear-gradient(135deg, var(--tone-from), var(--tone-to));
+  box-shadow: 0 4px 14px var(--tone-shadow);
+  transition:
+    --tone-from 0.3s ease,
+    --tone-to 0.3s ease,
+    --tone-shadow 0.3s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* 领取句签的庆祝遮罩：淡入淡出 + 卡片弹入 */
 .ss-celebrate-enter-active,
 .ss-celebrate-leave-active {

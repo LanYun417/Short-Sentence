@@ -17,11 +17,22 @@ import { DIFFICULTIES } from '~/composables/useQuestionSession';
 
 const model = defineModel<number>({ required: true });
 
-/** 各档选中态的渐变与投影色（按难度递进：生长 → 上升 → 炽热）。 */
-const TONES: Record<number, string> = {
-  1: 'bg-linear-to-br from-emerald-400 to-teal-500 shadow-emerald-500/35',
-  2: 'bg-linear-to-br from-sky-500 to-indigo-500 shadow-indigo-500/35',
-  3: 'bg-linear-to-br from-amber-500 to-orange-500 shadow-orange-500/35',
+/**
+ * 各档渐变的两个色标与投影色（按难度递进：生长 → 上升 → 炽热）。
+ *
+ * 用**色值**而不是 Tailwind 渐变类：渐变类一换就是整体替换，颜色只能硬切；
+ * 交给 CSS 变量后，配合 main.css 里 `@property` 注册的同名属性，浏览器可以对
+ * 色标插值，于是切换档位时渐变是平滑过渡的（同时位置也在滑动）。
+ */
+const TONE_FALLBACK = { from: '#34d399', to: '#14b8a6', shadow: 'rgb(16 185 129 / 35%)' };
+
+const TONES: Record<number, typeof TONE_FALLBACK> = {
+  // emerald-400 → teal-500
+  1: TONE_FALLBACK,
+  // sky-500 → indigo-500
+  2: { from: '#0ea5e9', to: '#6366f1', shadow: 'rgb(99 102 241 / 35%)' },
+  // amber-500 → orange-500
+  3: { from: '#f59e0b', to: '#f97316', shadow: 'rgb(249 115 22 / 35%)' },
 };
 
 /** 当前档位下标（滑块位置由它决定；取值异常时兜底到第一档）。 */
@@ -30,8 +41,8 @@ const activeIndex = computed(() => {
   return index < 0 ? 0 : index;
 });
 
-/** 滑块当前该用哪一档的渐变。 */
-const activeTone = computed(() => TONES[DIFFICULTIES[activeIndex.value]?.value ?? 1] ?? '');
+/** 滑块当前该用哪一档的色标。 */
+const activeTone = computed(() => TONES[DIFFICULTIES[activeIndex.value]?.value ?? 1] ?? TONE_FALLBACK);
 </script>
 
 <template>
@@ -48,12 +59,17 @@ const activeTone = computed(() => TONES[DIFFICULTIES[activeIndex.value]?.value ?
     >
       <!-- 滑块：宽度 = 单格宽（底槽宽减去左右内边距与两个间隙，再三等分）。
            位移用 `calc(下标 * (100% + 0.375rem))`——transform 的百分比相对元素**自身**尺寸，
-           所以 100% 恰好是「一格」，再加一个 gap（0.375rem = gap-1.5）就落在下一格起点。 -->
+           所以 100% 恰好是「一格」，再加一个 gap（0.375rem = gap-1.5）就落在下一格起点。
+           渐变与位移的过渡都在 .ss-difficulty-slider 里（含 @property 色标插值）。 -->
       <span
         aria-hidden="true"
-        class="pointer-events-none absolute inset-y-1.5 left-1.5 w-[calc((100%-1.5rem)/3)] rounded-xl shadow-md transition-transform duration-300 ease-out"
-        :class="activeTone"
-        :style="{ transform: `translateX(calc(${activeIndex} * (100% + 0.375rem)))` }"
+        class="ss-difficulty-slider pointer-events-none absolute inset-y-1.5 left-1.5 w-[calc((100%-1.5rem)/3)] rounded-xl"
+        :style="{
+          '--tone-from': activeTone.from,
+          '--tone-to': activeTone.to,
+          '--tone-shadow': activeTone.shadow,
+          transform: `translateX(calc(${activeIndex} * (100% + 0.375rem)))`,
+        }"
       />
 
       <button
