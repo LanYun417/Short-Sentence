@@ -20,14 +20,38 @@ export interface SentenceDraft {
   categoryName: string;
 }
 
-/** 生题 Provider 接口。 */
+/** 审核未通过的条目（含原因，便于日志排查）。 */
+export interface RejectedDraft {
+  draft: SentenceDraft;
+  reason: string;
+}
+
+/**
+ * 生题 Provider 接口。
+ *
+ * 三段式流水线：generate（生题）→ polish（优化）→ review（审核），
+ * 三者各自独立调用、可单独重试；审核不通过的题目直接丢弃，不进生图。
+ */
 export interface SentenceGenProvider {
   /**
-   * 生成一批句子草稿。
+   * 一阶段：生成一批句子草稿。
    * @param theme 当日主题（如「日常生活」）
    * @param count 目标条数
+   * @param focusDifficulty 强制本批全部为该难度（1/2/3），省略则按自然分布
    */
-  generateBatch(theme: string, count: number): Promise<SentenceDraft[]>;
+  generateBatch(theme: string, count: number, focusDifficulty?: number): Promise<SentenceDraft[]>;
+
+  /**
+   * 二阶段：优化地道性、中文可读性与难度标注。
+   * 返回**同数量、同顺序**的草稿（模型漏掉的条目保留原稿，不会因为「优化」丢题）。
+   */
+  polishBatch(drafts: SentenceDraft[], theme: string): Promise<SentenceDraft[]>;
+
+  /**
+   * 三阶段：审核并剔除不合格题目（语法/对译/语义自足/难度标注/内容适当性）。
+   * 模型未给出结论的条目按通过处理——审核本身失败不该让整批题目蒸发。
+   */
+  reviewBatch(drafts: SentenceDraft[]): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }>;
 }
 
 /** 每日句签主题（AI 输出解析后的单条）。 */

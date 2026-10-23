@@ -310,9 +310,13 @@ export const config = {
     dailyGoal: Math.max(1, toNumber(process.env.SENTENCE_DAILY_GOAL, 20)),
     /** 是否启用每日定时生成 */
     cronEnabled: toBoolean(process.env.SENTENCE_CRON_ENABLED, true),
-    /** 定时生成时刻（本地时间，默认 00:30，避开 00:05 日志归档与 00:10 保留清理） */
+    /**
+     * 定时生成时刻（本地时间，默认 00:00）。
+     * 与 00:05 日志归档、00:10 保留清理同处夜间时段：三条任务写的是不同的表，
+     * 后两者是秒级操作，不会与生成流水线抢资源。
+     */
     cronHour: toNumber(process.env.SENTENCE_CRON_HOUR, 0),
-    cronMinute: toNumber(process.env.SENTENCE_CRON_MINUTE, 30),
+    cronMinute: toNumber(process.env.SENTENCE_CRON_MINUTE, 0),
     /** 配图尺寸档位、宽高比、入库缩放（定义在 image-gen-config，CLI 脚本共用同一份） */
     imageSize: imageGenConfig.imageSize,
     imageRatio: imageGenConfig.imageRatio,

@@ -202,6 +202,8 @@ export class SentenceGenService {
       };
       let emptyChunks = 0;
       let failedChunks = 0;
+      /** 审核阶段剔除的条数（未入库；单独统计，便于判断提示词是否过严） */
+      let rejectedCount = 0;
       while (textDone < task.targetCount) {
         const need = Math.min(TEXT_CHUNK, task.targetCount - textDone);
         if (need <= 0) {
@@ -225,7 +227,26 @@ export class SentenceGenService {
           continue;
         }
         failedChunks = 0;
-        const inserted = await this.persistDrafts(drafts, taskId);
+
+        // ---------- 二阶段：优化（地道性 / 中文可读性 / 难度校准）----------
+        // 失败降级为原稿：优化是「加分项」，挂掉不该让整批题目作废
+        const polished = await this.runStage('优化', () => this.sentenceGen.polishBatch(drafts, theme), drafts);
+
+        // ---------- 三阶段：审核（不通过的直接丢弃，不进生图）----------
+        const reviewed = await this.runStage('审核', () => this.sentenceGen.reviewBatch(polished), {
+          approved: polished,
+          rejected: [] as Array<{ draft: SentenceDraft; reason: string }>,
+        });
+        if (reviewed.rejected.length > 0) {
+          rejectedCount += reviewed.rejected.length;
+          const sample = reviewed.rejected
+            .slice(0, 3)
+            .map((item) => `${item.draft.sentenceEn}（${item.reason}）`)
+            .join('；');
+          this.logger.warn(`[SentenceGen] 审核剔除 ${reviewed.rejected.length} 条，样例：${sample}`);
+        }
+
+        const inserted = await this.persistDrafts(reviewed.approved, taskId);
         textDone += inserted;
         await this.prisma.sentenceGenTask.update({ where: { id: taskId }, data: { textDone } });
         // 入库即排产：让生图与生题重叠
@@ -253,12 +274,16 @@ export class SentenceGenService {
           status: ok ? 'success' : 'failed',
           textDone,
           imageDone,
-          failCount,
+          // failCount 记「未入库条数」：调用失败 + 审核剔除（运营只看这个数字判断要不要补跑）
+          failCount: failCount + rejectedCount,
           errorMessage: ok ? null : '本轮未产出任何题目（详见服务日志）',
           finishedAt: new Date(),
         },
       });
-      this.logger.log(`[SentenceGen] 批次 ${taskId} 完成：题目 +${textDone}，图片 +${imageDone}，失败 ${failCount}`);
+      this.logger.log(
+        `[SentenceGen] 批次 ${taskId} 完成：题目 +${textDone}，图片 +${imageDone}，` +
+          `调用失败 ${failCount}，审核剔除 ${rejectedCount}`,
+      );
     } catch (error) {
       // 生题阶段整体异常（DB 抖动 / 意外抛出）也不能让已入库题目没有配图，
       // 否则整批白跑、前台始终无题可刷。
@@ -287,6 +312,21 @@ export class SentenceGenService {
       this.running = false;
       // 难度焦点只对当前批次有效，不能泄漏到下一次（含定时任务）
       this.focusDifficulty = null;
+    }
+  }
+
+  /**
+   * 跑一个可选阶段（优化 / 审核）。
+   *
+   * 失败时返回兜底值并记日志：二、三阶段分别是「加分项」与「把关」，挂掉不该让整批题目作废
+   * ——降级而不中断。重试次数比生题少：这类失败多为上游超时，多试无益且会拖长整批时长。
+   */
+  private async runStage<T>(name: string, task: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await withRetry(task, { maxAttempts: 2, baseDelayMs: 2000, maxDelayMs: 10_000 });
+    } catch (error) {
+      this.logger.error(`[SentenceGen] ${name}阶段失败，已降级（本批按未处理继续）：${this.errText(error)}`);
+      return fallback;
     }
   }
 

@@ -14,7 +14,7 @@ import { config } from '../config/config.js';
 import { AiCallLogService } from './ai-call-log.service.js';
 import {
   AiProviderError,
-  type ChatUsage,
+  type RejectedDraft,
   type SentenceCardTheme,
   type SentenceDraft,
   type SentenceGenProvider,
@@ -33,6 +33,81 @@ function isUsableDraft(item: unknown): item is SentenceDraft {
 function str(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
+
+/**
+ * 难度分级标准：生题（generate）与优化（polish）共用同一套。
+ *
+ * **难度由词汇与语法决定，不由句子长短决定**——6 词的 `Keep your eyes on the prize`
+ * 是 3 档（习语），6 词的 `Could you pass the salt?` 是 1 档。
+ * 两处各写一套必然漂移，所以集中在这里。提示词统一用英文：上游模型对英文指令的遵循度更高。
+ */
+const DIFFICULTY_RULES = [
+  'DIFFICULTY IS DECIDED BY VOCABULARY AND GRAMMAR, NOT BY SENTENCE LENGTH',
+  '(length is a consequence, not a criterion).',
+  '',
+  'Level 1 (basic):',
+  '- Vocabulary: only the most frequent everyday words (CEFR A1-A2: time, want, help, busy, sure, cold).',
+  '- Grammar: present simple, past simple, and simple modals (can, must). One simple sentence.',
+  '- Forbidden: subordinate clauses, perfect tenses, passive voice, idioms, figurative phrasal verbs.',
+  '- These sentences will naturally be short (usually 5-8 words), but do NOT label a level-2 sentence as',
+  '  level 1 just because it is short.',
+  '- Good: "Could you open the window?" / "I will be there at six." / "This coffee is too hot."',
+  '- Bad (these are level 2): "I\'m running a bit late, so I\'ll grab a coffee on the way."',
+  '  (figurative "grab" + result clause); "I\'ve been thinking about starting a new hobby."',
+  '  (present perfect continuous); "Let me know if you need any help with the report." (if-clause + set phrase).',
+  '',
+  'Level 2 (intermediate): any ONE of - a common word beyond the most frequent range, one clause or connector,',
+  'one of progressive / perfect / passive, a common phrasal verb.',
+  '',
+  'Level 3 (advanced): abstract nouns, idioms or figurative phrasal verbs, subjunctive mood, multiple clauses,',
+  'complex tense combinations.',
+  '',
+  'When unsure, choose 2 rather than 1. Never disguise a hard sentence as easy by shortening it.',
+].join('\n');
+
+/** 二阶段（优化）的 system 提示词。 */
+const POLISH_SYSTEM_PROMPT = [
+  'You are a senior English editor for a language-learning app.',
+  'Below is a batch of draft items (a JSON array; every item has an index).',
+  'Rewrite every item and return EXACTLY the same number in the same order, with matching indexes.',
+  'Do not add, drop or merge items.',
+  '',
+  'Improve:',
+  '1. sentenceEn: remove Chinglish, awkward collocations and unnatural word order; make it sound like',
+  '   something a native speaker would actually say in that situation. Keep the original meaning and scenario.',
+  '   Do not add slang, rare expressions or internet speak.',
+  '2. translationZh: remove translationese; follow Chinese word order and collocations;',
+  '   the Chinese alone must be understandable.',
+  '3. difficulty: re-judge with the rules below (the original label may be wrong; do not copy it).',
+  '4. ipa: British IPA consistent with the rewritten English.',
+  '5. scenePrompt: keep it a flat cartoon of TWO PEOPLE talking in the matching scene; fix it if it no longer matches.',
+  '6. categoryName: keep the original Chinese category name unless clearly wrong.',
+  '',
+  DIFFICULTY_RULES,
+  '',
+  'Output JSON only:',
+  '{"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":""}]}',
+].join('\n');
+
+/** 三阶段（审核）的 system 提示词。 */
+const REVIEW_SYSTEM_PROMPT = [
+  'You are the final quality gate before these items enter a sentence bank for a language-learning app.',
+  'Review every item (index = input position).',
+  '',
+  'FAIL an item if ANY of the following is true:',
+  '1. The English has grammar errors, unnatural collocations, or obvious Chinglish.',
+  '2. The Chinese is translationese, unclear, or does not match the English.',
+  '3. The Chinese alone is not understandable (not self-contained), or missing key information causes ambiguity.',
+  '4. The difficulty label clearly contradicts the content (a clause / perfect tense / idiom in level 1,',
+  '   or a trivial sentence in level 3).',
+  '5. Content unsuitable for a language-learning app: sensitive, vulgar, misleading, factually wrong,',
+  '   or advertising a specific brand.',
+  '6. Too empty to stand alone as a question (e.g. just "Okay." or "Sure.").',
+  '',
+  'Be strict: better to drop an item than to let a bad one through.',
+  'Output JSON only: {"items":[{"index":0,"pass":true,"reason":""}]}',
+  '(reason only when pass=false, max 15 words, English or Chinese)',
+].join('\n');
 
 @Injectable()
 export class AgnesSentenceProvider implements SentenceGenProvider {
@@ -57,41 +132,151 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     }
 
     const systemPrompt = [
-      '你是英语教研专家，为英语学习 App 生成日常对话短句题库。',
-      '严格要求：',
-      '1. 只输出 JSON，形状为 {"items": [...]}，不要任何解释文字；',
-      '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难，**按下面第 4 条的标准判定，不要凭感觉**）、categoryName（中文分类名，与主题一致或更细）；',
-      '3. translationZh 是最容易出问题的字段，三条硬性要求：',
-      '   a. 地道中文：符合中文的语序与词语搭配，严禁逐字直译英文语序。' +
-        '例：英文 "what the patient earth has grown" 应译作「大地耐心孕育出的（果实）」，' +
-        '不能译成「耐心大地生长出的」——中文里没有「耐心大地」这样拼出来的定语；',
-      '   b. 语义自足：只读中文就能明白这句话在说什么，不允许出现「必须对照英文才看得懂」的中文。' +
-        '反例：「站台在最后一刻变了。」——读的人不知道站台变成了什么，' +
-        '应写成「快到发车时站台临时换了」或「站台在最后一刻改了」；',
-      '   c. 成分完整：谁、做什么、在哪等必要信息不能省略到产生歧义；单句 8~25 字为宜；',
-      '4. 难度由**词汇与语法**决定，不由句子长短决定（长短只是结果，不是判据）：',
-      '   · 1（基础）：词汇全部是最日常的高频词（CEFR A1~A2，如 time / want / help / busy / sure / cold）；' +
-        '语法只用一般现在时、一般过去时、can / must 这类简单情态；单句，无从句、无完成时、无被动、无习语。' +
-        '这类句子自然就是短的（通常 5~8 词），但**不要为了凑短把 2 档的句子硬标成 1**。',
-      '     正例：Could you open the window?（A1 词汇 + 简单请求）｜I will be there at six.（A1 词汇 + 一般将来）｜' +
-        'This coffee is too hot.（A1 词汇 + 主系表）',
-      '     反例（词汇或语法已超出基础档，属于 2 档）：' +
-        "I'm running a bit late, so I'll grab a coffee on the way.（grab 引申义 + so 引导结果）；" +
-        "I've been thinking about starting a new hobby.（现在完成进行时）；" +
-        'Let me know if you need any help with the report.（if 从句 + let me know 固定表达）；',
-      '   · 2（进阶）：出现下列任一即算 2 档——一个超出最高频范围的常用词、一个从句或连接词、' +
-        '进行时 / 完成时 / 被动语态之一、常见短语动词；',
-      '   · 3（挑战）：出现抽象名词、习语或短语动词的引申义、虚拟语气、多重从句、复杂时态组合。',
-      '5. 难度分布：约 40% 标 1、40% 标 2、20% 标 3；' +
-        (focusDifficulty
-          ? `**本批全部为难度 ${focusDifficulty}**，逐条都必须符合第 4 条中该档的词汇与语法标准，` +
-            '不要靠缩短句子来伪装成低难度（例如把复杂时态去掉几个词——那仍然是 2 档）。'
-          : '三档都要有，不要把题目全堆在中档。'),
-      '6. sentenceEn 要地道、自然，可以是日常口语，但语义必须完整——不要为了「口语化」而省略到含义不清，也不要用生僻词与俚语；',
-      '7. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
-      `8. 当次生成 ${count} 条，主题：${theme}。`,
+      'You are an English curriculum expert building a sentence bank for an English-learning app.',
+      'Hard requirements:',
+      '1. Output JSON only, shaped as {"items": [...]}. No explanations.',
+      '2. Each item has: sentenceEn (natural spoken English), translationZh (Chinese meaning), ipa (British IPA),',
+      '   scenePrompt (English image prompt), difficulty (1/2/3, judged by rule 4 below),',
+      '   categoryName (Chinese category name, matching the theme or narrower).',
+      '3. translationZh is the field most likely to go wrong. Three hard rules:',
+      '   a. Natural Chinese: follow Chinese word order and collocations. Never translate English word order literally.',
+      '      Example: "what the patient earth has grown" -> 「大地耐心孕育出的（果实）」,',
+      '      never 「耐心大地生长出的」.',
+      '   b. Self-contained: the Chinese alone must make sense. If the reader needs the English to understand it,',
+      '      rewrite it. Bad: 「站台在最后一刻变了。」(what did the platform change into?)',
+      '      Good: 「快到发车时站台临时换了」.',
+      '   c. Complete: keep who / does what / where so there is no ambiguity. 8-25 Chinese characters.',
+      '',
+      DIFFICULTY_RULES,
+      '',
+      '4. Distribution: about 40% level 1, 40% level 2, 20% level 3.',
+      focusDifficulty
+        ? `   THIS BATCH MUST BE ALL LEVEL ${focusDifficulty}. Every item has to satisfy that level's vocabulary` +
+          ' and grammar rules above. Do not fake an easy level by merely shortening a hard sentence.'
+        : '   All three levels must appear; do not pile everything into level 2.',
+      '5. sentenceEn must be natural spoken English with complete meaning. Do not drop words in the name of',
+      '   "casual", and avoid rare words and slang.',
+      '6. scenePrompt: a flat cartoon illustration of TWO PEOPLE talking in that specific scene',
+      '   (who they are, what they are doing, the environment, the lighting). 16:9 composition, no text in the image.',
+      `7. Generate ${count} items this batch. Theme: ${theme}.`,
     ].join('\n');
 
+    const content = await this.chat('sentence_gen', systemPrompt, `Theme: ${theme}. Count: ${count}.`, 0.8);
+    const drafts = this.parseDrafts(content);
+    if (drafts.length === 0) {
+      throw new AiProviderError('生题接口未返回可用草稿', { retryable: true });
+    }
+    return drafts;
+  }
+
+  /**
+   * 二阶段（优化）：换编辑视角再过一遍，修正地道性、中文可读性与难度标注。
+   *
+   * 返回**同数量、同顺序**：模型漏掉的条目保留原稿，字段被写空的也回填原值——
+   * 「优化」不该让题目变少或丢字段，否则调用方还要额外做对齐与兜底。
+   */
+  async polishBatch(drafts: SentenceDraft[], theme: string): Promise<SentenceDraft[]> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    if (drafts.length === 0) {
+      return [];
+    }
+
+    const payload = drafts.map((draft, index) => ({ index, ...draft }));
+    const content = await this.chat(
+      'sentence_polish',
+      POLISH_SYSTEM_PROMPT,
+      `Theme: ${theme}\nDraft items:\n${JSON.stringify(payload)}`,
+      0.3,
+    );
+
+    const polished = new Map<number, SentenceDraft>();
+    for (const item of this.extractItems(content)) {
+      if (!isUsableDraft(item)) {
+        continue;
+      }
+      const raw = item as unknown as Record<string, unknown>;
+      const index = Number(raw.index);
+      if (!Number.isInteger(index) || index < 0 || index >= drafts.length) {
+        continue;
+      }
+      polished.set(index, {
+        sentenceEn: str(raw.sentenceEn, 300),
+        translationZh: str(raw.translationZh, 300),
+        ipa: str(raw.ipa, 200),
+        scenePrompt: str(raw.scenePrompt, 500),
+        difficulty: this.clampDifficulty(raw.difficulty),
+        categoryName: str(raw.categoryName, 50) || drafts[index].categoryName,
+      });
+    }
+
+    return drafts.map((draft, index) => {
+      const next = polished.get(index);
+      if (!next) {
+        return draft;
+      }
+      return {
+        ...next,
+        translationZh: next.translationZh || draft.translationZh,
+        ipa: next.ipa || draft.ipa,
+        scenePrompt: next.scenePrompt || draft.scenePrompt,
+      };
+    });
+  }
+
+  /**
+   * 三阶段（审核）：语法 / 对译 / 语义自足 / 难度标注 / 内容适当性五道关。
+   * 模型没给结论的条目按通过处理（fail-open）——审核调用本身失败不该让整批题目蒸发。
+   */
+  async reviewBatch(drafts: SentenceDraft[]): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    if (drafts.length === 0) {
+      return { approved: [], rejected: [] };
+    }
+
+    const payload = drafts.map((draft, index) => ({ index, ...draft }));
+    const content = await this.chat('sentence_review', REVIEW_SYSTEM_PROMPT, JSON.stringify(payload), 0.1);
+
+    const verdicts = new Map<number, { pass: boolean; reason: string }>();
+    for (const item of this.extractItems(content)) {
+      if (typeof item !== 'object' || item === null) {
+        continue;
+      }
+      const raw = item as Record<string, unknown>;
+      const index = Number(raw.index);
+      if (!Number.isInteger(index) || index < 0 || index >= drafts.length) {
+        continue;
+      }
+      verdicts.set(index, { pass: raw.pass === true, reason: str(raw.reason, 80) });
+    }
+
+    const approved: SentenceDraft[] = [];
+    const rejected: RejectedDraft[] = [];
+    drafts.forEach((draft, index) => {
+      const verdict = verdicts.get(index);
+      if (verdict && !verdict.pass) {
+        rejected.push({ draft, reason: verdict.reason || '审核未通过' });
+        return;
+      }
+      approved.push(draft);
+    });
+    return { approved, rejected };
+  }
+
+  /**
+   * 统一的上游调用：请求 + 错误归一 + AI 调用日志（三阶段共用，避免各写一套日志口径）。
+   * @param callType ai_call_log.type（sentence_gen / sentence_polish / sentence_review）
+   * @returns 模型输出文本（content 为空时回退 reasoning_content）
+   */
+  private async chat(
+    callType: string,
+    systemPrompt: string,
+    userContent: string,
+    temperature: number,
+  ): Promise<string> {
     const startedAt = Date.now();
     try {
       const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
@@ -104,9 +289,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
           model: config.ai.agnes.textModel,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `主题：${theme}，数量：${count}` },
+            { role: 'user', content: userContent },
           ],
-          temperature: 0.8,
+          temperature,
           response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
@@ -114,7 +299,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
 
       if (!response.ok) {
         const detail = (await response.text().catch(() => '')).slice(0, 300);
-        throw new AiProviderError(`生题接口返回 ${response.status}: ${detail}`, {
+        throw new AiProviderError(`${callType} 接口返回 ${response.status}: ${detail}`, {
           retryable: response.status === 429 || response.status >= 500,
           status: response.status,
         });
@@ -129,28 +314,23 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       const message = body.choices?.[0]?.message;
       // content 为空时回退 reasoning_content：推理模型可能把输出放在 reasoning_content 里
       const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
-      const usage: ChatUsage = {
-        promptTokens: body.usage?.prompt_tokens ?? 0,
-        completionTokens: body.usage?.completion_tokens ?? 0,
-      };
-
-      const drafts = this.parseDrafts(content);
-      if (drafts.length === 0) {
-        throw new AiProviderError('生题接口未返回可用草稿', { retryable: true });
+      if (!content) {
+        throw new AiProviderError(`${callType} 返回为空`, { retryable: true });
       }
+
       await this.aiCallLog.record({
-        type: 'sentence_gen',
+        type: callType,
         provider: 'agnes',
         model: config.ai.agnes.textModel,
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
+        promptTokens: body.usage?.prompt_tokens ?? 0,
+        completionTokens: body.usage?.completion_tokens ?? 0,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });
-      return drafts;
+      return content;
     } catch (error) {
       await this.aiCallLog.record({
-        type: 'sentence_gen',
+        type: callType,
         provider: 'agnes',
         model: config.ai.agnes.textModel,
         latencyMs: Date.now() - startedAt,
@@ -160,7 +340,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       if (error instanceof AiProviderError) {
         throw error;
       }
-      throw new AiProviderError(`生题接口调用失败: ${error instanceof Error ? error.message : String(error)}`, {
+      throw new AiProviderError(`${callType} 调用失败: ${error instanceof Error ? error.message : String(error)}`, {
         retryable: true,
       });
     }
@@ -176,91 +356,33 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     }
 
     const systemPrompt = [
-      '你是「短句」App 的每日句签设计师，为用户生成一张当天可收集的精美闪卡。',
-      '严格要求：',
-      '1. 只输出 JSON，形状为 {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}，不要任何解释文字；',
-      '2. title 是英文主题名（2~4 个单词，如 Morning Ritual），titleZh 是中文主题名；',
-      '3. sentenceEn 是一句简短、优美、积极向上的英文短句（不超过 12 个单词）；',
-      '4. translationZh 是中文译文，必须地道通顺、符合中文语序，严禁逐字直译英文：' +
-        '例：英文 "Small hands gather what the patient earth has grown." ' +
-        '应译作「小小的手，捧起大地耐心孕育的果实」，' +
-        '而不是「小小的手，收获耐心大地生长出的果实」（「耐心大地」不成词，定语顺序也是英文的）；' +
-        '中文同样要短，读两遍通顺即可，不要为了贴合英文而拗口；',
-      '5. titleZh 与 translationZh 不要出现同一个词堆叠，读起来要像中文而不是翻译腔；',
-      '6. scenePrompt 是英文生图提示词：唯美治愈系的场景插画（**不是**两人对话场景），描述画面主体、环境、光线、色调，扁平/绘本风，16:9 构图，不要图内文字；',
-      '7. 主题每天不同，避免与常见节日重复；积极、温暖、有画面感。',
-      `8. 日期：${day}。`,
+      'You are the card designer for "Short Sentence", an app where users collect one beautiful flash card per day.',
+      'Hard requirements:',
+      '1. Output JSON only, shaped as {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}.',
+      '   No explanations.',
+      '2. title: English theme name, 2-4 words (e.g. "Morning Ritual"). titleZh: the Chinese theme name.',
+      '3. sentenceEn: one short, beautiful, uplifting English sentence (at most 12 words).',
+      '4. translationZh: natural Chinese following Chinese word order. Never translate literally.',
+      '   Example: "Small hands gather what the patient earth has grown." -> 「小小的手，捧起大地耐心孕育的果实」,',
+      '   never 「小小的手，收获耐心大地生长出的果实」. Keep the Chinese short too; it must read smoothly aloud.',
+      '5. titleZh and translationZh must not stack the same words; they should read like Chinese, not a translation.',
+      '6. scenePrompt: English image prompt for a dreamy, healing scene illustration (NOT two people talking):',
+      '   describe the subject, environment, light and palette; flat / storybook style, 16:9, no text in the image.',
+      '7. The theme must differ every day; avoid common holidays. Positive, warm and visual.',
+      `8. Date: ${day}.`,
     ].join('\n');
 
-    const startedAt = Date.now();
-    try {
-      const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.ai.agnes.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: config.ai.agnes.textModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `生成 ${day} 的每日句签主题。` },
-          ],
-          temperature: 0.9,
-          response_format: { type: 'json_object' },
-        }),
-        signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
-      });
-
-      if (!response.ok) {
-        const detail = (await response.text().catch(() => '')).slice(0, 300);
-        throw new AiProviderError(`句签主题接口返回 ${response.status}: ${detail}`, {
-          retryable: response.status === 429 || response.status >= 500,
-          status: response.status,
-        });
-      }
-
-      const body = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string | null; reasoning_content?: string | null } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number };
-      };
-      const message = body.choices?.[0]?.message;
-      const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
-      const usage: ChatUsage = {
-        promptTokens: body.usage?.prompt_tokens ?? 0,
-        completionTokens: body.usage?.completion_tokens ?? 0,
-      };
-
-      const theme = this.parseSentenceCardTheme(content);
-      if (!theme) {
-        throw new AiProviderError('句签主题未返回可用内容', { retryable: true });
-      }
-      await this.aiCallLog.record({
-        type: 'sentence_card_gen',
-        provider: 'agnes',
-        model: config.ai.agnes.textModel,
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
-        latencyMs: Date.now() - startedAt,
-        status: 'success',
-      });
-      return theme;
-    } catch (error) {
-      await this.aiCallLog.record({
-        type: 'sentence_card_gen',
-        provider: 'agnes',
-        model: config.ai.agnes.textModel,
-        latencyMs: Date.now() - startedAt,
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-      });
-      if (error instanceof AiProviderError) {
-        throw error;
-      }
-      throw new AiProviderError(`句签主题接口调用失败: ${error instanceof Error ? error.message : String(error)}`, {
-        retryable: true,
-      });
+    const content = await this.chat(
+      'sentence_card_gen',
+      systemPrompt,
+      `Generate the daily card theme for ${day}.`,
+      0.9,
+    );
+    const theme = this.parseSentenceCardTheme(content);
+    if (!theme) {
+      throw new AiProviderError('句签主题输出不可用', { retryable: true });
     }
+    return theme;
   }
 
   /** 解析句签主题输出（容忍 ```json 围栏与思考文字夹带）。 */
@@ -300,8 +422,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     return theme;
   }
 
-  /** 解析模型输出为草稿数组（容忍 ```json 围栏、思考文字夹带与字段缺失）。 */
-  private parseDrafts(content: string): SentenceDraft[] {
+  /** 从模型输出中取出 items 数组（容忍 ```json 围栏与思考文字夹带）。 */
+  private extractItems(content: string): unknown[] {
     let text = content.trim();
     const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
     const matched = fence.exec(text);
@@ -320,13 +442,20 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     try {
       parsed = JSON.parse(text);
     } catch {
-      this.logger.warn('[SentenceGen] 模型输出不是合法 JSON，已丢弃');
+      this.logger.warn('[Sentence] 模型输出不是合法 JSON，已丢弃');
       return [];
     }
-    const container = parsed as { items?: unknown[] };
-    const items = Array.isArray(parsed) ? parsed : Array.isArray(container?.items) ? container.items : [];
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    const container = parsed as { items?: unknown };
+    return Array.isArray(container?.items) ? container.items : [];
+  }
+
+  /** 解析模型输出为草稿数组（字段缺失按空处理）。 */
+  private parseDrafts(content: string): SentenceDraft[] {
     const drafts: SentenceDraft[] = [];
-    for (const item of items) {
+    for (const item of this.extractItems(content)) {
       if (!isUsableDraft(item)) {
         continue;
       }
