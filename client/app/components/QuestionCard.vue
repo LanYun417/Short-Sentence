@@ -207,8 +207,7 @@ async function onSubmitReport(): Promise<void> {
 
         <!-- 题干 -->
         <div class="mb-4 rounded-2xl bg-slate-50 px-4 py-3 text-center dark:bg-slate-700/40">
-          <p class="text-[11px] font-medium tracking-wide text-sky-600 dark:text-sky-400">看图，说出英文</p>
-          <h2 class="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
             {{ question.translationZh }}
           </h2>
         </div>
