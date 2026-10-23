@@ -20,7 +20,9 @@ import {
   assertPasswordNotContainsAccount,
 } from '../../../common/auth/password-policy.js';
 import { comparePassword, hashPassword } from '../../../common/utils/utils.js';
+import type { Express } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { FilesService } from '../../files/files.service.js';
 
 /** 对外返回的客户端用户信息（不含口令）。 */
 export interface ClientUserProfile {
@@ -49,6 +51,7 @@ export class ClientAuthUserService {
     private readonly jwtService: JwtService,
     private readonly blacklist: TokenBlacklistService,
     private readonly clientAuth: ClientAuthService,
+    private readonly filesService: FilesService,
   ) {}
 
   /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。 */
@@ -152,6 +155,35 @@ export class ClientAuthUserService {
       signature: row.signature,
       createdAt: row.createdAt,
     };
+  }
+
+  /**
+   * 上传头像：落盘 → 关联到当前用户 → 清理被替换的旧头像 → 返回最新资料。
+   * 复用 admin 的 FilesService（幻数校验 / 秒传去重 / 目录分组不重造一套）。
+   */
+  async uploadAvatar(userId: number, files: Express.Multer.File[]): Promise<ClientUserProfile> {
+    if (!files || files.length === 0) {
+      throw AppException.badRequest('请选择要上传的头像');
+    }
+    const previous = await this.prisma.clientUser.findUnique({
+      where: { id: BigInt(userId) },
+      select: { avatarFileId: true },
+    });
+
+    const [saved] = await this.filesService.saveFiles(files, userId, { bizType: 'client-avatar' });
+    if (!saved) {
+      throw AppException.badRequest('头像保存失败');
+    }
+    const profile = await this.updateProfile(userId, { avatarFileId: saved.id });
+
+    // 旧头像已被替换：清掉孤儿文件，避免 uploads 只增不减
+    const previousId = previous ? Number(previous.avatarFileId) : 0;
+    if (previousId > 0 && previousId !== saved.id) {
+      await this.filesService.deleteFile(previousId).catch((error: unknown) => {
+        this.logger.warn(`旧头像清理失败（不影响本次上传）: ${error instanceof Error ? error.message : String(error)}`);
+      });
+    }
+    return profile;
   }
 
   /** 更新资料（只更新传入的字段）。 */

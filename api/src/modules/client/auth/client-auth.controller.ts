@@ -3,11 +3,14 @@
  * 权限口径：全部接口或公开（登录/注册/刷新）或「登录即可」（资料/密码/登出），
  * 不使用后台 RBAC 权限码——客户端数据按 userId 天然隔离。
  */
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import type { Express } from 'express';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import { Public } from '../../../common/auth/auth.guard.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { AppException } from '../../../common/exception/app.exception.js';
+import { UPLOAD_MULTER_OPTIONS } from '../../../common/file/upload.config.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { ClientAuthUserService, type ClientUserProfile } from './client-auth.service.js';
 import {
@@ -71,6 +74,17 @@ export class ClientAuthController {
   ): Promise<ResponseEnvelope<ClientUserProfile>> {
     const profile = await this.clientAuth.updateProfile(user.userId, dto);
     return { __raw: true, data: profile, message: '资料已更新' };
+  }
+
+  /** 上传头像（单文件；自动替换旧头像并清理原文件）。 */
+  @Post('avatar')
+  @UseInterceptors(AnyFilesInterceptor(UPLOAD_MULTER_OPTIONS))
+  async uploadAvatar(
+    @CurrentClientUser() user: ClientUserContext,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<ResponseEnvelope<ClientUserProfile>> {
+    const profile = await this.clientAuth.uploadAvatar(user.userId, files ?? []);
+    return { __raw: true, data: profile, message: '头像已更新' };
   }
 
   /** 修改密码。 */

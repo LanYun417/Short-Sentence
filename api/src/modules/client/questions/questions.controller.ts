@@ -2,22 +2,22 @@
  * 刷题控制器（/api/client/questions）。
  * 权限口径：需登录（client 令牌）；不使用权限码，数据按 userId 隔离。
  */
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { QuestionsService } from './questions.service.js';
-import { AnswerSentenceDto } from './dto.js';
+import { AnswerSentenceDto, NextQuestionQueryDto } from './dto.js';
 
 @Controller('client/questions')
 export class QuestionsController {
   constructor(private readonly questions: QuestionsService) {}
 
-  /** 下一张卡（8:2 新题/复习混抽；不含答案）。 */
+  /** 下一张卡（8:2 新题/复习混抽；不含答案）。difficulty 仅作用于新题抽取。 */
   @Get('next')
-  next(@CurrentClientUser() user: ClientUserContext) {
-    return this.questions.next(user.userId);
+  next(@CurrentClientUser() user: ClientUserContext, @Query() query: NextQuestionQueryDto) {
+    return this.questions.next(user.userId, query.difficulty);
   }
 
   /** 提交答案（返回正确答案，用于翻转面）。 */

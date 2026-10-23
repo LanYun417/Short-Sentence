@@ -96,16 +96,23 @@ export class QuestionsService {
   /**
    * 抽下一张卡：按 newRatio 概率取新题，否则取到期复习题；
    * 一侧无候选时回落到另一侧；最近 N 次答过的题（防重窗口）两侧都不出。
+   *
+   * @param difficulty 目标难度（1 易 / 2 中 / 3 难），仅作用于**新题**——
+   *   复习题必须按间隔重复排期走，按难度过滤会打乱复习节奏。该难度无可用新题时回落到不限难度。
    */
-  async next(userId: number): Promise<NextQuestion> {
+  async next(userId: number, difficulty?: number): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
     const wantNew = Math.random() < config.sentence.newRatio;
 
     let sentenceId: number | null;
     let source: 'new' | 'review';
     if (wantNew) {
-      sentenceId = await this.pickReadySentence(recentIds);
+      sentenceId = await this.pickReadySentence(recentIds, difficulty);
       source = 'new';
+      // 指定难度下没有可用新题：回落到不限难度，避免用户被卡住
+      if (sentenceId === null && difficulty) {
+        sentenceId = await this.pickReadySentence(recentIds);
+      }
       if (sentenceId === null) {
         sentenceId = await this.pickDueReviewSentence(userId, recentIds);
         source = 'review';
@@ -114,8 +121,11 @@ export class QuestionsService {
       sentenceId = await this.pickDueReviewSentence(userId, recentIds);
       source = 'review';
       if (sentenceId === null) {
-        sentenceId = await this.pickReadySentence(recentIds);
+        sentenceId = await this.pickReadySentence(recentIds, difficulty);
         source = 'new';
+        if (sentenceId === null && difficulty) {
+          sentenceId = await this.pickReadySentence(recentIds);
+        }
       }
     }
     if (sentenceId === null) {
@@ -347,9 +357,14 @@ export class QuestionsService {
    * 用「count → 随机 offset → take 1」而非 ORDER BY RAND()：
    * Prisma 的 orderBy 不支持 RAND()，且全表 RAND 在大表上是 O(N) 排序；
    * 随机 offset 方案只需一次 count（status 有索引）与一次 limit 查询。
+   *
+   * @param difficulty 难度筛选（1/2/3）；不传则不限难度。
    */
-  private async pickReadySentence(excludeIds: number[]): Promise<number | null> {
+  private async pickReadySentence(excludeIds: number[], difficulty?: number): Promise<number | null> {
     const where: Record<string, unknown> = { status: 'ready' };
+    if (difficulty) {
+      where.difficulty = difficulty;
+    }
     if (excludeIds.length > 0) {
       where.id = { notIn: excludeIds.map((id) => BigInt(id)) };
     }

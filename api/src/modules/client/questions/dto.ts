@@ -19,3 +19,17 @@ export class AnswerSentenceDto {
   @Max(3_600_000, { message: '作答耗时异常' })
   elapsedMs?: number;
 }
+
+/** 抽题查询入参。 */
+export class NextQuestionQueryDto {
+  /**
+   * 目标难度：1 易 / 2 中 / 3 难。
+   * 只作用于新题抽取；复习题仍按间隔重复排期走。该难度无可用新题时服务端回落到不限难度。
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '难度必须为整数' })
+  @Min(1, { message: '难度最小为 1' })
+  @Max(3, { message: '难度最大为 3' })
+  difficulty?: number;
+}
