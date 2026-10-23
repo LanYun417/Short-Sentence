@@ -5,9 +5,9 @@
  *
  * 翻牌规则：
  * - 提交答案 → 翻到背面看结果；
- * - 点「下一题」→ 先保持背面并显示加载态，新题到达后**翻回正面**揭示新题
- *   （而不是把卡片整个换掉硬切）——所以本组件不能用 :key 强制重建，
- *   否则 DOM 换新、transition 没有起点，翻牌动画就没了。
+ * - 点「下一题」→ 先保持背面并显示加载态，新题到达后**同方向继续往下翻**揭示新题
+ *   （累计 +180°，一路向前不回翻；而不是把卡片整个换掉硬切）——所以本组件不能用
+ *   :key 强制重建，否则 DOM 换新、transition 没有起点，翻牌动画就没了。
  */
 import type { AnswerResult, NextQuestion } from '~/types';
 import { withUploadToken } from '~/utils/upload-token';
@@ -42,6 +42,17 @@ const inputRef = ref<{ inputRef?: HTMLInputElement } | null>(null);
 
 /** 翻转态（有结果即翻转） */
 const flipped = computed(() => props.result !== null);
+
+/**
+ * 累计翻转角度（绕 X 轴，竖向「往下翻」）。
+ * 每次 flipped 变化 +180°，始终同方向继续翻——提交(0→180)看背面、
+ * 下一题(180→360)继续翻到正面，一路向前不「返回来」。
+ * 注意不能对 360 取模：取模会让 180→360 变回 180→0，又成了回翻。
+ */
+const flipDeg = ref(0);
+watch(flipped, () => {
+  flipDeg.value += 180;
+});
 
 /** 难度文案 */
 const difficultyText = computed(() => ['', '基础', '进阶', '挑战'][props.question.difficulty] ?? '');
@@ -116,7 +127,7 @@ function onFavorite(): void {
 
 <template>
   <div class="card-scene anim-in mx-auto w-full max-w-xl">
-    <div class="card-3d relative" :class="{ 'is-flipped': flipped }">
+    <div class="card-3d relative" :style="{ transform: `rotateX(${flipDeg}deg)` }">
       <!-- 正面：题干 + 场景图 + 输入 -->
       <div
         class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
