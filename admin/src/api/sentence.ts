@@ -6,6 +6,8 @@ import type {
   GenTaskItem,
   GenTaskQuery,
   PageResult,
+  SentenceCategoryItem,
+  SentenceCategoryPayload,
   SentenceItem,
   SentenceQuery,
   SentenceSavePayload,
@@ -57,4 +59,24 @@ export function getGenTaskListApi(params: GenTaskQuery): Promise<PageResult<GenT
 /** 场景分类（用于筛选与表单下拉） */
 export function getCategoryOptionsApi(): Promise<SentenceCategoryOption[]> {
   return get<SentenceCategoryOption[]>('/client/categories');
+}
+
+/** 场景分类列表（含题目数） */
+export function getCategoryListApi(): Promise<SentenceCategoryItem[]> {
+  return get<SentenceCategoryItem[]>('/sentences/categories');
+}
+
+/** 新增场景分类 */
+export function createCategoryApi(payload: SentenceCategoryPayload): Promise<{ id: number }> {
+  return post<{ id: number }>('/sentences/categories', payload);
+}
+
+/** 编辑场景分类 */
+export function updateCategoryApi(id: number, payload: SentenceCategoryPayload): Promise<null> {
+  return put<null>(`/sentences/categories/${id}`, payload);
+}
+
+/** 删除场景分类（有题目引用时后端拒绝） */
+export function deleteCategoryApi(id: number): Promise<null> {
+  return del<null>(`/sentences/categories/${id}`);
 }

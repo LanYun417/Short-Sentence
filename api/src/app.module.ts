@@ -33,6 +33,8 @@ import { NoticeModule } from './modules/notice/notice.module.js';
 import { TaskModule } from './modules/task/task.module.js';
 import { ClientModule } from './modules/client/client.module.js';
 import { SentenceModule } from './modules/sentence/sentence.module.js';
+import { ClientUsersModule } from './modules/client-users/client-users.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
 @Module({
   imports: [
@@ -62,6 +64,8 @@ import { SentenceModule } from './modules/sentence/sentence.module.js';
     // 「短句」：客户端用户体系（/api/client/*）与题库管理（/api/sentences，含每日生成流水线）
     ClientModule,
     SentenceModule,
+    ClientUsersModule,
+    AnalyticsModule,
   ],
   providers: [
     // 守卫顺序：先鉴权（挂 req.user），再校验权限码

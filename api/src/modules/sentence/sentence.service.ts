@@ -9,7 +9,7 @@ import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination, readNumber, readString } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
-import { SENTENCE_STATUS, SaveSentenceDto } from './sentence.dto.js';
+import { SENTENCE_STATUS, SaveCategoryDto, SaveSentenceDto } from './sentence.dto.js';
 
 /** 列表条目（含配图 URL 与分类名）。 */
 export interface SentenceItem {
@@ -28,6 +28,18 @@ export interface SentenceItem {
   genTaskId: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** 场景分类条目（含题目数）。 */
+export interface CategoryItem {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  sort: number;
+  status: number;
+  /** 该分类下的题目数 */
+  sentenceCount: number;
 }
 
 @Injectable()
@@ -195,6 +207,85 @@ export class SentenceService {
   }
 
   /** 无生图提示词时的兜底构图（仍是两人对话场景）。 */
+  /* ------------------------------ 场景分类 ------------------------------ */
+
+  /** 分类列表（含题目数）。 */
+  async listCategories(): Promise<CategoryItem[]> {
+    const [rows, counts] = await Promise.all([
+      this.prisma.sentenceCategory.findMany({ orderBy: { sort: 'asc' } }),
+      this.prisma.sentence.groupBy({ by: ['categoryId'], _count: { _all: true } }),
+    ]);
+    const countMap = new Map(counts.map((row) => [Number(row.categoryId), row._count._all]));
+    return rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      nameEn: row.nameEn,
+      icon: row.icon,
+      sort: row.sort,
+      status: row.status,
+      sentenceCount: countMap.get(Number(row.id)) ?? 0,
+    }));
+  }
+
+  /** 新增分类（名称唯一）。 */
+  async createCategory(dto: SaveCategoryDto): Promise<{ id: number }> {
+    const name = dto.name.trim();
+    const existing = await this.prisma.sentenceCategory.findFirst({ where: { name }, select: { id: true } });
+    if (existing) {
+      throw AppException.conflict('分类名称已存在');
+    }
+    const row = await this.prisma.sentenceCategory.create({
+      data: {
+        name,
+        nameEn: dto.nameEn?.trim() || null,
+        icon: dto.icon?.trim() || null,
+        sort: dto.sort ?? 0,
+        status: dto.status ?? 1,
+      },
+      select: { id: true },
+    });
+    return { id: Number(row.id) };
+  }
+
+  /** 编辑分类。 */
+  async updateCategory(id: number, dto: SaveCategoryDto): Promise<void> {
+    const row = await this.prisma.sentenceCategory.findUnique({ where: { id: BigInt(id) }, select: { id: true } });
+    if (!row) {
+      throw AppException.notFound('分类不存在');
+    }
+    const name = dto.name.trim();
+    const duplicated = await this.prisma.sentenceCategory.findFirst({
+      where: { name, id: { not: BigInt(id) } },
+      select: { id: true },
+    });
+    if (duplicated) {
+      throw AppException.conflict('分类名称已存在');
+    }
+    await this.prisma.sentenceCategory.update({
+      where: { id: BigInt(id) },
+      data: {
+        name,
+        nameEn: dto.nameEn?.trim() || null,
+        icon: dto.icon?.trim() || null,
+        sort: dto.sort ?? 0,
+        status: dto.status ?? 1,
+      },
+    });
+  }
+
+  /** 删除分类（有题目引用时拒绝，避免题目失去分类）。 */
+  async removeCategory(id: number): Promise<void> {
+    const row = await this.prisma.sentenceCategory.findUnique({ where: { id: BigInt(id) }, select: { id: true } });
+    if (!row) {
+      throw AppException.notFound('分类不存在');
+    }
+    const used = await this.prisma.sentence.count({ where: { categoryId: BigInt(id) } });
+    if (used > 0) {
+      throw AppException.conflict(`该分类下还有 ${used} 道题，请先迁移或下架`);
+    }
+    await this.prisma.sentenceCategory.delete({ where: { id: BigInt(id) } });
+  }
+
   private defaultScenePrompt(sentenceEn: string): string {
     return `Two people having a natural conversation in a everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", warm natural light, 16:9 composition, no text in image`;
   }

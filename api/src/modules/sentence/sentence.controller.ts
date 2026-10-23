@@ -11,7 +11,7 @@ import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { SentenceService } from './sentence.service.js';
 import { SentenceGenService } from './sentence-gen.service.js';
-import { SaveSentenceDto, TriggerGenDto } from './sentence.dto.js';
+import { SaveCategoryDto, SaveSentenceDto, TriggerGenDto } from './sentence.dto.js';
 
 /** 生成批次列表项。 */
 export interface GenTaskItem {
@@ -42,6 +42,43 @@ export class SentenceController {
   @RequirePermissions('sentence:list')
   list(@Query() query: Record<string, unknown>) {
     return this.sentenceService.list(query);
+  }
+
+  /**
+   * 场景分类列表（含题目数）。
+   * ⚠️ 必须声明在 `@Get(':id')` 之前：Nest 按声明顺序匹配，否则 `categories` 会被 `:id` 吃掉。
+   */
+  @Get('categories')
+  @RequirePermissions('sentence:list')
+  categories() {
+    return this.sentenceService.listCategories();
+  }
+
+  /** 新增分类。 */
+  @Post('categories')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '新增分类')
+  async createCategory(@Body() dto: SaveCategoryDto): Promise<ResponseEnvelope<{ id: number }>> {
+    const result = await this.sentenceService.createCategory(dto);
+    return { __raw: true, data: result, message: '新增成功' };
+  }
+
+  /** 编辑分类。 */
+  @Put('categories/:id')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '编辑分类')
+  async updateCategory(@Param() params: IdParamDto, @Body() dto: SaveCategoryDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceService.updateCategory(params.id, dto);
+    return { __raw: true, data: null, message: '保存成功' };
+  }
+
+  /** 删除分类（有题目引用时拒绝）。 */
+  @Delete('categories/:id')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '删除分类')
+  async removeCategory(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceService.removeCategory(params.id);
+    return { __raw: true, data: null, message: '已删除' };
   }
 
   /** 详情。 */

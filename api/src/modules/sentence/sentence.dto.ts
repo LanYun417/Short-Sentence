@@ -2,7 +2,7 @@
  * 题库管理 DTO（管理端）。
  */
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 
 /** 句子状态（与 schema 注释一致）。 */
 export const SENTENCE_STATUS = {
@@ -56,4 +56,38 @@ export class TriggerGenDto {
   @IsInt({ message: '目标数量必须为整数' })
   @Min(1, { message: '目标数量至少为 1' })
   count?: number;
+}
+
+/** 场景分类保存入参。 */
+export class SaveCategoryDto {
+  /** 分类名称（中文，唯一） */
+  @IsString({ message: '分类名称必须为字符串' })
+  @IsNotEmpty({ message: '分类名称不能为空' })
+  @MaxLength(50, { message: '分类名称最长 50 个字符' })
+  name!: string;
+
+  /** 英文名（客户端卡片副标题） */
+  @IsOptional()
+  @IsString()
+  @MaxLength(50, { message: '英文名最长 50 个字符' })
+  nameEn?: string;
+
+  /** 图标（bootstrap-icons 类名） */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100, { message: '图标名最长 100 个字符' })
+  icon?: string;
+
+  /** 排序（升序） */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '排序必须为整数' })
+  sort?: number;
+
+  /** 1 启用 / 0 禁用 */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '状态必须为整数' })
+  @IsIn([0, 1], { message: '状态只能是 0 或 1' })
+  status?: number;
 }

@@ -943,3 +943,137 @@ export interface GenTaskItem {
 export interface GenTaskQuery extends PageQuery {
   status?: string;
 }
+
+/* ------------------------------ 客户端用户 ------------------------------ */
+
+/** 客户端用户列表项 */
+export interface ClientUserItem {
+  id: number;
+  email: string;
+  nickname: string;
+  avatarUrl: string | null;
+  gender: string;
+  /** 1 启用 / 0 禁用 */
+  status: number;
+  birthday: string | null;
+  signature: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  answerCount: number;
+  correctCount: number;
+  favoriteCount: number;
+  streak: number;
+}
+
+/** 客户端用户最近答题 */
+export interface ClientUserRecentAnswer {
+  sentenceId: number;
+  sentenceEn: string;
+  translationZh: string;
+  isCorrect: boolean;
+  createdAt: string;
+}
+
+/** 客户端用户详情 */
+export interface ClientUserDetail extends ClientUserItem {
+  checkinDays: number;
+  recentAnswers: ClientUserRecentAnswer[];
+}
+
+/** 客户端用户查询参数 */
+export interface ClientUserQuery extends PageQuery {
+  keyword?: string;
+  status?: number;
+  gender?: string;
+}
+
+/* ------------------------------ 数据分析 ------------------------------ */
+
+/** 运营总览 */
+export interface AnalyticsOverview {
+  sentenceTotal: number;
+  sentenceReady: number;
+  sentencePending: number;
+  sentenceOffline: number;
+  userTotal: number;
+  userToday: number;
+  activeToday: number;
+  answerToday: number;
+  correctToday: number;
+  wordRootTotal: number;
+  aiCallToday: number;
+  checkinToday: number;
+}
+
+/** 答题趋势（双系列） */
+export interface AnswerTrend {
+  dates: string[];
+  answers: number[];
+  corrects: number[];
+}
+
+/** 分类运营数据 */
+export interface CategoryStat {
+  name: string;
+  sentenceCount: number;
+  answerCount: number;
+  correctCount: number;
+}
+
+/** AI 调用统计 */
+export interface AiCallStat {
+  name: string;
+  calls: number;
+  failed: number;
+  promptTokens: number;
+  completionTokens: number;
+}
+
+/** AI 调用日志项 */
+export interface AiCallLogItem {
+  id: number;
+  type: string;
+  provider: string;
+  model: string;
+  bizId: number;
+  promptTokens: number;
+  completionTokens: number;
+  latencyMs: number;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+/** AI 调用日志查询 */
+export interface AiCallLogQuery extends PageQuery {
+  type?: string;
+  status?: string;
+}
+
+/** 打卡统计 */
+export interface CheckinStat {
+  todayUsers: number;
+  avgStreak: number;
+  maxStreak: number;
+  totalCheckins: number;
+}
+
+/** 场景分类条目 */
+export interface SentenceCategoryItem {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  sort: number;
+  status: number;
+  sentenceCount: number;
+}
+
+/** 场景分类保存参数 */
+export interface SentenceCategoryPayload {
+  name: string;
+  nameEn?: string;
+  icon?: string;
+  sort?: number;
+  status?: number;
+}
