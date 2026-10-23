@@ -82,6 +82,10 @@ export interface TaskDeps {
   cleanLogs: () => Promise<void>;
   /** 缩略图缓存清理（ImageScaleService.sweep） */
   sweepImageCache: () => Promise<void>;
+  /** 短句题库生成（SentenceGenService.runScheduled；今日已成功则跳过） */
+  generateSentences: () => Promise<void>;
+  /** 词根词典每日入库（WordRootService.ingestDaily；从题库抽词并 AI 解析） */
+  ingestWordRoots: () => Promise<void>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -132,6 +136,32 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: config.upload.cacheSweepEnabled,
       create: (deps) => async () => {
         await deps.sweepImageCache();
+      },
+    },
+    {
+      name: 'sentence-gen',
+      title: '短句题库生成',
+      description:
+        '批量生成英语短句题库：AI 生文（DeepSeek）→ 场景配图（Agnes）→ 转 webp 入库。' +
+        '按当日目标题数补足，一天一批（当天已成功则跳过），支持断点续跑。',
+      schedule: { kind: 'daily', hour: config.sentence.cronHour, minute: config.sentence.cronMinute },
+      // 停用时不注册调度，但仍出现在管理端列表并标记「已停用」——运维看得到「有它但没跑」
+      enabled: config.sentence.cronEnabled,
+      create: (deps) => async () => {
+        await deps.generateSentences();
+      },
+    },
+    {
+      name: 'word-root-ingest',
+      title: '词根词典入库',
+      description:
+        '从题库句子中抽取尚未解析的单词，调用 AI 生成词根词缀拆解并入库（默认每日 100 个）。' +
+        '逐条串行 + 指数退避，避免打满上游配额。',
+      // 排在题库生成（00:30）之后，保证有当天的句子可抽词
+      schedule: { kind: 'daily', hour: 3, minute: 30 },
+      enabled: true,
+      create: (deps) => async () => {
+        await deps.ingestWordRoots();
       },
     },
   ];

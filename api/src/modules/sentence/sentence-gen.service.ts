@@ -1,18 +1,19 @@
 /**
- * 题库批量生成服务（每日 Cron + 手动触发）。
+ * 题库批量生成服务（每日定时 + 手动触发）。
  * 模块职责：把「生题（DeepSeek）→ 生图（Agnes）→ 转 webp 入库 → 置 ready」
  * 编排成可观测、可断点续跑的流水线。
  *
  * 关键设计：
- * - **进程内互斥**：同一时刻只跑一个批次（cron 与手动触发不叠加、多 worker 不重复烧配额）；
+ * - **进程内互斥**：同一时刻只跑一个批次（定时与手动触发不叠加、多 worker 不重复烧配额）；
  * - **断点续跑**：批次状态落 sentence_gen_task，重启后对未完成的批次继续执行；
  * - **幂等**：一天一批（biz_date 唯一），当天已有成功批次时拒绝再次触发；
  * - **限流**：生题信号量 + 指数退避重试（NVIDIA 约 40 RPM）；生图独立信号量（Agnes 限流未知）；
- * - **部分失败不判整批失败**：有净增题目即算成功，失败数进 failCount 供运营补跑。
+ * - **部分失败不判整批失败**：有净增题目即算成功，失败数进 failCount 供运营补跑；
+ * - **调度不在这里**：cron 由 TaskModule 的任务注册表统一注册（任务名 `sentence-gen`），
+ *   本服务只暴露执行入口。早期版本在此处自行 addCronJob，结果后台「定时任务」页看不到它、
+ *   执行记录也不进 sys_task_log——运维以为没配，其实在跑。
  */
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { SchedulerRegistry } from '@nestjs/schedule';
-import { CronJob } from 'cron';
+import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import { config } from '../../common/config/config.js';
 import { AppException } from '../../common/exception/app.exception.js';
@@ -47,48 +48,50 @@ const MAX_FAILED_CHUNKS = 5;
 const IMAGE_STYLE_SUFFIX =
   'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
 
-/** cron 任务名（SchedulerRegistry 键）。 */
-const CRON_JOB_NAME = 'sentence-daily-gen';
-
 @Injectable()
-export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
+export class SentenceGenService {
   private readonly logger = new Logger(SentenceGenService.name);
   /** 进程内互斥标志。 */
   private running = false;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly schedulerRegistry: SchedulerRegistry,
     private readonly sentenceGen: DeepSeekSentenceProvider,
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
   ) {}
 
-  /** 注册每日生成任务（配置驱动的动态 cron，不能用 @Cron 装饰器）。 */
-  onModuleInit(): void {
-    if (!config.sentence.cronEnabled) {
-      this.logger.warn('[SentenceGen] 每日生成已停用（SENTENCE_CRON_ENABLED=false）');
+  /**
+   * 定时触发入口（由 TaskModule 的 `sentence-gen` 任务调用）。
+   * 与手动触发同一套心智模型，只是 triggerType 记 cron；今日已成功则直接跳过。
+   */
+  async runScheduled(): Promise<void> {
+    if (this.running) {
+      this.logger.warn('[SentenceGen] 已有批次在执行，本次定时触发跳过');
       return;
     }
-    const cron = `0 ${config.sentence.cronMinute} ${config.sentence.cronHour} * * *`;
-    const job = CronJob.from({
-      cronTime: cron,
-      onTick: () => {
-        void this.triggerCron();
-      },
-      start: true,
-      name: CRON_JOB_NAME,
-      // 慢任务执行完才允许下一次触发（300 题生图可能跨小时）
-      waitForCompletion: true,
+    const bizDate = this.today();
+    // 一天一批：今天已成功 → 跳过（重复触发只会重复消耗上游配额）
+    const successToday = await this.prisma.sentenceGenTask.findFirst({
+      where: { bizDate, status: 'success' },
+      select: { id: true },
     });
-    this.schedulerRegistry.addCronJob(CRON_JOB_NAME, job);
-    this.logger.log(`[SentenceGen] 已注册每日生成任务（目标 ${config.sentence.dailyTarget} 题，cron: ${cron}）`);
-  }
-
-  onModuleDestroy(): void {
-    if (this.schedulerRegistry.doesExist('cron', CRON_JOB_NAME)) {
-      this.schedulerRegistry.deleteCronJob(CRON_JOB_NAME);
+    if (successToday) {
+      return;
     }
+    // 断点续跑：优先跑今天未完成的批次
+    const unfinished = await this.prisma.sentenceGenTask.findFirst({
+      where: { bizDate, status: { in: ['pending', 'running', 'failed'] } },
+      orderBy: { id: 'desc' },
+      select: { id: true },
+    });
+    const task =
+      unfinished ??
+      (await this.prisma.sentenceGenTask.create({
+        data: { bizDate, targetCount: config.sentence.dailyTarget, triggerType: 'cron', status: 'pending' },
+        select: { id: true },
+      }));
+    void this.execute(task.id);
   }
 
   /** 手动触发（管理端调试/补跑用）。 */
@@ -124,34 +127,6 @@ export class SentenceGenService implements OnModuleInit, OnModuleDestroy {
         });
     void this.execute(task.id);
     return { taskId: Number(task.id) };
-  }
-
-  /** cron 自动触发（同手动的心智模型，只是 triggerType 不同）。 */
-  private async triggerCron(): Promise<void> {
-    if (this.running) {
-      this.logger.warn('[SentenceGen] 已有批次在执行，本次 cron 触发跳过');
-      return;
-    }
-    const bizDate = this.today();
-    const successToday = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: 'success' },
-      select: { id: true },
-    });
-    if (successToday) {
-      return;
-    }
-    const unfinished = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: { in: ['pending', 'running', 'failed'] } },
-      orderBy: { id: 'desc' },
-      select: { id: true },
-    });
-    const task =
-      unfinished ??
-      (await this.prisma.sentenceGenTask.create({
-        data: { bizDate, targetCount: config.sentence.dailyTarget, triggerType: 'cron', status: 'pending' },
-        select: { id: true },
-      }));
-    void this.execute(task.id);
   }
 
   /** 主执行体（fire-and-forget 调用；结果全部落在批次表）。 */
