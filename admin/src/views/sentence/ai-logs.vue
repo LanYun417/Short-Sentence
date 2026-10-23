@@ -9,6 +9,7 @@ import { formatDateTime } from '@/utils/format';
 import type { AiCallStat } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
+import StatCard from '@/views/home/components/StatCard.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'AiCallLogList' });
@@ -20,6 +21,9 @@ const TYPE_LABEL: Record<string, string> = {
   expand: '造句',
   word_root: '词根',
 };
+
+/** 统计卡配色（按类型轮换） */
+const STAT_COLORS = ['#4f46e5', '#0891b2', '#059669', '#d97706'];
 
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
@@ -42,21 +46,20 @@ onMounted(async () => {
 <template>
   <div class="sentence-ai-logs-page">
     <!-- 近 7 日汇总 -->
-    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div v-for="item in stats" :key="item.name" class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">{{ item.name }}（近 7 日）</p>
-        <p class="mt-1 text-xl font-semibold">{{ item.calls }}</p>
-        <p class="text-xs text-gray-400">
-          失败 {{ item.failed }} · token {{ item.promptTokens + item.completionTokens }}
-        </p>
-      </div>
-      <div
-        v-if="stats.length === 0"
-        class="col-span-full rounded-lg border border-dashed border-gray-200 p-4 text-center text-sm text-gray-400"
-      >
-        近 7 日暂无 AI 调用记录
-      </div>
-    </div>
+    <el-row :gutter="16" class="mb-4">
+      <el-col v-for="(item, index) in stats" :key="item.name" :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard
+          :title="`${TYPE_LABEL[item.name] ?? item.name}（近 7 日）`"
+          :value="item.calls"
+          :sub="`失败 ${item.failed} · token ${item.promptTokens + item.completionTokens}`"
+          icon="cpu"
+          :color="STAT_COLORS[index % STAT_COLORS.length]"
+        />
+      </el-col>
+    </el-row>
+    <el-card v-if="stats.length === 0" shadow="never">
+      <p class="py-6 text-center text-sm text-muted">近 7 日暂无 AI 调用记录</p>
+    </el-card>
 
     <SearchForm @search="search" @reset="reset">
       <el-form-item label="类型">

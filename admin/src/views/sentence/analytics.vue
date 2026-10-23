@@ -14,6 +14,7 @@ import {
 import type { AiCallStat, AnalyticsOverview, AnswerTrend, CategoryStat, CheckinStat, NameValue } from '@/types/api';
 import PieChart from '@/views/home/components/PieChart.vue';
 import BarChart from '@/views/home/components/BarChart.vue';
+import StatCard from '@/views/home/components/StatCard.vue';
 import AnswerTrendChart from './components/AnswerTrendChart.vue';
 import { computed, ref } from 'vue';
 
@@ -51,28 +52,43 @@ const CARDS = computed(() => {
   const data = overview.value;
   return [
     {
-      label: '题库总量',
+      title: '题库总量',
       value: data?.sentenceTotal ?? 0,
       sub: `就绪 ${data?.sentenceReady ?? 0} · 待生图 ${data?.sentencePending ?? 0}`,
-      tone: 'text-blue-600',
+      icon: 'journal-text',
+      color: '#2563eb',
     },
     {
-      label: '客户端用户',
+      title: '客户端用户',
       value: data?.userTotal ?? 0,
       sub: `今日新增 ${data?.userToday ?? 0}`,
-      tone: 'text-emerald-600',
+      icon: 'people',
+      color: '#059669',
     },
-    { label: '今日活跃', value: data?.activeToday ?? 0, sub: '有答题的用户数', tone: 'text-amber-600' },
-    { label: '今日答题', value: data?.answerToday ?? 0, sub: `正确率 ${todayAccuracy.value}`, tone: 'text-violet-600' },
+    { title: '今日活跃', value: data?.activeToday ?? 0, sub: '有答题的用户数', icon: 'activity', color: '#d97706' },
     {
-      label: '今日打卡',
+      title: '今日答题',
+      value: data?.answerToday ?? 0,
+      sub: `正确率 ${todayAccuracy.value}`,
+      icon: 'pencil-square',
+      color: '#7c3aed',
+    },
+    {
+      title: '今日打卡',
       value: data?.checkinToday ?? 0,
       sub: `累计 ${checkin.value?.totalCheckins ?? 0} 人次`,
-      tone: 'text-rose-600',
+      icon: 'calendar-check',
+      color: '#e11d48',
     },
-    { label: '词根词条', value: data?.wordRootTotal ?? 0, sub: 'AI 解析入库', tone: 'text-cyan-600' },
-    { label: '今日 AI 调用', value: data?.aiCallToday ?? 0, sub: '生题 / 生图 / 造句 / 词根', tone: 'text-indigo-600' },
-    { label: '已下架', value: data?.sentenceOffline ?? 0, sub: '不参与抽题', tone: 'text-gray-500' },
+    { title: '词根词条', value: data?.wordRootTotal ?? 0, sub: 'AI 解析入库', icon: 'book', color: '#0891b2' },
+    {
+      title: '今日 AI 调用',
+      value: data?.aiCallToday ?? 0,
+      sub: '生题 / 生图 / 造句 / 词根',
+      icon: 'cpu',
+      color: '#4f46e5',
+    },
+    { title: '已下架', value: data?.sentenceOffline ?? 0, sub: '不参与抽题', icon: 'archive', color: '#6b7280' },
   ];
 });
 
@@ -112,91 +128,100 @@ onMounted(() => {
 
 <template>
   <div v-loading="loading" class="sentence-analytics-page">
+    <header class="mb-4">
+      <h2 class="text-xl font-bold text-ink">数据分析</h2>
+      <p class="mt-1.5 text-[13px] text-muted">题库、答题、打卡与 AI 调用的运营概览</p>
+    </header>
+
     <!-- 指标卡 -->
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div v-for="card in CARDS" :key="card.label" class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">{{ card.label }}</p>
-        <p class="mt-1 text-2xl font-semibold tabular-nums" :class="card.tone">{{ card.value }}</p>
-        <p class="mt-0.5 text-xs text-gray-400">{{ card.sub }}</p>
-      </div>
-    </div>
+    <el-row :gutter="16">
+      <el-col v-for="card in CARDS" :key="card.title" :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard :title="card.title" :value="card.value" :sub="card.sub" :icon="card.icon" :color="card.color" />
+      </el-col>
+    </el-row>
 
     <!-- 答题趋势 -->
     <el-card shadow="never" class="mt-4">
-      <div class="mb-2 flex items-center justify-between">
-        <p class="text-sm font-medium">答题趋势</p>
-        <el-radio-group :model-value="trendDays" size="small" @update:model-value="(v) => changeTrendDays(Number(v))">
-          <el-radio-button :value="7">近 7 日</el-radio-button>
-          <el-radio-button :value="14">近 14 日</el-radio-button>
-          <el-radio-button :value="30">近 30 日</el-radio-button>
-        </el-radio-group>
-      </div>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span>答题趋势</span>
+          <el-radio-group :model-value="trendDays" size="small" @update:model-value="(v) => changeTrendDays(Number(v))">
+            <el-radio-button :value="7">近 7 日</el-radio-button>
+            <el-radio-button :value="14">近 14 日</el-radio-button>
+            <el-radio-button :value="30">近 30 日</el-radio-button>
+          </el-radio-group>
+        </div>
+      </template>
       <AnswerTrendChart :data="trend" />
     </el-card>
 
     <!-- 难度 + 分类 -->
-    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <el-card shadow="never">
-        <p class="mb-2 text-sm font-medium">题目难度分布</p>
-        <PieChart :data="difficulty" />
-      </el-card>
-      <el-card shadow="never">
-        <p class="mb-2 text-sm font-medium">各场景题目数</p>
-        <BarChart :data="categoryChart" />
-      </el-card>
-    </div>
+    <el-row :gutter="16" class="mt-4">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>题目难度分布</template>
+          <PieChart :data="difficulty" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>各场景题目数</template>
+          <BarChart :data="categoryChart" />
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 分类运营明细 + AI 调用 -->
-    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <el-card shadow="never">
-        <p class="mb-2 text-sm font-medium">分类运营明细</p>
-        <el-table :data="categories" border size="small" max-height="320">
-          <el-table-column prop="name" label="场景" min-width="110" />
-          <el-table-column prop="sentenceCount" label="题目数" width="90" />
-          <el-table-column prop="answerCount" label="答题数" width="90" />
-          <el-table-column label="正确率" width="90">
-            <template #default="{ row }">
-              {{ row.answerCount > 0 ? `${((row.correctCount / row.answerCount) * 100).toFixed(0)}%` : '—' }}
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
-      <el-card shadow="never">
-        <p class="mb-2 text-sm font-medium">AI 调用（近 7 日）</p>
-        <el-table :data="aiStats" border size="small" max-height="320">
-          <el-table-column prop="name" label="类型" width="90" />
-          <el-table-column prop="calls" label="次数" width="80" />
-          <el-table-column prop="failed" label="失败" width="80" />
-          <el-table-column label="Token" width="110">
-            <template #default="{ row }">{{ row.promptTokens + row.completionTokens }}</template>
-          </el-table-column>
-          <el-table-column label="成功率" min-width="90">
-            <template #default="{ row }">
-              {{ row.calls > 0 ? `${(((row.calls - row.failed) / row.calls) * 100).toFixed(0)}%` : '—' }}
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
-    </div>
+    <el-row :gutter="16" class="mt-4">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>分类运营明细</template>
+          <el-table :data="categories" border size="small" max-height="320">
+            <el-table-column prop="name" label="场景" min-width="110" />
+            <el-table-column prop="sentenceCount" label="题目数" width="90" />
+            <el-table-column prop="answerCount" label="答题数" width="90" />
+            <el-table-column label="正确率" width="90">
+              <template #default="{ row }">
+                {{ row.answerCount > 0 ? `${((row.correctCount / row.answerCount) * 100).toFixed(0)}%` : '—' }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>AI 调用（近 7 日）</template>
+          <el-table :data="aiStats" border size="small" max-height="320">
+            <el-table-column prop="name" label="类型" width="90" />
+            <el-table-column prop="calls" label="次数" width="80" />
+            <el-table-column prop="failed" label="失败" width="80" />
+            <el-table-column label="Token" width="110">
+              <template #default="{ row }">{{ row.promptTokens + row.completionTokens }}</template>
+            </el-table-column>
+            <el-table-column label="成功率" min-width="90">
+              <template #default="{ row }">
+                {{ row.calls > 0 ? `${(((row.calls - row.failed) / row.calls) * 100).toFixed(0)}%` : '—' }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 打卡 -->
-    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">今日打卡人数</p>
-        <p class="mt-1 text-xl font-semibold">{{ checkin?.todayUsers ?? 0 }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">今日平均连续天数</p>
-        <p class="mt-1 text-xl font-semibold">{{ checkin?.avgStreak ?? 0 }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">今日最长连续天数</p>
-        <p class="mt-1 text-xl font-semibold">{{ checkin?.maxStreak ?? 0 }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-200 p-3">
-        <p class="text-xs text-gray-400">累计打卡人次</p>
-        <p class="mt-1 text-xl font-semibold">{{ checkin?.totalCheckins ?? 0 }}</p>
-      </div>
-    </div>
+    <el-row :gutter="16" class="mt-4">
+      <el-col :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard title="今日打卡人数" :value="checkin?.todayUsers ?? 0" icon="person-check" color="#e11d48" />
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard title="今日平均连续天数" :value="checkin?.avgStreak ?? 0" icon="fire" color="#f97316" />
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard title="今日最长连续天数" :value="checkin?.maxStreak ?? 0" icon="trophy" color="#eab308" />
+      </el-col>
+      <el-col :xs="24" :sm="12" :md="6" class="my-1">
+        <StatCard title="累计打卡人次" :value="checkin?.totalCheckins ?? 0" icon="calendar2-check" color="#0891b2" />
+      </el-col>
+    </el-row>
   </div>
 </template>

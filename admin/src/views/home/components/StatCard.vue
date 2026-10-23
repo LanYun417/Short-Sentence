@@ -9,6 +9,8 @@ const props = withDefaults(
     title: string;
     /** 数值 */
     value: number | string;
+    /** 副标题（可选，如「较昨日 +5」） */
+    sub?: string;
     /** 图标名（Bootstrap Icons 原生类名，不含 `bi-` 前缀，如 `person`） */
     icon?: string;
     /** 主题色 */
@@ -33,6 +35,7 @@ const iconBg = computed(() => (/^#[0-9a-f]{6}$/i.test(props.color) ? `${props.co
       <div>
         <p class="text-[13px] text-muted">{{ title }}</p>
         <p class="mt-2 text-[26px] font-bold tabular-nums text-ink">{{ displayValue }}</p>
+        <p v-if="sub" class="mt-1 text-xs text-muted">{{ sub }}</p>
       </div>
       <div class="w-12 h-12 rounded-xl flex-center" :style="{ backgroundColor: iconBg, color: color }">
         <el-icon :size="24" aria-hidden="true"><i :class="`bi bi-${icon}`" /></el-icon>
