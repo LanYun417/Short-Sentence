@@ -152,6 +152,11 @@ function onNext(): void {
   void loadNext();
 }
 
+/** 换一题：跳过当前题直接抽下一张（与「下一题」同路径，未提交也能用）。 */
+function onSkip(): void {
+  void loadNext();
+}
+
 /** 收藏 / 取消。 */
 function onFavorite(): void {
   void toggleFavorite();
@@ -245,6 +250,20 @@ function onFavorite(): void {
           @next="onNext"
           @favorite="onFavorite"
         />
+      </div>
+
+      <!-- 换一题：跳过当前题（未提交也能用）。贴卡片右下角，不抢「确定」的主操作位 -->
+      <div class="anim-in mx-auto mt-2 flex max-w-xl justify-end" :style="{ animationDelay: '180ms' }">
+        <UButton
+          size="sm"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-refresh-cw"
+          :loading="loading"
+          @click="onSkip"
+        >
+          换一题
+        </UButton>
       </div>
 
       <!-- 达标提示（句签已收入囊中，庆祝特效播完即收起，不再常驻展示） -->
