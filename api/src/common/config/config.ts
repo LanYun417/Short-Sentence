@@ -7,6 +7,7 @@
 import path from 'node:path';
 import { ROOT_DIR, toBoolean, toNumber } from './env-parse.js';
 import { dbConfig } from './db-config.js';
+import { imageGenConfig } from './image-gen-config.js';
 
 /**
  * 项目根目录（定义在 `env-parse.ts`，本文件仅转发导出以保持对外 API 稳定）。
@@ -312,12 +313,11 @@ export const config = {
     /** 定时生成时刻（本地时间，默认 00:30，避开 00:05 日志归档与 00:10 保留清理） */
     cronHour: toNumber(process.env.SENTENCE_CRON_HOUR, 0),
     cronMinute: toNumber(process.env.SENTENCE_CRON_MINUTE, 30),
-    /** 配图尺寸档位与宽高比（16:9 卡片图，2K 档输出 2624x1472） */
-    imageSize: process.env.SENTENCE_IMAGE_SIZE ?? '2K',
-    imageRatio: process.env.SENTENCE_IMAGE_RATIO ?? '16:9',
-    /** 入库前缩放上限（宽 px）与 webp 质量 */
-    imageMaxWidth: toNumber(process.env.SENTENCE_IMAGE_MAX_WIDTH, 1280),
-    imageQuality: Math.min(100, Math.max(1, toNumber(process.env.SENTENCE_IMAGE_QUALITY, 80))),
+    /** 配图尺寸档位、宽高比、入库缩放（定义在 image-gen-config，CLI 脚本共用同一份） */
+    imageSize: imageGenConfig.imageSize,
+    imageRatio: imageGenConfig.imageRatio,
+    imageMaxWidth: imageGenConfig.imageMaxWidth,
+    imageQuality: imageGenConfig.imageQuality,
     /** 抽题时未做过的新题占比（其余按比例从复习池混入） */
     newRatio: Math.min(1, Math.max(0, toNumber(process.env.SENTENCE_NEW_RATIO, 0.8))),
     /** 防重窗口：最近 N 次答过的题不再出现（0 = 不启用） */

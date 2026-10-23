@@ -16,7 +16,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
 import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { FileService } from '../src/common/file/file.service.js';
-import { config } from '../src/common/config/config.js';
+import { imageGenConfig } from '../src/common/config/image-gen-config.js';
 
 /** 单题定义。 */
 interface SentenceSeed {
@@ -949,12 +949,12 @@ async function main(): Promise<void> {
         lastStart = Date.now();
         try {
           const image = await imageGen.generate(`${row.scenePrompt}, ${IMAGE_STYLE_SUFFIX}`, {
-            size: config.sentence.imageSize,
-            ratio: config.sentence.imageRatio,
+            size: imageGenConfig.imageSize,
+            ratio: imageGenConfig.imageRatio,
           });
           const webp = await sharp(image.buffer)
-            .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
-            .webp({ quality: config.sentence.imageQuality })
+            .resize({ width: imageGenConfig.imageMaxWidth, withoutEnlargement: true })
+            .webp({ quality: imageGenConfig.imageQuality })
             .toBuffer();
           const saved = await fileService.save(`${Number(row.id)}.webp`, 'image/webp', webp, null);
           await prisma.sentence.update({
