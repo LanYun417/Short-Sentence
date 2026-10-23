@@ -51,8 +51,6 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  DailyCollectible: 'DailyCollectible',
-  UserCollectible: 'UserCollectible',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -64,6 +62,8 @@ export const ModelName = {
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
   Notice: 'Notice',
+  DailySentenceCard: 'DailySentenceCard',
+  UserSentenceCard: 'UserSentenceCard',
   ClientUser: 'ClientUser',
   SentenceCategory: 'SentenceCategory',
   Sentence: 'Sentence',
@@ -99,33 +99,6 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
-
-
-export const DailyCollectibleScalarFieldEnum = {
-  id: 'id',
-  bizDate: 'bizDate',
-  title: 'title',
-  titleZh: 'titleZh',
-  sentenceEn: 'sentenceEn',
-  translationZh: 'translationZh',
-  scenePrompt: 'scenePrompt',
-  imageFileId: 'imageFileId',
-  status: 'status',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type DailyCollectibleScalarFieldEnum = (typeof DailyCollectibleScalarFieldEnum)[keyof typeof DailyCollectibleScalarFieldEnum]
-
-
-export const UserCollectibleScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  collectibleId: 'collectibleId',
-  obtainedAt: 'obtainedAt'
-} as const
-
-export type UserCollectibleScalarFieldEnum = (typeof UserCollectibleScalarFieldEnum)[keyof typeof UserCollectibleScalarFieldEnum]
 
 
 export const DictTypeScalarFieldEnum = {
@@ -295,6 +268,33 @@ export const NoticeScalarFieldEnum = {
 } as const
 
 export type NoticeScalarFieldEnum = (typeof NoticeScalarFieldEnum)[keyof typeof NoticeScalarFieldEnum]
+
+
+export const DailySentenceCardScalarFieldEnum = {
+  id: 'id',
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  imageFileId: 'imageFileId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DailySentenceCardScalarFieldEnum = (typeof DailySentenceCardScalarFieldEnum)[keyof typeof DailySentenceCardScalarFieldEnum]
+
+
+export const UserSentenceCardScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceCardId: 'sentenceCardId',
+  obtainedAt: 'obtainedAt'
+} as const
+
+export type UserSentenceCardScalarFieldEnum = (typeof UserSentenceCardScalarFieldEnum)[keyof typeof UserSentenceCardScalarFieldEnum]
 
 
 export const ClientUserScalarFieldEnum = {
@@ -605,19 +605,6 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
-export const DailyCollectibleOrderByRelevanceFieldEnum = {
-  bizDate: 'bizDate',
-  title: 'title',
-  titleZh: 'titleZh',
-  sentenceEn: 'sentenceEn',
-  translationZh: 'translationZh',
-  scenePrompt: 'scenePrompt',
-  status: 'status'
-} as const
-
-export type DailyCollectibleOrderByRelevanceFieldEnum = (typeof DailyCollectibleOrderByRelevanceFieldEnum)[keyof typeof DailyCollectibleOrderByRelevanceFieldEnum]
-
-
 export const NullsOrder = {
   first: 'first',
   last: 'last'
@@ -761,6 +748,19 @@ export const NoticeOrderByRelevanceFieldEnum = {
 } as const
 
 export type NoticeOrderByRelevanceFieldEnum = (typeof NoticeOrderByRelevanceFieldEnum)[keyof typeof NoticeOrderByRelevanceFieldEnum]
+
+
+export const DailySentenceCardOrderByRelevanceFieldEnum = {
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  status: 'status'
+} as const
+
+export type DailySentenceCardOrderByRelevanceFieldEnum = (typeof DailySentenceCardOrderByRelevanceFieldEnum)[keyof typeof DailySentenceCardOrderByRelevanceFieldEnum]
 
 
 export const ClientUserOrderByRelevanceFieldEnum = {

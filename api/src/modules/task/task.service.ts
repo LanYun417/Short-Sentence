@@ -21,7 +21,7 @@ import { FileLoggerService } from '../../common/log/file-logger.service.js';
 import { ImageScaleService } from '../../common/file/file-guards.js';
 import { SentenceGenService } from '../sentence/sentence-gen.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
-import { CollectibleService } from '../client/collectible/collectible.service.js';
+import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { buildTaskRegistry, cronOf, type TaskContext, type TaskDefinition, type TaskDeps } from './task.registry.js';
 
@@ -121,7 +121,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly imageScale: ImageScaleService,
     private readonly sentenceGen: SentenceGenService,
     private readonly wordRoot: WordRootService,
-    private readonly collectible: CollectibleService,
+    private readonly sentenceCard: SentenceCardService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -135,7 +135,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       ingestWordRoots: async () => {
         await this.wordRoot.ingestDaily();
       },
-      generateDailyCollectible: () => this.collectible.generateDaily(),
+      generateDailySentenceCard: () => this.sentenceCard.generateDaily(),
     };
 
     const registry = buildTaskRegistry();

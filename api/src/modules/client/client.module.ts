@@ -7,7 +7,7 @@
 import { Module } from '@nestjs/common';
 import { FilesModule } from '../files/files.module.js';
 import { WordRootModule } from './word-root/word-root.module.js';
-import { CollectibleModule } from './collectible/collectible.module.js';
+import { SentenceCardModule } from './sentence-card/sentence-card.module.js';
 import { ClientAuthController } from './auth/client-auth.controller.js';
 import { ClientAuthUserService } from './auth/client-auth.service.js';
 import { QuestionsController } from './questions/questions.controller.js';
@@ -24,8 +24,8 @@ import { CategoriesController } from './categories/categories.controller.js';
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
   // WordRootModule：词根词典（搜索 / 查词 / 每日入库）
-  // CollectibleModule：每日藏品（领取 / 我的藏品；生成走 TaskModule 定时任务）
-  imports: [FilesModule, WordRootModule, CollectibleModule],
+  // SentenceCardModule：每日句签（领取 / 我的句签；生成走 TaskModule 定时任务）
+  imports: [FilesModule, WordRootModule, SentenceCardModule],
   controllers: [
     ClientAuthController,
     QuestionsController,

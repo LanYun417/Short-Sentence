@@ -84,8 +84,8 @@ export interface TodayCheckin {
   completed: boolean;
 }
 
-/** 每日藏品（AI 生成的精美闪卡，完成每日目标后获得）。 */
-export interface Collectible {
+/** 每日句签（AI 生成的精美闪卡，完成每日目标后获得）。 */
+export interface SentenceCard {
   id: number;
   bizDate: string;
   title: string;

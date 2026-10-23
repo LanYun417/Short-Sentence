@@ -5806,55 +5806,6 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
-    "group": "Collectible",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/collectible/mine",
-        "summary": "我的藏品列表（按获得时间倒序）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/collectible/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/collectible/claim",
-        "summary": "领取今日藏品（完成每日目标且今日藏品就绪时返回；否则 null）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/collectible/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
     "group": "Library",
     "endpoints": [
       {
@@ -6047,6 +5998,55 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/report\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "SentenceCard",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/sentence-card/mine",
+        "summary": "我的句签列表（按获得时间倒序）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/sentence-card/claim",
+        "summary": "领取今日句签（完成每日目标且今日句签就绪时返回；否则 null）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/sentence-card/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

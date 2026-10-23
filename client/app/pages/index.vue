@@ -2,9 +2,9 @@
 /**
  * 首页刷题（核心页面）。
  * 布局：[今日进度 Hero] [题干] [16:9 场景图] [输入框] [确定] → 翻转 → [下一题]。
- * 达成每日目标后自动领取并展示「今日 AI 藏品」。
+ * 达成每日目标后自动领取并展示「今日 AI 句签」。
  */
-import type { Collectible, NextQuestion } from '~/types';
+import type { SentenceCard, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { useQuestionSession, DIFFICULTIES } from '~/composables/useQuestionSession';
 import { withUploadToken } from '~/utils/upload-token';
@@ -54,26 +54,26 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 /** 完成数滚动动画。 */
 const doneDisplay = useCountUp(todayDone);
 
-/* ------------------------------ 今日 AI 藏品 ------------------------------ */
+/* ------------------------------ 今日 AI 句签 ------------------------------ */
 
-const collectible = ref<Collectible | null>(null);
+const sentenceCard = ref<SentenceCard | null>(null);
 const claiming = ref(false);
-// 藏品图片走 /static，需带令牌（Cookie 令牌，SSR 与客户端同源一致）
+// 句签图片走 /static，需带令牌（Cookie 令牌，SSR 与客户端同源一致）
 const tokenCookie = useCookie<string | null>('ss_token');
-const collectibleImageSrc = computed(() =>
-  collectible.value?.imageUrl ? withUploadToken(collectible.value.imageUrl, tokenCookie.value) : undefined,
+const sentenceCardImageSrc = computed(() =>
+  sentenceCard.value?.imageUrl ? withUploadToken(sentenceCard.value.imageUrl, tokenCookie.value) : undefined,
 );
 
-/** 领取今日藏品（达标后自动调用；幂等，失败静默不影响刷题）。 */
-async function claimCollectible(): Promise<void> {
+/** 领取今日句签（达标后自动调用；幂等，失败静默不影响刷题）。 */
+async function claimSentenceCard(): Promise<void> {
   if (claiming.value || !goalReached.value) {
     return;
   }
   claiming.value = true;
   try {
-    collectible.value = await apiFetch<Collectible | null>('/client/collectible/claim', { method: 'POST' });
+    sentenceCard.value = await apiFetch<SentenceCard | null>('/client/sentence-card/claim', { method: 'POST' });
   } catch {
-    // 静默：藏品领取失败不打扰用户（下次达标/进入页面会再试）
+    // 静默：句签领取失败不打扰用户（下次达标/进入页面会再试）
   } finally {
     claiming.value = false;
   }
@@ -81,8 +81,8 @@ async function claimCollectible(): Promise<void> {
 
 // 达标瞬间自动领取（提交答案跨过目标线时触发）
 watch(goalReached, (reached) => {
-  if (reached && !collectible.value) {
-    void claimCollectible();
+  if (reached && !sentenceCard.value) {
+    void claimSentenceCard();
   }
 });
 
@@ -91,9 +91,9 @@ onMounted(() => {
   if (!question.value) {
     void loadNext();
   }
-  // 刷新页面时若今日目标已完成，自动领取当日藏品
+  // 刷新页面时若今日目标已完成，自动领取当日句签
   if (goalReached.value) {
-    void claimCollectible();
+    void claimSentenceCard();
   }
 });
 
@@ -219,18 +219,18 @@ function onFavorite(): void {
         />
       </div>
 
-      <!-- 达标 → 今日 AI 藏品（自动领取并展示） -->
+      <!-- 达标 → 今日 AI 句签（自动领取并展示） -->
       <div v-if="goalReached" class="anim-pop mt-5">
         <!-- 已领取：精美闪卡 -->
         <div
-          v-if="collectible"
+          v-if="sentenceCard"
           class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-amber-200/60 dark:bg-slate-800 dark:ring-amber-500/20"
         >
           <div class="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
             <img
-              v-if="collectibleImageSrc"
-              :src="collectibleImageSrc"
-              :alt="collectible.title"
+              v-if="sentenceCardImageSrc"
+              :src="sentenceCardImageSrc"
+              :alt="sentenceCard.title"
               class="h-full w-full object-cover"
             />
             <div v-else class="flex h-full items-center justify-center text-slate-400">
@@ -240,16 +240,16 @@ function onFavorite(): void {
               class="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur"
             >
               <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
-              今日藏品 · 已获得
+              今日句签 · 已获得
             </span>
           </div>
           <div class="p-5">
             <div class="flex items-baseline gap-2">
-              <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ collectible.titleZh }}</h3>
-              <span class="text-sm text-slate-400">{{ collectible.title }}</span>
+              <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ sentenceCard.titleZh }}</h3>
+              <span class="text-sm text-slate-400">{{ sentenceCard.title }}</span>
             </div>
-            <p class="mt-2 text-base font-medium text-slate-700 dark:text-slate-200">{{ collectible.sentenceEn }}</p>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ collectible.translationZh }}</p>
+            <p class="mt-2 text-base font-medium text-slate-700 dark:text-slate-200">{{ sentenceCard.sentenceEn }}</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ sentenceCard.translationZh }}</p>
             <p class="mt-3 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
               <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
               完成今日目标，收下这张属于你的闪卡
@@ -257,7 +257,7 @@ function onFavorite(): void {
           </div>
         </div>
 
-        <!-- 领取中 / 今日藏品尚未生成 -->
+        <!-- 领取中 / 今日句签尚未生成 -->
         <div
           v-else
           class="flex flex-col items-center gap-3 rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5 text-center dark:border-amber-500/20 dark:bg-amber-500/10"
@@ -267,7 +267,7 @@ function onFavorite(): void {
             <span class="font-semibold">今日目标已完成！</span>
           </div>
           <p class="text-sm text-amber-700/80 dark:text-amber-200/80">
-            {{ claiming ? '正在为你解锁今日藏品…' : '今日藏品还在准备中，稍后再来看看' }}
+            {{ claiming ? '正在为你解锁今日句签…' : '今日句签还在准备中，稍后再来看看' }}
           </p>
           <UIcon v-if="claiming" name="i-lucide-loader-circle" class="h-5 w-5 animate-spin text-amber-500" />
         </div>

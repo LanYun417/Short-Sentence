@@ -8,8 +8,6 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './models/DailyCollectible.js'
-export type * from './models/UserCollectible.js'
 export type * from './models/DictType.js'
 export type * from './models/DictItem.js'
 export type * from './models/SysConfig.js'
@@ -21,6 +19,8 @@ export type * from './models/LoginLog.js'
 export type * from './models/OperationLog.js'
 export type * from './models/HttpLog.js'
 export type * from './models/Notice.js'
+export type * from './models/DailySentenceCard.js'
+export type * from './models/UserSentenceCard.js'
 export type * from './models/ClientUser.js'
 export type * from './models/SentenceCategory.js'
 export type * from './models/Sentence.js'

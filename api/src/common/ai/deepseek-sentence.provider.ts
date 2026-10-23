@@ -11,7 +11,7 @@ import { AiCallLogService } from './ai-call-log.service.js';
 import {
   AiProviderError,
   type ChatUsage,
-  type CollectibleTheme,
+  type SentenceCardTheme,
   type SentenceDraft,
   type SentenceGenProvider,
 } from './ai.types.js';
@@ -139,16 +139,16 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
   }
 
   /**
-   * 生成每日藏品主题（一张精美闪卡的文案 + 生图提示词）。
+   * 生成每日句签主题（一张精美句签的文案 + 生图提示词）。
    * 与生题共用上游与日志；输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
    */
-  async generateCollectibleTheme(day: string): Promise<CollectibleTheme> {
+  async generateSentenceCardTheme(day: string): Promise<SentenceCardTheme> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_NVIDIA_API_KEY 缺失）', { retryable: false });
     }
 
     const systemPrompt = [
-      '你是「短句」App 的每日藏品设计师，为用户生成一张当天可收集的精美闪卡。',
+      '你是「短句」App 的每日句签设计师，为用户生成一张当天可收集的精美句签。',
       '严格要求：',
       '1. 只输出 JSON，形状为 {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}，不要任何解释文字；',
       '2. title 是英文主题名（2~4 个单词，如 Morning Ritual），titleZh 是中文主题名；',
@@ -170,7 +170,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
           model: config.ai.nvidia.model,
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `生成 ${day} 的每日藏品主题。` },
+            { role: 'user', content: `生成 ${day} 的每日句签主题。` },
           ],
           temperature: 0.9,
           response_format: { type: 'json_object' },
@@ -180,7 +180,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
 
       if (!response.ok) {
         const detail = (await response.text().catch(() => '')).slice(0, 300);
-        throw new AiProviderError(`藏品主题接口返回 ${response.status}: ${detail}`, {
+        throw new AiProviderError(`句签主题接口返回 ${response.status}: ${detail}`, {
           retryable: response.status === 429 || response.status >= 500,
           status: response.status,
         });
@@ -198,12 +198,12 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
         completionTokens: body.usage?.completion_tokens ?? 0,
       };
 
-      const theme = this.parseCollectibleTheme(content);
+      const theme = this.parseSentenceCardTheme(content);
       if (!theme) {
-        throw new AiProviderError('藏品主题未返回可用内容', { retryable: true });
+        throw new AiProviderError('句签主题未返回可用内容', { retryable: true });
       }
       await this.aiCallLog.record({
-        type: 'collectible_gen',
+        type: 'sentence_card_gen',
         provider: 'nvidia',
         model: config.ai.nvidia.model,
         promptTokens: usage.promptTokens,
@@ -214,7 +214,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       return theme;
     } catch (error) {
       await this.aiCallLog.record({
-        type: 'collectible_gen',
+        type: 'sentence_card_gen',
         provider: 'nvidia',
         model: config.ai.nvidia.model,
         latencyMs: Date.now() - startedAt,
@@ -224,14 +224,14 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       if (error instanceof AiProviderError) {
         throw error;
       }
-      throw new AiProviderError(`藏品主题接口调用失败: ${error instanceof Error ? error.message : String(error)}`, {
+      throw new AiProviderError(`句签主题接口调用失败: ${error instanceof Error ? error.message : String(error)}`, {
         retryable: true,
       });
     }
   }
 
-  /** 解析藏品主题输出（容忍 ```json 围栏与思考文字夹带）。 */
-  private parseCollectibleTheme(content: string): CollectibleTheme | null {
+  /** 解析句签主题输出（容忍 ```json 围栏与思考文字夹带）。 */
+  private parseSentenceCardTheme(content: string): SentenceCardTheme | null {
     let text = content.trim();
     const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
     const matched = fence.exec(text);
@@ -249,11 +249,11 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
     try {
       parsed = JSON.parse(text);
     } catch {
-      this.logger.warn('[Collectible] 藏品主题输出不是合法 JSON，已丢弃');
+      this.logger.warn('[SentenceCard] 句签主题输出不是合法 JSON，已丢弃');
       return null;
     }
     const raw = parsed as Record<string, unknown>;
-    const theme: CollectibleTheme = {
+    const theme: SentenceCardTheme = {
       title: str(raw.title, 80),
       titleZh: str(raw.titleZh, 80),
       sentenceEn: str(raw.sentenceEn, 200),

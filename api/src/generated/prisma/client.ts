@@ -31,8 +31,8 @@ export * from "./enums.js"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more DailyCollectibles
- * const dailyCollectibles = await prisma.dailyCollectible.findMany()
+ * // Fetch zero or more DictTypes
+ * const dictTypes = await prisma.dictType.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -41,16 +41,6 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
-/**
- * Model DailyCollectible
- * 每日藏品（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
- */
-export type DailyCollectible = Prisma.DailyCollectibleModel
-/**
- * Model UserCollectible
- * 用户藏品（userId + collectibleId 唯一，重复领取被唯一键拦截）
- */
-export type UserCollectible = Prisma.UserCollectibleModel
 /**
  * Model DictType
  * 字典类型表
@@ -110,6 +100,16 @@ export type HttpLog = Prisma.HttpLogModel
  *  * 不需要额外的已读关联表与联表查询。
  */
 export type Notice = Prisma.NoticeModel
+/**
+ * Model DailySentenceCard
+ * 每日句签（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
+ */
+export type DailySentenceCard = Prisma.DailySentenceCardModel
+/**
+ * Model UserSentenceCard
+ * 用户句签（userId + sentenceCardId 唯一，重复领取被唯一键拦截）
+ */
+export type UserSentenceCard = Prisma.UserSentenceCardModel
 /**
  * Model ClientUser
  * 客户端用户（与后台 sys_user 彻底隔离，独立鉴权体系）

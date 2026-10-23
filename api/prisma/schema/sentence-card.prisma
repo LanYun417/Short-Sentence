@@ -1,10 +1,11 @@
 // use prisma-next
 
-// 「短句」每日藏品域：AI 每日生成一张精美闪卡（藏品），用户完成每日目标后获得。
+// 「短句」每日句签域：AI 每日生成一张精美句签（可留存的闪卡），用户完成每日目标后获得。
+// 命名取向：对外叫「句签」（贴合「短句」品牌，含「书签/留存」意味），避免「藏品」过于直白。
 // 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
 
-/// 每日藏品（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
-model DailyCollectible {
+/// 每日句签（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
+model DailySentenceCard {
   /// 主键
   id BigInt @id @default(autoincrement()) @db.BigInt
   /// 业务日期（YYYY-MM-DD，唯一：一天一张，重复触发幂等跳过）
@@ -28,27 +29,27 @@ model DailyCollectible {
   /// 更新时间
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  grants UserCollectible[]
+  grants UserSentenceCard[]
 
   @@index([status, bizDate])
-  @@map("daily_collectible")
+  @@map("daily_sentence_card")
 }
 
-/// 用户藏品（userId + collectibleId 唯一，重复领取被唯一键拦截）
-model UserCollectible {
+/// 用户句签（userId + sentenceCardId 唯一，重复领取被唯一键拦截）
+model UserSentenceCard {
   /// 主键
   id BigInt @id @default(autoincrement()) @db.BigInt
   /// 用户 id
   userId BigInt @map("user_id") @db.BigInt
-  /// 藏品 id
-  collectibleId BigInt @map("collectible_id") @db.BigInt
+  /// 句签 id
+  sentenceCardId BigInt @map("sentence_card_id") @db.BigInt
   /// 获得时间
   obtainedAt DateTime @default(now()) @map("obtained_at")
 
-  collectible DailyCollectible @relation(fields: [collectibleId], references: [id])
+  sentenceCard DailySentenceCard @relation(fields: [sentenceCardId], references: [id])
 
-  /// 同一用户同一藏品只能获得一次
-  @@unique([userId, collectibleId])
+  /// 同一用户同一句签只能获得一次
+  @@unique([userId, sentenceCardId])
   @@index([userId, obtainedAt])
-  @@map("user_collectible")
+  @@map("user_sentence_card")
 }

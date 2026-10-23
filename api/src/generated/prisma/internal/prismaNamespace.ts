@@ -397,8 +397,6 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
-  DailyCollectible: 'DailyCollectible',
-  UserCollectible: 'UserCollectible',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -410,6 +408,8 @@ export const ModelName = {
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
   Notice: 'Notice',
+  DailySentenceCard: 'DailySentenceCard',
+  UserSentenceCard: 'UserSentenceCard',
   ClientUser: 'ClientUser',
   SentenceCategory: 'SentenceCategory',
   Sentence: 'Sentence',
@@ -444,142 +444,10 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dailyCollectible" | "userCollectible" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
-    DailyCollectible: {
-      payload: Prisma.$DailyCollectiblePayload<ExtArgs>
-      fields: Prisma.DailyCollectibleFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.DailyCollectibleFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.DailyCollectibleFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        findFirst: {
-          args: Prisma.DailyCollectibleFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.DailyCollectibleFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        findMany: {
-          args: Prisma.DailyCollectibleFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>[]
-        }
-        create: {
-          args: Prisma.DailyCollectibleCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        createMany: {
-          args: Prisma.DailyCollectibleCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        delete: {
-          args: Prisma.DailyCollectibleDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        update: {
-          args: Prisma.DailyCollectibleUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        deleteMany: {
-          args: Prisma.DailyCollectibleDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.DailyCollectibleUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        upsert: {
-          args: Prisma.DailyCollectibleUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailyCollectiblePayload>
-        }
-        aggregate: {
-          args: Prisma.DailyCollectibleAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateDailyCollectible>
-        }
-        groupBy: {
-          args: Prisma.DailyCollectibleGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.DailyCollectibleGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.DailyCollectibleCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.DailyCollectibleCountAggregateOutputType> | number
-        }
-      }
-    }
-    UserCollectible: {
-      payload: Prisma.$UserCollectiblePayload<ExtArgs>
-      fields: Prisma.UserCollectibleFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.UserCollectibleFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.UserCollectibleFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        findFirst: {
-          args: Prisma.UserCollectibleFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.UserCollectibleFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        findMany: {
-          args: Prisma.UserCollectibleFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>[]
-        }
-        create: {
-          args: Prisma.UserCollectibleCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        createMany: {
-          args: Prisma.UserCollectibleCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        delete: {
-          args: Prisma.UserCollectibleDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        update: {
-          args: Prisma.UserCollectibleUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        deleteMany: {
-          args: Prisma.UserCollectibleDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.UserCollectibleUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        upsert: {
-          args: Prisma.UserCollectibleUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserCollectiblePayload>
-        }
-        aggregate: {
-          args: Prisma.UserCollectibleAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateUserCollectible>
-        }
-        groupBy: {
-          args: Prisma.UserCollectibleGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.UserCollectibleGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.UserCollectibleCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.UserCollectibleCountAggregateOutputType> | number
-        }
-      }
-    }
     DictType: {
       payload: Prisma.$DictTypePayload<ExtArgs>
       fields: Prisma.DictTypeFieldRefs
@@ -1303,6 +1171,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.NoticeCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.NoticeCountAggregateOutputType> | number
+        }
+      }
+    }
+    DailySentenceCard: {
+      payload: Prisma.$DailySentenceCardPayload<ExtArgs>
+      fields: Prisma.DailySentenceCardFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DailySentenceCardFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DailySentenceCardFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        findFirst: {
+          args: Prisma.DailySentenceCardFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DailySentenceCardFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        findMany: {
+          args: Prisma.DailySentenceCardFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>[]
+        }
+        create: {
+          args: Prisma.DailySentenceCardCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        createMany: {
+          args: Prisma.DailySentenceCardCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.DailySentenceCardDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        update: {
+          args: Prisma.DailySentenceCardUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        deleteMany: {
+          args: Prisma.DailySentenceCardDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DailySentenceCardUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.DailySentenceCardUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DailySentenceCardPayload>
+        }
+        aggregate: {
+          args: Prisma.DailySentenceCardAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDailySentenceCard>
+        }
+        groupBy: {
+          args: Prisma.DailySentenceCardGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DailySentenceCardGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DailySentenceCardCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DailySentenceCardCountAggregateOutputType> | number
+        }
+      }
+    }
+    UserSentenceCard: {
+      payload: Prisma.$UserSentenceCardPayload<ExtArgs>
+      fields: Prisma.UserSentenceCardFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserSentenceCardFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserSentenceCardFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        findFirst: {
+          args: Prisma.UserSentenceCardFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserSentenceCardFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        findMany: {
+          args: Prisma.UserSentenceCardFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>[]
+        }
+        create: {
+          args: Prisma.UserSentenceCardCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        createMany: {
+          args: Prisma.UserSentenceCardCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.UserSentenceCardDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        update: {
+          args: Prisma.UserSentenceCardUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserSentenceCardDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserSentenceCardUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.UserSentenceCardUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSentenceCardPayload>
+        }
+        aggregate: {
+          args: Prisma.UserSentenceCardAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserSentenceCard>
+        }
+        groupBy: {
+          args: Prisma.UserSentenceCardGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserSentenceCardGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserSentenceCardCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserSentenceCardCountAggregateOutputType> | number
         }
       }
     }
@@ -2599,33 +2599,6 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
-export const DailyCollectibleScalarFieldEnum = {
-  id: 'id',
-  bizDate: 'bizDate',
-  title: 'title',
-  titleZh: 'titleZh',
-  sentenceEn: 'sentenceEn',
-  translationZh: 'translationZh',
-  scenePrompt: 'scenePrompt',
-  imageFileId: 'imageFileId',
-  status: 'status',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type DailyCollectibleScalarFieldEnum = (typeof DailyCollectibleScalarFieldEnum)[keyof typeof DailyCollectibleScalarFieldEnum]
-
-
-export const UserCollectibleScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  collectibleId: 'collectibleId',
-  obtainedAt: 'obtainedAt'
-} as const
-
-export type UserCollectibleScalarFieldEnum = (typeof UserCollectibleScalarFieldEnum)[keyof typeof UserCollectibleScalarFieldEnum]
-
-
 export const DictTypeScalarFieldEnum = {
   id: 'id',
   dictName: 'dictName',
@@ -2793,6 +2766,33 @@ export const NoticeScalarFieldEnum = {
 } as const
 
 export type NoticeScalarFieldEnum = (typeof NoticeScalarFieldEnum)[keyof typeof NoticeScalarFieldEnum]
+
+
+export const DailySentenceCardScalarFieldEnum = {
+  id: 'id',
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  imageFileId: 'imageFileId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DailySentenceCardScalarFieldEnum = (typeof DailySentenceCardScalarFieldEnum)[keyof typeof DailySentenceCardScalarFieldEnum]
+
+
+export const UserSentenceCardScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceCardId: 'sentenceCardId',
+  obtainedAt: 'obtainedAt'
+} as const
+
+export type UserSentenceCardScalarFieldEnum = (typeof UserSentenceCardScalarFieldEnum)[keyof typeof UserSentenceCardScalarFieldEnum]
 
 
 export const ClientUserScalarFieldEnum = {
@@ -3103,19 +3103,6 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
-export const DailyCollectibleOrderByRelevanceFieldEnum = {
-  bizDate: 'bizDate',
-  title: 'title',
-  titleZh: 'titleZh',
-  sentenceEn: 'sentenceEn',
-  translationZh: 'translationZh',
-  scenePrompt: 'scenePrompt',
-  status: 'status'
-} as const
-
-export type DailyCollectibleOrderByRelevanceFieldEnum = (typeof DailyCollectibleOrderByRelevanceFieldEnum)[keyof typeof DailyCollectibleOrderByRelevanceFieldEnum]
-
-
 export const NullsOrder = {
   first: 'first',
   last: 'last'
@@ -3259,6 +3246,19 @@ export const NoticeOrderByRelevanceFieldEnum = {
 } as const
 
 export type NoticeOrderByRelevanceFieldEnum = (typeof NoticeOrderByRelevanceFieldEnum)[keyof typeof NoticeOrderByRelevanceFieldEnum]
+
+
+export const DailySentenceCardOrderByRelevanceFieldEnum = {
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  status: 'status'
+} as const
+
+export type DailySentenceCardOrderByRelevanceFieldEnum = (typeof DailySentenceCardOrderByRelevanceFieldEnum)[keyof typeof DailySentenceCardOrderByRelevanceFieldEnum]
 
 
 export const ClientUserOrderByRelevanceFieldEnum = {
@@ -3425,16 +3425,16 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
- * Reference to a field of type 'DateTime'
+ * Reference to a field of type 'Int'
  */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'DateTime'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
     
 
 
@@ -3609,8 +3609,6 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
-  dailyCollectible?: Prisma.DailyCollectibleOmit
-  userCollectible?: Prisma.UserCollectibleOmit
   dictType?: Prisma.DictTypeOmit
   dictItem?: Prisma.DictItemOmit
   sysConfig?: Prisma.SysConfigOmit
@@ -3622,6 +3620,8 @@ export type GlobalOmitConfig = {
   operationLog?: Prisma.OperationLogOmit
   httpLog?: Prisma.HttpLogOmit
   notice?: Prisma.NoticeOmit
+  dailySentenceCard?: Prisma.DailySentenceCardOmit
+  userSentenceCard?: Prisma.UserSentenceCardOmit
   clientUser?: Prisma.ClientUserOmit
   sentenceCategory?: Prisma.SentenceCategoryOmit
   sentence?: Prisma.SentenceOmit
