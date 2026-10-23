@@ -4,6 +4,7 @@
  * 客户端用户体系（client_user）与后台 admin 完全隔离。
  */
 import { useAuthStore } from '~/stores/auth';
+import { withUploadToken } from '~/utils/upload-token';
 import type { ClientUserProfile } from '~/types';
 
 const auth = useAuthStore();
@@ -68,6 +69,11 @@ function isActive(to: string): boolean {
 const activeIndex = computed(() => NAV_ITEMS.findIndex((item) => isActive(item.to)));
 
 const avatarText = computed(() => (auth.user?.nickname ?? '?').slice(0, 1));
+// 头像图片地址：/static 资源需带令牌，令牌走 Cookie（SSR 与客户端同源一致，首屏即加载）
+const tokenCookie = useCookie<string | null>('ss_token');
+const avatarSrc = computed(() =>
+  auth.user?.avatarUrl ? withUploadToken(auth.user.avatarUrl, tokenCookie.value) : undefined,
+);
 
 onMounted(() => {
   // 挂载后再恢复本地缓存资料：SSR 首屏与客户端首帧都不读 localStorage，避免水合不一致
@@ -149,9 +155,6 @@ function onLogout(): void {
               <UButton to="/login" size="sm" class="anim-pop ml-1"> 登录 </UButton>
             </template>
             <template v-else>
-              <NuxtLink to="/profile" class="ml-1" aria-label="个人中心">
-                <UAvatar :text="avatarText" size="sm" class="transition-transform duration-200 hover:scale-110" />
-              </NuxtLink>
               <UButton
                 color="neutral"
                 variant="ghost"
@@ -162,6 +165,15 @@ function onLogout(): void {
                 aria-label="退出登录"
                 @click="onLogout"
               />
+              <!-- 头像固定在最右侧（点击进个人中心） -->
+              <NuxtLink to="/profile" class="ml-1" aria-label="个人中心">
+                <UAvatar
+                  :src="avatarSrc"
+                  :text="avatarText"
+                  size="sm"
+                  class="transition-transform duration-200 hover:scale-110"
+                />
+              </NuxtLink>
             </template>
           </div>
         </div>
