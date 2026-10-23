@@ -9,14 +9,9 @@
  */
 import type { SentenceLibraryItem } from '~/types';
 import { apiFetch } from '~/composables/useApi';
-import { withUploadToken } from '~/utils/upload-token';
-
-// 图片令牌走 Cookie：SSR 渲染的缩略图 URL 与客户端水合结果一致，首屏图片即开始加载
-const tokenCookie = useCookie<string | null>('ss_token');
-
-/** 缩略图地址（附加访问令牌）。 */
+/** 缩略图地址。 */
 function itemSrc(url?: string | null): string {
-  return withUploadToken(url, tokenCookie.value);
+  return url ?? '';
 }
 
 const props = defineProps<{

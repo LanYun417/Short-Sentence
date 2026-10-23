@@ -8,7 +8,6 @@
 import { useAuthStore } from '~/stores/auth';
 import { apiFetch } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
-import { withUploadToken } from '~/utils/upload-token';
 import type { ClientUserProfile, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -70,12 +69,8 @@ const goalPercent = computed(() => {
 });
 
 const avatarText = computed(() => (auth.user?.nickname ?? '?').slice(0, 1));
-// 头像令牌走 Cookie：SSR 渲染的头像 URL 带令牌，首屏即显示（服务端读不到 localStorage）
-const tokenCookie = useCookie<string | null>('ss_token');
-/** 头像地址：/static 资源需要带令牌才能访问 */
-const avatarSrc = computed(() =>
-  auth.user?.avatarUrl ? withUploadToken(auth.user.avatarUrl, tokenCookie.value) : undefined,
-);
+/** 头像地址（/static 资源，防盗链按 Referer 白名单放行）。 */
+const avatarSrc = computed(() => auth.user?.avatarUrl ?? undefined);
 
 /** 表单 Tab（slot 字段指定内容插槽名）。 */
 const TABS = [
@@ -110,7 +105,7 @@ const sentenceCards = ref<SentenceCard[]>(ssrSentenceCards.value ?? []);
 
 /** 句签图片地址（/static 需带令牌）。 */
 function sentenceCardImg(url: string | null): string | undefined {
-  return url ? withUploadToken(url, tokenCookie.value) : undefined;
+  return url ?? undefined;
 }
 
 if (ssrUser.value) {

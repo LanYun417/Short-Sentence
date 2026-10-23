@@ -8,7 +8,6 @@ import { usePermissionStore } from '@/store/modules/permission';
 import { useAppStore } from '@/store/modules/app';
 import { useTheme } from '@/composables/useTheme';
 import { applyPrimaryColor, DEFAULT_PRIMARY_COLOR } from '@/utils/theme';
-import { withUploadToken } from '@/utils/uploadToken';
 
 defineOptions({ name: 'Avatar' });
 
@@ -106,7 +105,7 @@ function handlePrimaryColorChange(color: string | null): void {
 
     <el-dropdown trigger="click">
       <div class="cursor-pointer outline-none flex items-center gap-2">
-        <el-avatar :size="32" :src="withUploadToken(avatar)">
+        <el-avatar :size="32" :src="avatar">
           <el-icon aria-hidden="true"><i class="bi bi-person" /></el-icon>
         </el-avatar>
         <span class="text-sm text-ink">{{ nickname }}</span>

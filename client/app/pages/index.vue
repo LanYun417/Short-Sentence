@@ -7,7 +7,6 @@
 import type { SentenceCard, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { useQuestionSession, DIFFICULTIES } from '~/composables/useQuestionSession';
-import { withUploadToken } from '~/utils/upload-token';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -58,11 +57,7 @@ const doneDisplay = useCountUp(todayDone);
 
 const sentenceCard = ref<SentenceCard | null>(null);
 const claiming = ref(false);
-// 句签图片走 /static，需带令牌（Cookie 令牌，SSR 与客户端同源一致）
-const tokenCookie = useCookie<string | null>('ss_token');
-const sentenceCardImageSrc = computed(() =>
-  sentenceCard.value?.imageUrl ? withUploadToken(sentenceCard.value.imageUrl, tokenCookie.value) : undefined,
-);
+const sentenceCardImageSrc = computed(() => sentenceCard.value?.imageUrl ?? undefined);
 
 /** 领取今日句签（达标后自动调用；幂等，失败静默不影响刷题）。 */
 async function claimSentenceCard(): Promise<void> {

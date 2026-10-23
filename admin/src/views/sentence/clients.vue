@@ -14,7 +14,6 @@ import {
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
-import { withUploadToken } from '@/utils/uploadToken';
 import type { ClientUserDetail, ClientUserItem } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -164,7 +163,7 @@ onMounted(() => {
         <el-table-column label="用户" min-width="200">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
-              <el-avatar :size="32" :src="withUploadToken(row.avatarUrl) || undefined">
+              <el-avatar :size="32" :src="row.avatarUrl || undefined">
                 {{ (row.nickname || '?').slice(0, 1) }}
               </el-avatar>
               <div class="min-w-0">
@@ -248,7 +247,7 @@ onMounted(() => {
       <div v-loading="detailLoading">
         <template v-if="detail">
           <div class="mb-4 flex items-center gap-3">
-            <el-avatar :size="48" :src="withUploadToken(detail.avatarUrl) || undefined">
+            <el-avatar :size="48" :src="detail.avatarUrl || undefined">
               {{ (detail.nickname || '?').slice(0, 1) }}
             </el-avatar>
             <div>

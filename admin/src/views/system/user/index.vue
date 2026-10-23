@@ -29,7 +29,6 @@ import UserForm from './components/UserForm.vue';
 import AssignRoleDialog from './components/AssignRoleDialog.vue';
 import UserPermissionDrawer from './components/UserPermissionDrawer.vue';
 import UserImportDialog from './components/UserImportDialog.vue';
-import { withUploadToken } from '@/utils/uploadToken';
 
 defineOptions({ name: 'SystemUser' });
 
@@ -292,7 +291,7 @@ onMounted(() => {
         <el-table-column type="selection" width="48" align="center" :selectable="selectableUser" />
         <el-table-column v-if="isVisible('avatar')" label="头像" width="80" align="center">
           <template #default="{ row }">
-            <el-avatar :size="36" :src="withUploadToken(row.avatar)">
+            <el-avatar :size="36" :src="row.avatar">
               <el-icon aria-hidden="true"><i class="bi bi-person-fill" /></el-icon>
             </el-avatar>
           </template>

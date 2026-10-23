@@ -17,7 +17,6 @@ import {
 } from '@/api/sentence';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
-import { withUploadToken } from '@/utils/uploadToken';
 import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -239,8 +238,8 @@ onMounted(async () => {
           <template #default="{ row }">
             <el-image
               v-if="row.imageUrl"
-              :src="withUploadToken(`${row.imageUrl}?scale=200`)"
-              :preview-src-list="[withUploadToken(row.imageUrl)]"
+              :src="`${row.imageUrl}?scale=200`"
+              :preview-src-list="[row.imageUrl]"
               fit="cover"
               style="width: 88px; height: 50px; border-radius: 6px"
             />

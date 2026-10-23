@@ -11,7 +11,6 @@
  */
 import type { AnswerResult, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
-import { withUploadToken } from '~/utils/upload-token';
 
 const props = defineProps<{
   /** 当前题目（sentenceId 变化即换卡） */
@@ -30,11 +29,8 @@ const emit = defineEmits<{
   (e: 'favorite'): void;
 }>();
 
-// 图片令牌走 Cookie（SSR 与客户端同源一致：服务端渲染的 URL 也带令牌，首屏图片即加载）
-const tokenCookie = useCookie<string | null>('ss_token');
-
-/** 配图地址（附加访问令牌；Cookie 令牌刷新后自动重算）。 */
-const imageSrc = computed(() => withUploadToken(props.question.imageUrl, tokenCookie.value));
+/** 配图地址。 */
+const imageSrc = computed(() => props.question.imageUrl);
 
 /** 用户输入 */
 const answer = ref('');
