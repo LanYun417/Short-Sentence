@@ -4496,6 +4496,412 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "词根词典",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/word-roots",
+        "summary": "分页列表（筛选：关键词 / 来源）",
+        "permission": [
+          "sentence:wordroot:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/word-roots?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/word-roots/:id",
+        "summary": "详情",
+        "permission": [
+          "sentence:wordroot:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/word-roots/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/word-roots/analyze",
+        "summary": "按单词立即解析并入库（单条，通常 3~10s）",
+        "permission": [
+          "sentence:wordroot:gen"
+        ],
+        "isPublic": false,
+        "action": "词根词典 · 立即解析",
+        "params": [
+          {
+            "name": "word",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/word-roots/analyze\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"word\": \"示例值\"\n    }'",
+          "requestBody": {
+            "word": "示例值"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/word-roots/:id",
+        "summary": "编辑",
+        "permission": [
+          "sentence:wordroot:edit"
+        ],
+        "isPublic": false,
+        "action": "词根词典 · 编辑",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "phonetic",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "meaning",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "analysisJson",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "结构化解析（JSON 字符串，形如 {\"parts\":[...],\"explanation\":\"\",\"related\":[]}）。 用字符串而非对象接收：白名单校验需要明确的形状，且前端用 JSON 文本域编辑。",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/word-roots/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"phonetic\": \"示例值\",\n      \"meaning\": \"示例值\",\n      \"analysisJson\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "phonetic": "示例值",
+            "meaning": "示例值",
+            "analysisJson": "示例值"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/word-roots/:id",
+        "summary": "删除",
+        "permission": [
+          "sentence:wordroot:remove"
+        ],
+        "isPublic": false,
+        "action": "词根词典 · 删除",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/word-roots/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "句签管理",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/sentence-cards",
+        "summary": "分页列表（筛选：status / 日期区间 / 关键词）",
+        "permission": [
+          "sentence:card:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/sentence-cards?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/sentence-cards/:id",
+        "summary": "详情（含最近领取用户）",
+        "permission": [
+          "sentence:card:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/sentence-cards/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentence-cards/generate",
+        "summary": "按日期重新生成（同步等待 AI 文案 + 生图，通常 10~40s）。 ⚠️ 必须声明在 `@Get(':id')` 之前不是必需的（方法不同），但保持与其他模块一致的可读性",
+        "permission": [
+          "sentence:card:gen"
+        ],
+        "isPublic": false,
+        "action": "句签管理 · 重新生成",
+        "params": [
+          {
+            "name": "bizDate",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "业务日期（YYYY-MM-DD）",
+            "example": "示例值"
+          },
+          {
+            "name": "force",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "已就绪时是否强制覆盖。 缺省按 true 处理——运营点「重新生成」的意图就是要换一张。",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentence-cards/generate\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"bizDate\": \"示例值\",\n      \"force\": true\n    }'",
+          "requestBody": {
+            "bizDate": "示例值",
+            "force": true
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/sentence-cards/:id",
+        "summary": "编辑文案",
+        "permission": [
+          "sentence:card:edit"
+        ],
+        "isPublic": false,
+        "action": "句签管理 · 编辑文案",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "title",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "titleZh",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "sentenceEn",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "translationZh",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/sentence-cards/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"title\": \"示例值\",\n      \"titleZh\": \"示例值\",\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "title": "示例值",
+            "titleZh": "示例值",
+            "sentenceEn": "示例值",
+            "translationZh": "示例值"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sentence-cards/:id",
+        "summary": "删除（连带领取记录）",
+        "permission": [
+          "sentence:card:remove"
+        ],
+        "isPublic": false,
+        "action": "句签管理 · 删除",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/sentence-cards/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "客户端用户",
     "endpoints": [
       {

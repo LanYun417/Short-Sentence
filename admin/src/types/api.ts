@@ -1117,3 +1117,91 @@ export interface HandleReportPayload {
   status: 'resolved' | 'dismissed';
   handleNote?: string;
 }
+
+/* ------------------------------ 每日句签 ------------------------------ */
+
+/** 句签状态 */
+export type SentenceCardStatus = 'pending' | 'ready' | 'failed';
+
+/** 句签列表项（运营后台） */
+export interface SentenceCardItem {
+  id: number;
+  /** 业务日期 YYYY-MM-DD（一天一张） */
+  bizDate: string;
+  title: string;
+  titleZh: string;
+  sentenceEn: string;
+  translationZh: string;
+  imageUrl: string | null;
+  status: SentenceCardStatus;
+  /** 领取人数 */
+  claimCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 句签详情（多出提示词与最近领取） */
+export interface SentenceCardDetail extends SentenceCardItem {
+  /** 生图提示词（审核文案与画面是否匹配） */
+  scenePrompt: string;
+  imageFileId: number;
+  claims: Array<{ userId: number; nickname: string | null; email: string | null; obtainedAt: string }>;
+}
+
+/** 句签查询参数 */
+export interface SentenceCardQuery extends PageQuery {
+  status?: string;
+  keyword?: string;
+  /** 业务日期起（含） */
+  startDate?: string;
+  /** 业务日期止（含） */
+  endDate?: string;
+}
+
+/** 编辑句签文案 */
+export interface SentenceCardPayload {
+  title?: string;
+  titleZh?: string;
+  sentenceEn?: string;
+  translationZh?: string;
+}
+
+/* ------------------------------ 词根词典 ------------------------------ */
+
+/** 词根词素 */
+export interface WordRootPart {
+  /** prefix 前缀 / root 词根 / suffix 后缀 */
+  type: string;
+  text: string;
+  meaning?: string;
+}
+
+/** 词条（运营后台） */
+export interface WordRootItem {
+  id: number;
+  word: string;
+  phonetic: string | null;
+  meaning: string | null;
+  parts: WordRootPart[];
+  explanation: string;
+  related: string[];
+  /** ai 实时解析 / daily 每日批量 */
+  source: string;
+  searchCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 词条查询参数 */
+export interface WordRootQuery extends PageQuery {
+  keyword?: string;
+  source?: string;
+}
+
+/** 编辑词条入参 */
+export interface WordRootPayload {
+  phonetic?: string;
+  meaning?: string;
+  /** 结构化解析（JSON 文本） */
+  analysisJson?: string;
+}

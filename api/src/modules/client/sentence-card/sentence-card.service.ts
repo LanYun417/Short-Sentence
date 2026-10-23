@@ -50,14 +50,27 @@ export class SentenceCardService {
    * 失败会落一条 status=failed 记录并抛出（任务日志记为失败），便于排查与手动重试。
    */
   async generateDaily(): Promise<void> {
-    const bizDate = this.today();
+    await this.generateForDate(this.today());
+  }
+
+  /**
+   * 生成指定日期的句签（幂等：该日期已 ready 则跳过）。
+   *
+   * 抽出来供运营后台复用：后台要能重生成**任意日期**的卡片，也要能强制覆盖已就绪的
+   * （文案不满意时换一张），这两件事都不是定时任务会做的。
+   *
+   * @param bizDate 业务日期 YYYY-MM-DD
+   * @param force true 时即使已就绪也重新生成
+   * @returns 是否实际生成（false = 已就绪被跳过）
+   */
+  async generateForDate(bizDate: string, force = false): Promise<boolean> {
     const existing = await this.prisma.dailySentenceCard.findUnique({
       where: { bizDate },
       select: { id: true, status: true },
     });
-    if (existing?.status === 'ready') {
+    if (!force && existing?.status === 'ready') {
       this.logger.log(`[SentenceCard] ${bizDate} 句签已就绪，跳过`);
-      return;
+      return false;
     }
 
     try {
@@ -98,6 +111,7 @@ export class SentenceCardService {
         update: data,
       });
       this.logger.log(`[SentenceCard] ${bizDate} 句签生成完成：${theme.title}`);
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`[SentenceCard] ${bizDate} 句签生成失败：${message}`);

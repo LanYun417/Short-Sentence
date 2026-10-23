@@ -33,6 +33,8 @@ import { NoticeModule } from './modules/notice/notice.module.js';
 import { TaskModule } from './modules/task/task.module.js';
 import { ClientModule } from './modules/client/client.module.js';
 import { SentenceModule } from './modules/sentence/sentence.module.js';
+import { SentenceCardsModule } from './modules/sentence-cards/sentence-cards.module.js';
+import { WordRootsModule } from './modules/word-roots/word-roots.module.js';
 import { ClientUsersModule } from './modules/client-users/client-users.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
@@ -64,6 +66,9 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     // 「短句」：客户端用户体系（/api/client/*）与题库管理（/api/sentences，含每日生成流水线）
     ClientModule,
     SentenceModule,
+    // 「短句」运营后台：每日句签管理（/api/sentence-cards）与词根词典管理（/api/word-roots）
+    SentenceCardsModule,
+    WordRootsModule,
     ClientUsersModule,
     AnalyticsModule,
   ],
