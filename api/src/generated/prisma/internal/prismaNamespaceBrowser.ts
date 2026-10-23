@@ -51,6 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  DailyCollectible: 'DailyCollectible',
+  UserCollectible: 'UserCollectible',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -97,6 +99,33 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const DailyCollectibleScalarFieldEnum = {
+  id: 'id',
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  imageFileId: 'imageFileId',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DailyCollectibleScalarFieldEnum = (typeof DailyCollectibleScalarFieldEnum)[keyof typeof DailyCollectibleScalarFieldEnum]
+
+
+export const UserCollectibleScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  collectibleId: 'collectibleId',
+  obtainedAt: 'obtainedAt'
+} as const
+
+export type UserCollectibleScalarFieldEnum = (typeof UserCollectibleScalarFieldEnum)[keyof typeof UserCollectibleScalarFieldEnum]
 
 
 export const DictTypeScalarFieldEnum = {
@@ -574,6 +603,19 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const DailyCollectibleOrderByRelevanceFieldEnum = {
+  bizDate: 'bizDate',
+  title: 'title',
+  titleZh: 'titleZh',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  scenePrompt: 'scenePrompt',
+  status: 'status'
+} as const
+
+export type DailyCollectibleOrderByRelevanceFieldEnum = (typeof DailyCollectibleOrderByRelevanceFieldEnum)[keyof typeof DailyCollectibleOrderByRelevanceFieldEnum]
 
 
 export const NullsOrder = {

@@ -8,7 +8,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../config/config.js';
 import { AiCallLogService } from './ai-call-log.service.js';
-import { AiProviderError, type ChatUsage, type SentenceDraft, type SentenceGenProvider } from './ai.types.js';
+import {
+  AiProviderError,
+  type ChatUsage,
+  type CollectibleTheme,
+  type SentenceDraft,
+  type SentenceGenProvider,
+} from './ai.types.js';
 
 /** 单条草稿的最小可用判定。 */
 function isUsableDraft(item: unknown): item is SentenceDraft {
@@ -130,6 +136,135 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
         retryable: true,
       });
     }
+  }
+
+  /**
+   * 生成每日藏品主题（一张精美闪卡的文案 + 生图提示词）。
+   * 与生题共用上游与日志；输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
+   */
+  async generateCollectibleTheme(day: string): Promise<CollectibleTheme> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_NVIDIA_API_KEY 缺失）', { retryable: false });
+    }
+
+    const systemPrompt = [
+      '你是「短句」App 的每日藏品设计师，为用户生成一张当天可收集的精美闪卡。',
+      '严格要求：',
+      '1. 只输出 JSON，形状为 {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}，不要任何解释文字；',
+      '2. title 是英文主题名（2~4 个单词，如 Morning Ritual），titleZh 是中文主题名；',
+      '3. sentenceEn 是一句简短、优美、积极向上的英文短句（不超过 12 个单词），translationZh 是精准中文翻译；',
+      '4. scenePrompt 是英文生图提示词：唯美治愈系的场景插画（**不是**两人对话场景），描述画面主体、环境、光线、色调，扁平/绘本风，16:9 构图，不要图内文字；',
+      '5. 主题每天不同，避免与常见节日重复；积极、温暖、有画面感。',
+      `6. 日期：${day}。`,
+    ].join('\n');
+
+    const startedAt = Date.now();
+    try {
+      const response = await fetch(`${config.ai.nvidia.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.ai.nvidia.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: config.ai.nvidia.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `生成 ${day} 的每日藏品主题。` },
+          ],
+          temperature: 0.9,
+          response_format: { type: 'json_object' },
+        }),
+        signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
+      });
+
+      if (!response.ok) {
+        const detail = (await response.text().catch(() => '')).slice(0, 300);
+        throw new AiProviderError(`藏品主题接口返回 ${response.status}: ${detail}`, {
+          retryable: response.status === 429 || response.status >= 500,
+          status: response.status,
+        });
+      }
+
+      const body = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string | null; reasoning_content?: string | null } }>;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
+      };
+      const message = body.choices?.[0]?.message;
+      // 与生题同因：推理模型会把输出放进 reasoning_content，content 可能为 null
+      const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
+      const usage: ChatUsage = {
+        promptTokens: body.usage?.prompt_tokens ?? 0,
+        completionTokens: body.usage?.completion_tokens ?? 0,
+      };
+
+      const theme = this.parseCollectibleTheme(content);
+      if (!theme) {
+        throw new AiProviderError('藏品主题未返回可用内容', { retryable: true });
+      }
+      await this.aiCallLog.record({
+        type: 'collectible_gen',
+        provider: 'nvidia',
+        model: config.ai.nvidia.model,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        latencyMs: Date.now() - startedAt,
+        status: 'success',
+      });
+      return theme;
+    } catch (error) {
+      await this.aiCallLog.record({
+        type: 'collectible_gen',
+        provider: 'nvidia',
+        model: config.ai.nvidia.model,
+        latencyMs: Date.now() - startedAt,
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+      throw new AiProviderError(`藏品主题接口调用失败: ${error instanceof Error ? error.message : String(error)}`, {
+        retryable: true,
+      });
+    }
+  }
+
+  /** 解析藏品主题输出（容忍 ```json 围栏与思考文字夹带）。 */
+  private parseCollectibleTheme(content: string): CollectibleTheme | null {
+    let text = content.trim();
+    const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+    const matched = fence.exec(text);
+    if (matched) {
+      text = matched[1].trim();
+    }
+    if (!text.startsWith('{')) {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        text = text.slice(start, end + 1);
+      }
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      this.logger.warn('[Collectible] 藏品主题输出不是合法 JSON，已丢弃');
+      return null;
+    }
+    const raw = parsed as Record<string, unknown>;
+    const theme: CollectibleTheme = {
+      title: str(raw.title, 80),
+      titleZh: str(raw.titleZh, 80),
+      sentenceEn: str(raw.sentenceEn, 200),
+      translationZh: str(raw.translationZh, 200),
+      scenePrompt: str(raw.scenePrompt, 500),
+    };
+    // 标题与短句为卡面必需，缺任一视为不可用
+    if (!theme.title || !theme.sentenceEn || !theme.scenePrompt) {
+      return null;
+    }
+    return theme;
   }
 
   /** 解析模型输出为草稿数组（容忍 ```json 围栏、思考文字夹带与字段缺失）。 */

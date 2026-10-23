@@ -31,8 +31,8 @@ export * from "./enums.js"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more DictTypes
- * const dictTypes = await prisma.dictType.findMany()
+ * // Fetch zero or more DailyCollectibles
+ * const dailyCollectibles = await prisma.dailyCollectible.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -41,6 +41,16 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
+/**
+ * Model DailyCollectible
+ * 每日藏品（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
+ */
+export type DailyCollectible = Prisma.DailyCollectibleModel
+/**
+ * Model UserCollectible
+ * 用户藏品（userId + collectibleId 唯一，重复领取被唯一键拦截）
+ */
+export type UserCollectible = Prisma.UserCollectibleModel
 /**
  * Model DictType
  * 字典类型表

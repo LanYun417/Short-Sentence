@@ -2,7 +2,7 @@
  * 刷题会话（单卡状态机 + 后端交互）。
  *
  * 状态流转：loadNext → answering → submit → flipped → next → loadNext …
- * 翻转后的结果只保留到下一次 loadNext；打卡达标的海报数据由页面层消费 result.todayDone。
+ * 翻转后的结果只保留到下一次 loadNext；达标后的今日进度由页面层消费 result.todayDone。
  */
 import type { Ref } from 'vue';
 import type { AnswerResult, NextQuestion } from '~/types';

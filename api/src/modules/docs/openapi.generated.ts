@@ -95,6 +95,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "ClientAuth"
     },
     {
+      "name": "Collectible"
+    },
+    {
       "name": "Library"
     },
     {
@@ -10152,6 +10155,134 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "修改密码",
         "operationId": "put__api_client_auth_password",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/collectible/mine": {
+      "get": {
+        "tags": [
+          "Collectible"
+        ],
+        "summary": "我的藏品列表（按获得时间倒序）",
+        "operationId": "get__api_client_collectible_mine",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/collectible/claim": {
+      "post": {
+        "tags": [
+          "Collectible"
+        ],
+        "summary": "领取今日藏品（完成每日目标且今日藏品就绪时返回；否则 null）",
+        "operationId": "post__api_client_collectible_claim",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",

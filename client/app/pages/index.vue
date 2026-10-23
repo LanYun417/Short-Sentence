@@ -2,12 +2,12 @@
 /**
  * 首页刷题（核心页面）。
  * 布局：[今日进度 Hero] [题干] [16:9 场景图] [输入框] [确定] → 翻转 → [下一题]。
- * 达成每日目标后出现「生成打卡海报」入口。
+ * 达成每日目标后自动领取并展示「今日 AI 藏品」。
  */
-import type { CheckinResult, NextQuestion } from '~/types';
+import type { Collectible, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { useQuestionSession, DIFFICULTIES } from '~/composables/useQuestionSession';
-import { usePoster } from '~/composables/usePoster';
+import { withUploadToken } from '~/utils/upload-token';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -29,7 +29,6 @@ const {
   submit,
   toggleFavorite,
 } = useQuestionSession();
-const { generating, generate } = usePoster();
 
 /**
  * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
@@ -43,9 +42,6 @@ if (ssrQuestion.value) {
   prefill(ssrQuestion.value);
 }
 
-/** 打卡数据（达标后由用户点击生成） */
-const checkinData = ref<CheckinResult | null>(null);
-
 /** 今日完成 / 目标（优先取提交后的实时结果，其次题目上的快照）。 */
 const todayDone = computed(() => result.value?.todayDone ?? question.value?.todayDone ?? 0);
 const todayGoal = computed(() => result.value?.todayGoal ?? question.value?.todayGoal ?? 0);
@@ -58,10 +54,46 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 /** 完成数滚动动画。 */
 const doneDisplay = useCountUp(todayDone);
 
+/* ------------------------------ 今日 AI 藏品 ------------------------------ */
+
+const collectible = ref<Collectible | null>(null);
+const claiming = ref(false);
+// 藏品图片走 /static，需带令牌（Cookie 令牌，SSR 与客户端同源一致）
+const tokenCookie = useCookie<string | null>('ss_token');
+const collectibleImageSrc = computed(() =>
+  collectible.value?.imageUrl ? withUploadToken(collectible.value.imageUrl, tokenCookie.value) : undefined,
+);
+
+/** 领取今日藏品（达标后自动调用；幂等，失败静默不影响刷题）。 */
+async function claimCollectible(): Promise<void> {
+  if (claiming.value || !goalReached.value) {
+    return;
+  }
+  claiming.value = true;
+  try {
+    collectible.value = await apiFetch<Collectible | null>('/client/collectible/claim', { method: 'POST' });
+  } catch {
+    // 静默：藏品领取失败不打扰用户（下次达标/进入页面会再试）
+  } finally {
+    claiming.value = false;
+  }
+}
+
+// 达标瞬间自动领取（提交答案跨过目标线时触发）
+watch(goalReached, (reached) => {
+  if (reached && !collectible.value) {
+    void claimCollectible();
+  }
+});
+
 onMounted(() => {
   // SSR 已预抽题时直接用；失败/客户端路由进入时才现场拉取
   if (!question.value) {
     void loadNext();
+  }
+  // 刷新页面时若今日目标已完成，自动领取当日藏品
+  if (goalReached.value) {
+    void claimCollectible();
   }
 });
 
@@ -78,17 +110,6 @@ function onNext(): void {
 /** 收藏 / 取消。 */
 function onFavorite(): void {
   void toggleFavorite();
-}
-
-/** 打卡（幂等）。 */
-async function onCheckin(): Promise<void> {
-  const data = await apiFetch<CheckinResult>('/client/checkin', { method: 'POST' });
-  checkinData.value = data;
-  await nextTick();
-  const element = document.querySelector<HTMLElement>('[data-poster]');
-  if (element) {
-    await generate(element);
-  }
 }
 </script>
 
@@ -198,32 +219,59 @@ async function onCheckin(): Promise<void> {
         />
       </div>
 
-      <!-- 达标 → 打卡海报入口 -->
+      <!-- 达标 → 今日 AI 藏品（自动领取并展示） -->
       <div v-if="goalReached" class="anim-pop mt-5">
+        <!-- 已领取：精美闪卡 -->
         <div
+          v-if="collectible"
+          class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-amber-200/60 dark:bg-slate-800 dark:ring-amber-500/20"
+        >
+          <div class="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
+            <img
+              v-if="collectibleImageSrc"
+              :src="collectibleImageSrc"
+              :alt="collectible.title"
+              class="h-full w-full object-cover"
+            />
+            <div v-else class="flex h-full items-center justify-center text-slate-400">
+              <UIcon name="i-lucide-image-off" class="h-8 w-8" />
+            </div>
+            <span
+              class="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur"
+            >
+              <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
+              今日藏品 · 已获得
+            </span>
+          </div>
+          <div class="p-5">
+            <div class="flex items-baseline gap-2">
+              <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ collectible.titleZh }}</h3>
+              <span class="text-sm text-slate-400">{{ collectible.title }}</span>
+            </div>
+            <p class="mt-2 text-base font-medium text-slate-700 dark:text-slate-200">{{ collectible.sentenceEn }}</p>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ collectible.translationZh }}</p>
+            <p class="mt-3 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
+              完成今日目标，收下这张属于你的闪卡
+            </p>
+          </div>
+        </div>
+
+        <!-- 领取中 / 今日藏品尚未生成 -->
+        <div
+          v-else
           class="flex flex-col items-center gap-3 rounded-3xl border border-amber-200/70 bg-amber-50/80 p-5 text-center dark:border-amber-500/20 dark:bg-amber-500/10"
         >
           <div class="anim-float flex items-center gap-2 text-amber-700 dark:text-amber-300">
             <UIcon name="i-lucide-party-popper" class="h-5 w-5" />
             <span class="font-semibold">今日目标已完成！</span>
           </div>
-          <p class="text-sm text-amber-700/80 dark:text-amber-200/80">生成一张打卡海报，记录今天的坚持</p>
-          <UButton
-            color="warning"
-            size="lg"
-            class="shadow-lg shadow-orange-500/20"
-            :loading="generating"
-            @click="onCheckin"
-          >
-            {{ generating ? '生成中…' : checkinData ? '重新生成海报' : '生成打卡海报' }}
-          </UButton>
+          <p class="text-sm text-amber-700/80 dark:text-amber-200/80">
+            {{ claiming ? '正在为你解锁今日藏品…' : '今日藏品还在准备中，稍后再来看看' }}
+          </p>
+          <UIcon v-if="claiming" name="i-lucide-loader-circle" class="h-5 w-5 animate-spin text-amber-500" />
         </div>
       </div>
     </template>
-
-    <!-- 海报（离屏渲染；生成后由 usePoster 触发下载） -->
-    <div v-if="checkinData" class="pointer-events-none fixed left-[-9999px] top-0">
-      <PosterCanvas :checkin="checkinData" />
-    </div>
   </div>
 </template>

@@ -9,7 +9,7 @@ import { useAuthStore } from '~/stores/auth';
 import { apiFetch } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
 import { withUploadToken } from '~/utils/upload-token';
-import type { ClientUserProfile, TodayCheckin } from '~/types';
+import type { ClientUserProfile, Collectible, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -81,6 +81,7 @@ const avatarSrc = computed(() =>
 const TABS = [
   { label: '基本资料', icon: 'i-lucide-user-round', slot: 'profile' },
   { label: '账号安全', icon: 'i-lucide-shield-check', slot: 'security' },
+  { label: '我的藏品', icon: 'i-lucide-sparkles', slot: 'collectibles' },
 ];
 
 /** 回填表单。 */
@@ -101,6 +102,15 @@ function fillForm(): void {
  */
 const { data: ssrUser } = await useSsrApi<ClientUserProfile>('ss:me', '/client/auth/me');
 const { data: ssrToday } = await useSsrApi<TodayCheckin>('ss:today', '/client/checkin/today');
+const { data: ssrCollectibles } = await useSsrApi<Collectible[]>('ss:collectibles', '/client/collectible/mine');
+
+/** 我的藏品（SSR 预取首屏；客户端进入时异步到位后再更新）。 */
+const collectibles = ref<Collectible[]>(ssrCollectibles.value ?? []);
+
+/** 藏品图片地址（/static 需带令牌）。 */
+function collectibleImg(url: string | null): string | undefined {
+  return url ? withUploadToken(url, tokenCookie.value) : undefined;
+}
 
 if (ssrUser.value) {
   auth.user = ssrUser.value;
@@ -120,6 +130,11 @@ watch(ssrUser, (profile) => {
 watch(ssrToday, (data) => {
   if (data) {
     today.value = data;
+  }
+});
+watch(ssrCollectibles, (data) => {
+  if (data) {
+    collectibles.value = data;
   }
 });
 
@@ -366,6 +381,41 @@ async function onChangePassword(): Promise<void> {
                 修改密码
               </UButton>
               <span v-if="passwordMessage" class="text-sm text-slate-400">{{ passwordMessage }}</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- 我的藏品 -->
+        <template #collectibles>
+          <div
+            class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
+          >
+            <div v-if="collectibles.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div
+                v-for="item in collectibles"
+                :key="item.id"
+                class="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200/70 dark:bg-slate-800 dark:ring-slate-700/70"
+              >
+                <div class="aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
+                  <img
+                    v-if="item.imageUrl"
+                    :src="collectibleImg(item.imageUrl)"
+                    :alt="item.title"
+                    class="h-full w-full object-cover"
+                  />
+                  <div v-else class="flex h-full items-center justify-center text-slate-300 dark:text-slate-600">
+                    <UIcon name="i-lucide-image-off" class="h-6 w-6" />
+                  </div>
+                </div>
+                <div class="p-3">
+                  <p class="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{{ item.titleZh }}</p>
+                  <p class="truncate text-xs text-slate-400">{{ item.bizDate }}</p>
+                </div>
+              </div>
+            </div>
+            <div v-else class="flex flex-col items-center gap-2 py-10 text-center text-slate-400">
+              <UIcon name="i-lucide-sparkles" class="h-8 w-8" />
+              <p class="text-sm">还没有藏品，完成每日目标即可获得当日 AI 闪卡</p>
             </div>
           </div>
         </template>

@@ -418,18 +418,6 @@ export type DictTypeScalarRelationFilter = {
   isNot?: Prisma.DictTypeWhereInput
 }
 
-export type BigIntFieldUpdateOperationsInput = {
-  set?: bigint | number
-  increment?: bigint | number
-  decrement?: bigint | number
-  multiply?: bigint | number
-  divide?: bigint | number
-}
-
-export type StringFieldUpdateOperationsInput = {
-  set?: string
-}
-
 export type IntFieldUpdateOperationsInput = {
   set?: number
   increment?: number
@@ -440,10 +428,6 @@ export type IntFieldUpdateOperationsInput = {
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
 }
 
 export type DictTypeCreateNestedOneWithoutItemsInput = {

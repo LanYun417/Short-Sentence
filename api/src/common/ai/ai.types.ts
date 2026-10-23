@@ -30,6 +30,20 @@ export interface SentenceGenProvider {
   generateBatch(theme: string, count: number): Promise<SentenceDraft[]>;
 }
 
+/** 每日藏品主题（AI 输出解析后的单条）。 */
+export interface CollectibleTheme {
+  /** 主题标题（英文，如 Morning Ritual） */
+  title: string;
+  /** 主题标题（中文） */
+  titleZh: string;
+  /** 卡面短句（英文） */
+  sentenceEn: string;
+  /** 短句中文释义 */
+  translationZh: string;
+  /** 生图提示词（唯美场景插画，非对话） */
+  scenePrompt: string;
+}
+
 /** 生图结果（原始字节，转 webp 与入库由调用方负责）。 */
 export interface GeneratedImage {
   buffer: Buffer;

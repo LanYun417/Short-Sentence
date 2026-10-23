@@ -1,7 +1,6 @@
 /**
  * 打卡服务（客户端）。
- * 模块职责：每日完成计数、连续天数（streak）计算、今日进度查询、
- * 打卡完成时的海报数据组装（海报本体由前端 html2canvas 生成，服务端只给数据）。
+ * 模块职责：每日完成计数、连续天数（streak）计算、今日进度查询。
  */
 import { Injectable } from '@nestjs/common';
 import { config } from '../../../common/config/config.js';
@@ -16,12 +15,6 @@ export interface TodayCheckin {
   streak: number;
   /** 是否已完成当日目标 */
   completed: boolean;
-}
-
-/** 打卡结果（含海报所需的代表句子）。 */
-export interface CheckinResult extends TodayCheckin {
-  /** 今日答对的代表句子（最多 3 条，供海报展示） */
-  highlights: Array<{ sentenceEn: string; translationZh: string }>;
 }
 
 @Injectable()
@@ -78,8 +71,8 @@ export class CheckinService {
     });
   }
 
-  /** 打卡（幂等；返回 streak 与海报数据）。 */
-  async checkin(userId: number): Promise<CheckinResult> {
+  /** 打卡（幂等；返回 streak）。 */
+  async checkin(userId: number): Promise<TodayCheckin> {
     const date = this.today();
     await this.recordAnswer(userId);
     const row = await this.prisma.userCheckin.findUnique({
@@ -88,32 +81,15 @@ export class CheckinService {
     });
     if (!row) {
       // recordAnswer 刚写入，理论上必然存在；防御性兜底
-      return { date, doneCount: 0, goalCount: config.sentence.dailyGoal, streak: 1, completed: false, highlights: [] };
+      return { date, doneCount: 0, goalCount: config.sentence.dailyGoal, streak: 1, completed: false };
     }
-    const highlights = await this.todayHighlights(userId);
     return {
       date,
       doneCount: row.doneCount,
       goalCount: row.goalCount,
       streak: row.streak,
       completed: row.doneCount >= row.goalCount,
-      highlights,
     };
-  }
-
-  /** 今日答对的代表句子（最多 3 条，按时间倒序）。 */
-  private async todayHighlights(userId: number): Promise<Array<{ sentenceEn: string; translationZh: string }>> {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const rows = await this.prisma.sentenceRecord.findMany({
-      where: { userId: BigInt(userId), isCorrect: 1, createdAt: { gte: startOfToday } },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      select: { sentence: { select: { sentenceEn: true, translationZh: true } } },
-    });
-    return rows
-      .filter((row): row is { sentence: { sentenceEn: string; translationZh: string } } => row.sentence !== null)
-      .map((row) => ({ sentenceEn: row.sentence.sentenceEn, translationZh: row.sentence.translationZh }));
   }
 
   /** 本地时区的今天（YYYY-MM-DD）。 */

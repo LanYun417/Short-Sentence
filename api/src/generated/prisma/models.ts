@@ -8,6 +8,8 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/DailyCollectible.js'
+export type * from './models/UserCollectible.js'
 export type * from './models/DictType.js'
 export type * from './models/DictItem.js'
 export type * from './models/SysConfig.js'

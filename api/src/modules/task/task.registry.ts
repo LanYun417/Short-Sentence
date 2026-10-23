@@ -86,6 +86,8 @@ export interface TaskDeps {
   generateSentences: () => Promise<void>;
   /** 词根词典每日入库（WordRootService.ingestDaily；从题库抽词并 AI 解析） */
   ingestWordRoots: () => Promise<void>;
+  /** 每日藏品生成（CollectibleService.generateDaily；AI 文案 + 生图，当天已就绪则跳过） */
+  generateDailyCollectible: () => Promise<void>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -162,6 +164,19 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: true,
       create: (deps) => async () => {
         await deps.ingestWordRoots();
+      },
+    },
+    {
+      name: 'daily-collectible',
+      title: '每日藏品生成',
+      description:
+        'AI 生成当天的精美闪卡藏品（DeepSeek 文案 + Agnes 生图 → webp 入库），一天一张（当天已就绪则跳过）。' +
+        '用户完成每日目标后可在客户端领取。',
+      // 凌晨生成，保证白天用户达标时藏品已就绪
+      schedule: { kind: 'daily', hour: 0, minute: 10 },
+      enabled: true,
+      create: (deps) => async () => {
+        await deps.generateDailyCollectible();
       },
     },
   ];

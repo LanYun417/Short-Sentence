@@ -18,6 +18,16 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
+ * Model DailyCollectible
+ * 每日藏品（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
+ */
+export type DailyCollectible = Prisma.DailyCollectibleModel
+/**
+ * Model UserCollectible
+ * 用户藏品（userId + collectibleId 唯一，重复领取被唯一键拦截）
+ */
+export type UserCollectible = Prisma.UserCollectibleModel
+/**
  * Model DictType
  * 字典类型表
  */

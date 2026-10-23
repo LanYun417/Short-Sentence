@@ -42,7 +42,7 @@ useHead({
             operatingSystem: 'Web',
             inLanguage: 'zh-CN',
             description: '每天 20 句，看图学地道英语口语。场景闪卡 + 间隔重复 + AI 拓展。',
-            featureList: ['视觉场景闪卡', '间隔重复复习', 'AI 场景造句', '词根拆解', '每日打卡海报'],
+            featureList: ['视觉场景闪卡', '间隔重复复习', 'AI 场景造句', '词根拆解', '每日 AI 藏品'],
             offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
           },
         ],

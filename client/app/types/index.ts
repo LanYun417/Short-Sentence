@@ -84,9 +84,17 @@ export interface TodayCheckin {
   completed: boolean;
 }
 
-/** 打卡结果（含海报高亮句）。 */
-export interface CheckinResult extends TodayCheckin {
-  highlights: Array<{ sentenceEn: string; translationZh: string }>;
+/** 每日藏品（AI 生成的精美闪卡，完成每日目标后获得）。 */
+export interface Collectible {
+  id: number;
+  bizDate: string;
+  title: string;
+  titleZh: string;
+  sentenceEn: string;
+  translationZh: string;
+  imageUrl: string | null;
+  /** 获得时间（ISO；未领取为 null） */
+  obtainedAt: string | null;
 }
 
 /** 场景分类。 */
