@@ -6,7 +6,7 @@
  */
 import type { SentenceCard, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
-import { useQuestionSession, DIFFICULTIES } from '~/composables/useQuestionSession';
+import { useQuestionSession } from '~/composables/useQuestionSession';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -204,24 +204,7 @@ function onFavorite(): void {
 
     <!-- 难度选择：开始刷题前选，中途也可随时切换（切换后立刻按新难度抽题） -->
     <div class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
-      <div class="mb-1.5 flex items-center justify-between">
-        <span class="text-xs font-medium text-slate-400">题目难度</span>
-        <span class="text-xs text-slate-400">可随时切换</span>
-      </div>
-      <div class="flex gap-2">
-        <UButton
-          v-for="level in DIFFICULTIES"
-          :key="level.value"
-          :color="difficulty === level.value ? 'primary' : 'neutral'"
-          :variant="difficulty === level.value ? 'solid' : 'soft'"
-          :icon="level.icon"
-          size="sm"
-          class="flex-1 transition-transform active:scale-95"
-          @click="setDifficulty(level.value)"
-        >
-          {{ level.label }}
-        </UButton>
-      </div>
+      <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 
     <p class="anim-in mb-4 text-center text-sm text-slate-400" :style="{ animationDelay: '80ms' }">

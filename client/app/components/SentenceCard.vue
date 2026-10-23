@@ -76,6 +76,20 @@ const glareStyle = computed(() => ({
   transform: `translateZ(${Z_GLARE}px)`,
 }));
 
+/**
+ * 镭射层：光谱带随指针在卡面上滑动。
+ * 静止时常驻一层较淡的彩虹（否则「镭射」只在鼠标划过时才存在，卡片本身没有材质感），
+ * 指针进入后加深并跟手。减少动态效果时锁在正中、再降一档强度。
+ */
+const holoStyle = computed(() => {
+  const x = reduceMotion.value ? 50 : 50 + offsetX.value * 120;
+  const y = reduceMotion.value ? 50 : 50 + offsetY.value * 120;
+  return {
+    backgroundPosition: `${x.toFixed(2)}% ${y.toFixed(2)}%`,
+    opacity: reduceMotion.value ? 0.3 : active.value ? 0.85 : 0.45,
+  };
+});
+
 /** 日期（YYYY-MM-DD → 「10月23日」）。 */
 const dateText = computed(() => {
   const [, month, day] = props.card.bizDate.split('-');
@@ -102,7 +116,9 @@ const dateText = computed(() => {
           <div v-else class="flex h-full items-center justify-center text-slate-400">
             <UIcon name="i-lucide-image-off" class="h-8 w-8" />
           </div>
-          <!-- 渐变蒙版：让文字在任何配图上都清晰 -->
+          <!-- 镭射材质（贴在图面上，随卡片一起倾斜；光谱随指针滑动） -->
+          <div class="ss-holo pointer-events-none absolute inset-0" :style="holoStyle" />
+          <!-- 渐变蒙版：让文字在任何配图上都清晰（压在镭射之上，避免底部反光影响可读性） -->
           <div
             class="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/75 via-black/35 to-transparent"
           />

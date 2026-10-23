@@ -200,6 +200,33 @@
   animation: ss-halo-spin 4.5s linear infinite;
 }
 
+/* ===== 句签卡镭射材质 =====
+   模拟实体镭射卡（衍射光栅）的彩虹反光：一道斜向光谱带，贴在图面上而不是浮在上层，
+   因此随卡片一起倾斜。
+   background-position 由 SentenceCard.vue 按指针偏移驱动——转动卡片时光谱滑动，
+   这正是镭射卡的辨识特征；不驱动时停在 50%/50%，静态下也有固定的彩虹质感。
+   background-size 必须大于 100%，否则 background-position 没有可移动的余量。
+   混合模式用 overlay 而非 screen：screen 只在暗部显色，而题目配图是明快的扁平插画，
+   screen 叠加后几乎看不见（实测对比过 screen / overlay / color-dodge / 半透明直盖，
+   overlay 在亮底与暗底上都显色，且不冲淡原图色彩）。色带刻意收窄成一条光带，
+   铺满整幅会变成一层均匀彩雾，不像「卡」。 */
+.ss-holo {
+  background-image: linear-gradient(
+    115deg,
+    rgb(255 255 255 / 0%) 20%,
+    rgb(255 60 160 / 55%) 30%,
+    rgb(255 214 10 / 55%) 38%,
+    rgb(60 255 190 / 50%) 46%,
+    rgb(60 160 255 / 55%) 54%,
+    rgb(180 90 255 / 55%) 62%,
+    rgb(255 255 255 / 0%) 72%
+  );
+  background-position: 50% 50%;
+  background-size: 260% 260%;
+  mix-blend-mode: overlay;
+  transition: opacity 0.35s ease;
+}
+
 /* 领取句签的庆祝遮罩：淡入淡出 + 卡片弹入 */
 .ss-celebrate-enter-active,
 .ss-celebrate-leave-active {
@@ -275,5 +302,9 @@
   .ss-beam,
   .ss-avatar-halo {
     animation: none !important;
+  }
+
+  .ss-holo {
+    transition: none !important;
   }
 }
