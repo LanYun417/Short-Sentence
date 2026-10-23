@@ -11,6 +11,14 @@ import type { SentenceLibraryItem } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { withUploadToken } from '~/utils/upload-token';
 
+// 图片令牌走 Cookie：SSR 渲染的缩略图 URL 与客户端水合结果一致，首屏图片即开始加载
+const tokenCookie = useCookie<string | null>('ss_token');
+
+/** 缩略图地址（附加访问令牌）。 */
+function itemSrc(url?: string | null): string {
+  return withUploadToken(url, tokenCookie.value);
+}
+
 const props = defineProps<{
   /** favorites 收藏夹 / review 错题复习池 */
   mode: 'favorites' | 'review';
@@ -67,8 +75,36 @@ async function loadMore(): Promise<void> {
   }
 }
 
+/**
+ * SSR 预取首屏第一页：列表 HTML 直接带数据，不再骨架屏等水合。
+ * 令牌过期等失败时为 null，挂载后走既有客户端流程兜底。
+ */
+const { data: ssrPage } = await useSsrApi<{ list: SentenceLibraryItem[]; total: number }>(
+  `ss:${props.mode}`,
+  isReview.value ? '/client/review' : '/client/favorites',
+  { page: 1, pageSize },
+);
+if (ssrPage.value) {
+  items.value = [...ssrPage.value.list];
+  total.value = ssrPage.value.total;
+  page.value = 2;
+  loaded.value = true;
+}
+// 客户端路由进入时数据异步到达：到位后回填（仅在尚未加载过时生效）
+watch(ssrPage, (data) => {
+  if (data && !loaded.value) {
+    items.value = [...data.list];
+    total.value = data.total;
+    page.value = 2;
+    loaded.value = true;
+  }
+});
+
 onMounted(() => {
-  void loadMore();
+  // SSR 已带首屏数据时跳过，「加载更多」从第 2 页继续
+  if (!loaded.value) {
+    void loadMore();
+  }
 });
 </script>
 
@@ -139,7 +175,7 @@ onMounted(() => {
           <div class="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700">
             <img
               v-if="item.imageUrl"
-              :src="withUploadToken(item.imageUrl)"
+              :src="itemSrc(item.imageUrl)"
               :alt="item.translationZh"
               class="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
               loading="lazy"

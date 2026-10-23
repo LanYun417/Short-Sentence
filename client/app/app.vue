@@ -4,10 +4,21 @@
  * 客户端用户体系（client_user）与后台 admin 完全隔离。
  */
 import { useAuthStore } from '~/stores/auth';
+import type { ClientUserProfile } from '~/types';
 
 const auth = useAuthStore();
 const colorMode = useColorMode();
 const route = useRoute();
+
+/**
+ * SSR 预取当前用户：首屏 HTML 直接带昵称/头像，不再等水合后闪空。
+ * 键 ss:me 与个人中心共享，同一次请求只调一次接口（useAsyncData 按 key 去重）。
+ */
+const { data: ssrUser } = await useSsrApi<ClientUserProfile>('ss:me', '/client/auth/me');
+if (ssrUser.value) {
+  // 服务端与客户端水合期都直接注入 store，两端首帧一致（资料本身会渲染进 HTML，无泄露面）
+  auth.user = ssrUser.value;
+}
 
 /**
  * 结构化数据（JSON-LD）：让搜索引擎直接理解「这是什么产品」，是富媒体摘要的前提。
@@ -61,7 +72,11 @@ const avatarText = computed(() => (auth.user?.nickname ?? '?').slice(0, 1));
 onMounted(() => {
   // 挂载后再恢复本地缓存资料：SSR 首屏与客户端首帧都不读 localStorage，避免水合不一致
   auth.hydrate();
-  if (auth.loggedIn && !auth.user) {
+  if (ssrUser.value) {
+    // SSR 已带来最新资料：顺带刷新 localStorage 缓存，后续离线兜底也是新数据
+    auth.setProfile(ssrUser.value);
+  } else if (auth.loggedIn && !auth.user) {
+    // SSR 预取失败（Cookie 令牌过期等）：走既有客户端流程（含无感刷新）
     void auth.fetchMe();
   }
 });

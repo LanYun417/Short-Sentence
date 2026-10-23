@@ -26,18 +26,24 @@ function toPath(url: string): string {
 /**
  * 为静态资源 URL 附加访问令牌（仅同源 `/static`）。
  * @param url 资源地址（可为相对路径或绝对地址）
+ * @param token 显式令牌（SSR 场景必须传 Cookie 里读到的值——服务端读不到 localStorage，
+ *   显式传入才能让 SSR 输出的图片 URL 带令牌且与客户端水合结果一致）
  * @returns 处理后的地址；无需或无法附加时原样返回
  */
-export function withUploadToken(url?: string | null): string {
+export function withUploadToken(url?: string | null, token?: string | null): string {
   if (!url) {
     return '';
   }
-  const token = getToken();
-  if (!token) {
+  const value = token ?? getToken();
+  if (!value) {
     return url;
   }
   // 跨域 / 外部资源不附加令牌，避免泄露给第三方
   if (/^https?:\/\//i.test(url)) {
+    // SSR 无 window 无法判同源：绝对地址保守原样返回（业务里图片都是相对路径，走不到这里）
+    if (typeof window === 'undefined') {
+      return url;
+    }
     try {
       if (new URL(url).origin !== window.location.origin) {
         return url;
@@ -51,5 +57,5 @@ export function withUploadToken(url?: string | null): string {
     return url;
   }
   const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}token=${encodeURIComponent(token)}`;
+  return `${url}${separator}token=${encodeURIComponent(value)}`;
 }

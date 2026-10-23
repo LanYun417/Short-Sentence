@@ -84,6 +84,9 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '/api',
     },
+    // 服务端（SSR）访问 API 的内网地址：生产里相对路径 /api 由网关转发，Node 内部 $fetch 走不到，
+    // 必须直连 API。部署时按拓扑注入 NUXT_API_INTERNAL_URL（如 http://api:3000/api）。
+    apiInternalUrl: process.env.NUXT_API_INTERNAL_URL || 'http://127.0.0.1:3000/api',
   },
 
   // 开发期把后端接口与静态资源代理到 NestJS（生产同源部署无需此配置）

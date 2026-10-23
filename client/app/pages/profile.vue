@@ -70,8 +70,12 @@ const goalPercent = computed(() => {
 });
 
 const avatarText = computed(() => (auth.user?.nickname ?? '?').slice(0, 1));
+// 头像令牌走 Cookie：SSR 渲染的头像 URL 带令牌，首屏即显示（服务端读不到 localStorage）
+const tokenCookie = useCookie<string | null>('ss_token');
 /** 头像地址：/static 资源需要带令牌才能访问 */
-const avatarSrc = computed(() => (auth.user?.avatarUrl ? withUploadToken(auth.user.avatarUrl) : undefined));
+const avatarSrc = computed(() =>
+  auth.user?.avatarUrl ? withUploadToken(auth.user.avatarUrl, tokenCookie.value) : undefined,
+);
 
 /** 表单 Tab（slot 字段指定内容插槽名）。 */
 const TABS = [
@@ -91,10 +95,47 @@ function fillForm(): void {
   signature.value = user.signature ?? '';
 }
 
-onMounted(async () => {
-  await auth.fetchMe();
-  fillForm();
-  today.value = await apiFetch<TodayCheckin>('/client/checkin/today');
+/**
+ * SSR 预取资料与今日数据：首屏 HTML 直接带头像/昵称/统计。
+ * ss:me 与外壳共享同一 key（一次请求两处用）；令牌过期时返回 null，挂载后走客户端流程兜底。
+ */
+const { data: ssrUser } = await useSsrApi<ClientUserProfile>('ss:me', '/client/auth/me');
+const { data: ssrToday } = await useSsrApi<TodayCheckin>('ss:today', '/client/checkin/today');
+
+if (ssrUser.value) {
+  auth.user = ssrUser.value;
+}
+if (ssrToday.value) {
+  today.value = ssrToday.value;
+}
+fillForm();
+
+// 客户端路由进入时数据是异步到达的：到位后再回填表单与统计
+watch(ssrUser, (profile) => {
+  if (profile) {
+    auth.user = profile;
+    fillForm();
+  }
+});
+watch(ssrToday, (data) => {
+  if (data) {
+    today.value = data;
+  }
+});
+
+onMounted(() => {
+  // SSR 资料：顺带刷新 localStorage 缓存（离线兜底也保持新鲜）
+  if (ssrUser.value) {
+    auth.setProfile(ssrUser.value);
+  } else if (!auth.user && auth.loggedIn) {
+    // SSR 预取失败（Cookie 令牌过期等）：走既有客户端流程（含无感刷新）
+    void auth.fetchMe().then(fillForm);
+  }
+  if (!today.value) {
+    void apiFetch<TodayCheckin>('/client/checkin/today').then((data) => {
+      today.value = data;
+    });
+  }
 });
 
 /** 打开文件选择。 */

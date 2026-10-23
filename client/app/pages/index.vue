@@ -4,7 +4,7 @@
  * 布局：[今日进度 Hero] [题干] [16:9 场景图] [输入框] [确定] → 翻转 → [下一题]。
  * 达成每日目标后出现「生成打卡海报」入口。
  */
-import type { CheckinResult } from '~/types';
+import type { CheckinResult, NextQuestion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { useQuestionSession, DIFFICULTIES } from '~/composables/useQuestionSession';
 import { usePoster } from '~/composables/usePoster';
@@ -25,10 +25,23 @@ const {
   difficulty,
   loadNext,
   setDifficulty,
+  prefill,
   submit,
   toggleFavorite,
 } = useQuestionSession();
 const { generating, generate } = usePoster();
+
+/**
+ * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
+ * （todayDone/todayGoal 快照也在里面，进度 Hero 一并 SSR）。
+ * 预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
+ */
+const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
+  difficulty: difficulty.value,
+});
+if (ssrQuestion.value) {
+  prefill(ssrQuestion.value);
+}
 
 /** 打卡数据（达标后由用户点击生成） */
 const checkinData = ref<CheckinResult | null>(null);
@@ -46,7 +59,10 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 const doneDisplay = useCountUp(todayDone);
 
 onMounted(() => {
-  void loadNext();
+  // SSR 已预抽题时直接用；失败/客户端路由进入时才现场拉取
+  if (!question.value) {
+    void loadNext();
+  }
 });
 
 /** 提交答案。 */

@@ -29,6 +29,12 @@ const emit = defineEmits<{
   (e: 'favorite'): void;
 }>();
 
+// 图片令牌走 Cookie（SSR 与客户端同源一致：服务端渲染的 URL 也带令牌，首屏图片即加载）
+const tokenCookie = useCookie<string | null>('ss_token');
+
+/** 配图地址（附加访问令牌；Cookie 令牌刷新后自动重算）。 */
+const imageSrc = computed(() => withUploadToken(props.question.imageUrl, tokenCookie.value));
+
 /** 用户输入 */
 const answer = ref('');
 /** @nuxt/ui 的 UInput 暴露 inputRef，用于换卡后自动聚焦 */
@@ -138,7 +144,7 @@ function onFavorite(): void {
         >
           <img
             v-if="question.imageUrl"
-            :src="withUploadToken(question.imageUrl)"
+            :src="imageSrc"
             :alt="question.translationZh"
             class="anim-fade h-full w-full object-cover transition-transform duration-700 hover:scale-105"
             loading="lazy"
