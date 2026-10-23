@@ -111,7 +111,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-loading="loading" class="p-4">
+  <div v-loading="loading" class="sentence-analytics-page">
     <!-- 指标卡 -->
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
       <div v-for="card in CARDS" :key="card.label" class="rounded-lg border border-gray-200 p-3">
@@ -122,7 +122,7 @@ onMounted(() => {
     </div>
 
     <!-- 答题趋势 -->
-    <div class="mt-4 rounded-lg border border-gray-200 p-4">
+    <el-card shadow="never" class="mt-4">
       <div class="mb-2 flex items-center justify-between">
         <p class="text-sm font-medium">答题趋势</p>
         <el-radio-group :model-value="trendDays" size="small" @update:model-value="(v) => changeTrendDays(Number(v))">
@@ -132,23 +132,23 @@ onMounted(() => {
         </el-radio-group>
       </div>
       <AnswerTrendChart :data="trend" />
-    </div>
+    </el-card>
 
     <!-- 难度 + 分类 -->
     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div class="rounded-lg border border-gray-200 p-4">
+      <el-card shadow="never">
         <p class="mb-2 text-sm font-medium">题目难度分布</p>
         <PieChart :data="difficulty" />
-      </div>
-      <div class="rounded-lg border border-gray-200 p-4">
+      </el-card>
+      <el-card shadow="never">
         <p class="mb-2 text-sm font-medium">各场景题目数</p>
         <BarChart :data="categoryChart" />
-      </div>
+      </el-card>
     </div>
 
     <!-- 分类运营明细 + AI 调用 -->
     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <div class="rounded-lg border border-gray-200 p-4">
+      <el-card shadow="never">
         <p class="mb-2 text-sm font-medium">分类运营明细</p>
         <el-table :data="categories" border size="small" max-height="320">
           <el-table-column prop="name" label="场景" min-width="110" />
@@ -160,8 +160,8 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
-      </div>
-      <div class="rounded-lg border border-gray-200 p-4">
+      </el-card>
+      <el-card shadow="never">
         <p class="mb-2 text-sm font-medium">AI 调用（近 7 日）</p>
         <el-table :data="aiStats" border size="small" max-height="320">
           <el-table-column prop="name" label="类型" width="90" />
@@ -176,7 +176,7 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
-      </div>
+      </el-card>
     </div>
 
     <!-- 打卡 -->

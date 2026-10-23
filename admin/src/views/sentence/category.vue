@@ -99,52 +99,56 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4">
-    <div class="mb-3 flex items-center gap-2">
-      <el-button v-permission="'sentence:category'" type="primary" @click="handleCreate">新增分类</el-button>
-      <el-button :loading="loading" @click="load">刷新</el-button>
-      <span class="text-sm text-gray-400">共 {{ list.length }} 个分类</span>
-    </div>
+  <div class="sentence-category-page">
+    <el-card shadow="never">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">场景分类（共 {{ list.length }} 个）</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button v-permission="'sentence:category'" type="primary" @click="handleCreate">新增分类</el-button>
+          <el-button :loading="loading" @click="load">刷新</el-button>
+        </div>
+      </div>
 
-    <el-table v-loading="loading" :data="list" border row-key="id">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="name" label="分类名称" min-width="140" />
-      <el-table-column prop="nameEn" label="英文名" min-width="120">
-        <template #default="{ row }">{{ row.nameEn ?? '—' }}</template>
-      </el-table-column>
-      <el-table-column prop="icon" label="图标" min-width="120">
-        <template #default="{ row }">{{ row.icon ?? '—' }}</template>
-      </el-table-column>
-      <el-table-column prop="sort" label="排序" width="80" />
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-            {{ row.status === 1 ? '启用' : '禁用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="sentenceCount" label="题目数" width="90" />
-      <el-table-column label="操作" width="140" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            v-permission="'sentence:category'"
-            link
-            type="primary"
-            @click="handleEdit(row as SentenceCategoryItem)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            v-permission="'sentence:category'"
-            link
-            type="danger"
-            @click="handleDelete(row as SentenceCategoryItem)"
-          >
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <el-table v-loading="loading" :data="list" border row-key="id">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="分类名称" min-width="140" />
+        <el-table-column prop="nameEn" label="英文名" min-width="120">
+          <template #default="{ row }">{{ row.nameEn ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column prop="icon" label="图标" min-width="120">
+          <template #default="{ row }">{{ row.icon ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序" width="80" />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sentenceCount" label="题目数" width="90" />
+        <el-table-column label="操作" width="140" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-permission="'sentence:category'"
+              link
+              type="primary"
+              @click="handleEdit(row as SentenceCategoryItem)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              v-permission="'sentence:category'"
+              link
+              type="danger"
+              @click="handleDelete(row as SentenceCategoryItem)"
+            >
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <BasicDialog
       v-model="dialogVisible"

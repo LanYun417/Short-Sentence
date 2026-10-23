@@ -40,7 +40,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="sentence-ai-logs-page">
     <!-- 近 7 日汇总 -->
     <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
       <div v-for="item in stats" :key="item.name" class="rounded-lg border border-gray-200 p-3">
@@ -75,45 +75,49 @@ onMounted(async () => {
       </el-form-item>
     </SearchForm>
 
-    <div class="mb-3 flex items-center gap-2">
-      <el-button :loading="loading" @click="getList">刷新</el-button>
-      <span class="text-sm text-gray-400">共 {{ total }} 条</span>
-    </div>
+    <el-card shadow="never" class="mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">AI 调用日志（共 {{ total }} 条）</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button :loading="loading" @click="getList">刷新</el-button>
+        </div>
+      </div>
 
-    <el-table v-loading="loading" :data="list" border row-key="id">
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column label="类型" width="90">
-        <template #default="{ row }">{{ TYPE_LABEL[row.type] ?? row.type }}</template>
-      </el-table-column>
-      <el-table-column prop="provider" label="提供方" width="100" />
-      <el-table-column prop="model" label="模型" min-width="180" show-overflow-tooltip />
-      <el-table-column label="Token" width="130">
-        <template #default="{ row }">{{ row.promptTokens }} / {{ row.completionTokens }}</template>
-      </el-table-column>
-      <el-table-column label="耗时" width="100">
-        <template #default="{ row }">{{ row.latencyMs }} ms</template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
-            {{ row.status === 'success' ? '成功' : '失败' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="errorMessage" label="错误摘要" min-width="180" show-overflow-tooltip>
-        <template #default="{ row }">{{ row.errorMessage ?? '—' }}</template>
-      </el-table-column>
-      <el-table-column label="时间" width="170">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-    </el-table>
+      <el-table v-loading="loading" :data="list" border row-key="id">
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column label="类型" width="90">
+          <template #default="{ row }">{{ TYPE_LABEL[row.type] ?? row.type }}</template>
+        </el-table-column>
+        <el-table-column prop="provider" label="提供方" width="100" />
+        <el-table-column prop="model" label="模型" min-width="180" show-overflow-tooltip />
+        <el-table-column label="Token" width="130">
+          <template #default="{ row }">{{ row.promptTokens }} / {{ row.completionTokens }}</template>
+        </el-table-column>
+        <el-table-column label="耗时" width="100">
+          <template #default="{ row }">{{ row.latencyMs }} ms</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
+              {{ row.status === 'success' ? '成功' : '失败' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="errorMessage" label="错误摘要" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.errorMessage ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column label="时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+      </el-table>
 
-    <Pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      @size-change="changePageSize"
-      @current-change="changePage"
-    />
+      <Pagination
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        @size-change="changePageSize"
+        @current-change="changePage"
+      />
+    </el-card>
   </div>
 </template>

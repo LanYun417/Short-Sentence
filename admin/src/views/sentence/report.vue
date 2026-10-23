@@ -89,7 +89,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="sentence-report-page">
     <!-- 查询 -->
     <SearchForm @search="search" @reset="reset">
       <el-form-item label="关键词">
@@ -112,68 +112,71 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <!-- 工具栏 -->
-    <div class="mb-3 flex items-center gap-2">
-      <el-button :loading="loading" @click="getList">刷新</el-button>
-      <span class="text-sm text-gray-400">共 {{ total }} 条举报</span>
-    </div>
+    <el-card shadow="never" class="mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">举报处理（共 {{ total }} 条）</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button :loading="loading" @click="getList">刷新</el-button>
+        </div>
+      </div>
 
-    <!-- 表格 -->
-    <el-table v-loading="loading" :data="list" border row-key="id">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column label="题目" min-width="260">
-        <template #default="{ row }">
-          <template v-if="row.sentence">
-            <p class="text-sm font-medium">{{ row.sentence.sentenceEn }}</p>
-            <p class="text-xs text-gray-400">{{ row.sentence.translationZh }}</p>
+      <!-- 表格 -->
+      <el-table v-loading="loading" :data="list" border row-key="id">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="题目" min-width="260">
+          <template #default="{ row }">
+            <template v-if="row.sentence">
+              <p class="text-sm font-medium">{{ row.sentence.sentenceEn }}</p>
+              <p class="text-xs text-gray-400">{{ row.sentence.translationZh }}</p>
+            </template>
+            <span v-else class="text-gray-400">题目已删除</span>
           </template>
-          <span v-else class="text-gray-400">题目已删除</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="类型" width="140">
-        <template #default="{ row }">
-          <el-tag size="small" type="warning">{{ REASON_LABEL[row.reason] ?? row.reason }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="补充说明" min-width="200">
-        <template #default="{ row }">
-          <span class="text-sm text-gray-600">{{ row.description || '—' }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="举报人" width="130">
-        <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
-            {{ STATUS_LABEL[row.status] ?? row.status }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="举报时间" width="170">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            v-permission="'sentence:report:handle'"
-            link
-            type="primary"
-            @click="handleOpen(row as SentenceReportItem)"
-          >
-            {{ row.status === 'pending' ? '处理' : '改判' }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+        <el-table-column label="类型" width="140">
+          <template #default="{ row }">
+            <el-tag size="small" type="warning">{{ REASON_LABEL[row.reason] ?? row.reason }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="补充说明" min-width="200">
+          <template #default="{ row }">
+            <span class="text-sm text-gray-600">{{ row.description || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="举报人" width="130">
+          <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
+              {{ STATUS_LABEL[row.status] ?? row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="举报时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-permission="'sentence:report:handle'"
+              link
+              type="primary"
+              @click="handleOpen(row as SentenceReportItem)"
+            >
+              {{ row.status === 'pending' ? '处理' : '改判' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <Pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      @size-change="changePageSize"
-      @current-change="changePage"
-    />
+      <Pagination
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        @size-change="changePageSize"
+        @current-change="changePage"
+      />
+    </el-card>
 
     <!-- 处理弹窗 -->
     <BasicDialog v-model="dialogVisible" title="处理举报" width="520px" :show-footer="false">

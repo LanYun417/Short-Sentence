@@ -17,6 +17,7 @@ import {
 } from '@/api/sentence';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
+import { withUploadToken } from '@/utils/uploadToken';
 import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -199,7 +200,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="sentence-page">
     <!-- 查询表单：关键词 / 状态 / 难度 -->
     <SearchForm @search="search" @reset="reset">
       <el-form-item label="关键词">
@@ -221,73 +222,77 @@ onMounted(async () => {
       </el-form-item>
     </SearchForm>
 
-    <!-- 工具栏 -->
-    <div class="mb-3 flex items-center gap-2">
-      <el-button v-permission="'sentence:add'" type="primary" @click="handleCreate">新增题目</el-button>
-      <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
-      <el-button @click="handleOpenGenTasks">生成批次</el-button>
-      <el-button :loading="loading" @click="getList">刷新</el-button>
-    </div>
+    <el-card shadow="never" class="mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">题库列表（共 {{ total }}）</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button v-permission="'sentence:add'" type="primary" @click="handleCreate">新增题目</el-button>
+          <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
+          <el-button @click="handleOpenGenTasks">生成批次</el-button>
+          <el-button :loading="loading" @click="getList">刷新</el-button>
+        </div>
+      </div>
 
-    <!-- 题目表 -->
-    <el-table v-loading="loading" :data="list" border row-key="id">
-      <el-table-column label="配图" width="110">
-        <template #default="{ row }">
-          <el-image
-            v-if="row.imageUrl"
-            :src="`${row.imageUrl}?scale=small`"
-            :preview-src-list="[row.imageUrl]"
-            fit="cover"
-            style="width: 88px; height: 50px; border-radius: 6px"
-          />
-          <span v-else class="text-gray-400">—</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="sentenceEn" label="英文句子" min-width="220" show-overflow-tooltip />
-      <el-table-column prop="translationZh" label="中文释义" min-width="160" show-overflow-tooltip />
-      <el-table-column prop="ipa" label="音标" min-width="120" show-overflow-tooltip />
-      <el-table-column label="分类" width="100">
-        <template #default="{ row }">{{ row.categoryName ?? '—' }}</template>
-      </el-table-column>
-      <el-table-column label="难度" width="80">
-        <template #default="{ row }">{{ DIFFICULTY_LABEL[row.difficulty] ?? row.difficulty }}</template>
-      </el-table-column>
-      <el-table-column label="来源" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.source === 'ai' ? 'success' : 'info'" size="small">
-            {{ row.source === 'ai' ? 'AI' : '手工' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="STATUS_TAG[row.status as SentenceStatus]?.type ?? 'info'" size="small">
-            {{ STATUS_TAG[row.status as SentenceStatus]?.label ?? row.status }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建时间" width="170">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="140" fixed="right">
-        <template #default="{ row }">
-          <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
-            >编辑</el-button
-          >
-          <el-button v-permission="'sentence:remove'" link type="danger" @click="handleOffline(row as SentenceItem)"
-            >下架</el-button
-          >
-        </template>
-      </el-table-column>
-    </el-table>
+      <!-- 题目表 -->
+      <el-table v-loading="loading" :data="list" border row-key="id">
+        <el-table-column label="配图" width="110">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.imageUrl"
+              :src="withUploadToken(`${row.imageUrl}?scale=200`)"
+              :preview-src-list="[withUploadToken(row.imageUrl)]"
+              fit="cover"
+              style="width: 88px; height: 50px; border-radius: 6px"
+            />
+            <span v-else class="text-gray-400">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sentenceEn" label="英文句子" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="translationZh" label="中文释义" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="ipa" label="音标" min-width="120" show-overflow-tooltip />
+        <el-table-column label="分类" width="100">
+          <template #default="{ row }">{{ row.categoryName ?? '—' }}</template>
+        </el-table-column>
+        <el-table-column label="难度" width="80">
+          <template #default="{ row }">{{ DIFFICULTY_LABEL[row.difficulty] ?? row.difficulty }}</template>
+        </el-table-column>
+        <el-table-column label="来源" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.source === 'ai' ? 'success' : 'info'" size="small">
+              {{ row.source === 'ai' ? 'AI' : '手工' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="STATUS_TAG[row.status as SentenceStatus]?.type ?? 'info'" size="small">
+              {{ STATUS_TAG[row.status as SentenceStatus]?.label ?? row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right">
+          <template #default="{ row }">
+            <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
+              >编辑</el-button
+            >
+            <el-button v-permission="'sentence:remove'" link type="danger" @click="handleOffline(row as SentenceItem)"
+              >下架</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <Pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      @size-change="changePageSize"
-      @current-change="changePage"
-    />
+      <Pagination
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        @size-change="changePageSize"
+        @current-change="changePage"
+      />
+    </el-card>
 
     <!-- 新增/编辑弹窗（自定义 footer：保存中禁用确定按钮） -->
     <BasicDialog

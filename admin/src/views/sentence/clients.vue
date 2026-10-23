@@ -14,6 +14,7 @@ import {
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
+import { withUploadToken } from '@/utils/uploadToken';
 import type { ClientUserDetail, ClientUserItem } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -129,7 +130,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="sentence-clients-page">
     <!-- 查询 -->
     <SearchForm @search="search" @reset="reset">
       <el-form-item label="关键词">
@@ -150,101 +151,104 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <!-- 工具栏 -->
-    <div class="mb-3 flex items-center gap-2">
-      <el-button :loading="loading" @click="getList">刷新</el-button>
-      <span class="text-sm text-gray-400">共 {{ total }} 位用户</span>
-    </div>
+    <el-card shadow="never" class="mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+        <span class="text-[15px] font-semibold text-ink">客户端用户（共 {{ total }}）</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <el-button :loading="loading" @click="getList">刷新</el-button>
+        </div>
+      </div>
 
-    <!-- 表格 -->
-    <el-table v-loading="loading" :data="list" border row-key="id">
-      <el-table-column label="用户" min-width="200">
-        <template #default="{ row }">
-          <div class="flex items-center gap-2">
-            <el-avatar :size="32" :src="row.avatarUrl ?? undefined">
-              {{ (row.nickname || '?').slice(0, 1) }}
-            </el-avatar>
-            <div class="min-w-0">
-              <p class="truncate font-medium">{{ row.nickname }}</p>
-              <p class="truncate text-xs text-gray-400">{{ row.email }}</p>
+      <!-- 表格 -->
+      <el-table v-loading="loading" :data="list" border row-key="id">
+        <el-table-column label="用户" min-width="200">
+          <template #default="{ row }">
+            <div class="flex items-center gap-2">
+              <el-avatar :size="32" :src="withUploadToken(row.avatarUrl) || undefined">
+                {{ (row.nickname || '?').slice(0, 1) }}
+              </el-avatar>
+              <div class="min-w-0">
+                <p class="truncate font-medium">{{ row.nickname }}</p>
+                <p class="truncate text-xs text-gray-400">{{ row.email }}</p>
+              </div>
             </div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="性别" width="70">
-        <template #default="{ row }">{{ GENDER_LABEL[row.gender] ?? row.gender }}</template>
-      </el-table-column>
-      <el-table-column label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-            {{ row.status === 1 ? '启用' : '禁用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="answerCount" label="答题数" width="90" />
-      <el-table-column label="正确率" width="90">
-        <template #default="{ row }">{{ correctRate(row as ClientUserItem) }}</template>
-      </el-table-column>
-      <el-table-column prop="favoriteCount" label="收藏" width="80" />
-      <el-table-column prop="streak" label="连续打卡" width="100" />
-      <el-table-column label="最后登录" width="170">
-        <template #default="{ row }">{{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : '—' }}</template>
-      </el-table-column>
-      <el-table-column label="注册时间" width="170">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="230" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            v-permission="'client:user:query'"
-            link
-            type="primary"
-            @click="handleDetail(row as ClientUserItem)"
-          >
-            详情
-          </el-button>
-          <el-button
-            v-permission="'client:user:edit'"
-            link
-            type="warning"
-            @click="handleToggleStatus(row as ClientUserItem)"
-          >
-            {{ row.status === 1 ? '禁用' : '启用' }}
-          </el-button>
-          <el-button
-            v-permission="'client:user:reset'"
-            link
-            type="primary"
-            @click="handleResetPwd(row as ClientUserItem)"
-          >
-            重置密码
-          </el-button>
-          <el-button
-            v-permission="'client:user:offline'"
-            link
-            type="danger"
-            @click="handleOffline(row as ClientUserItem)"
-          >
-            下线
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+          </template>
+        </el-table-column>
+        <el-table-column label="性别" width="70">
+          <template #default="{ row }">{{ GENDER_LABEL[row.gender] ?? row.gender }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="answerCount" label="答题数" width="90" />
+        <el-table-column label="正确率" width="90">
+          <template #default="{ row }">{{ correctRate(row as ClientUserItem) }}</template>
+        </el-table-column>
+        <el-table-column prop="favoriteCount" label="收藏" width="80" />
+        <el-table-column prop="streak" label="连续打卡" width="100" />
+        <el-table-column label="最后登录" width="170">
+          <template #default="{ row }">{{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : '—' }}</template>
+        </el-table-column>
+        <el-table-column label="注册时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="230" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-permission="'client:user:query'"
+              link
+              type="primary"
+              @click="handleDetail(row as ClientUserItem)"
+            >
+              详情
+            </el-button>
+            <el-button
+              v-permission="'client:user:edit'"
+              link
+              type="warning"
+              @click="handleToggleStatus(row as ClientUserItem)"
+            >
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+            <el-button
+              v-permission="'client:user:reset'"
+              link
+              type="primary"
+              @click="handleResetPwd(row as ClientUserItem)"
+            >
+              重置密码
+            </el-button>
+            <el-button
+              v-permission="'client:user:offline'"
+              link
+              type="danger"
+              @click="handleOffline(row as ClientUserItem)"
+            >
+              下线
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <Pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      @size-change="changePageSize"
-      @current-change="changePage"
-    />
+      <Pagination
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        @size-change="changePageSize"
+        @current-change="changePage"
+      />
+    </el-card>
 
     <!-- 详情 -->
     <BasicDialog v-model="detailVisible" title="用户详情" width="720px" :show-footer="false">
       <div v-loading="detailLoading">
         <template v-if="detail">
           <div class="mb-4 flex items-center gap-3">
-            <el-avatar :size="48" :src="detail.avatarUrl ?? undefined">
+            <el-avatar :size="48" :src="withUploadToken(detail.avatarUrl) || undefined">
               {{ (detail.nickname || '?').slice(0, 1) }}
             </el-avatar>
             <div>
