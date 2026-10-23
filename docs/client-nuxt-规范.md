@@ -46,7 +46,7 @@ client/
 │  ├─ pages/              # 路由页面：index / login / register / profile / favorites / review / ai
 │  ├─ components/         # AppScrollArea（悬浮滚动条）/ AuthShell（认证页骨架）/
 │  │                      #   QuestionCard（翻转卡）/ SentenceCard / SentenceLibraryList /
-│  │                      #   BirthdayPicker / GrowthPanel
+│  │                      #   DifficultyPicker（滑块式难度选择）/ BirthdayPicker / GrowthPanel
 │  ├─ composables/        # useApi / useSsrApi（SSR 取数）/ useQuestionSession / useSse /
 │  │                      #   useTodayCard / usePageSeo / useCountUp
 │  ├─ stores/             # Pinia：auth（令牌走 Cookie，资料在挂载后从 localStorage 恢复）
