@@ -2,7 +2,15 @@
  * 刷题 DTO（客户端）。
  */
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+
+/**
+ * 作答模式：
+ * - input    默写（自己敲出整句，默认）
+ * - assemble 拼词（点选词块拼成句子，见 /questions/next 下发的 words）
+ */
+export const ANSWER_MODES = ['input', 'assemble'] as const;
+export type AnswerMode = (typeof ANSWER_MODES)[number];
 
 /** 提交答案入参。 */
 export class AnswerSentenceDto {
@@ -18,6 +26,15 @@ export class AnswerSentenceDto {
   @Min(0, { message: '作答耗时不能为负' })
   @Max(3_600_000, { message: '作答耗时异常' })
   elapsedMs?: number;
+
+  /**
+   * 作答模式（缺省按 input 处理）。
+   * 只上报「这次是怎么作答的」，**不传经验值**——经验仍由服务端按模式选规则发放：
+   * 拼词模式的答案就在选项里，识别难度低于默写，故按约六成计算（见 XP_RULES）。
+   */
+  @IsOptional()
+  @IsIn([...ANSWER_MODES], { message: '作答模式不合法' })
+  mode?: AnswerMode;
 }
 
 /** 抽题查询入参。 */
@@ -32,4 +49,12 @@ export class NextQuestionQueryDto {
   @Min(1, { message: '难度最小为 1' })
   @Max(3, { message: '难度最大为 3' })
   difficulty?: number;
+
+  /**
+   * 作答模式：只影响**是否下发打乱词块**（拼词模式需要），不影响选题逻辑。
+   * 不带该参数时按 input 处理，不返回词块——输入模式拿不到答案。
+   */
+  @IsOptional()
+  @IsIn([...ANSWER_MODES], { message: '作答模式不合法' })
+  mode?: AnswerMode;
 }

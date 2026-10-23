@@ -1,6 +1,6 @@
 # 用户端规范（client/ · Nuxt 4 「短句」App）
 
-适用于 `client/`（Nuxt 4 + Nuxt UI v4 + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、输入英文、提交后 3D 翻转看答案。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
+适用于 `client/`（Nuxt 4 + Nuxt UI v4 + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、作答、提交后 3D 翻转看答案。**作答支持两种模式（可随时切换）**：`输入`（自己敲出整句）与 `拼词`（点选打乱的词块拼成句子，词块由后端随题下发）。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
 
 ## 1. 硬性约定
 
@@ -8,6 +8,7 @@
 - 组合式 API + `<script setup lang="ts">`；**Nuxt UI v4 承担组件层**（`UButton` / `UInput` / `UFormField` / `UCard` / `UAlert` / `UTabs` / `UBadge` / `USelect` / `UTextarea` / `UAvatar` / `USkeleton` / `UApp`），**不引 Element Plus**（那是 admin 中后台的栈）；
 - **不直接依赖 `reka-ui`**：它只是 Nuxt UI 的内部实现细节，业务代码一律用 `U*` 前缀组件，避免和 Nuxt UI 的版本绑死；
 - 根组件必须包一层 `<UApp>`：Toast / Modal / Tooltip 等覆盖层依赖它提供的上下文；
+- **作答模式只上报、不参与判分**：`submit` 带 `mode`（`input` / `assemble`），后端据此选 XP 规则（拼词约为输入六成，**界面上不提示差异**）；对错与经验一律服务端权威，前端不传。拼词词块（`question.words`）仅在 `mode=assemble` 时由后端下发，输入模式恒为 `null`——否则等于提前把答案给了用户；
 - **布局只有一个入口**：根组件固定写成 `<UApp><NuxtLayout><NuxtPage /></NuxtLayout></UApp>`。顶栏、内容滚动区与移动端底部 Tab 属于 `layouts/default.vue`；登录 / 注册这类要独占视口的页面用 `layouts/auth.vue`（只渲染页面本身，不含外壳）。
   - **禁止用 `definePageMeta({ layout: false })` 表达「不要外壳」**：外壳若写在根组件里，`layout: false` 去不掉它（页面仍被顶栏占去 64px，`h-dvh` 分栏因此溢出、底部被裁）；更严重的是在 Nuxt 中页面级 `layout` 元信息必须由 `<NuxtLayout>` 消费，缺少它时两个 `layout: false` 页面之间做 SPA 导航会出现「路由已切换（`matched` / `name` 都正确）但 `<NuxtPage>` 不重新渲染」，表现就是**内容区一片空白**。
   - 认证页（登录 / 注册）共用 `components/AuthShell.vue`：品牌 + 页面标题 + 表单，**居中对称的单列**，整块在视口内垂直水平居中。
@@ -45,8 +46,10 @@ client/
 │  │  └─ auth.vue         # 认证页布局：独占视口的全屏画布，无外壳
 │  ├─ pages/              # 路由页面：index / login / register / profile / favorites / review / ai
 │  ├─ components/         # AppScrollArea（悬浮滚动条）/ AuthShell（认证页骨架）/
-│  │                      #   QuestionCard（翻转卡）/ SentenceCard / SentenceLibraryList /
-│  │                      #   DifficultyPicker（滑块式难度选择）/ BirthdayPicker / GrowthPanel
+│  │                      #   QuestionCard（翻转卡）/ AssembleAnswer（拼词作答）/
+│  │                      #   SentenceCard / SentenceLibraryList /
+│  │                      #   PracticeModePicker（作答方式）/ DifficultyPicker（难度）/
+│  │                      #   BirthdayPicker / GrowthPanel
 │  ├─ composables/        # useApi / useSsrApi（SSR 取数）/ useQuestionSession / useSse /
 │  │                      #   useTodayCard / usePageSeo / useCountUp
 │  ├─ stores/             # Pinia：auth（令牌走 Cookie，资料在挂载后从 localStorage 恢复）

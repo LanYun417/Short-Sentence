@@ -22,20 +22,22 @@ const {
   submitting,
   errorMessage,
   difficulty,
+  mode,
   loadNext,
   setDifficulty,
+  setMode,
   prefill,
   submit,
   toggleFavorite,
 } = useQuestionSession();
 
 /**
- * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
- * （todayDone/todayGoal 快照也在里面，进度 Hero 一并 SSR）。
- * 预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
+ * SSR 预抽题：服务端按 Cookie 令牌 + 难度/模式偏好抽好卡，首屏 HTML 直接带题面
+ * （拼词模式还会带打乱的词块）。预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
  */
 const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
   difficulty: difficulty.value,
+  mode: mode.value,
 });
 if (ssrQuestion.value) {
   prefill(ssrQuestion.value);
@@ -52,6 +54,13 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 
 /** 完成数滚动动画。 */
 const doneDisplay = useCountUp(todayDone);
+
+/** 操作提示：只说明怎么作答，不提示两种模式的经验差异（产品要求）。 */
+const modeHint = computed(() =>
+  mode.value === 'assemble'
+    ? '看中文，把词块按顺序拼成英文句子；提交后翻卡对照'
+    : '看中文，想英文；提交后翻卡对照。回车 = 确定 / 下一题',
+);
 
 /* ------------------------------ 今日 AI 句签 ------------------------------ */
 
@@ -207,13 +216,18 @@ function onFavorite(): void {
       </div>
     </section>
 
+    <!-- 作答方式：拼词（点词块）/ 输入（自己敲）。切换后立刻按新模式重抽一题 -->
+    <div class="anim-in mb-3" :style="{ animationDelay: '40ms' }">
+      <PracticeModePicker :model-value="mode" @update:model-value="setMode" />
+    </div>
+
     <!-- 难度选择：开始刷题前选，中途也可随时切换（切换后立刻按新难度抽题） -->
-    <div class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
+    <div class="anim-in mb-4" :style="{ animationDelay: '60ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 
     <p class="anim-in mb-4 text-center text-sm text-slate-400" :style="{ animationDelay: '80ms' }">
-      看中文，想英文；提交后翻卡对照。回车 = 确定 / 下一题
+      {{ modeHint }}
     </p>
 
     <!-- 错误态 -->
@@ -246,6 +260,7 @@ function onFavorite(): void {
           :result="result"
           :submitting="submitting"
           :loading="loading"
+          :mode="mode"
           @submit="onSubmit"
           @next="onNext"
           @favorite="onFavorite"

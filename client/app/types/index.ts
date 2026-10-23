@@ -38,6 +38,8 @@ export interface NextQuestion {
   todayGoal: number;
   /** new 新题 / review 复习题 */
   source: 'new' | 'review';
+  /** 拼词模式的候选词块（打乱）；输入模式为 null */
+  words: string[] | null;
 }
 
 /** 提交答案结果（含正确答案）。 */

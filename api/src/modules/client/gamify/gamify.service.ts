@@ -18,6 +18,16 @@ export const XP_RULES = {
   answer_correct_review: 5,
   /** 答错（仍给少量正反馈，不惩罚） */
   answer_wrong: 2,
+  /**
+   * 拼词模式：首次答对。
+   * 拼词时正确单词就在选项里，只考语序与搭配，识别难度明显低于默写，
+   * 因此经验按默写约六成发放（不在界面上提示，避免用户为了刷经验纠结模式）。
+   */
+  answer_correct_first_assemble: 6,
+  /** 拼词模式：复习答对 */
+  answer_correct_review_assemble: 3,
+  /** 拼词模式：答错（正反馈相应减少，仍不惩罚） */
+  answer_wrong_assemble: 1,
   /** 收藏一句 */
   favorite: 3,
   /** 完成每日目标 */

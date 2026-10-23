@@ -18,7 +18,7 @@ import { buildPageResult, parsePagination } from '../../../common/utils/utils.js
 import type { PageResult } from '../../../common/types.js';
 import { CheckinService } from '../checkin/checkin.service.js';
 import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
-import { AnswerSentenceDto } from './dto.js';
+import { AnswerSentenceDto, type AnswerMode } from './dto.js';
 
 /**
  * 间隔重复梯度（天）：下标 = reviewLevel。
@@ -45,6 +45,11 @@ export interface NextQuestion {
   todayGoal: number;
   /** 本题来源：new 新题 / review 复习题 */
   source: 'new' | 'review';
+  /**
+   * 拼词模式的候选词块（打乱后的英文单词，含原标点）。
+   * 仅 `mode=assemble` 时下发；输入模式恒为 null —— 否则等于把答案提前给了用户。
+   */
+  words: string[] | null;
 }
 
 /** 提交答案结果（含正确答案，用于翻转面）。 */
@@ -90,6 +95,55 @@ export function normalizeAnswer(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+/**
+ * 把英文句子拆成词块并打乱（拼词模式用）。
+ *
+ * 按空白拆词，**词块保留原标点**（`I'm`、`minutes?`）——拼回去与原句逐字一致，
+ * 因此答案比对口径不必为拼词模式做任何放宽（仍然只认全等）。
+ *
+ * 打乱用 Fisher–Yates；若结果恰好与原文同序（两三个词的短句很容易出现），
+ * 整体左移一位——否则等于把答案原样摆在用户面前。
+ */
+export function shuffleWords(sentenceEn: string): string[] {
+  const words = sentenceEn.trim().split(/\s+/).filter(Boolean);
+  if (words.length <= 1) {
+    return words;
+  }
+  const original = words.slice();
+  for (let i = words.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [words[i], words[j]] = [words[j], words[i]];
+  }
+  if (words.every((word, index) => word === original[index])) {
+    const first = words.shift();
+    if (first !== undefined) {
+      words.push(first);
+    }
+  }
+  return words;
+}
+
+/**
+ * 作答模式 → XP 事件类型。
+ * 拼词模式的选项就在眼前，识别难度低于默写，因此经验按约六成发放（数值见 XP_RULES）。
+ * 客户端只上报「用了哪种模式」，经验值恒由服务端决定。
+ */
+const XP_EVENT: Record<
+  AnswerMode,
+  { first: keyof typeof XP_RULES; review: keyof typeof XP_RULES; wrong: keyof typeof XP_RULES }
+> = {
+  input: {
+    first: 'answer_correct_first',
+    review: 'answer_correct_review',
+    wrong: 'answer_wrong',
+  },
+  assemble: {
+    first: 'answer_correct_first_assemble',
+    review: 'answer_correct_review_assemble',
+    wrong: 'answer_wrong_assemble',
+  },
+};
+
 @Injectable()
 export class QuestionsService {
   constructor(
@@ -105,8 +159,9 @@ export class QuestionsService {
    *
    * @param difficulty 目标难度（1 易 / 2 中 / 3 难），仅作用于**新题**——
    *   复习题必须按间隔重复排期走，按难度过滤会打乱复习节奏。该难度无可用新题时回落到不限难度。
+   * @param mode 作答模式；`assemble` 时下发打乱词块，其余情况不下发（输入模式拿不到答案）。
    */
-  async next(userId: number, difficulty?: number): Promise<NextQuestion> {
+  async next(userId: number, difficulty?: number, mode?: AnswerMode): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
     const wantNew = Math.random() < config.sentence.newRatio;
 
@@ -142,6 +197,7 @@ export class QuestionsService {
       where: { id: BigInt(sentenceId) },
       select: {
         id: true,
+        sentenceEn: true,
         translationZh: true,
         imageFileId: true,
         difficulty: true,
@@ -162,6 +218,7 @@ export class QuestionsService {
       todayDone: today?.doneCount ?? 0,
       todayGoal: config.sentence.dailyGoal,
       source,
+      words: mode === 'assemble' ? shuffleWords(sentence.sentenceEn) : null,
     };
   }
 
@@ -207,12 +264,10 @@ export class QuestionsService {
     });
     await this.checkinService.recordAnswer(userId);
 
-    // 微游戏化：按作答质量发 XP（服务端权威 + event_key 幂等），并尝试解锁成就
-    const eventType: keyof typeof XP_RULES = isCorrect
-      ? last
-        ? 'answer_correct_review'
-        : 'answer_correct_first'
-      : 'answer_wrong';
+    // 微游戏化：按作答质量与模式发 XP（服务端权威 + event_key 幂等），并尝试解锁成就
+    // 模式只决定用哪组规则，经验值恒由服务端算——拼词模式经验约为默写六成
+    const rule = XP_EVENT[dto.mode === 'assemble' ? 'assemble' : 'input'];
+    const eventType: keyof typeof XP_RULES = isCorrect ? (last ? rule.review : rule.first) : rule.wrong;
     await this.gamify.awardXp(userId, eventType, `answer:${record.id}`, XP_RULES[eventType]);
 
     const favorited = await this.isFavorited(userId, sentence.id);

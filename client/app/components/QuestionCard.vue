@@ -10,6 +10,7 @@
  *   :key 强制重建，否则 DOM 换新、transition 没有起点，翻牌动画就没了。
  */
 import type { AnswerResult, NextQuestion } from '~/types';
+import type { AnswerMode } from '~/composables/useQuestionSession';
 import { apiFetch } from '~/composables/useApi';
 
 const props = defineProps<{
@@ -21,6 +22,8 @@ const props = defineProps<{
   submitting: boolean;
   /** 正在拉取下一题（背面显示加载态，到达后翻回正面） */
   loading: boolean;
+  /** 作答模式：input 自己敲，assemble 点选词块 */
+  mode: AnswerMode;
 }>();
 
 const emit = defineEmits<{
@@ -39,6 +42,25 @@ const inputRef = ref<{ inputRef?: HTMLInputElement } | null>(null);
 
 /** 翻转态（有结果即翻转） */
 const flipped = computed(() => props.result !== null);
+
+/**
+ * 是否走拼词作答。
+ * 词块由后端随题下发；万一缺失（旧缓存、接口异常）自动回落到输入框，不至于卡住。
+ */
+const assembleMode = computed(() => props.mode === 'assemble' && (props.question.words?.length ?? 0) > 0);
+
+/** 拼词模式下词块是否已全部用上（决定「确定」可用性，避免点一个词就交）。 */
+const wordsAllUsed = computed(() => {
+  const total = props.question.words?.length ?? 0;
+  if (total === 0) {
+    return false;
+  }
+  const used = answer.value.trim().split(/\s+/).filter(Boolean).length;
+  return used >= total;
+});
+
+/** 能否提交：拼词要求词块全部用完，输入要求非空。 */
+const canSubmit = computed(() => (assembleMode.value ? wordsAllUsed.value : answer.value.trim().length > 0));
 
 /**
  * 累计翻转角度（绕 Y 轴，横向「从左往右」翻）。
@@ -101,14 +123,15 @@ function onKeydown(event: KeyboardEvent): void {
 
 /** 提交答案。 */
 function onSubmit(): void {
-  if (props.submitting || flipped.value) {
+  if (props.submitting || flipped.value || !canSubmit.value) {
     return;
   }
-  const value = answer.value.trim();
-  if (!value) {
-    return;
-  }
-  emit('submit', value);
+  emit('submit', answer.value.trim());
+}
+
+/** 拼词区回传拼接结果（与输入框共用同一个 answer 状态）。 */
+function onAssembleAnswer(value: string): void {
+  answer.value = value;
 }
 
 /** 收藏（带瞬时放大反馈）。 */
@@ -225,32 +248,54 @@ async function onSubmitReport(): Promise<void> {
           <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">配图缺失</div>
         </div>
 
-        <form class="mt-4 flex gap-2" @submit.prevent="onSubmit">
-          <UInput
-            ref="inputRef"
-            v-model="answer"
-            type="text"
-            size="lg"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            placeholder="输入对应的英文句子"
-            class="flex-1"
-            :disabled="submitting"
-          />
-          <UButton
-            type="submit"
-            size="lg"
-            :loading="submitting"
-            :disabled="!answer.trim()"
-            class="group [&_svg]:transition-transform [&_svg]:group-hover:translate-x-0.5"
-          >
-            确定
-            <template #trailing>
-              <UIcon name="i-lucide-corner-down-left" class="h-4 w-4" />
-            </template>
-          </UButton>
-        </form>
+        <!-- 作答区：拼词模式点词块，输入模式自己敲 -->
+        <div class="mt-4">
+          <template v-if="assembleMode">
+            <AssembleAnswer :words="question.words ?? []" :disabled="submitting" @update:answer="onAssembleAnswer" />
+            <div class="mt-3 flex justify-end">
+              <UButton
+                type="button"
+                size="lg"
+                :loading="submitting"
+                :disabled="!canSubmit"
+                class="group [&_svg]:transition-transform [&_svg]:group-hover:translate-x-0.5"
+                @click="onSubmit"
+              >
+                确定
+                <template #trailing>
+                  <UIcon name="i-lucide-corner-down-left" class="h-4 w-4" />
+                </template>
+              </UButton>
+            </div>
+          </template>
+
+          <form v-else class="flex gap-2" @submit.prevent="onSubmit">
+            <UInput
+              ref="inputRef"
+              v-model="answer"
+              type="text"
+              size="lg"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="输入对应的英文句子"
+              class="flex-1"
+              :disabled="submitting"
+            />
+            <UButton
+              type="submit"
+              size="lg"
+              :loading="submitting"
+              :disabled="!canSubmit"
+              class="group [&_svg]:transition-transform [&_svg]:group-hover:translate-x-0.5"
+            >
+              确定
+              <template #trailing>
+                <UIcon name="i-lucide-corner-down-left" class="h-4 w-4" />
+              </template>
+            </UButton>
+          </form>
+        </div>
       </div>
 
       <!-- 背面：加载中 / 正确答案 -->
