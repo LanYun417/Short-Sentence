@@ -60,10 +60,19 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '你是英语教研专家，为英语学习 App 生成日常对话短句题库。',
       '严格要求：',
       '1. 只输出 JSON，形状为 {"items": [...]}，不要任何解释文字；',
-      '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（精准中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难）、categoryName（中文分类名，与主题一致或更细）；',
-      '3. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
-      '4. 句子口语化、实用、避免生僻词；难度分布均匀；',
-      `5. 当次生成 ${count} 条，主题：${theme}。`,
+      '2. 每个 item 字段：sentenceEn（地道英文口语句）、translationZh（中文释义）、ipa（英式音标）、scenePrompt（英文生图提示词）、difficulty（1易/2中/3难）、categoryName（中文分类名，与主题一致或更细）；',
+      '3. translationZh 是最容易出问题的字段，三条硬性要求：',
+      '   a. 地道中文：符合中文的语序与词语搭配，严禁逐字直译英文语序。' +
+        '例：英文 "what the patient earth has grown" 应译作「大地耐心孕育出的（果实）」，' +
+        '不能译成「耐心大地生长出的」——中文里没有「耐心大地」这样拼出来的定语；',
+      '   b. 语义自足：只读中文就能明白这句话在说什么，不允许出现「必须对照英文才看得懂」的中文。' +
+        '反例：「站台在最后一刻变了。」——读的人不知道站台变成了什么，' +
+        '应写成「快到发车时站台临时换了」或「站台在最后一刻改了」；',
+      '   c. 成分完整：谁、做什么、在哪等必要信息不能省略到产生歧义；单句 8~25 字为宜；',
+      '4. sentenceEn 要地道、自然，可以是日常口语，但语义必须完整——不要为了「口语化」而省略到含义不清，' +
+        '也不要用生僻词与俚语；难度分布均匀；',
+      '5. scenePrompt 必须是「两个人在具体场景中对话」的卡通插画画面描述：人物身份、动作、环境、光线，扁平卡通风格，16:9 构图，不要图内文字；',
+      `6. 当次生成 ${count} 条，主题：${theme}。`,
     ].join('\n');
 
     const startedAt = Date.now();
@@ -154,10 +163,16 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '严格要求：',
       '1. 只输出 JSON，形状为 {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}，不要任何解释文字；',
       '2. title 是英文主题名（2~4 个单词，如 Morning Ritual），titleZh 是中文主题名；',
-      '3. sentenceEn 是一句简短、优美、积极向上的英文短句（不超过 12 个单词），translationZh 是精准中文翻译；',
-      '4. scenePrompt 是英文生图提示词：唯美治愈系的场景插画（**不是**两人对话场景），描述画面主体、环境、光线、色调，扁平/绘本风，16:9 构图，不要图内文字；',
-      '5. 主题每天不同，避免与常见节日重复；积极、温暖、有画面感。',
-      `6. 日期：${day}。`,
+      '3. sentenceEn 是一句简短、优美、积极向上的英文短句（不超过 12 个单词）；',
+      '4. translationZh 是中文译文，必须地道通顺、符合中文语序，严禁逐字直译英文：' +
+        '例：英文 "Small hands gather what the patient earth has grown." ' +
+        '应译作「小小的手，捧起大地耐心孕育的果实」，' +
+        '而不是「小小的手，收获耐心大地生长出的果实」（「耐心大地」不成词，定语顺序也是英文的）；' +
+        '中文同样要短，读两遍通顺即可，不要为了贴合英文而拗口；',
+      '5. titleZh 与 translationZh 不要出现同一个词堆叠，读起来要像中文而不是翻译腔；',
+      '6. scenePrompt 是英文生图提示词：唯美治愈系的场景插画（**不是**两人对话场景），描述画面主体、环境、光线、色调，扁平/绘本风，16:9 构图，不要图内文字；',
+      '7. 主题每天不同，避免与常见节日重复；积极、温暖、有画面感。',
+      `8. 日期：${day}。`,
     ].join('\n');
 
     const startedAt = Date.now();
