@@ -10,7 +10,9 @@
 - 根组件必须包一层 `<UApp>`：Toast / Modal / Tooltip 等覆盖层依赖它提供的上下文；
 - **布局只有一个入口**：根组件固定写成 `<UApp><NuxtLayout><NuxtPage /></NuxtLayout></UApp>`。顶栏、内容滚动区与移动端底部 Tab 属于 `layouts/default.vue`；登录 / 注册这类要独占视口的页面用 `layouts/auth.vue`（只渲染页面本身，不含外壳）。
   - **禁止用 `definePageMeta({ layout: false })` 表达「不要外壳」**：外壳若写在根组件里，`layout: false` 去不掉它（页面仍被顶栏占去 64px，`h-dvh` 分栏因此溢出、底部被裁）；更严重的是在 Nuxt 中页面级 `layout` 元信息必须由 `<NuxtLayout>` 消费，缺少它时两个 `layout: false` 页面之间做 SPA 导航会出现「路由已切换（`matched` / `name` 都正确）但 `<NuxtPage>` 不重新渲染」，表现就是**内容区一片空白**。
-  - 认证页（登录 / 注册）结构同构，共用 `components/AuthShell.vue`（左品牌栏 + 右表单列），页面只通过插槽填标题与表单。
+  - 认证页（登录 / 注册）共用 `components/AuthShell.vue`：品牌 + 页面标题 + 表单，**居中对称的单列**，整块在视口内垂直水平居中。
+    品牌用 `favicon.svg` + 渐变字标「短句」，与 default 布局顶栏的呈现保持一致；**不要用 `public/logo.svg`**——它是 800×300 的完整字标原稿，viewBox 留白很大（内容仅占中间一块且偏左上），按高度缩放后既显小又不在正中。
+    认证页只放功能性文案，不放卖点列表、产品示意这类营销内容——登录/注册是一次性动作，用户只想尽快填完，营销区块既占地方又拖慢视线。
 - 语义色在 `app/app.config.ts` 的 `ui.colors` 配置（当前 `primary=sky`、`neutral=slate`）。**该文件必须放在 `app/` 目录内**（Nuxt 4 的 srcDir 是 `app/`，放仓库根不生效，表现为 primary 仍是默认的 green）；
 - 图标用 `i-lucide-*`，本地由 `@iconify-json/lucide`（devDependency）打包，不走运行时 CDN；勿新增图标集除非确有需要；
 - 样式用 Tailwind 工具类；主题令牌走 Nuxt color-mode（亮/暗）；

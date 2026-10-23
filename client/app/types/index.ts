@@ -7,14 +7,6 @@ export interface ApiEnvelope<T> {
   data: T;
 }
 
-/** 认证页品牌栏的单个卖点（登录 / 注册共用）。 */
-export interface AuthFeature {
-  /** 图标名（i-lucide-*） */
-  icon: string;
-  title: string;
-  desc: string;
-}
-
 /** 客户端用户资料。 */
 export interface ClientUserProfile {
   id: number;

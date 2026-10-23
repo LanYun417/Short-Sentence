@@ -1,10 +1,9 @@
 <script setup lang="ts">
 /**
  * 注册页（邮箱 + 密码 + 昵称；昵称缺省取邮箱前缀）。
- * 与登录页共用 AuthShell：结构完全同构，仅文案、渐变与字段数不同。
+ * 与登录页共用 AuthShell：版式完全同构，仅标题与字段数不同。
  */
 import { useAuthStore } from '~/stores/auth';
-import type { AuthFeature } from '~/types';
 
 definePageMeta({ layout: 'auth' });
 
@@ -22,13 +21,6 @@ const password = ref('');
 const nickname = ref('');
 const errorMessage = ref('');
 const submitting = ref(false);
-
-/** 品牌分栏卖点。 */
-const FEATURES: AuthFeature[] = [
-  { icon: 'i-lucide-image', title: '场景记句', desc: '看图联想语境，一句一画记得更牢' },
-  { icon: 'i-lucide-refresh-cw', title: '间隔复习', desc: '按遗忘曲线安排错题，滚动巩固' },
-  { icon: 'i-lucide-sparkles', title: 'AI 拓展', desc: '场景造句、词根拆解随时问' },
-];
 
 /** 注册成功后跳回来源页（缺省首页）。 */
 async function onSubmit(): Promise<void> {
@@ -50,74 +42,58 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <AuthShell
-    gradient="bg-linear-to-br from-violet-600 via-indigo-600 to-sky-500"
-    drift-class="bg-violet-300/20"
-    title-line1="加入短句"
-    title-line2="开始你的场景英语之旅"
-    subtitle="一个账号，同步收藏、打卡与复习进度。"
-    mobile-title="加入短句"
-    mobile-subtitle="一个账号，同步收藏与打卡"
-    :features="FEATURES"
-  >
-    <div class="anim-in mb-6 hidden lg:block" style="animation-delay: 80ms">
-      <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">创建账号</h1>
-      <p class="mt-1 text-sm text-slate-400">几十秒即可开始刷题</p>
-    </div>
+  <AuthShell title="创建账号">
+    <UCard
+      :ui="{
+        body: 'p-6',
+        ring: 'ring-1 ring-slate-200/80 dark:ring-slate-700/80',
+        shadow: 'shadow-xl shadow-slate-900/5',
+      }"
+    >
+      <form class="space-y-4" @submit.prevent="onSubmit">
+        <UFormField label="邮箱">
+          <UInput
+            v-model="email"
+            type="email"
+            required
+            autocomplete="email"
+            size="lg"
+            class="w-full"
+            icon="i-lucide-mail"
+          />
+        </UFormField>
 
-    <div class="anim-in" style="animation-delay: 160ms">
-      <UCard
-        :ui="{
-          body: 'p-6',
-          ring: 'ring-1 ring-slate-200/80 dark:ring-slate-700/80',
-          shadow: 'shadow-xl shadow-slate-900/5',
-        }"
-      >
-        <form class="space-y-4" @submit.prevent="onSubmit">
-          <UFormField label="邮箱">
-            <UInput
-              v-model="email"
-              type="email"
-              required
-              autocomplete="email"
-              size="lg"
-              class="w-full"
-              icon="i-lucide-mail"
-            />
-          </UFormField>
+        <UFormField label="昵称（可选）">
+          <UInput v-model="nickname" type="text" maxlength="50" size="lg" class="w-full" icon="i-lucide-user" />
+        </UFormField>
 
-          <UFormField label="昵称（可选）">
-            <UInput v-model="nickname" type="text" maxlength="50" size="lg" class="w-full" icon="i-lucide-user" />
-          </UFormField>
+        <UFormField label="密码" help="6~32 位，需同时包含字母和数字">
+          <UInput
+            v-model="password"
+            type="password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+            size="lg"
+            class="w-full"
+            icon="i-lucide-lock"
+          />
+        </UFormField>
 
-          <UFormField label="密码" help="6~32 位，需同时包含字母和数字">
-            <UInput
-              v-model="password"
-              type="password"
-              required
-              minlength="6"
-              autocomplete="new-password"
-              size="lg"
-              class="w-full"
-              icon="i-lucide-lock"
-            />
-          </UFormField>
+        <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
-          <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
+        <UButton type="submit" block size="lg" :loading="submitting" :disabled="!email || password.length < 6">
+          {{ submitting ? '注册中…' : '注册并登录' }}
+          <template #trailing>
+            <UIcon name="i-lucide-arrow-right" class="h-4 w-4" />
+          </template>
+        </UButton>
+      </form>
 
-          <UButton type="submit" block size="lg" :loading="submitting" :disabled="!email || password.length < 6">
-            {{ submitting ? '注册中…' : '注册并登录' }}
-            <template #trailing>
-              <UIcon name="i-lucide-arrow-right" class="h-4 w-4" />
-            </template>
-          </UButton>
-        </form>
-
-        <p class="mt-4 text-center text-sm text-slate-400">
-          已有账号？
-          <ULink to="/login" class="font-medium">登录</ULink>
-        </p>
-      </UCard>
-    </div>
+      <p class="mt-4 text-center text-sm text-slate-400">
+        已有账号？
+        <ULink to="/login" class="font-medium">登录</ULink>
+      </p>
+    </UCard>
   </AuthShell>
 </template>
