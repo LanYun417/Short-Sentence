@@ -188,15 +188,22 @@ async function onChangePassword(): Promise<void> {
       </div>
 
       <div class="relative px-5 pb-5 md:px-7 md:pb-6">
-        <!-- 头像 + 身份信息 -->
-        <div class="-mt-11 flex items-end gap-4">
+        <!-- 头像 + 身份信息（头像手搓 96px：v4 的 UAvatar 3xl 只有 48px，角标会盖掉大半） -->
+        <div class="-mt-14 flex items-end gap-4">
           <div class="relative shrink-0">
-            <div class="rounded-full bg-white p-1 shadow-lg dark:bg-slate-900">
-              <UAvatar size="3xl" :src="avatarSrc" :text="avatarText" />
+            <div
+              class="rounded-full bg-white p-1.5 shadow-lg ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700/60"
+            >
+              <div
+                class="grid size-24 place-items-center overflow-hidden rounded-full bg-slate-100 text-3xl font-bold text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+              >
+                <img v-if="avatarSrc" :src="avatarSrc" alt="头像" class="h-full w-full object-cover" />
+                <span v-else aria-hidden="true">{{ avatarText }}</span>
+              </div>
             </div>
             <button
               type="button"
-              class="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:scale-110 hover:text-primary active:scale-90 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+              class="absolute right-0 bottom-0 grid h-9 w-9 translate-x-1/4 translate-y-1/4 place-items-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:scale-110 hover:text-primary active:scale-90 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
               :disabled="uploading"
               title="更换头像"
               aria-label="更换头像"
@@ -214,8 +221,8 @@ async function onChangePassword(): Promise<void> {
             />
           </div>
 
-          <div class="min-w-0 pb-1">
-            <h1 class="truncate text-xl font-bold text-slate-900 dark:text-slate-50">{{ auth.user?.nickname }}</h1>
+          <div class="min-w-0 pb-1.5">
+            <h1 class="truncate text-2xl font-bold text-slate-900 dark:text-slate-50">{{ auth.user?.nickname }}</h1>
             <p class="truncate text-sm text-slate-400">{{ auth.user?.email }}</p>
           </div>
         </div>
