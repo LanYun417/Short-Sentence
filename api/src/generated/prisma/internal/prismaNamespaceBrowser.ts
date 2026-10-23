@@ -68,6 +68,7 @@ export const ModelName = {
   SentenceGenTask: 'SentenceGenTask',
   SentenceRecord: 'SentenceRecord',
   SentenceFavorite: 'SentenceFavorite',
+  SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
   User: 'User',
@@ -360,6 +361,22 @@ export const SentenceFavoriteScalarFieldEnum = {
 } as const
 
 export type SentenceFavoriteScalarFieldEnum = (typeof SentenceFavoriteScalarFieldEnum)[keyof typeof SentenceFavoriteScalarFieldEnum]
+
+
+export const SentenceReportScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceId: 'sentenceId',
+  reason: 'reason',
+  description: 'description',
+  status: 'status',
+  handleNote: 'handleNote',
+  handledAt: 'handledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SentenceReportScalarFieldEnum = (typeof SentenceReportScalarFieldEnum)[keyof typeof SentenceReportScalarFieldEnum]
 
 
 export const UserCheckinScalarFieldEnum = {
@@ -751,6 +768,16 @@ export const SentenceRecordOrderByRelevanceFieldEnum = {
 } as const
 
 export type SentenceRecordOrderByRelevanceFieldEnum = (typeof SentenceRecordOrderByRelevanceFieldEnum)[keyof typeof SentenceRecordOrderByRelevanceFieldEnum]
+
+
+export const SentenceReportOrderByRelevanceFieldEnum = {
+  reason: 'reason',
+  description: 'description',
+  status: 'status',
+  handleNote: 'handleNote'
+} as const
+
+export type SentenceReportOrderByRelevanceFieldEnum = (typeof SentenceReportOrderByRelevanceFieldEnum)[keyof typeof SentenceReportOrderByRelevanceFieldEnum]
 
 
 export const UserCheckinOrderByRelevanceFieldEnum = {

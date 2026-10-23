@@ -766,6 +766,27 @@ const MENU_TREE: MenuSeedNode[] = [
         visible: Status.ENABLED,
         keepAlive: 1,
       },
+      {
+        key: 'sentence:report',
+        menuName: '举报处理',
+        menuType: MenuType.MENU,
+        path: '/sentence/report',
+        component: 'sentence/report',
+        icon: 'flag',
+        permission: 'sentence:report',
+        sort: 6,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:report:handle',
+            menuName: '处理举报',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:report:handle',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

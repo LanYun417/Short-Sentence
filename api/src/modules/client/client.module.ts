@@ -14,6 +14,8 @@ import { QuestionsService } from './questions/questions.service.js';
 import { LibraryController } from './library/library.controller.js';
 import { CheckinController } from './checkin/checkin.controller.js';
 import { CheckinService } from './checkin/checkin.service.js';
+import { ReportController } from './report/report.controller.js';
+import { ReportService } from './report/report.service.js';
 import { ClientAiController } from './ai/client-ai.controller.js';
 import { ClientAiService } from './ai/client-ai.service.js';
 import { CategoriesController } from './categories/categories.controller.js';
@@ -27,9 +29,10 @@ import { CategoriesController } from './categories/categories.controller.js';
     QuestionsController,
     LibraryController,
     CheckinController,
+    ReportController,
     ClientAiController,
     CategoriesController,
   ],
-  providers: [ClientAuthUserService, QuestionsService, CheckinService, ClientAiService],
+  providers: [ClientAuthUserService, QuestionsService, CheckinService, ReportService, ClientAiService],
 })
 export class ClientModule {}

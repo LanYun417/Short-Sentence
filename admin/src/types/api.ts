@@ -1077,3 +1077,43 @@ export interface SentenceCategoryPayload {
   sort?: number;
   status?: number;
 }
+
+/* ------------------------------ 题目举报 ------------------------------ */
+
+/** 举报类型 */
+export type SentenceReportReason = 'wrong' | 'inappropriate' | 'image' | 'other';
+
+/** 举报处理状态 */
+export type SentenceReportStatus = 'pending' | 'resolved' | 'dismissed';
+
+/** 题目举报列表项 */
+export interface SentenceReportItem {
+  id: number;
+  reason: SentenceReportReason;
+  description: string | null;
+  status: SentenceReportStatus;
+  handleNote: string | null;
+  handledAt: string | null;
+  createdAt: string;
+  /** 被举报句子（题目被硬删时为 null） */
+  sentence: { id: number; sentenceEn: string; translationZh: string } | null;
+  /** 举报人（client_user） */
+  reporter: { id: number; nickname: string } | null;
+}
+
+/** 题目举报查询参数 */
+export interface SentenceReportQuery extends PageQuery {
+  /** 状态筛选 */
+  status?: string;
+  /** 类型筛选 */
+  reason?: string;
+  /** 关键词（英文 / 翻译 / 补充说明） */
+  keyword?: string;
+}
+
+/** 处理举报入参 */
+export interface HandleReportPayload {
+  /** resolved 已处理 / dismissed 已驳回 */
+  status: 'resolved' | 'dismissed';
+  handleNote?: string;
+}

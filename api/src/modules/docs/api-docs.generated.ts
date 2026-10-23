@@ -4665,6 +4665,62 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/reports",
+        "summary": "分页列表（筛选：status/reason/keyword）",
+        "permission": [
+          "sentence:report"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/reports?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/sentences",
         "summary": "分页列表（筛选：status/categoryId/difficulty/keyword）",
         "permission": [
@@ -4987,6 +5043,52 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/batch\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"count\": 1\n    }'",
           "requestBody": {
             "count": 1
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/reports/:id",
+        "summary": "处理举报（标记已处理/已驳回 + 备注）",
+        "permission": [
+          "sentence:report:handle"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 处理举报",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "处理结果：resolved 已处理 / dismissed 已驳回",
+            "example": "示例值"
+          },
+          {
+            "name": "handleNote",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "处理备注（可选）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/reports/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\",\n      \"handleNote\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值",
+            "handleNote": "示例值"
           }
         }
       },
@@ -5880,6 +5982,22 @@ export const API_DOCS: ApiDocGroup[] = [
           "pathParams": {
             "id": "1"
           }
+        }
+      }
+    ]
+  },
+  {
+    "group": "Report",
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "/api/client/report",
+        "summary": "提交举报/反馈",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/report\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

@@ -299,6 +299,7 @@ export type SentenceWhereInput = {
   category?: Prisma.XOR<Prisma.SentenceCategoryScalarRelationFilter, Prisma.SentenceCategoryWhereInput>
   records?: Prisma.SentenceRecordListRelationFilter
   favorites?: Prisma.SentenceFavoriteListRelationFilter
+  reports?: Prisma.SentenceReportListRelationFilter
 }
 
 export type SentenceOrderByWithRelationInput = {
@@ -318,6 +319,7 @@ export type SentenceOrderByWithRelationInput = {
   category?: Prisma.SentenceCategoryOrderByWithRelationInput
   records?: Prisma.SentenceRecordOrderByRelationAggregateInput
   favorites?: Prisma.SentenceFavoriteOrderByRelationAggregateInput
+  reports?: Prisma.SentenceReportOrderByRelationAggregateInput
   _relevance?: Prisma.SentenceOrderByRelevanceInput
 }
 
@@ -341,6 +343,7 @@ export type SentenceWhereUniqueInput = Prisma.AtLeast<{
   category?: Prisma.XOR<Prisma.SentenceCategoryScalarRelationFilter, Prisma.SentenceCategoryWhereInput>
   records?: Prisma.SentenceRecordListRelationFilter
   favorites?: Prisma.SentenceFavoriteListRelationFilter
+  reports?: Prisma.SentenceReportListRelationFilter
 }, "id" | "sentenceEn">
 
 export type SentenceOrderByWithAggregationInput = {
@@ -399,6 +402,7 @@ export type SentenceCreateInput = {
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
   records?: Prisma.SentenceRecordCreateNestedManyWithoutSentenceInput
   favorites?: Prisma.SentenceFavoriteCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceUncheckedCreateInput = {
@@ -417,6 +421,7 @@ export type SentenceUncheckedCreateInput = {
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
   favorites?: Prisma.SentenceFavoriteUncheckedCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportUncheckedCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceUpdateInput = {
@@ -435,6 +440,7 @@ export type SentenceUpdateInput = {
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
   records?: Prisma.SentenceRecordUpdateManyWithoutSentenceNestedInput
   favorites?: Prisma.SentenceFavoriteUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceUncheckedUpdateInput = {
@@ -453,6 +459,7 @@ export type SentenceUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
   favorites?: Prisma.SentenceFavoriteUncheckedUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUncheckedUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceCreateManyInput = {
@@ -657,6 +664,20 @@ export type SentenceUpdateOneRequiredWithoutFavoritesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.SentenceUpdateToOneWithWhereWithoutFavoritesInput, Prisma.SentenceUpdateWithoutFavoritesInput>, Prisma.SentenceUncheckedUpdateWithoutFavoritesInput>
 }
 
+export type SentenceCreateNestedOneWithoutReportsInput = {
+  create?: Prisma.XOR<Prisma.SentenceCreateWithoutReportsInput, Prisma.SentenceUncheckedCreateWithoutReportsInput>
+  connectOrCreate?: Prisma.SentenceCreateOrConnectWithoutReportsInput
+  connect?: Prisma.SentenceWhereUniqueInput
+}
+
+export type SentenceUpdateOneRequiredWithoutReportsNestedInput = {
+  create?: Prisma.XOR<Prisma.SentenceCreateWithoutReportsInput, Prisma.SentenceUncheckedCreateWithoutReportsInput>
+  connectOrCreate?: Prisma.SentenceCreateOrConnectWithoutReportsInput
+  upsert?: Prisma.SentenceUpsertWithoutReportsInput
+  connect?: Prisma.SentenceWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SentenceUpdateToOneWithWhereWithoutReportsInput, Prisma.SentenceUpdateWithoutReportsInput>, Prisma.SentenceUncheckedUpdateWithoutReportsInput>
+}
+
 export type SentenceCreateWithoutCategoryInput = {
   id?: bigint | number
   difficulty?: number
@@ -672,6 +693,7 @@ export type SentenceCreateWithoutCategoryInput = {
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordCreateNestedManyWithoutSentenceInput
   favorites?: Prisma.SentenceFavoriteCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceUncheckedCreateWithoutCategoryInput = {
@@ -689,6 +711,7 @@ export type SentenceUncheckedCreateWithoutCategoryInput = {
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
   favorites?: Prisma.SentenceFavoriteUncheckedCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportUncheckedCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceCreateOrConnectWithoutCategoryInput = {
@@ -751,6 +774,7 @@ export type SentenceCreateWithoutRecordsInput = {
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
   favorites?: Prisma.SentenceFavoriteCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceUncheckedCreateWithoutRecordsInput = {
@@ -768,6 +792,7 @@ export type SentenceUncheckedCreateWithoutRecordsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   favorites?: Prisma.SentenceFavoriteUncheckedCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportUncheckedCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceCreateOrConnectWithoutRecordsInput = {
@@ -801,6 +826,7 @@ export type SentenceUpdateWithoutRecordsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
   favorites?: Prisma.SentenceFavoriteUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceUncheckedUpdateWithoutRecordsInput = {
@@ -818,6 +844,7 @@ export type SentenceUncheckedUpdateWithoutRecordsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   favorites?: Prisma.SentenceFavoriteUncheckedUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUncheckedUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceCreateWithoutFavoritesInput = {
@@ -835,6 +862,7 @@ export type SentenceCreateWithoutFavoritesInput = {
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
   records?: Prisma.SentenceRecordCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceUncheckedCreateWithoutFavoritesInput = {
@@ -852,6 +880,7 @@ export type SentenceUncheckedCreateWithoutFavoritesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
+  reports?: Prisma.SentenceReportUncheckedCreateNestedManyWithoutSentenceInput
 }
 
 export type SentenceCreateOrConnectWithoutFavoritesInput = {
@@ -885,6 +914,7 @@ export type SentenceUpdateWithoutFavoritesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
   records?: Prisma.SentenceRecordUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceUncheckedUpdateWithoutFavoritesInput = {
@@ -902,6 +932,95 @@ export type SentenceUncheckedUpdateWithoutFavoritesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUncheckedUpdateManyWithoutSentenceNestedInput
+}
+
+export type SentenceCreateWithoutReportsInput = {
+  id?: bigint | number
+  difficulty?: number
+  sentenceEn: string
+  translationZh: string
+  ipa?: string | null
+  scenePrompt: string
+  imageFileId?: bigint | number
+  source?: string
+  status?: string
+  genTaskId?: bigint | number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
+  records?: Prisma.SentenceRecordCreateNestedManyWithoutSentenceInput
+  favorites?: Prisma.SentenceFavoriteCreateNestedManyWithoutSentenceInput
+}
+
+export type SentenceUncheckedCreateWithoutReportsInput = {
+  id?: bigint | number
+  categoryId: bigint | number
+  difficulty?: number
+  sentenceEn: string
+  translationZh: string
+  ipa?: string | null
+  scenePrompt: string
+  imageFileId?: bigint | number
+  source?: string
+  status?: string
+  genTaskId?: bigint | number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
+  favorites?: Prisma.SentenceFavoriteUncheckedCreateNestedManyWithoutSentenceInput
+}
+
+export type SentenceCreateOrConnectWithoutReportsInput = {
+  where: Prisma.SentenceWhereUniqueInput
+  create: Prisma.XOR<Prisma.SentenceCreateWithoutReportsInput, Prisma.SentenceUncheckedCreateWithoutReportsInput>
+}
+
+export type SentenceUpsertWithoutReportsInput = {
+  update: Prisma.XOR<Prisma.SentenceUpdateWithoutReportsInput, Prisma.SentenceUncheckedUpdateWithoutReportsInput>
+  create: Prisma.XOR<Prisma.SentenceCreateWithoutReportsInput, Prisma.SentenceUncheckedCreateWithoutReportsInput>
+  where?: Prisma.SentenceWhereInput
+}
+
+export type SentenceUpdateToOneWithWhereWithoutReportsInput = {
+  where?: Prisma.SentenceWhereInput
+  data: Prisma.XOR<Prisma.SentenceUpdateWithoutReportsInput, Prisma.SentenceUncheckedUpdateWithoutReportsInput>
+}
+
+export type SentenceUpdateWithoutReportsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  difficulty?: Prisma.IntFieldUpdateOperationsInput | number
+  sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
+  imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
+  records?: Prisma.SentenceRecordUpdateManyWithoutSentenceNestedInput
+  favorites?: Prisma.SentenceFavoriteUpdateManyWithoutSentenceNestedInput
+}
+
+export type SentenceUncheckedUpdateWithoutReportsInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  difficulty?: Prisma.IntFieldUpdateOperationsInput | number
+  sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
+  imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
+  favorites?: Prisma.SentenceFavoriteUncheckedUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceCreateManyCategoryInput = {
@@ -934,6 +1053,7 @@ export type SentenceUpdateWithoutCategoryInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUpdateManyWithoutSentenceNestedInput
   favorites?: Prisma.SentenceFavoriteUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceUncheckedUpdateWithoutCategoryInput = {
@@ -951,6 +1071,7 @@ export type SentenceUncheckedUpdateWithoutCategoryInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
   favorites?: Prisma.SentenceFavoriteUncheckedUpdateManyWithoutSentenceNestedInput
+  reports?: Prisma.SentenceReportUncheckedUpdateManyWithoutSentenceNestedInput
 }
 
 export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
@@ -976,11 +1097,13 @@ export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
 export type SentenceCountOutputType = {
   records: number
   favorites: number
+  reports: number
 }
 
 export type SentenceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   records?: boolean | SentenceCountOutputTypeCountRecordsArgs
   favorites?: boolean | SentenceCountOutputTypeCountFavoritesArgs
+  reports?: boolean | SentenceCountOutputTypeCountReportsArgs
 }
 
 /**
@@ -1007,6 +1130,13 @@ export type SentenceCountOutputTypeCountFavoritesArgs<ExtArgs extends runtime.Ty
   where?: Prisma.SentenceFavoriteWhereInput
 }
 
+/**
+ * SentenceCountOutputType without action
+ */
+export type SentenceCountOutputTypeCountReportsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SentenceReportWhereInput
+}
+
 
 export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1025,6 +1155,7 @@ export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
   favorites?: boolean | Prisma.Sentence$favoritesArgs<ExtArgs>
+  reports?: boolean | Prisma.Sentence$reportsArgs<ExtArgs>
   _count?: boolean | Prisma.SentenceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["sentence"]>
 
@@ -1051,6 +1182,7 @@ export type SentenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
   favorites?: boolean | Prisma.Sentence$favoritesArgs<ExtArgs>
+  reports?: boolean | Prisma.Sentence$reportsArgs<ExtArgs>
   _count?: boolean | Prisma.SentenceCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -1060,6 +1192,7 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     category: Prisma.$SentenceCategoryPayload<ExtArgs>
     records: Prisma.$SentenceRecordPayload<ExtArgs>[]
     favorites: Prisma.$SentenceFavoritePayload<ExtArgs>[]
+    reports: Prisma.$SentenceReportPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     /**
@@ -1457,6 +1590,7 @@ export interface Prisma__SentenceClient<T, Null = never, ExtArgs extends runtime
   category<T extends Prisma.SentenceCategoryDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SentenceCategoryDefaultArgs<ExtArgs>>): Prisma.Prisma__SentenceCategoryClient<runtime.Types.Result.GetResult<Prisma.$SentenceCategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   records<T extends Prisma.Sentence$recordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Sentence$recordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SentenceRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   favorites<T extends Prisma.Sentence$favoritesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Sentence$favoritesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SentenceFavoritePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reports<T extends Prisma.Sentence$reportsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Sentence$reportsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SentenceReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1892,6 +2026,30 @@ export type Sentence$favoritesArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.SentenceFavoriteScalarFieldEnum | Prisma.SentenceFavoriteScalarFieldEnum[]
+}
+
+/**
+ * Sentence.reports
+ */
+export type Sentence$reportsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SentenceReport
+   */
+  select?: Prisma.SentenceReportSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SentenceReport
+   */
+  omit?: Prisma.SentenceReportOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SentenceReportInclude<ExtArgs> | null
+  where?: Prisma.SentenceReportWhereInput
+  orderBy?: Prisma.SentenceReportOrderByWithRelationInput | Prisma.SentenceReportOrderByWithRelationInput[]
+  cursor?: Prisma.SentenceReportWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SentenceReportScalarFieldEnum | Prisma.SentenceReportScalarFieldEnum[]
 }
 
 /**

@@ -6,10 +6,12 @@ import { Module } from '@nestjs/common';
 import { SentenceController } from './sentence.controller.js';
 import { SentenceService } from './sentence.service.js';
 import { SentenceGenService } from './sentence-gen.service.js';
+import { ReportController } from './report.controller.js';
+import { ReportService } from './report.service.js';
 
 @Module({
-  controllers: [SentenceController],
-  providers: [SentenceService, SentenceGenService],
+  controllers: [SentenceController, ReportController],
+  providers: [SentenceService, SentenceGenService, ReportService],
   // SentenceGenService 需要导出：client 模块的未来扩展（如用户端「等待更新」提示）可能查询批次状态
   exports: [SentenceGenService],
 })

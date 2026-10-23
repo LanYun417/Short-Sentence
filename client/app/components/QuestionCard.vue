@@ -5,11 +5,12 @@
  *
  * 翻牌规则：
  * - 提交答案 → 翻到背面看结果；
- * - 点「下一题」→ 先保持背面并显示加载态，新题到达后**同方向继续往下翻**揭示新题
+ * - 点「下一题」→ 先保持背面并显示加载态，新题到达后**同方向继续从左往右翻**揭示新题
  *   （累计 +180°，一路向前不回翻；而不是把卡片整个换掉硬切）——所以本组件不能用
  *   :key 强制重建，否则 DOM 换新、transition 没有起点，翻牌动画就没了。
  */
 import type { AnswerResult, NextQuestion } from '~/types';
+import { apiFetch } from '~/composables/useApi';
 import { withUploadToken } from '~/utils/upload-token';
 
 const props = defineProps<{
@@ -44,10 +45,10 @@ const inputRef = ref<{ inputRef?: HTMLInputElement } | null>(null);
 const flipped = computed(() => props.result !== null);
 
 /**
- * 累计翻转角度（绕 X 轴，竖向「往下翻」）。
- * 每次 flipped 变化 +180°，始终同方向继续翻——提交(0→180)看背面、
- * 下一题(180→360)继续翻到正面，一路向前不「返回来」。
- * 注意不能对 360 取模：取模会让 180→360 变回 180→0，又成了回翻。
+ * 累计翻转角度（绕 Y 轴，横向「从左往右」翻）。
+ * 每次 flipped 变化 +180°，始终同方向（正向＝从左往右）继续翻——确定(0→180)看背面、
+ * 下一题(180→360)继续翻到正面，确定与下一题都是从左往右、一路向前不「返回来」。
+ * 注意不能对 360 取模：取模会让 180→360 变回 180→0，又成了反向回翻。
  */
 const flipDeg = ref(0);
 watch(flipped, () => {
@@ -123,11 +124,68 @@ function onFavorite(): void {
   }, 400);
   emit('favorite');
 }
+
+/* ------------------------------ 举报 / 反馈 ------------------------------ */
+
+/** 反馈类型选项（value 与后端 reason 枚举一致）。 */
+const REPORT_REASONS = [
+  { value: 'wrong', label: '题目/翻译有误' },
+  { value: 'inappropriate', label: '内容不适当' },
+  { value: 'image', label: '图片不雅/有问题' },
+  { value: 'other', label: '其他' },
+];
+
+const reportOpen = ref(false);
+const reportReason = ref('wrong');
+const reportDescription = ref('');
+const reportSubmitting = ref(false);
+const reportMessage = ref('');
+/** 最近一次提交是否成功（决定提示文案配色）。 */
+const reportOk = ref(false);
+
+/** 打开举报弹窗（重置表单）。 */
+function openReport(): void {
+  reportReason.value = 'wrong';
+  reportDescription.value = '';
+  reportMessage.value = '';
+  reportOk.value = false;
+  reportOpen.value = true;
+}
+
+/** 提交举报/反馈（成功后延时自动关闭）。 */
+async function onSubmitReport(): Promise<void> {
+  if (reportSubmitting.value) {
+    return;
+  }
+  reportSubmitting.value = true;
+  reportMessage.value = '';
+  try {
+    await apiFetch('/client/report', {
+      method: 'POST',
+      body: {
+        sentenceId: props.question.sentenceId,
+        reason: reportReason.value,
+        description: reportDescription.value.trim() || undefined,
+      },
+    });
+    reportOk.value = true;
+    reportMessage.value = '已收到，感谢你的反馈';
+    reportDescription.value = '';
+    window.setTimeout(() => {
+      reportOpen.value = false;
+    }, 1200);
+  } catch (error) {
+    reportOk.value = false;
+    reportMessage.value = error instanceof Error ? error.message : '提交失败，请稍后重试';
+  } finally {
+    reportSubmitting.value = false;
+  }
+}
 </script>
 
 <template>
   <div class="card-scene anim-in mx-auto w-full max-w-xl">
-    <div class="card-3d relative" :style="{ transform: `rotateX(${flipDeg}deg)` }">
+    <div class="card-3d relative" :style="{ transform: `rotateY(${flipDeg}deg)` }">
       <!-- 正面：题干 + 场景图 + 输入 -->
       <div
         class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
@@ -140,6 +198,15 @@ function onFavorite(): void {
             {{ difficultyText }}
           </UBadge>
           <span class="ml-auto tabular-nums">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
+          <UButton
+            icon="i-lucide-flag"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            title="举报 / 反馈此题"
+            aria-label="举报或反馈此题"
+            @click="openReport"
+          />
         </div>
 
         <!-- 题干 -->
@@ -259,4 +326,42 @@ function onFavorite(): void {
       </div>
     </div>
   </div>
+
+  <!-- 举报 / 反馈弹窗：放在 3D 场景外（card-scene 的 perspective 会影响模态定位）-->
+  <UModal
+    v-model:open="reportOpen"
+    title="举报 / 反馈"
+    description="题目有错、内容或图片不适当？告诉我们，运营会核查处理。"
+  >
+    <template #body>
+      <div class="space-y-4">
+        <UFormField label="反馈类型">
+          <USelect v-model="reportReason" :items="REPORT_REASONS" value-key="value" label-key="label" class="w-full" />
+        </UFormField>
+        <UFormField label="补充说明" help="选填，描述具体问题（最多 500 字）">
+          <UTextarea
+            v-model="reportDescription"
+            :rows="3"
+            maxlength="500"
+            autoresize
+            class="w-full"
+            placeholder="例如：英文句子有语法错误 / 配图令人不适…"
+          />
+        </UFormField>
+        <p
+          v-if="reportMessage"
+          class="text-sm"
+          :class="reportOk ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+        >
+          {{ reportMessage }}
+        </p>
+      </div>
+    </template>
+    <template #footer="{ close }">
+      <div class="flex items-center justify-end gap-2">
+        <UButton color="neutral" variant="ghost" @click="close">取消</UButton>
+        <UButton :loading="reportSubmitting" @click="onSubmitReport">提交</UButton>
+      </div>
+    </template>
+  </UModal>
 </template>

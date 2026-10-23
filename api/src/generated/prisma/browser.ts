@@ -107,6 +107,11 @@ export type SentenceRecord = Prisma.SentenceRecordModel
  */
 export type SentenceFavorite = Prisma.SentenceFavoriteModel
 /**
+ * Model SentenceReport
+ * 题目举报/反馈（用户端「举报」按钮提交，供运营核查处理）
+ */
+export type SentenceReport = Prisma.SentenceReportModel
+/**
  * Model UserCheckin
  * 每日打卡（一行 = 一个用户一天的完成记录）
  */

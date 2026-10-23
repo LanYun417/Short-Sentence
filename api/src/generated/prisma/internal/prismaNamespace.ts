@@ -414,6 +414,7 @@ export const ModelName = {
   SentenceGenTask: 'SentenceGenTask',
   SentenceRecord: 'SentenceRecord',
   SentenceFavorite: 'SentenceFavorite',
+  SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
   User: 'User',
@@ -441,7 +442,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1567,6 +1568,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SentenceReport: {
+      payload: Prisma.$SentenceReportPayload<ExtArgs>
+      fields: Prisma.SentenceReportFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SentenceReportFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SentenceReportFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        findFirst: {
+          args: Prisma.SentenceReportFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SentenceReportFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        findMany: {
+          args: Prisma.SentenceReportFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>[]
+        }
+        create: {
+          args: Prisma.SentenceReportCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        createMany: {
+          args: Prisma.SentenceReportCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.SentenceReportDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        update: {
+          args: Prisma.SentenceReportUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        deleteMany: {
+          args: Prisma.SentenceReportDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SentenceReportUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.SentenceReportUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SentenceReportPayload>
+        }
+        aggregate: {
+          args: Prisma.SentenceReportAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSentenceReport>
+        }
+        groupBy: {
+          args: Prisma.SentenceReportGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SentenceReportGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SentenceReportCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SentenceReportCountAggregateOutputType> | number
+        }
+      }
+    }
     UserCheckin: {
       payload: Prisma.$UserCheckinPayload<ExtArgs>
       fields: Prisma.UserCheckinFieldRefs
@@ -2662,6 +2729,22 @@ export const SentenceFavoriteScalarFieldEnum = {
 export type SentenceFavoriteScalarFieldEnum = (typeof SentenceFavoriteScalarFieldEnum)[keyof typeof SentenceFavoriteScalarFieldEnum]
 
 
+export const SentenceReportScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceId: 'sentenceId',
+  reason: 'reason',
+  description: 'description',
+  status: 'status',
+  handleNote: 'handleNote',
+  handledAt: 'handledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SentenceReportScalarFieldEnum = (typeof SentenceReportScalarFieldEnum)[keyof typeof SentenceReportScalarFieldEnum]
+
+
 export const UserCheckinScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3053,6 +3136,16 @@ export const SentenceRecordOrderByRelevanceFieldEnum = {
 export type SentenceRecordOrderByRelevanceFieldEnum = (typeof SentenceRecordOrderByRelevanceFieldEnum)[keyof typeof SentenceRecordOrderByRelevanceFieldEnum]
 
 
+export const SentenceReportOrderByRelevanceFieldEnum = {
+  reason: 'reason',
+  description: 'description',
+  status: 'status',
+  handleNote: 'handleNote'
+} as const
+
+export type SentenceReportOrderByRelevanceFieldEnum = (typeof SentenceReportOrderByRelevanceFieldEnum)[keyof typeof SentenceReportOrderByRelevanceFieldEnum]
+
+
 export const UserCheckinOrderByRelevanceFieldEnum = {
   checkinDate: 'checkinDate'
 } as const
@@ -3359,6 +3452,7 @@ export type GlobalOmitConfig = {
   sentenceGenTask?: Prisma.SentenceGenTaskOmit
   sentenceRecord?: Prisma.SentenceRecordOmit
   sentenceFavorite?: Prisma.SentenceFavoriteOmit
+  sentenceReport?: Prisma.SentenceReportOmit
   userCheckin?: Prisma.UserCheckinOmit
   aiCallLog?: Prisma.AiCallLogOmit
   user?: Prisma.UserOmit

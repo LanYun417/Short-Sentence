@@ -9,9 +9,9 @@
 /* 正文中文字体走浏览器默认回退（不引入 @theme 字体声明，
    避免 @nuxt/fonts 把系统字体名当可下载字体解析而构建失败） */
 
-/* ===== 闪卡 3D 翻转（绕 X 轴，竖向「往下翻」）=====
+/* ===== 闪卡 3D 翻转（绕 Y 轴，横向「从左往右」翻）=====
    翻转角度由 QuestionCard.vue 用内联 transform 累计（每次 +180°，同方向继续翻），
-   所以这里只保留 3D 上下文与过渡，不再用 .is-flipped 类切换 0/180（那会回翻）。 */
+   所以这里只保留 3D 上下文与过渡，不再用 .is-flipped 类切换 0/180（那会反向回翻）。 */
 .card-scene {
   perspective: 1600px;
 }
@@ -26,7 +26,7 @@
 }
 
 .card-face--back {
-  transform: rotateX(180deg);
+  transform: rotateY(180deg);
 }
 
 /* ===== AppScrollArea：隐藏原生滚动条，改用自绘悬浮滚动条 =====
