@@ -173,6 +173,76 @@
   animation: ss-gradient-pan 9s ease-in-out infinite;
 }
 
+/* ===== 今日进度 Hero：随刷题量「升温」的卡片 =====
+   进度从 0 到目标，卡片配色由冷（青蓝）逐级升到金橙（达标）。
+   三个色标注册成 <color> 类型：只有注册过的自定义属性浏览器才会插值，
+   否则换色是硬切（同 .ss-difficulty-slider 的处理手法）。
+   具体色值由 index.vue 按阶段注入 --hero-from / --hero-via / --hero-to。 */
+@property --hero-from {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #0ea5e9;
+}
+
+@property --hero-via {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #6366f1;
+}
+
+@property --hero-to {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #8b5cf6;
+}
+
+@property --hero-shadow {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: rgb(99 102 241 / 25%);
+}
+
+.ss-hero {
+  background-image: linear-gradient(135deg, var(--hero-from), var(--hero-via), var(--hero-to));
+  box-shadow: 0 10px 30px -8px var(--hero-shadow);
+  transition:
+    --hero-from 0.8s ease,
+    --hero-via 0.8s ease,
+    --hero-to 0.8s ease,
+    --hero-shadow 0.8s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 达标：内圈一道呼吸光边（不是闪光，是「点亮」的感觉） */
+@keyframes ss-hero-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.ss-hero--done::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 40%);
+  animation: ss-hero-breathe 3.6s ease-in-out infinite;
+}
+
+/* 进度条末端的光点：跟住完成度，达标转金色 */
+.ss-hero-dot {
+  transition:
+    left 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.5s ease,
+    box-shadow 0.5s ease;
+}
+
 /* 列表错落入场：配合内联 --d 延迟变量 */
 .anim-stagger {
   animation: ss-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -346,6 +416,17 @@
 
   .ss-beam,
   .ss-avatar-halo {
+    animation: none !important;
+  }
+
+  /* 进度升温做成瞬时切换（不做颜色插值），达标光边常亮 */
+  .ss-hero,
+  .ss-hero-dot {
+    transition: none !important;
+  }
+
+  .ss-hero--done::after {
+    opacity: 0.6;
     animation: none !important;
   }
 

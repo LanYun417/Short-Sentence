@@ -57,6 +57,87 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 /** 完成数滚动动画。 */
 const doneDisplay = useCountUp(todayDone);
 
+/* ------------------------------ 进度卡片的阶段效果 ------------------------------ */
+
+/**
+ * 进度阶段：卡片配色随完成度由冷到暖逐级升温，达标转金橙。
+ *
+ * 分五档而不是「线性插值」：色相跨太多时连续插值会经过一段浑浊的灰调，
+ * 分段各自给一组和谐的起止色，档位之间再由 CSS 对色标插值平滑过渡。
+ */
+type HeroStageKey = 'idle' | 'warmup' | 'push' | 'sprint' | 'done';
+
+/** 各阶段的渐变三色与投影色（与 main.css 的 --hero-* 变量对应）。 */
+const HERO_STAGES: Record<HeroStageKey, { from: string; via: string; to: string; shadow: string }> = {
+  // 还没开始：青蓝，冷静、不催人
+  idle: { from: '#0284c7', via: '#0e7490', to: '#0f766e', shadow: 'rgb(8 145 178 / 25%)' },
+  // 起步 1~33%：品牌蓝紫
+  warmup: { from: '#0ea5e9', via: '#6366f1', to: '#8b5cf6', shadow: 'rgb(99 102 241 / 25%)' },
+  // 推进 34~66%：紫
+  push: { from: '#6366f1', via: '#8b5cf6', to: '#d946ef', shadow: 'rgb(168 85 247 / 30%)' },
+  // 冲刺 67~99%：紫 → 玫红 → 橙，已经热起来了
+  sprint: { from: '#8b5cf6', via: '#f43f5e', to: '#f97316', shadow: 'rgb(244 63 94 / 30%)' },
+  // 达标：金橙，奖励感
+  done: { from: '#fbbf24', via: '#f59e0b', to: '#f97316', shadow: 'rgb(249 115 22 / 35%)' },
+};
+
+/** 当前阶段（达标优先判定，避免 pct 取整到 100 但实际未达标时误判）。 */
+const heroStage = computed<{ key: HeroStageKey } & (typeof HERO_STAGES)[HeroStageKey]>(() => {
+  if (goalReached.value) {
+    return { key: 'done', ...HERO_STAGES.done };
+  }
+  if (todayDone.value <= 0) {
+    return { key: 'idle', ...HERO_STAGES.idle };
+  }
+  if (goalPct.value >= 67) {
+    return { key: 'sprint', ...HERO_STAGES.sprint };
+  }
+  if (goalPct.value >= 34) {
+    return { key: 'push', ...HERO_STAGES.push };
+  }
+  return { key: 'warmup', ...HERO_STAGES.warmup };
+});
+
+/** 光斑强度随进度增强：刚起步时若有若无，冲刺时最亮。 */
+const heroGlowOpacity = computed(() => {
+  const map: Record<HeroStageKey, number> = { idle: 0.35, warmup: 0.6, push: 0.8, sprint: 1, done: 1 };
+  return map[heroStage.value.key];
+});
+
+/**
+ * 进度文案：还没开始时不说「还差 20 句」（像催作业），达标后交给右上的「已达标」徽标。
+ */
+const heroHint = computed(() => {
+  if (goalReached.value) {
+    return '';
+  }
+  if (todayDone.value <= 0) {
+    return '今天还没开始';
+  }
+  return `还差 ${goalRemaining.value} 句`;
+});
+
+/**
+ * 阶段升级时给卡片一次轻微「顶一下」的正反馈（scale 而非 animation：
+ * 本元素已有 .anim-in 入场动画，再叠一个 animation 会互相覆盖）。
+ */
+const heroPulse = ref(false);
+let pulseTimer: ReturnType<typeof setTimeout> | 0 = 0;
+watch(
+  () => heroStage.value.key,
+  (next, prev) => {
+    // 首帧不弹（SSR 水合时 prev 为 undefined）
+    if (!prev || next === 'idle') {
+      return;
+    }
+    heroPulse.value = true;
+    clearTimeout(pulseTimer);
+    pulseTimer = setTimeout(() => {
+      heroPulse.value = false;
+    }, 460);
+  },
+);
+
 /* ------------------------------ 今日 AI 句签 ------------------------------ */
 
 const { status: todayCard, markObtained } = useTodayCard();
@@ -144,6 +225,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(closeTimer);
+  clearTimeout(pulseTimer);
 });
 
 /** 提交答案。 */
@@ -169,17 +251,25 @@ function onFavorite(): void {
 
 <template>
   <div class="mx-auto max-w-xl px-4 py-6 md:py-8">
-    <!-- 今日进度 Hero -->
+    <!-- 今日进度 Hero：配色随完成度升温（未开始青蓝 → 冲刺玫红 → 达标金橙），见 heroStage -->
     <section
-      class="anim-in anim-gradient relative mb-5 overflow-hidden rounded-3xl bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 bg-size-[200%_200%] p-5 text-white shadow-lg shadow-indigo-500/25"
+      class="ss-hero anim-in anim-gradient relative mb-5 overflow-hidden rounded-3xl bg-size-[200%_200%] p-5 text-white"
+      :class="{ 'ss-hero--done': heroStage.key === 'done', 'scale-[1.012]': heroPulse }"
+      :style="{
+        '--hero-from': heroStage.from,
+        '--hero-via': heroStage.via,
+        '--hero-to': heroStage.to,
+        '--hero-shadow': heroStage.shadow,
+      }"
     >
-      <!-- 装饰光斑（缓慢漂移，让渐变区块不死板） -->
+      <!-- 装饰光斑（缓慢漂移；亮度随进度增强，冲刺阶段最明显） -->
       <div
-        class="anim-drift pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl"
+        class="anim-drift pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl transition-opacity duration-700"
+        :style="{ opacity: heroGlowOpacity }"
       />
       <div
-        class="anim-drift pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-sky-300/25 blur-2xl"
-        style="animation-delay: -6s"
+        class="anim-drift pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-sky-300/25 blur-2xl transition-opacity duration-700"
+        :style="{ animationDelay: '-6s', opacity: heroGlowOpacity }"
       />
 
       <div class="relative flex items-end justify-between">
@@ -199,14 +289,24 @@ function onFavorite(): void {
         >
           <UIcon name="i-lucide-check-circle-2" class="h-3.5 w-3.5" /> 已达标
         </span>
-        <span v-else-if="todayGoal > 0" class="text-xs text-white/80">还差 {{ goalRemaining }} 句</span>
+        <span v-else-if="heroHint" class="text-xs text-white/80">{{ heroHint }}</span>
       </div>
 
-      <!-- 进度条 -->
-      <div class="relative mt-4 h-2 w-full overflow-hidden rounded-full bg-white/25">
+      <!-- 进度条：末端光点跟住完成度，达标转金色 -->
+      <div class="relative mt-4 h-2 w-full rounded-full bg-white/25">
         <div
-          class="h-full rounded-full bg-white shadow-sm transition-all duration-700 ease-out"
+          class="h-full rounded-full bg-white/95 transition-all duration-700 ease-out"
           :style="{ width: `${goalPct}%` }"
+        />
+        <span
+          class="ss-hero-dot absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          :class="
+            heroStage.key === 'done'
+              ? 'bg-amber-200 shadow-[0_0_10px_2px_rgba(251,191,36,0.75)]'
+              : 'bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.5)]'
+          "
+          :style="{ left: `${goalPct}%` }"
+          aria-hidden="true"
         />
       </div>
     </section>
