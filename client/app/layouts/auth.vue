@@ -12,7 +12,7 @@
 </script>
 
 <template>
-  <div class="min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <div class="ss-auth-layout min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <slot />
   </div>
 </template>

@@ -275,6 +275,16 @@
   transform: translateY(-6px);
 }
 
+/* 认证页（登录 / 注册）专用：入场位移改为向上。
+   这两页整页高度正好等于视口（min-h-dvh），滚动条由 body 承担；
+   而通用入场起始态是向下位移 translateY(10px)，会让文档短暂高出视口 10px，
+   于是切换时闪出一条滚动条（实测 scrollHeight 900 → 910）。
+   改成与离场同向的上飘后不再撑高文档（实测恒为 900），推页动感仍在。
+   业务页在 default 布局里由 AppScrollArea 内部滚动、body 从不滚动，故不受影响。 */
+.ss-auth-layout .page-enter-from {
+  transform: translateY(-10px);
+}
+
 /* 尊重系统「减少动态效果」偏好 */
 @media (prefers-reduced-motion: reduce) {
   .anim-in,
