@@ -248,18 +248,18 @@ export class WordRootService {
 
   /** 调上游做一次词根解析（非流式）。 */
   private async analyze(word: string): Promise<WordRootAnalysis> {
-    if (config.ai.nvidia.apiKey.trim().length === 0) {
-      throw new Error('AI 能力未配置（AI_NVIDIA_API_KEY 缺失）');
+    if (config.ai.agnes.apiKey.trim().length === 0) {
+      throw new Error('AI 能力未配置（AI_AGNES_API_KEY 缺失）');
     }
     const startedAt = Date.now();
-    const response = await fetch(`${config.ai.nvidia.baseUrl}/chat/completions`, {
+    const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.ai.nvidia.apiKey}`,
+        Authorization: `Bearer ${config.ai.agnes.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: config.ai.nvidia.model,
+        model: config.ai.agnes.textModel,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `单词：${word}` },
@@ -281,8 +281,8 @@ export class WordRootService {
     const content = payload.choices?.[0]?.message?.content ?? '';
     await this.aiCallLog.record({
       type: 'word_root',
-      provider: 'nvidia',
-      model: config.ai.nvidia.model,
+      provider: 'agnes',
+      model: config.ai.agnes.textModel,
       bizId: 0,
       promptTokens: payload.usage?.prompt_tokens ?? 0,
       completionTokens: payload.usage?.completion_tokens ?? 0,

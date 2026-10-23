@@ -1,13 +1,13 @@
 /**
  * 题库批量生成服务（每日定时 + 手动触发）。
- * 模块职责：把「生题（DeepSeek）→ 生图（Agnes）→ 转 webp 入库 → 置 ready」
+ * 模块职责：把「生文（Agnes 2.5 Flash）→ 生图（Agnes）→ 转 webp 入库 → 置 ready」
  * 编排成可观测、可断点续跑的流水线。
  *
  * 关键设计：
  * - **进程内互斥**：同一时刻只跑一个批次（定时与手动触发不叠加、多 worker 不重复烧配额）；
  * - **断点续跑**：批次状态落 sentence_gen_task，重启后对未完成的批次继续执行；
  * - **幂等**：一天一批（biz_date 唯一），当天已有成功批次时拒绝再次触发；
- * - **限流**：生题信号量 + 指数退避重试（NVIDIA 约 40 RPM）；生图独立信号量（Agnes 限流未知）；
+ * - **限流**：生文信号量 + 指数退避重试；生图独立信号量（两者限流均未知，保守并发）；
  * - **部分失败不判整批失败**：有净增题目即算成功，失败数进 failCount 供运营补跑；
  * - **调度不在这里**：cron 由 TaskModule 的任务注册表统一注册（任务名 `sentence-gen`），
  *   本服务只暴露执行入口。早期版本在此处自行 addCronJob，结果后台「定时任务」页看不到它、
@@ -19,7 +19,7 @@ import { config } from '../../common/config/config.js';
 import { AppException } from '../../common/exception/app.exception.js';
 import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { DeepSeekSentenceProvider } from '../../common/ai/deepseek-sentence.provider.js';
+import { AgnesSentenceProvider } from '../../common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
@@ -56,7 +56,7 @@ export class SentenceGenService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sentenceGen: DeepSeekSentenceProvider,
+    private readonly sentenceGen: AgnesSentenceProvider,
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
   ) {}

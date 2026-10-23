@@ -20,7 +20,11 @@ import { CheckinService } from '../checkin/checkin.service.js';
 import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
 import { AnswerSentenceDto } from './dto.js';
 
-/** 间隔重复梯度（天）：下标 = reviewLevel。 */
+/**
+ * 间隔重复梯度（天）：下标 = reviewLevel。
+ * 下标 0（答错/未掌握）**不再走天数梯度**——答错立即到期（见 answer()）；
+ * 保留占位只是为了避免下标偏移，其值无实际意义。
+ */
 const REVIEW_INTERVAL_DAYS = [1, 3, 7, 15, 30];
 
 /** 复习池候选批大小（在此范围内随机取，兼顾「到期优先」与「不总是同一题」）。 */
@@ -183,7 +187,11 @@ export class QuestionsService {
       select: { reviewLevel: true },
     });
     const level = isCorrect ? Math.min((last?.reviewLevel ?? 0) + 1, REVIEW_INTERVAL_DAYS.length - 1) : 0;
-    const nextReviewAt = this.addDays(new Date(), REVIEW_INTERVAL_DAYS[level]);
+    // 答错：**立即到期**——当天就在错题库与练习流中复现（此前答错也走 +1 天，
+    // 导致用户刚答错时错题库恒为空，看起来像数据坏了）。
+    // 练习流不会因此连续追问同一题：next() 有防重窗口（recentSentenceIds）兜底。
+    // 答对：按间隔重复等级走天数梯度。
+    const nextReviewAt = isCorrect ? this.addDays(new Date(), REVIEW_INTERVAL_DAYS[level]) : new Date();
 
     const record = await this.prisma.sentenceRecord.create({
       data: {

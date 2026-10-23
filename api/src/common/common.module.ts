@@ -21,7 +21,7 @@ import { FileService } from './file/file.service.js';
 import { ImageScaleService, HotlinkGuardMiddleware, ImageScaleMiddleware } from './file/file-guards.js';
 import { IpRegionService } from './ip/ip-region.service.js';
 import { AiCallLogService } from './ai/ai-call-log.service.js';
-import { DeepSeekSentenceProvider } from './ai/deepseek-sentence.provider.js';
+import { AgnesSentenceProvider } from './ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from './ai/agnes-image.provider.js';
 
 @Global()
@@ -46,7 +46,7 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     IpRegionService,
     // AI 能力（「短句」题库生题/生图；密钥缺失时由各 Provider 的 enabled 标记禁用）
     AiCallLogService,
-    DeepSeekSentenceProvider,
+    AgnesSentenceProvider,
     AgnesImageProvider,
     // 静态资源链的中间件：由 app.setup.ts 显式挂到 express 上，需要能被 app.get 解析
     HotlinkGuardMiddleware,
@@ -70,7 +70,7 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     ImageScaleService,
     IpRegionService,
     AiCallLogService,
-    DeepSeekSentenceProvider,
+    AgnesSentenceProvider,
     AgnesImageProvider,
   ],
 })

@@ -1,9 +1,9 @@
 /**
- * 客户端 AI 服务（流式代理 DeepSeek）。
+ * 客户端 AI 服务（流式代理 Agnes）。
  * 模块职责：场景延展造句、词根词缀拆解——用户端「AI 拓展」差异化能力。
  *
  * 关键约定：
- * - **密钥只在服务端**：前端只见到本服务转发的 SSE，上游 NVIDIA Key 不暴露；
+ * - **密钥只在服务端**：前端只见到本服务转发的 SSE，上游 Agnes Key 不暴露；
  * - **流式转发**：上游 chunk 实时透传，客户端断连立即 AbortController 中止上游（防泄漏计费）；
  * - **错误不透出细节**：流内以 error 事件下发统一文案，堆栈只进日志；
  * - **留痕**：每次调用落 ai_call_log（含 usage，需上游 stream_options.include_usage）。
@@ -67,17 +67,17 @@ export class ClientAiService {
 
       void (async () => {
         try {
-          if (config.ai.nvidia.apiKey.trim().length === 0) {
-            throw new AiProviderError('AI 能力未配置（AI_NVIDIA_API_KEY 缺失）', { retryable: false });
+          if (config.ai.agnes.apiKey.trim().length === 0) {
+            throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
           }
-          const response = await fetch(`${config.ai.nvidia.baseUrl}/chat/completions`, {
+          const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${config.ai.nvidia.apiKey}`,
+              Authorization: `Bearer ${config.ai.agnes.apiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: config.ai.nvidia.model,
+              model: config.ai.agnes.textModel,
               messages: [
                 { role: 'system', content: params.system },
                 { role: 'user', content: params.user },
@@ -110,8 +110,8 @@ export class ClientAiService {
           subscriber.complete();
           await this.aiCallLog.record({
             type: params.type,
-            provider: 'nvidia',
-            model: config.ai.nvidia.model,
+            provider: 'agnes',
+            model: config.ai.agnes.textModel,
             bizId: params.bizId,
             promptTokens,
             completionTokens,
@@ -129,8 +129,8 @@ export class ClientAiService {
           );
           await this.aiCallLog.record({
             type: params.type,
-            provider: 'nvidia',
-            model: config.ai.nvidia.model,
+            provider: 'agnes',
+            model: config.ai.agnes.textModel,
             bizId: params.bizId,
             latencyMs: Date.now() - startedAt,
             status: 'failed',

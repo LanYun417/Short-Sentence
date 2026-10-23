@@ -1,9 +1,13 @@
 /**
- * DeepSeek 生题 Provider（经 NVIDIA integrate 的 OpenAI 兼容接口）。
- * 模块职责：按主题批量生成句子草稿（英文句子/中文释义/音标/对话场景提示词/难度/分类）。
+ * Agnes 生题 Provider（agnes-2.5-flash，OpenAI 兼容 chat/completions）。
+ * 模块职责：按主题批量生成句子草稿（英文句子/中文释义/音标/对话场景提示词/难度/分类），
+ * 以及每日句签的主题文案。
  *
- * 契约：POST {baseUrl}/chat/completions，Bearer 认证，response_format=json_object。
- * 限流：上游约 40 RPM，调用方（生成流水线）必须用信号量控制并发，本 Provider 只管单次调用。
+ * 契约（官方文档）：POST {baseUrl}/chat/completions，Bearer 认证；
+ * 请求 { model: 'agnes-2.5-flash', messages, temperature, response_format: json_object }；
+ * 响应 choices[0].message.content（OpenAI 兼容）。
+ * Base URL 与密钥与生图（AgnesImageProvider）共用，仅模型不同。
+ * 限流未知，调用方（生成流水线）必须用信号量控制并发，本 Provider 只管单次调用。
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../config/config.js';
@@ -31,14 +35,14 @@ function str(value: unknown, max: number): string {
 }
 
 @Injectable()
-export class DeepSeekSentenceProvider implements SentenceGenProvider {
-  private readonly logger = new Logger(DeepSeekSentenceProvider.name);
+export class AgnesSentenceProvider implements SentenceGenProvider {
+  private readonly logger = new Logger(AgnesSentenceProvider.name);
 
   constructor(private readonly aiCallLog: AiCallLogService) {}
 
   /** 密钥未配置时禁用生题能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
-    return config.ai.nvidia.apiKey.trim().length > 0;
+    return config.ai.agnes.apiKey.trim().length > 0;
   }
 
   /**
@@ -49,7 +53,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
    */
   async generateBatch(theme: string, count: number): Promise<SentenceDraft[]> {
     if (!this.enabled) {
-      throw new AiProviderError('生题能力未配置（AI_NVIDIA_API_KEY 缺失）', { retryable: false });
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
 
     const systemPrompt = [
@@ -64,14 +68,14 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
 
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${config.ai.nvidia.baseUrl}/chat/completions`, {
+      const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${config.ai.nvidia.apiKey}`,
+          Authorization: `Bearer ${config.ai.agnes.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.ai.nvidia.model,
+          model: config.ai.agnes.textModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `主题：${theme}，数量：${count}` },
@@ -97,9 +101,7 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       const message = body.choices?.[0]?.message;
-      // content 为空时回退 reasoning_content：NVIDIA 上的 deepseek-v4.1-flash 属推理模型，
-      // 会把全部输出（含目标 JSON）放进 reasoning_content，而 content 为 null。
-      // 只读 content 会拿到空串，表现为「接口 200 正常，却每批零净增、题库始终为空」。
+      // content 为空时回退 reasoning_content：推理模型可能把输出放在 reasoning_content 里
       const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
       const usage: ChatUsage = {
         promptTokens: body.usage?.prompt_tokens ?? 0,
@@ -112,8 +114,8 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       }
       await this.aiCallLog.record({
         type: 'sentence_gen',
-        provider: 'nvidia',
-        model: config.ai.nvidia.model,
+        provider: 'agnes',
+        model: config.ai.agnes.textModel,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         latencyMs: Date.now() - startedAt,
@@ -123,8 +125,8 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
     } catch (error) {
       await this.aiCallLog.record({
         type: 'sentence_gen',
-        provider: 'nvidia',
-        model: config.ai.nvidia.model,
+        provider: 'agnes',
+        model: config.ai.agnes.textModel,
         latencyMs: Date.now() - startedAt,
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : String(error),
@@ -139,16 +141,16 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
   }
 
   /**
-   * 生成每日句签主题（一张精美句签的文案 + 生图提示词）。
-   * 与生题共用上游与日志；输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
+   * 生成每日句签主题（一张精美闪卡的文案 + 生图提示词）。
+   * 输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
    */
   async generateSentenceCardTheme(day: string): Promise<SentenceCardTheme> {
     if (!this.enabled) {
-      throw new AiProviderError('生题能力未配置（AI_NVIDIA_API_KEY 缺失）', { retryable: false });
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
 
     const systemPrompt = [
-      '你是「短句」App 的每日句签设计师，为用户生成一张当天可收集的精美句签。',
+      '你是「短句」App 的每日句签设计师，为用户生成一张当天可收集的精美闪卡。',
       '严格要求：',
       '1. 只输出 JSON，形状为 {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}，不要任何解释文字；',
       '2. title 是英文主题名（2~4 个单词，如 Morning Ritual），titleZh 是中文主题名；',
@@ -160,14 +162,14 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
 
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${config.ai.nvidia.baseUrl}/chat/completions`, {
+      const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${config.ai.nvidia.apiKey}`,
+          Authorization: `Bearer ${config.ai.agnes.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.ai.nvidia.model,
+          model: config.ai.agnes.textModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `生成 ${day} 的每日句签主题。` },
@@ -191,7 +193,6 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
         usage?: { prompt_tokens?: number; completion_tokens?: number };
       };
       const message = body.choices?.[0]?.message;
-      // 与生题同因：推理模型会把输出放进 reasoning_content，content 可能为 null
       const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
       const usage: ChatUsage = {
         promptTokens: body.usage?.prompt_tokens ?? 0,
@@ -204,8 +205,8 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
       }
       await this.aiCallLog.record({
         type: 'sentence_card_gen',
-        provider: 'nvidia',
-        model: config.ai.nvidia.model,
+        provider: 'agnes',
+        model: config.ai.agnes.textModel,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         latencyMs: Date.now() - startedAt,
@@ -215,8 +216,8 @@ export class DeepSeekSentenceProvider implements SentenceGenProvider {
     } catch (error) {
       await this.aiCallLog.record({
         type: 'sentence_card_gen',
-        provider: 'nvidia',
-        model: config.ai.nvidia.model,
+        provider: 'agnes',
+        model: config.ai.agnes.textModel,
         latencyMs: Date.now() - startedAt,
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : String(error),

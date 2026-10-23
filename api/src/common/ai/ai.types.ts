@@ -4,7 +4,7 @@
  * 换模型、换厂商（或加 mock 实现）都不需要改动业务代码。
  */
 
-/** 生题草稿（DeepSeek 输出解析后的单条）。 */
+/** 生题草稿（Agnes 输出解析后的单条）。 */
 export interface SentenceDraft {
   /** 英文句子（入库唯一键） */
   sentenceEn: string;
@@ -61,7 +61,7 @@ export interface ImageGenProvider {
   generate(prompt: string, options: { size: string; ratio: string }): Promise<GeneratedImage>;
 }
 
-/** OpenAI 兼容用量统计（DeepSeek / NVIDIA 返回）。 */
+/** OpenAI 兼容用量统计（Agnes 返回）。 */
 export interface ChatUsage {
   promptTokens: number;
   completionTokens: number;

@@ -283,19 +283,16 @@ export const config = {
    * 与 JWT 的 fail-fast 区别：JWT 缺失等于鉴权体系不可用，AI 缺失只是增值功能不可用。
    */
   ai: {
-    nvidia: {
-      /** NVIDIA integrate（OpenAI 兼容）入口，DeepSeek 生题走这里 */
-      baseUrl: process.env.AI_NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1',
-      apiKey: process.env.AI_NVIDIA_API_KEY ?? '',
-      model: process.env.AI_NVIDIA_MODEL ?? 'deepseek-ai/deepseek-v4.1-flash',
-    },
     agnes: {
-      /** Agnes AI 生图入口 */
+      /** Agnes AI 入口（生文与生图共用同一 Base URL 与密钥） */
       baseUrl: process.env.AI_AGNES_BASE_URL ?? 'https://api.agnes-ai.cn/v1',
       apiKey: process.env.AI_AGNES_API_KEY ?? '',
-      model: process.env.AI_AGNES_MODEL ?? 'agnes-image-2.5-flash',
+      /** 图像模型（题目配图 / 句签生图） */
+      imageModel: process.env.AI_AGNES_IMAGE_MODEL ?? process.env.AI_AGNES_MODEL ?? 'agnes-image-2.5-flash',
+      /** 文本模型（生题 / 造句 / 词根解析 / 句签文案；OpenAI 兼容 chat/completions） */
+      textModel: process.env.AI_AGNES_TEXT_MODEL ?? 'agnes-2.5-flash',
     },
-    /** 生题并发上限（NVIDIA 约 40 RPM，保守取 2） */
+    /** 生题并发上限（Agnes 限流未知，保守取 2） */
     textConcurrency: Math.max(1, toNumber(process.env.AI_TEXT_CONCURRENCY, 2)),
     /** 生图并发上限（Agnes 限流未知，保守取 3） */
     imageConcurrency: Math.max(1, toNumber(process.env.AI_IMAGE_CONCURRENCY, 3)),

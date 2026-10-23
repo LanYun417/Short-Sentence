@@ -19,7 +19,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { FileService } from '../src/common/file/file.service.js';
 import { ImageScaleService } from '../src/common/file/file-guards.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
-import { DeepSeekSentenceProvider } from '../src/common/ai/deepseek-sentence.provider.js';
+import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
 import { FilesService } from '../src/modules/files/files.service.js';
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   const aiCallLog = new AiCallLogService(prisma);
   const gen = new SentenceGenService(
     prisma,
-    new DeepSeekSentenceProvider(aiCallLog),
+    new AgnesSentenceProvider(aiCallLog),
     new AgnesImageProvider(aiCallLog),
     new FileService(prisma),
   );

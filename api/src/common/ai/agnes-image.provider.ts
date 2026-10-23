@@ -42,7 +42,7 @@ export class AgnesImageProvider implements ImageGenProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.ai.agnes.model,
+          model: config.ai.agnes.imageModel,
           prompt,
           size: options.size,
           ratio: options.ratio,
@@ -98,7 +98,7 @@ export class AgnesImageProvider implements ImageGenProvider {
     await this.aiCallLog.record({
       type: 'image_gen',
       provider: 'agnes-ai',
-      model: config.ai.agnes.model,
+      model: config.ai.agnes.imageModel,
       latencyMs,
       status,
       errorMessage,

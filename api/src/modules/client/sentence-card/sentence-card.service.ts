@@ -13,7 +13,7 @@ import sharp from 'sharp';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
 import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
-import { DeepSeekSentenceProvider } from '../../../common/ai/deepseek-sentence.provider.js';
+import { AgnesSentenceProvider } from '../../../common/ai/agnes-sentence.provider.js';
 import { withRetry } from '../../../common/ai/concurrency.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -40,7 +40,7 @@ export class SentenceCardService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly themeGen: DeepSeekSentenceProvider,
+    private readonly themeGen: AgnesSentenceProvider,
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
   ) {}
