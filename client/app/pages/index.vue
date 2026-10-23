@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * 首页刷题（核心页面）。
- * 布局：[今日进度 Hero] [题干] [16:9 场景图] [输入框] [确定] → 翻转 → [下一题]。
+ * 布局：[今日进度 Hero] [作答方式] [难度] [题干 + 16:9 场景图 + 作答区] → 翻转 → [下一题]。
+ * 作答支持两种模式（默写 / 拼词），页面不再放操作提示文案，只靠控件本身表达。
  * 达成每日目标后自动领取并展示「今日 AI 句签」。
  */
 import type { SentenceCard, NextQuestion } from '~/types';
@@ -10,9 +11,10 @@ import { useQuestionSession } from '~/composables/useQuestionSession';
 
 definePageMeta({ middleware: ['auth'] });
 
+// 页面描述只进 <head>（SEO / 分享卡片），不在页面上渲染
 usePageSeo({
   title: '今日刷题',
-  description: '看中文想英文，提交后翻卡对照。每天 20 句，看图学地道英语口语。',
+  description: '看图学地道英语口语：看中文写英文，提交后翻卡对照。每天 20 句，间隔重复记得住。',
 });
 
 const {
@@ -54,13 +56,6 @@ const goalRemaining = computed(() => Math.max(0, todayGoal.value - todayDone.val
 
 /** 完成数滚动动画。 */
 const doneDisplay = useCountUp(todayDone);
-
-/** 操作提示：只说明怎么作答，不提示两种模式的经验差异（产品要求）。 */
-const modeHint = computed(() =>
-  mode.value === 'assemble'
-    ? '看中文，把词块按顺序拼成英文句子；提交后翻卡对照'
-    : '看中文，想英文；提交后翻卡对照。回车 = 确定 / 下一题',
-);
 
 /* ------------------------------ 今日 AI 句签 ------------------------------ */
 
@@ -225,10 +220,6 @@ function onFavorite(): void {
     <div class="anim-in mb-4" :style="{ animationDelay: '60ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
-
-    <p class="anim-in mb-4 text-center text-sm text-slate-400" :style="{ animationDelay: '80ms' }">
-      {{ modeHint }}
-    </p>
 
     <!-- 错误态 -->
     <UAlert
