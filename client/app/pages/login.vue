@@ -104,8 +104,8 @@ async function onSubmit(): Promise<void> {
             <span class="ml-auto tabular-nums">今日 7/20</span>
           </div>
           <p class="mt-2.5 text-center text-sm font-semibold">我要烤三文鱼，谢谢。再来一杯水。</p>
-          <div class="mt-2 grid aspect-[16/9] place-items-center rounded-xl bg-white/15">
-            <UIcon name="i-lucide-image" class="h-6 w-6 text-white/40" />
+          <div class="mt-2 grid aspect-[16/9] place-items-center rounded-xl bg-linear-to-br from-white/25 to-white/5">
+            <UIcon name="i-lucide-image" class="h-6 w-6 text-white/50" />
           </div>
           <div class="mt-2 flex gap-2">
             <div class="h-8 flex-1 rounded-lg bg-white/15" />
@@ -134,8 +134,19 @@ async function onSubmit(): Promise<void> {
 
     <!-- 表单列：内容区自己滚，超出时出现悬浮滚动条 -->
     <AppScrollArea>
-      <div class="flex min-h-full items-center justify-center bg-slate-50 px-4 py-10 dark:bg-slate-950">
-        <div class="w-full max-w-sm">
+      <div
+        class="relative flex min-h-full items-center justify-center overflow-hidden bg-slate-50 px-4 py-10 dark:bg-slate-950"
+      >
+        <!-- 装饰光斑：给纯色背景一点纵深 -->
+        <div
+          class="anim-drift pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-200/45 blur-3xl dark:bg-sky-500/10"
+        />
+        <div
+          class="anim-drift pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-indigo-200/45 blur-3xl dark:bg-indigo-500/10"
+          style="animation-delay: -7s"
+        />
+
+        <div class="relative w-full max-w-sm">
           <!-- 移动端品牌头 -->
           <div class="anim-in mb-8 flex flex-col items-center text-center lg:hidden">
             <span
@@ -153,7 +164,13 @@ async function onSubmit(): Promise<void> {
           </div>
 
           <div class="anim-in" style="animation-delay: 160ms">
-            <UCard :ui="{ body: 'p-6' }">
+            <UCard
+              :ui="{
+                body: 'p-6',
+                ring: 'ring-1 ring-slate-200/80 dark:ring-slate-700/80',
+                shadow: 'shadow-xl shadow-slate-900/5',
+              }"
+            >
               <form class="space-y-4" @submit.prevent="onSubmit">
                 <UFormField label="邮箱">
                   <UInput

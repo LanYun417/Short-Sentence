@@ -161,13 +161,16 @@ function onLogout(): void {
                 @click="onLogout"
               />
               <!-- 头像固定在最右侧（点击进个人中心） -->
+              <!-- 刻意不用 UAvatar/NuxtImg：它会把 /static 当本地文件解析走 /_ipx 代理，
+                   而配图实际在 API 侧（devProxy 只对 HTTP 请求生效），导致 IPX_FILE_NOT_FOUND。
+                   这里用裸 <img>，与 profile 页头像一致。 -->
               <NuxtLink to="/profile" class="ml-1" aria-label="个人中心">
-                <UAvatar
-                  :src="avatarSrc"
-                  :text="avatarText"
-                  size="sm"
-                  class="transition-transform duration-200 hover:scale-110"
-                />
+                <span
+                  class="grid size-8 place-items-center overflow-hidden rounded-full bg-linear-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white transition-transform duration-200 hover:scale-110"
+                >
+                  <img v-if="avatarSrc" :src="avatarSrc" alt="头像" class="h-full w-full object-cover" />
+                  <span v-else>{{ avatarText }}</span>
+                </span>
               </NuxtLink>
             </template>
           </div>

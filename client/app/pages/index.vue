@@ -59,6 +59,16 @@ const sentenceCard = ref<SentenceCard | null>(null);
 const claiming = ref(false);
 const sentenceCardImageSrc = computed(() => sentenceCard.value?.imageUrl ?? undefined);
 
+/** 句签日期（YYYY-MM-DD → 「10月23日」）。 */
+const sentenceCardDate = computed(() => {
+  const raw = sentenceCard.value?.bizDate;
+  if (!raw) {
+    return '';
+  }
+  const [, month, day] = raw.split('-');
+  return month && day ? `${Number(month)}月${Number(day)}日` : raw;
+});
+
 /** 领取今日句签（达标后自动调用；幂等，失败静默不影响刷题）。 */
 async function claimSentenceCard(): Promise<void> {
   if (claiming.value || !goalReached.value) {
@@ -216,39 +226,59 @@ function onFavorite(): void {
 
       <!-- 达标 → 今日 AI 句签（自动领取并展示） -->
       <div v-if="goalReached" class="anim-pop mt-5">
-        <!-- 已领取：精美闪卡 -->
+        <!-- 已领取：精美句签卡（文字叠在配图上，配渐变蒙版保证可读） -->
         <div
           v-if="sentenceCard"
-          class="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-amber-200/60 dark:bg-slate-800 dark:ring-amber-500/20"
+          class="group relative overflow-hidden rounded-3xl shadow-xl ring-1 ring-amber-200/60 dark:ring-amber-500/20"
         >
           <div class="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
             <img
               v-if="sentenceCardImageSrc"
               :src="sentenceCardImageSrc"
               :alt="sentenceCard.title"
-              class="h-full w-full object-cover"
+              class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div v-else class="flex h-full items-center justify-center text-slate-400">
               <UIcon name="i-lucide-image-off" class="h-8 w-8" />
             </div>
-            <span
-              class="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur"
-            >
-              <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
-              今日句签 · 已获得
-            </span>
-          </div>
-          <div class="p-5">
-            <div class="flex items-baseline gap-2">
-              <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ sentenceCard.titleZh }}</h3>
-              <span class="text-sm text-slate-400">{{ sentenceCard.title }}</span>
+
+            <!-- 渐变蒙版：让文字在任何配图上都清晰 -->
+            <div
+              class="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/75 via-black/35 to-transparent"
+            />
+
+            <!-- 顶部：已获得徽标 + 日期 -->
+            <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-amber-600 shadow-sm backdrop-blur dark:bg-slate-900/70 dark:text-amber-400"
+              >
+                <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
+                今日句签 · 已获得
+              </span>
+              <span
+                class="rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium tabular-nums text-white backdrop-blur"
+              >
+                {{ sentenceCardDate }}
+              </span>
             </div>
-            <p class="mt-2 text-base font-medium text-slate-700 dark:text-slate-200">{{ sentenceCard.sentenceEn }}</p>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ sentenceCard.translationZh }}</p>
-            <p class="mt-3 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-              <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
-              完成今日目标，收下这张属于你的闪卡
-            </p>
+
+            <!-- 底部：主题 + 短句 -->
+            <div class="absolute inset-x-0 bottom-0 p-4 text-white">
+              <div class="flex items-baseline gap-2">
+                <h3 class="text-lg font-bold drop-shadow-sm">{{ sentenceCard.titleZh }}</h3>
+                <span class="text-xs text-white/70">{{ sentenceCard.title }}</span>
+              </div>
+              <p class="mt-1.5 text-base font-semibold drop-shadow-sm">{{ sentenceCard.sentenceEn }}</p>
+              <p class="mt-0.5 text-sm text-white/80 drop-shadow-sm">{{ sentenceCard.translationZh }}</p>
+            </div>
+          </div>
+
+          <!-- 卡脚 -->
+          <div
+            class="flex items-center gap-1.5 bg-white px-4 py-2.5 text-xs text-amber-600 dark:bg-slate-800 dark:text-amber-400"
+          >
+            <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
+            完成今日目标，收下这张属于你的闪卡
           </div>
         </div>
 
