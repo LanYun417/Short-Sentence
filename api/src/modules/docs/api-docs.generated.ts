@@ -5806,6 +5806,44 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "Gamify",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/gamify/overview",
+        "summary": "成长概览（XP / 等级 / 成就 / 场景地图）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/gamify/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "Library",
     "endpoints": [
       {

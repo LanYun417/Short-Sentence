@@ -80,8 +80,9 @@ const avatarSrc = computed(() =>
 /** 表单 Tab（slot 字段指定内容插槽名）。 */
 const TABS = [
   { label: '基本资料', icon: 'i-lucide-user-round', slot: 'profile' },
-  { label: '账号安全', icon: 'i-lucide-shield-check', slot: 'security' },
+  { label: '成长', icon: 'i-lucide-trending-up', slot: 'growth' },
   { label: '我的句签', icon: 'i-lucide-sparkles', slot: 'sentenceCards' },
+  { label: '账号安全', icon: 'i-lucide-shield-check', slot: 'security' },
 ];
 
 /** 回填表单。 */
@@ -347,6 +348,13 @@ async function onChangePassword(): Promise<void> {
               <UButton icon="i-lucide-check" :loading="saving" @click="onSave">保存资料</UButton>
               <span v-if="saveMessage" class="text-sm text-slate-400">{{ saveMessage }}</span>
             </div>
+          </div>
+        </template>
+
+        <!-- 成长：XP / 等级 / 成就 / 场景探索 -->
+        <template #growth>
+          <div class="mt-4">
+            <GrowthPanel />
           </div>
         </template>
 

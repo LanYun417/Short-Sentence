@@ -29,12 +29,14 @@ export type AggregateClientUser = {
 export type ClientUserAvgAggregateOutputType = {
   id: number | null
   avatarFileId: number | null
+  xp: number | null
   status: number | null
 }
 
 export type ClientUserSumAggregateOutputType = {
   id: bigint | null
   avatarFileId: bigint | null
+  xp: number | null
   status: number | null
 }
 
@@ -47,6 +49,7 @@ export type ClientUserMinAggregateOutputType = {
   birthday: Date | null
   gender: string | null
   signature: string | null
+  xp: number | null
   status: number | null
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
@@ -63,6 +66,7 @@ export type ClientUserMaxAggregateOutputType = {
   birthday: Date | null
   gender: string | null
   signature: string | null
+  xp: number | null
   status: number | null
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
@@ -79,6 +83,7 @@ export type ClientUserCountAggregateOutputType = {
   birthday: number
   gender: number
   signature: number
+  xp: number
   status: number
   lastLoginAt: number
   passwordChangedAt: number
@@ -91,12 +96,14 @@ export type ClientUserCountAggregateOutputType = {
 export type ClientUserAvgAggregateInputType = {
   id?: true
   avatarFileId?: true
+  xp?: true
   status?: true
 }
 
 export type ClientUserSumAggregateInputType = {
   id?: true
   avatarFileId?: true
+  xp?: true
   status?: true
 }
 
@@ -109,6 +116,7 @@ export type ClientUserMinAggregateInputType = {
   birthday?: true
   gender?: true
   signature?: true
+  xp?: true
   status?: true
   lastLoginAt?: true
   passwordChangedAt?: true
@@ -125,6 +133,7 @@ export type ClientUserMaxAggregateInputType = {
   birthday?: true
   gender?: true
   signature?: true
+  xp?: true
   status?: true
   lastLoginAt?: true
   passwordChangedAt?: true
@@ -141,6 +150,7 @@ export type ClientUserCountAggregateInputType = {
   birthday?: true
   gender?: true
   signature?: true
+  xp?: true
   status?: true
   lastLoginAt?: true
   passwordChangedAt?: true
@@ -244,6 +254,7 @@ export type ClientUserGroupByOutputType = {
   birthday: Date | null
   gender: string
   signature: string | null
+  xp: number
   status: number
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
@@ -283,6 +294,7 @@ export type ClientUserWhereInput = {
   birthday?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   gender?: Prisma.StringFilter<"ClientUser"> | string
   signature?: Prisma.StringNullableFilter<"ClientUser"> | string | null
+  xp?: Prisma.IntFilter<"ClientUser"> | number
   status?: Prisma.IntFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
@@ -299,6 +311,7 @@ export type ClientUserOrderByWithRelationInput = {
   birthday?: Prisma.SortOrderInput | Prisma.SortOrder
   gender?: Prisma.SortOrder
   signature?: Prisma.SortOrderInput | Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -319,6 +332,7 @@ export type ClientUserWhereUniqueInput = Prisma.AtLeast<{
   birthday?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   gender?: Prisma.StringFilter<"ClientUser"> | string
   signature?: Prisma.StringNullableFilter<"ClientUser"> | string | null
+  xp?: Prisma.IntFilter<"ClientUser"> | number
   status?: Prisma.IntFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
@@ -335,6 +349,7 @@ export type ClientUserOrderByWithAggregationInput = {
   birthday?: Prisma.SortOrderInput | Prisma.SortOrder
   gender?: Prisma.SortOrder
   signature?: Prisma.SortOrderInput | Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -359,6 +374,7 @@ export type ClientUserScalarWhereWithAggregatesInput = {
   birthday?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
   gender?: Prisma.StringWithAggregatesFilter<"ClientUser"> | string
   signature?: Prisma.StringNullableWithAggregatesFilter<"ClientUser"> | string | null
+  xp?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
   status?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
@@ -375,6 +391,7 @@ export type ClientUserCreateInput = {
   birthday?: Date | string | null
   gender?: string
   signature?: string | null
+  xp?: number
   status?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
@@ -391,6 +408,7 @@ export type ClientUserUncheckedCreateInput = {
   birthday?: Date | string | null
   gender?: string
   signature?: string | null
+  xp?: number
   status?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
@@ -407,6 +425,7 @@ export type ClientUserUpdateInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   signature?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -423,6 +442,7 @@ export type ClientUserUncheckedUpdateInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   signature?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -439,6 +459,7 @@ export type ClientUserCreateManyInput = {
   birthday?: Date | string | null
   gender?: string
   signature?: string | null
+  xp?: number
   status?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
@@ -455,6 +476,7 @@ export type ClientUserUpdateManyMutationInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   signature?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -471,6 +493,7 @@ export type ClientUserUncheckedUpdateManyInput = {
   birthday?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   gender?: Prisma.StringFieldUpdateOperationsInput | string
   signature?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -493,6 +516,7 @@ export type ClientUserCountOrderByAggregateInput = {
   birthday?: Prisma.SortOrder
   gender?: Prisma.SortOrder
   signature?: Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
@@ -503,6 +527,7 @@ export type ClientUserCountOrderByAggregateInput = {
 export type ClientUserAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   avatarFileId?: Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
 
@@ -515,6 +540,7 @@ export type ClientUserMaxOrderByAggregateInput = {
   birthday?: Prisma.SortOrder
   gender?: Prisma.SortOrder
   signature?: Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
@@ -531,6 +557,7 @@ export type ClientUserMinOrderByAggregateInput = {
   birthday?: Prisma.SortOrder
   gender?: Prisma.SortOrder
   signature?: Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
@@ -541,6 +568,7 @@ export type ClientUserMinOrderByAggregateInput = {
 export type ClientUserSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   avatarFileId?: Prisma.SortOrder
+  xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
 
@@ -555,6 +583,7 @@ export type ClientUserSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   birthday?: boolean
   gender?: boolean
   signature?: boolean
+  xp?: boolean
   status?: boolean
   lastLoginAt?: boolean
   passwordChangedAt?: boolean
@@ -573,6 +602,7 @@ export type ClientUserSelectScalar = {
   birthday?: boolean
   gender?: boolean
   signature?: boolean
+  xp?: boolean
   status?: boolean
   lastLoginAt?: boolean
   passwordChangedAt?: boolean
@@ -580,7 +610,7 @@ export type ClientUserSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "status" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clientUser"]>
+export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "xp" | "status" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clientUser"]>
 
 export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ClientUser"
@@ -618,6 +648,10 @@ export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * 个性签名
      */
     signature: string | null
+    /**
+     * 累计经验值（只增不减；由 gamify 服务端按事件发放，幂等账本见 gamify.prisma）
+     */
+    xp: number
     /**
      * 1 启用 / 0 禁用
      */
@@ -1015,6 +1049,7 @@ export interface ClientUserFieldRefs {
   readonly birthday: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly gender: Prisma.FieldRef<"ClientUser", 'String'>
   readonly signature: Prisma.FieldRef<"ClientUser", 'String'>
+  readonly xp: Prisma.FieldRef<"ClientUser", 'Int'>
   readonly status: Prisma.FieldRef<"ClientUser", 'Int'>
   readonly lastLoginAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly passwordChangedAt: Prisma.FieldRef<"ClientUser", 'DateTime'>

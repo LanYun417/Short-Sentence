@@ -97,6 +97,51 @@ export interface SentenceCard {
   obtainedAt: string | null;
 }
 
+/** 微游戏化：CEFR 等级信息。 */
+export interface GamifyLevel {
+  code: string;
+  name: string;
+  min: number;
+  next: number | null;
+  toNext: number;
+  progress: number;
+}
+
+/** 微游戏化：成就（含解锁状态）。 */
+export interface GamifyAchievement {
+  code: string;
+  name: string;
+  description: string;
+  /** lucide 图标名（不含 i-lucide- 前缀） */
+  icon: string;
+  category: string;
+  rewardXp: number;
+  unlocked: boolean;
+  unlockedAt: string | null;
+}
+
+/** 微游戏化：场景探索地图条目。 */
+export interface GamifyScene {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  unlocked: boolean;
+  practicedCount: number;
+}
+
+/** 微游戏化：成长概览。 */
+export interface GamifyOverview {
+  xp: number;
+  level: GamifyLevel;
+  achievements: GamifyAchievement[];
+  unlockedAchievements: number;
+  totalAchievements: number;
+  sceneMap: GamifyScene[];
+  unlockedScenes: number;
+  totalScenes: number;
+}
+
 /** 场景分类。 */
 export interface SentenceCategory {
   id: number;

@@ -1390,6 +1390,7 @@ export async function runSeed(prisma: PrismaService): Promise<void> {
   await seedDict(prisma);
   await seedConfig(prisma);
   await seedSentenceCategories(prisma);
+  await seedAchievements(prisma);
 
   logger.log('种子数据初始化完成');
 }
@@ -1425,6 +1426,129 @@ async function seedSentenceCategories(prisma: PrismaService): Promise<void> {
     }
   }
   logger.log(`短句分类数据完成，共 ${SENTENCE_CATEGORY_SEEDS.length} 个（新建 ${created} 个）`);
+}
+
+/* --------------------------------- 成就种子 -------------------------------- */
+
+/** 微游戏化成就定义（code 为稳定业务键；判定逻辑在 GamifyService 的 CONDITIONS 里按 code 关联）。 */
+const ACHIEVEMENT_SEEDS: Array<{
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  rewardXp: number;
+  sort: number;
+}> = [
+  {
+    code: 'first_step',
+    name: '初次落笔',
+    description: '完成第一次作答',
+    icon: 'footprints',
+    category: 'behavior',
+    rewardXp: 10,
+    sort: 1,
+  },
+  {
+    code: 'streak_3',
+    name: '小有恒心',
+    description: '连续打卡 3 天',
+    icon: 'flame',
+    category: 'persist',
+    rewardXp: 20,
+    sort: 2,
+  },
+  {
+    code: 'streak_7',
+    name: '七日不辍',
+    description: '连续打卡 7 天',
+    icon: 'fire',
+    category: 'persist',
+    rewardXp: 50,
+    sort: 3,
+  },
+  {
+    code: 'streak_30',
+    name: '月满',
+    description: '连续打卡 30 天',
+    icon: 'trophy',
+    category: 'persist',
+    rewardXp: 200,
+    sort: 4,
+  },
+  {
+    code: 'correct_50',
+    name: '初露锋芒',
+    description: '累计答对 50 题',
+    icon: 'target',
+    category: 'behavior',
+    rewardXp: 30,
+    sort: 5,
+  },
+  {
+    code: 'correct_200',
+    name: '熟能生巧',
+    description: '累计答对 200 题',
+    icon: 'award',
+    category: 'behavior',
+    rewardXp: 100,
+    sort: 6,
+  },
+  {
+    code: 'favorite_20',
+    name: '收藏家',
+    description: '收藏 20 句',
+    icon: 'bookmark',
+    category: 'behavior',
+    rewardXp: 30,
+    sort: 7,
+  },
+  {
+    code: 'explorer_3',
+    name: '初探',
+    description: '解锁 3 个场景',
+    icon: 'map',
+    category: 'behavior',
+    rewardXp: 30,
+    sort: 8,
+  },
+  {
+    code: 'explorer_all',
+    name: '环游',
+    description: '解锁全部场景',
+    icon: 'globe',
+    category: 'behavior',
+    rewardXp: 150,
+    sort: 9,
+  },
+  {
+    code: 'level_b1',
+    name: '进阶',
+    description: '达到 B1 等级',
+    icon: 'trending-up',
+    category: 'persist',
+    rewardXp: 50,
+    sort: 10,
+  },
+];
+
+/** 写入成就定义（幂等：按 code upsert，元数据随发布更新）。 */
+async function seedAchievements(prisma: PrismaService): Promise<void> {
+  for (const seed of ACHIEVEMENT_SEEDS) {
+    await prisma.achievement.upsert({
+      where: { code: seed.code },
+      create: seed,
+      update: {
+        name: seed.name,
+        description: seed.description,
+        icon: seed.icon,
+        category: seed.category,
+        rewardXp: seed.rewardXp,
+        sort: seed.sort,
+      },
+    });
+  }
+  logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个`);
 }
 
 /**

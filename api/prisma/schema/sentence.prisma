@@ -24,6 +24,8 @@ model ClientUser {
   gender            String    @default("secret") @db.VarChar(10)
   /// 个性签名
   signature         String?   @db.VarChar(200)
+  /// 累计经验值（只增不减；由 gamify 服务端按事件发放，幂等账本见 gamify.prisma）
+  xp                Int       @default(0) @db.Int
   /// 1 启用 / 0 禁用
   status            Int       @default(1) @db.TinyInt
   /// 最后登录时间

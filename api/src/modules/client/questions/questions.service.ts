@@ -17,6 +17,7 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
 import type { PageResult } from '../../../common/types.js';
 import { CheckinService } from '../checkin/checkin.service.js';
+import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
 import { AnswerSentenceDto } from './dto.js';
 
 /** 间隔重复梯度（天）：下标 = reviewLevel。 */
@@ -91,6 +92,7 @@ export class QuestionsService {
     private readonly prisma: PrismaService,
     private readonly fileService: FileService,
     private readonly checkinService: CheckinService,
+    private readonly gamify: GamifyService,
   ) {}
 
   /**
@@ -183,7 +185,7 @@ export class QuestionsService {
     const level = isCorrect ? Math.min((last?.reviewLevel ?? 0) + 1, REVIEW_INTERVAL_DAYS.length - 1) : 0;
     const nextReviewAt = this.addDays(new Date(), REVIEW_INTERVAL_DAYS[level]);
 
-    await this.prisma.sentenceRecord.create({
+    const record = await this.prisma.sentenceRecord.create({
       data: {
         userId: BigInt(userId),
         sentenceId: sentence.id,
@@ -193,11 +195,27 @@ export class QuestionsService {
         reviewLevel: level,
         nextReviewAt,
       },
+      select: { id: true },
     });
     await this.checkinService.recordAnswer(userId);
 
+    // 微游戏化：按作答质量发 XP（服务端权威 + event_key 幂等），并尝试解锁成就
+    const eventType: keyof typeof XP_RULES = isCorrect
+      ? last
+        ? 'answer_correct_review'
+        : 'answer_correct_first'
+      : 'answer_wrong';
+    await this.gamify.awardXp(userId, eventType, `answer:${record.id}`, XP_RULES[eventType]);
+
     const favorited = await this.isFavorited(userId, sentence.id);
     const today = await this.checkinService.getToday(userId);
+
+    // 完成每日目标额外奖励（按日期幂等，一天一次）
+    if (today?.completed) {
+      await this.gamify.awardXp(userId, 'daily_goal', `daily_goal:${userId}:${today.date}`, XP_RULES.daily_goal);
+    }
+    await this.gamify.checkAchievements(userId);
+
     return {
       sentenceId: Number(sentence.id),
       isCorrect,
@@ -231,6 +249,9 @@ export class QuestionsService {
     await this.prisma.sentenceFavorite.create({
       data: { userId: BigInt(userId), sentenceId: sentence.id },
     });
+    // 微游戏化：收藏发 XP（按 userId+sentenceId 幂等，反复收藏不重复给）+ 尝试解锁成就
+    await this.gamify.awardXp(userId, 'favorite', `favorite:${userId}:${sentence.id}`, XP_RULES.favorite);
+    await this.gamify.checkAchievements(userId);
     return { favorited: true };
   }
 
