@@ -106,11 +106,11 @@ function onLogout(): void {
         <div class="mx-auto flex h-14 max-w-3xl items-center gap-1 px-4 md:h-16">
           <!-- 品牌字标 -->
           <NuxtLink to="/" class="group mr-2 flex items-center gap-2 md:mr-4">
-            <span
-              class="grid h-8 w-8 place-items-center rounded-xl bg-linear-to-br from-sky-500 to-indigo-600 text-white shadow-sm shadow-indigo-500/30 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
-            >
-              <UIcon name="i-lucide-languages" class="h-5 w-5" />
-            </span>
+            <img
+              src="/favicon.svg"
+              alt="短句"
+              class="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
+            />
             <span
               class="bg-linear-to-r from-sky-600 to-indigo-600 bg-clip-text text-lg font-bold tracking-tight text-transparent dark:from-sky-400 dark:to-indigo-400"
               >短句</span
@@ -123,13 +123,14 @@ function onLogout(): void {
               v-for="item in NAV_ITEMS"
               :key="item.to"
               :to="item.to"
-              class="rounded-full px-3 py-1.5 text-sm transition"
+              class="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition"
               :class="
                 isActive(item.to)
                   ? 'bg-sky-50 font-medium text-sky-600 dark:bg-sky-500/15 dark:text-sky-300'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
               "
             >
+              <UIcon :name="item.icon" class="h-4 w-4" />
               {{ item.label }}
             </NuxtLink>
           </nav>

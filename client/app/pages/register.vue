@@ -62,11 +62,7 @@ async function onSubmit(): Promise<void> {
       />
 
       <div class="anim-in relative flex items-center gap-2.5">
-        <span
-          class="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 shadow-inner backdrop-blur transition-transform duration-300 hover:rotate-6"
-        >
-          <UIcon name="i-lucide-languages" class="h-6 w-6" />
-        </span>
+        <img src="/favicon.svg" alt="短句" class="h-10 w-10 transition-transform duration-300 hover:rotate-6" />
         <span class="text-xl font-bold tracking-tight">短句</span>
       </div>
 
@@ -99,11 +95,7 @@ async function onSubmit(): Promise<void> {
         <div class="w-full max-w-sm">
           <!-- 移动端品牌头 -->
           <div class="anim-in mb-8 flex flex-col items-center text-center lg:hidden">
-            <span
-              class="grid h-12 w-12 place-items-center rounded-2xl bg-linear-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/25"
-            >
-              <UIcon name="i-lucide-languages" class="h-7 w-7" />
-            </span>
+            <img src="/favicon.svg" alt="短句" class="h-12 w-12" />
             <h2 class="mt-3 text-xl font-bold text-slate-800 dark:text-slate-100">加入短句</h2>
             <p class="mt-1 text-sm text-slate-400">一个账号，同步收藏与打卡</p>
           </div>
