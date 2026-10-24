@@ -13,6 +13,7 @@
  */
 import type { SentenceCategory, SentenceLibraryItem } from '~/types';
 import { apiFetch } from '~/composables/useApi';
+import { DIFFICULTIES } from '~/composables/useQuestionSession';
 
 /** 缩略图地址。 */
 function itemSrc(url?: string | null): string {
@@ -44,11 +45,8 @@ const TYPE_OPTIONS = [
   { label: '对题', value: 'right' as const },
 ];
 const type = ref<'all' | 'wrong' | 'right'>('all');
-const DIFFICULTY_OPTIONS = [
-  { label: '易', value: 1 },
-  { label: '中', value: 2 },
-  { label: '难', value: 3 },
-];
+// 难度档位**直接复用刷题页的定义**（基础 / 进阶 / 挑战）——两处口径必须一致，
+// 否则用户在这里筛「中」、刷题页选「进阶」，同一个值出现两套叫法会歧义。
 const difficulty = ref<number | null>(null);
 const categoryId = ref<number | null>(null);
 const from = ref('');
@@ -78,6 +76,11 @@ function fmtDate(value: string): string {
   }
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 难度档位文案（与刷题页同源的 DIFFICULTIES，取值异常时兜底显示原值）。 */
+function difficultyLabel(value: number): string {
+  return DIFFICULTIES.find((level) => level.value === value)?.label ?? `难度 ${value}`;
 }
 
 /* ----------------------------- 无限滚动哨兵 + 返回顶部 ----------------------------- */
@@ -311,7 +314,7 @@ const emptyText = computed(() => {
       <div class="flex flex-wrap items-center gap-2">
         <USelect
           v-model="difficulty"
-          :items="DIFFICULTY_OPTIONS"
+          :items="DIFFICULTIES"
           value-key="value"
           label-key="label"
           placeholder="全部难度"
@@ -410,9 +413,9 @@ const emptyText = computed(() => {
               <UBadge v-if="item.categoryName" color="neutral" variant="subtle" size="sm">{{
                 item.categoryName
               }}</UBadge>
-              <UBadge v-if="item.difficulty" color="neutral" variant="subtle" size="sm"
-                >难度 {{ item.difficulty }}</UBadge
-              >
+              <UBadge v-if="item.difficulty" color="neutral" variant="subtle" size="sm">{{
+                difficultyLabel(item.difficulty)
+              }}</UBadge>
               <UBadge color="neutral" variant="soft" size="sm">{{ fmtDate(item.createdAt) }}</UBadge>
             </div>
           </div>
