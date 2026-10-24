@@ -390,6 +390,19 @@
   transform: translateY(-10px);
 }
 
+/* ===== 主题（亮 / 暗）切换过渡 =====
+   由 layouts/default.vue 的 toggleTheme() 触发：把 <html> 上的 class 切换包进
+   document.startViewTransition()，浏览器对**新旧两份整页快照**做交叉溶解，
+   于是整站颜色「化」过去，而不是硬切。
+   为什么不逐个元素补 CSS transition：暗色由 <html> 的 class 驱动全站几百个元素的
+   dark: 变体，逐个补既会漏也脏；一份快照全覆盖，且天然不干扰元素自身的
+   hover / transform 过渡。不支持 startViewTransition 的浏览器不进该分支，瞬时切换。 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* 尊重系统「减少动态效果」偏好 */
 @media (prefers-reduced-motion: reduce) {
   .anim-in,
@@ -432,5 +445,11 @@
 
   .ss-holo {
     transition: none !important;
+  }
+
+  /* 主题切换退化为瞬时切换（不做整页交叉溶解） */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }

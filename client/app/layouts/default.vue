@@ -36,9 +36,27 @@ const activeIndex = computed(() => NAV_ITEMS.findIndex((item) => isActive(item.t
 const avatarText = computed(() => (auth.user?.nickname ?? '?').slice(0, 1));
 const avatarSrc = computed(() => auth.user?.avatarUrl ?? undefined);
 
-/** 切换亮/暗。 */
+/**
+ * 切换亮/暗：把 class 切换包进 View Transitions，浏览器对整页新旧两份快照做交叉溶解，
+ * 得到舒适的「化过去」效果（见 main.css 的 ::view-transition 片段）。
+ * 不支持 startViewTransition 的浏览器直接切换，无动画也不影响可用性。
+ */
 function toggleTheme(): void {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+  const next = colorMode.value === 'dark' ? 'light' : 'dark';
+  const apply = (): void => {
+    // 交给模块维护响应式状态与持久化（Cookie / localStorage）
+    colorMode.preference = next;
+    // 同步把 class 落到 <html>：模块侧是经 Vue watcher（微任务）异步落地的，
+    // 而 startViewTransition 的新快照需在回调后立即抓取——这里补一手保证抓到的是新外观。
+    // 与模块 watcher 的同名操作幂等，无副作用。
+    document.documentElement.classList.toggle('dark', next === 'dark');
+  };
+  const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
+  if (typeof doc.startViewTransition === 'function') {
+    doc.startViewTransition(apply);
+  } else {
+    apply();
+  }
 }
 
 /** 退出登录。 */

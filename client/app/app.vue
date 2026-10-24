@@ -44,7 +44,23 @@ if (ssrTodayCard.value) {
  * 放在根组件而非单个页面：任何入口被收录时都带着它。
  */
 const siteConfig = useSiteConfig();
+
+/**
+ * 主题联动原生控件：把当前 color-scheme 写到 <html> 的 style 上，让原生控件
+ * （日期选择器、下拉、UA 滚动条）跟随亮/暗，而不是停在 UA 默认的浅色。
+ * 与 class 切换同源（都来自 colorMode），首帧 SSR 渲染就带上正确值。
+ */
+const colorMode = useColorMode();
+
 useHead({
+  htmlAttrs: {
+    style: computed(() => {
+      // value 可能是 light / dark / system（跟随系统时服务端 state 仍是字面量 'system'）：
+      // 'system' 映射为合法的 `light dark`（跟随 UA 偏好），并兜底所有非法值，绝不渲染无效 CSS。
+      const scheme = colorMode.value === 'system' ? 'light dark' : colorMode.value === 'dark' ? 'dark' : 'light';
+      return `color-scheme: ${scheme}`;
+    }),
+  },
   script: [
     {
       type: 'application/ld+json',
@@ -59,7 +75,7 @@ useHead({
             applicationCategory: 'EducationalApplication',
             operatingSystem: 'Web',
             inLanguage: 'zh-CN',
-            description: '每天 20 句，看图学地道英语口语。场景闪卡 + 间隔重复 + AI 拓展。',
+            description: '每天 20 句，看图学地道英语。场景闪卡 + 间隔重复 + AI 拓展。',
             featureList: ['视觉场景闪卡', '间隔重复复习', 'AI 场景造句', '词根拆解', '每日句签'],
             offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
           },
