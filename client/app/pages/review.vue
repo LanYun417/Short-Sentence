@@ -1,13 +1,13 @@
 <script setup lang="ts">
-/** 错题复习池页（路由 /review）。列表逻辑复用 SentenceLibraryList。 */
+/** 学习记录页（路由 /review）。列表逻辑复用 SentenceLibraryList，呈现全量作答历史。 */
 definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
-  title: '错题复习池',
-  description: '答错且到期的句子按间隔重复出现，滚动巩固。',
+  title: '学习记录',
+  description: '回顾你答过的每一句，按时间、对错、难度与场景筛选，滚动到底自动加载。',
 });
 </script>
 
 <template>
-  <SentenceLibraryList mode="review" />
+  <SentenceLibraryList mode="history" />
 </template>

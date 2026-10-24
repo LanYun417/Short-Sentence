@@ -69,6 +69,10 @@ export interface SentenceLibraryItem {
   createdAt: string;
   reviewLevel?: number;
   nextReviewAt: string | null;
+  /** 历史记录专用：本次作答是否正确 */
+  isCorrect?: boolean;
+  /** 历史记录专用：用户本次实际作答（答错时回显） */
+  userAnswer?: string | null;
 }
 
 /** 分页响应。 */
