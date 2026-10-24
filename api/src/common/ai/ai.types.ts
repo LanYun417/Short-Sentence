@@ -52,8 +52,9 @@ export interface SentenceGenProvider {
   polishBatch(drafts: SentenceDraft[], theme: string, bizId?: number): Promise<SentenceDraft[]>;
 
   /**
-   * 三阶段：审核并剔除不合格题目（语法/对译/语义自足/难度标注/内容适当性）。
-   * 模型未给出结论的条目按通过处理——审核本身失败不该让整批题目蒸发。
+   * 三阶段：审核并剔除不合格题目
+   * （语法 / 对译 / 语义自足 / 难度标注 / 内容适当性 / 逻辑自洽 / 可画性）。
+   * **fail-closed**：模型未给出结论的条目按不通过处理——漏判即放行等于没审。
    * @param bizId 关联业务 id（批次 id）
    */
   reviewBatch(

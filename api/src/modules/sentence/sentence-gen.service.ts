@@ -372,9 +372,11 @@ export class SentenceGenService {
 
         // ---------- 三阶段：审核（不通过的直接丢弃，不进生图）----------
         await this.heartbeat(taskId, 'reviewing');
+        // 审核阶段本身失败时**整批丢弃**（fail-closed）：宁可这一批不要，
+        // 也不让没审过的题进库——过去 fallback 是「全部放行」，等于审核形同虚设。
         const reviewed = await this.runStage('审核', () => this.sentenceGen.reviewBatch(polished, Number(taskId)), {
-          approved: polished,
-          rejected: [] as Array<{ draft: SentenceDraft; reason: string }>,
+          approved: [] as SentenceDraft[],
+          rejected: polished.map((draft) => ({ draft, reason: '审核阶段调用失败，整批丢弃' })),
         });
         if (reviewed.rejected.length > 0) {
           rejectedCount += reviewed.rejected.length;
@@ -484,8 +486,11 @@ export class SentenceGenService {
   /**
    * 跑一个可选阶段（优化 / 审核）。
    *
-   * 失败时返回兜底值并记日志：二、三阶段分别是「加分项」与「把关」，挂掉不该让整批题目作废
-   * ——降级而不中断。重试次数比生题少：这类失败多为上游超时，多试无益且会拖长整批时长。
+   * 失败时返回调用方给的兜底值并记日志——**兜底值由阶段自己决定**：
+   * - 优化是「加分项」：失败就退回原稿，不该让整批作废；
+   * - 审核是「把关」：失败必须**整批丢弃**（fail-closed），不能放行没审过的题。
+   *
+   * 重试次数比生题少：这类失败多为上游超时，多试无益且会拖长整批时长。
    */
   private async runStage<T>(name: string, task: () => Promise<T>, fallback: T): Promise<T> {
     try {

@@ -99,9 +99,13 @@ function parseAlternates(value: unknown, max = 5): string[] {
 /**
  * 难度分级标准：生题（generate）与优化（polish）共用同一套。
  *
- * **难度由词汇与语法决定，不由句子长短决定**——6 词的 `Keep your eyes on the prize`
- * 是 3 档（习语），6 词的 `Could you pass the salt?` 是 1 档。
+ * **难度由词汇与语法决定，不由句子长短决定**——6 词的习语是 3 档，6 词的日常请求是 1 档。
  * 两处各写一套必然漂移，所以集中在这里。提示词统一用英文：上游模型对英文指令的遵循度更高。
+ *
+ * ⚠️ 这里**刻意不写成品例句**：早期版本给了 "Could you open the window?" 之类的完整句子，
+ * 结果模型把它们（及近似变体）直接当素材复述进题库（2026-10-24 实测：题库里出现
+ * "I'm running late, so I'll grab a coffee on the way."，正是当时的反例原文）。
+ * 现在只描述**结构特征**，并在末尾明确禁止照抄示例。
  */
 const DIFFICULTY_RULES = [
   'DIFFICULTY IS DECIDED BY VOCABULARY AND GRAMMAR, NOT BY SENTENCE LENGTH',
@@ -111,12 +115,11 @@ const DIFFICULTY_RULES = [
   '- Vocabulary: only the most frequent everyday words (CEFR A1-A2: time, want, help, busy, sure, cold).',
   '- Grammar: present simple, past simple, and simple modals (can, must). One simple sentence.',
   '- Forbidden: subordinate clauses, perfect tenses, passive voice, idioms, figurative phrasal verbs.',
+  '- Typical shape: one subject + one verb + one object or adverbial, with no connector.',
   '- These sentences will naturally be short (usually 5-8 words), but do NOT label a level-2 sentence as',
   '  level 1 just because it is short.',
-  '- Good: "Could you open the window?" / "I will be there at six." / "This coffee is too hot."',
-  '- Bad (these are level 2): "I\'m running a bit late, so I\'ll grab a coffee on the way."',
-  '  (figurative "grab" + result clause); "I\'ve been thinking about starting a new hobby."',
-  '  (present perfect continuous); "Let me know if you need any help with the report." (if-clause + set phrase).',
+  '- Anything containing a "so / because / if" clause, a progressive or perfect tense, a passive, or a',
+  '  figurative phrasal verb is AT LEAST level 2, no matter how short.',
   '',
   'Level 2 (intermediate): any ONE of - a common word beyond the most frequent range, one clause or connector,',
   'one of progressive / perfect / passive, a common phrasal verb.',
@@ -125,6 +128,8 @@ const DIFFICULTY_RULES = [
   'complex tense combinations.',
   '',
   'When unsure, choose 2 rather than 1. Never disguise a hard sentence as easy by shortening it.',
+  'These rules describe STRUCTURE only. Never output an example from these instructions, or a close',
+  'variant of one, as a real item.',
 ].join('\n');
 
 /** 二阶段（优化）的 system 提示词。 */
@@ -161,14 +166,24 @@ const REVIEW_SYSTEM_PROMPT = [
   '',
   'FAIL an item if ANY of the following is true:',
   '1. The English has grammar errors, unnatural collocations, or obvious Chinglish.',
-  '2. The Chinese is translationese, unclear, or does not match the English.',
-  '3. The Chinese alone is not understandable (not self-contained), or missing key information causes ambiguity.',
+  '2. The Chinese is translationese — especially keeping English word order (the object placed before the verb) —',
+  '   unclear, or does not match the English.',
+  '3. The Chinese alone is not understandable (not self-contained), or key information is missing so the',
+  '   meaning is ambiguous. A compressed phrase without a predicate counts as broken.',
   '4. The difficulty label clearly contradicts the content (a clause / perfect tense / idiom in level 1,',
   '   or a trivial sentence in level 3).',
   '5. Content unsuitable for a language-learning app: sensitive, vulgar, misleading, factually wrong,',
   '   or advertising a specific brand.',
-  '6. Too empty to stand alone as a question (e.g. just "Okay." or "Sure.").',
+  '6. Too empty to stand alone as a question (e.g. a bare one-word acknowledgement).',
+  '7. THE SITUATION IS NOT LOGICALLY COHERENT. The cause / contrast / result relation must actually hold:',
+  '   if the sentence uses "so", "because" or "but", the two halves have to be genuinely connected.',
+  '   Reject contradictions in the scene as well — for example someone described as being in a hurry who is',
+  '   then calmly doing something leisurely. Everyday details must agree with each other.',
+  '8. THE SENTENCE CANNOT BE ILLUSTRATED. The app shows one flat cartoon of two people talking, so the item',
+  '   must depict a concrete, observable everyday scene. Reject purely abstract statements, inner states with',
+  '   no visible action, and anything that only works as written text.',
   '',
+  'You MUST output exactly one verdict per item. An item with no verdict will be treated as FAILED.',
   'Be strict: better to drop an item than to let a bad one through.',
   'Output JSON only: {"items":[{"index":0,"pass":true,"reason":""}]}',
   '(reason only when pass=false, max 15 words, English or Chinese)',
@@ -210,19 +225,17 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   categoryName (Chinese category name, matching the theme or narrower),',
       '   alternateAnswers (array of 3-5 OTHER natural English sentences that mean the SAME as sentenceEn).',
       '3. translationZh is the field most likely to go wrong. Three hard rules:',
-      '   a. Natural Chinese: follow Chinese word order and collocations. Never translate English word order literally.',
-      '      Example: "what the patient earth has grown" -> 「大地耐心孕育出的（果实）」,',
-      '      never 「耐心大地生长出的」.',
-      '   b. Self-contained: the Chinese alone must make sense. If the reader needs the English to understand it,',
-      '      rewrite it. Bad: 「站台在最后一刻变了。」(what did the platform change into?)',
-      '      Good: 「快到发车时站台临时换了」.',
+      '   a. Natural Chinese: follow Chinese word order and collocations. Never map English word order literally.',
+      '      The classic tell is leaving the object in front of the verb, or stacking adverbs before the verb.',
+      '   b. Self-contained: the Chinese alone must make sense without seeing the English. Never drop the time,',
+      '      place or condition clause the sentence depends on; a compressed phrase without a predicate reads broken.',
       '   c. Complete: keep who / does what / where so there is no ambiguity. 8-25 Chinese characters.',
       '8b. alternateAnswers rules:',
       '   - Each entry is a DIFFERENT natural way to express the SAME meaning as sentenceEn',
       '     (different wording, word order, or vocabulary). All must be grammatically correct and natural.',
       '   - None may equal sentenceEn or each other (after ignoring case and punctuation).',
-      '   - Provide 3 to 5 entries. Only use fewer if the sentence is so formulaic that genuine alternatives',
-      '     do not exist (e.g. "Thank you." -> ["Thanks."]), and never invent awkward ones.',
+      '   - Provide 3 to 5 entries. Only use fewer if the sentence is a fixed courtesy formula with one obvious',
+      '     alternative; never invent awkward ones.',
       '   - Do NOT include sentenceEn itself in this array.',
       '',
       DIFFICULTY_RULES,
@@ -324,8 +337,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   }
 
   /**
-   * 三阶段（审核）：语法 / 对译 / 语义自足 / 难度标注 / 内容适当性五道关。
-   * 模型没给结论的条目按通过处理（fail-open）——审核调用本身失败不该让整批题目蒸发。
+   * 三阶段（审核）：语法 / 对译 / 语义自足 / 难度标注 / 内容适当性 / 逻辑自洽 / 可画性七道关。
+   * **fail-closed**：模型没给结论的条目按**不通过**处理——漏判即放行等于这道题没审过。
+   * （2026-10-24 之前是 fail-open，实测大量题目在"审核通过"的名义下带着翻译腔进了库。）
    */
   async reviewBatch(
     drafts: SentenceDraft[],
@@ -358,8 +372,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     const rejected: RejectedDraft[] = [];
     drafts.forEach((draft, index) => {
       const verdict = verdicts.get(index);
-      if (verdict && !verdict.pass) {
-        rejected.push({ draft, reason: verdict.reason || '审核未通过' });
+      // fail-closed：模型没给结论就**不放行**
+      if (!verdict || !verdict.pass) {
+        rejected.push({ draft, reason: verdict?.reason || '审核未给出结论' });
         return;
       }
       approved.push(draft);
