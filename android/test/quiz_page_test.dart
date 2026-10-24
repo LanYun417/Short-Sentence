@@ -172,4 +172,33 @@ void main() {
     expect(image.imageUrl, endsWith('/static/webp/demo.webp'));
     container.dispose();
   });
+
+  testWidgets('点下一题后卡片保持背面（不当用户面往回翻）', (tester) async {
+    // 曾经的 bug：loadNext() 一进去就 phase=loading + clearResult，
+    // flipped 立刻变 false → 卡片当着用户的面从 180° 往回转，
+    // 停在中间角度就是「卡片斜着」。现在 loading 期间应保持翻转态。
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: _question(),
+        phase: QuizPhase.answered,
+        result: _result(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('下一题'), findsOneWidget);
+
+    // 进入抽题中
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+      loadingNext: true,
+    );
+    await tester.pump();
+
+    // 仍应是背面（加载态），而不是回到正面
+    expect(find.text('加载下一题…'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+    container.dispose();
+  });
 }

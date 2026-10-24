@@ -42,6 +42,7 @@ class QuizState {
     this.stats = const QuizStats(),
     this.mode = AnswerMode.input,
     this.startedAt,
+    this.loadingNext = false,
   });
 
   /// 当前题目（null = 尚未抽到）
@@ -54,6 +55,12 @@ class QuizState {
 
   /// 错误提示（抽题/提交失败时）
   final String? error;
+
+  /// 是否正在抽**下一题**（此时应保持背面显示加载态，而非翻回正面）。
+  ///
+  /// 与 `phase == loading` 的区别：首次抽题（无题）也是 loading，但那时
+  /// 应显示骨架屏；只有「已答过 → 抽下一题」才需要保持背面。
+  final bool loadingNext;
 
   final QuizStats stats;
 
@@ -81,6 +88,7 @@ class QuizState {
     bool clearError = false,
     bool clearResult = false,
     bool clearQuestion = false,
+    bool? loadingNext,
   }) {
     return QuizState(
       question: clearQuestion ? null : (question ?? this.question),
@@ -135,6 +143,8 @@ class QuizController extends Notifier<QuizState> {
       clearError: true,
       clearResult: true,
       error: null,
+      // 已答过题才需要保持背面；首次抽题走骨架屏
+      loadingNext: state.phase == QuizPhase.answered,
     );
     try {
       final question = await _api.next(

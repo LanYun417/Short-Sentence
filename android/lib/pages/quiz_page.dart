@@ -93,6 +93,20 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     }
   }
 
+  /// 抽下一题期间用于撑住背面外壳的占位结果（result 已被清空）。
+  AnswerResult get _placeholderResult => const AnswerResult(
+        sentenceId: 0,
+        isCorrect: false,
+        sentenceEn: '',
+        validAnswers: <String>[],
+        translationZh: '',
+        ipa: null,
+        imageUrl: null,
+        favorited: false,
+        todayDone: 0,
+        todayGoal: 0,
+      );
+
   void _next() {
     _resetInputs();
     ref.read(quizControllerProvider.notifier).loadNext();
@@ -110,8 +124,16 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     //
     // 取模是为了让「下一题」时从 360 回到 0 而不是继续涨（数值无界会丢精度），
     // 同时保持方向一致：false->0、true->180，永远同向。
-    final flipped = state.isAnswered && state.result != null;
-    final targetDeg = flipped ? 180.0 : 0.0;
+    // 翻转态。**抽下一题(loadingNext)时保持翻转**——否则点「下一题」后
+    // flipped 立刻变 false，卡片会当着用户的面从 180° 往回转、停在中间角度
+    // （就是截图里「卡片斜着」的来源）。
+    // Web 端的做法是保持背面并显示加载态，新题到达后同方向继续翻。
+    //
+    // 为什么用 state.loadingNext 而不是页面里暂存：loadNext() 一进去就
+    // clearResult，flipped 的依据(result)当场就没了，页面根本来不及暂存。
+    // 必须在**状态层**就标记「这次 loading 是要保持背面的」。
+    final flipped = state.phase == QuizPhase.answered ||
+        (state.phase == QuizPhase.loading && state.loadingNext);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -131,8 +153,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
       ),
       body: SafeArea(
         child: switch (state.phase) {
-          QuizPhase.loading when state.question == null => const _SkeletonCard(),
-          _ when state.question != null => _buildCard(context, state, targetDeg, flipped),
+          // 首次抽题（还没有题）→ 骨架屏；「抽下一题」→ 保持背面走加载态
+          QuizPhase.loading when !state.loadingNext => const _SkeletonCard(),
+          _ when state.question != null => _buildCard(context, state, flipped),
           _ => _EmptyState(
               error: state.error,
               onRetry: () => ref.read(quizControllerProvider.notifier).loadNext(),
@@ -142,7 +165,7 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     );
   }
 
-  Widget _buildCard(BuildContext context, QuizState state, double deg, bool flipped) {
+  Widget _buildCard(BuildContext context, QuizState state, bool flipped) {
     final question = state.question!;
 
     return ListView(
@@ -162,7 +185,6 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         ),
         const SizedBox(height: 12),
         _FlipCard(
-          deg: deg,
           flipped: flipped,
           frontBuilder: (_) => _FrontFace(
             question: question,
@@ -182,15 +204,18 @@ class _QuizPageState extends ConsumerState<QuizPage> {
           ),
           backBuilder: (_) {
             final current = state.result;
-            return current == null
-                ? const SizedBox.shrink()
-                : _BackFace(
-                    result: current,
-                    userAnswer: _answerController.text,
-                    onNext: _next,
-                    onToggleFavorite: () =>
-                        ref.read(quizControllerProvider.notifier).toggleFavorite(),
-                  );
+            // 抽下一题时 result 已被清空，但**仍要渲染背面**（显示加载态）：
+            // 否则卡片区域会整个消失，观感是「卡片没了」而不是「在加载」。
+            // 用一个占位 result 撑住背面外壳。
+            final shown = current ?? _placeholderResult;
+            return _BackFace(
+              result: shown,
+              userAnswer: _answerController.text,
+              onNext: _next,
+              loading: state.loadingNext,
+              onToggleFavorite: () =>
+                  ref.read(quizControllerProvider.notifier).toggleFavorite(),
+            );
           },
         ),
         const SizedBox(height: 8),
@@ -462,46 +487,75 @@ class _ModeTab extends StatelessWidget {
 
 /* ------------------------------ 翻卡容器 ------------------------------ */
 
-class _FlipCard extends StatelessWidget {
+class _FlipCard extends StatefulWidget {
   const _FlipCard({
-    required this.deg,
     required this.flipped,
     required this.frontBuilder,
     required this.backBuilder,
   });
 
-  /// 目标角度（度）。**值发生变化时** TweenAnimationBuilder 会自动补间动画——
-  /// 这就是翻牌的驱动源。相同值不动画（首屏 0->0 不动画，正确）。
-  final double deg;
-
-  /// 是否已翻到背面。**由它决定显示哪一面**（而不是从动画值反推）：
-  /// 动画值只负责「转的过程」，若因时序没跟上，内容也不会错。
   final bool flipped;
-
   final WidgetBuilder frontBuilder;
   final WidgetBuilder backBuilder;
 
   @override
+  State<_FlipCard> createState() => _FlipCardState();
+}
+
+class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(milliseconds: 450),
+    vsync: this,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始就对齐（避免首帧闪一下正面再翻）
+    _controller.value = widget.flipped ? 1 : 0;
+  }
+
+  @override
+  void didUpdateWidget(covariant _FlipCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.flipped != widget.flipped) {
+      // 用控制器驱动：稳态必然是 0 或 1，**不可能停在中间值**。
+      // （TweenAnimationBuilder 的补间值在某些时序下会滞留在中途。）
+      if (widget.flipped) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(end: deg),
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        // 超过一半时切背面，且背面预旋转 180 度——否则翻过去是镜像文字。
+        final showBack = t >= 0.5;
         return Transform(
+          // 显式按容器中心旋转：不设 alignment 时 Transform 默认按左上角转，
+          // 在宽度不确定的 ListView 里会偏，观感就是「卡片斜着」。
           alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..setEntry(3, 0, 0.001) // 一点透视，让 3D 感更真实
-            ..rotateY(t * 3.1415926 / 180),
-          child: flipped
-              // 背面**预旋转 180 度**：否则翻过去看到的是镜像文字
-              // （Web 端 .card-face--back 的做法）
+          // 纯 2D rotateY（不加透视）：透视会让卡片在 180 度也显得歪。
+          transform: Matrix4.rotationY(t * 3.1415926),
+          child: showBack
               ? Transform(
                   alignment: Alignment.center,
-                  transform: Matrix4.identity()..rotateY(3.1415926),
-                  child: backBuilder(context),
+                  transform: Matrix4.rotationY(3.1415926),
+                  child: widget.backBuilder(context),
                 )
-              : frontBuilder(context),
+              : widget.frontBuilder(context),
         );
       },
     );
@@ -874,9 +928,13 @@ class _BackFace extends StatelessWidget {
     required this.userAnswer,
     required this.onNext,
     required this.onToggleFavorite,
+    this.loading = false,
   });
 
   final AnswerResult result;
+
+  /// 正在抽下一题：显示加载态（对齐 Web 端「保持背面并显示加载态」）。
+  final bool loading;
 
   /// 用户提交的答案（答错时展示并划掉，与 Web 端一致）。
   final String userAnswer;
@@ -897,6 +955,27 @@ class _BackFace extends StatelessWidget {
     final barFg = correct
         ? const Color(0xFF047857)
         : const Color(0xFFBE123C);
+
+    if (loading) {
+      return _CardFace(
+        child: SizedBox(
+          height: 240,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: 14),
+              Text(
+                '加载下一题…',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return _CardFace(
       child: Column(
