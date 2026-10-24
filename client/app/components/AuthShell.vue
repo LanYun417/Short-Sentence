@@ -19,7 +19,7 @@ defineProps<{
     <!-- 居中光晕：给纯色背景一点纵深，左右对称不破坏版式 -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        class="absolute left-1/2 top-0 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-sky-200/45 blur-3xl dark:bg-sky-500/10"
+        class="absolute left-1/2 top-0 h-104 w-104 -translate-x-1/2 -translate-y-1/3 rounded-full bg-sky-200/45 blur-3xl dark:bg-sky-500/10"
       />
     </div>
 

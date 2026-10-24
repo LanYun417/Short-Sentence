@@ -106,14 +106,14 @@ const dateText = computed(() => {
 <template>
   <!-- 外层：透视容器（不加 overflow，3D 图层才能溢出产生纵深） -->
   <div
-    class="[perspective:1000px]"
+    class="perspective-[1000px]"
     @pointerenter="active = true"
     @pointermove="onPointerMove"
     @pointerleave="onPointerLeave"
   >
     <!-- 内层：倾斜的本体 -->
-    <div ref="card" class="[transform-style:preserve-3d]" :style="cardStyle">
-      <div class="relative [transform-style:preserve-3d]">
+    <div ref="card" class="transform-3d" :style="cardStyle">
+      <div class="relative transform-3d">
         <!-- 配图层（自身圆角裁剪；内部扁平化不影响兄弟图层） -->
         <div
           class="relative aspect-video overflow-hidden rounded-3xl bg-slate-100 shadow-xl ring-1 ring-amber-200/60 dark:bg-slate-700 dark:ring-amber-500/20"

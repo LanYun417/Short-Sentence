@@ -139,7 +139,7 @@ function onLogout(): void {
               <!-- 今日句签已获得：常驻光环 + 角标（光束飞行的落点） -->
               <span
                 v-if="todayCard.obtained"
-                class="ss-avatar-halo pointer-events-none absolute -inset-[3px] rounded-full opacity-90"
+                class="ss-avatar-halo pointer-events-none absolute -inset-0.75 rounded-full opacity-90"
               />
               <span
                 class="relative grid size-8 place-items-center overflow-hidden rounded-full bg-linear-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white transition-transform duration-200 hover:scale-110"
