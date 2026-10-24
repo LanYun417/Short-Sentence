@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:short_sentence/api/models/question.dart';
 import 'package:short_sentence/pages/quiz_page.dart';
@@ -119,5 +120,56 @@ void main() {
     expect(find.text('you'), findsOneWidget);
     // 「撤销」常驻显示（未选中时置灰），这是设计调整后的行为
     expect(find.text('撤销'), findsOneWidget);
+  });
+
+  testWidgets('翻转角度与 flipped 一致（不会出现转一半还显示正面）', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    // 未提交：正面
+    expect(find.text('确定'), findsOneWidget);
+
+    // 提交判分：flipped 变 true，目标角度必须同步到 180
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.answered,
+      result: _result(),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // 背面出现、正面消失——证明 deg 与 flipped 没有脱节
+    expect(find.text('下一题'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+  });
+
+  testWidgets('配图 URL 经 staticUrl 拼成绝对地址', (tester) async {
+    // 后端返回的是相对路径 /static/webp/xxx.webp，
+    // 直接喂给 CachedNetworkImage 会请求失败（曾经的 bug：显示「配图加载失败」）。
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(<String, dynamic>{
+          'sentenceId': 1117,
+          'translationZh': 'x',
+          'source': 'new',
+          'imageUrl': '/static/webp/demo.webp',
+        }),
+        phase: QuizPhase.answering,
+      ),
+    );
+    await tester.pump();
+
+    // 页面上不应出现「配图加载失败」/「配图缺失」
+    expect(find.text('配图加载失败'), findsNothing);
+    expect(find.text('配图缺失'), findsNothing);
+
+    // CachedNetworkImage 内部用的已是绝对地址
+    final image = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+    expect(image.imageUrl, startsWith('http'));
+    expect(image.imageUrl, endsWith('/static/webp/demo.webp'));
+    container.dispose();
   });
 }

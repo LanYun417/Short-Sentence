@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/answer_normalize.dart';
+import '../api/auth_api.dart';
 import '../api/models/question.dart';
 import '../state/quiz_controller.dart';
 import '../theme.dart';
@@ -42,13 +43,6 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   /// 拼词模式：已选中的词块（有序）。
   final List<String> _picked = <String>[];
 
-  /// 累计翻转角度（度）。每次 flipped 变化 +180，**不对 360 取模**——
-  /// 取模会让 180->360 变回 180->0，又成了反向回翻（与 Web 端 flipDeg 同思路）。
-  double _flipDeg = 0;
-
-  /// 上一帧的翻转态（用于 didUpdateWidget 里判断是否该 +180）。
-  bool _lastAnswered = false;
-
   @override
   void initState() {
     super.initState();
@@ -59,24 +53,6 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
     });
-  }
-
-  /// 翻转态变化时推进累计角度。
-  ///
-  /// 为什么在这里而不是 build / ref.listen：
-  /// - `ref.listen` **只能在 build 内调用**，放 initState 会直接抛断言
-  ///   （`ref.listen can only be used within the build method`）；
-  /// - build 阶段改状态是反模式，会触发额外重建。
-  /// didUpdateWidget 在每次父级重建后调用，此时 provider 已是最新值，
-  /// 正好用来对比上一帧的翻转态。
-  @override
-  void didUpdateWidget(covariant QuizPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final answered = ref.read(quizControllerProvider).isAnswered;
-    if (answered != _lastAnswered) {
-      _lastAnswered = answered;
-      _flipDeg += 180;
-    }
   }
 
   @override
@@ -126,10 +102,16 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(quizControllerProvider);
 
-    // 翻转角度由 didUpdateWidget 推进（每次 flipped 变化 +180 度），
-    // 这里只读取目标值；不在 build 阶段改状态（反模式，会触发额外重建）。
+    // 翻转目标角度**由 flipped 直接推导**（而不是累加）：
+    // 累加方案依赖 didUpdateWidget 被可靠触发，但提交答案后 QuizPage 自身
+    // 参数没变、父级不重建，didUpdateWidget 可能根本不跑——于是 deg 与
+    // flipped 脱节，出现「卡片转了一半却还显示正面」的露馅画面。
+    // 推导方案没有中间状态可漏，deg 与 flipped 永远一致。
+    //
+    // 取模是为了让「下一题」时从 360 回到 0 而不是继续涨（数值无界会丢精度），
+    // 同时保持方向一致：false->0、true->180，永远同向。
     final flipped = state.isAnswered && state.result != null;
-    final targetDeg = _flipDeg;
+    final targetDeg = flipped ? 180.0 : 0.0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -664,7 +646,7 @@ class _FrontFace extends StatelessWidget {
                       ),
                     )
                   : CachedNetworkImage(
-                      imageUrl: question.imageUrl!,
+                      imageUrl: staticUrl(question.imageUrl),
                       fit: BoxFit.cover,
                       placeholder: (context, _) => Container(
                         color: scheme.surfaceContainerHighest,
