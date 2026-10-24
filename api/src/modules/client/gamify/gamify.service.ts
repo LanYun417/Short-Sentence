@@ -188,8 +188,8 @@ export class GamifyService {
     };
   }
 
-  /** 检查并解锁成就（幂等）；返回本次新解锁的 code 列表。 */
-  async checkAchievements(userId: number): Promise<string[]> {
+  /** 检查并解锁成就（幂等）；返回本次新解锁的成就（code + 名称，便于客户端直接展示）。 */
+  async checkAchievements(userId: number): Promise<Array<{ code: string; name: string }>> {
     const uid = BigInt(userId);
     const [achievements, unlocked] = await Promise.all([
       this.prisma.achievement.findMany({ orderBy: { sort: 'asc' } }),
@@ -200,7 +200,7 @@ export class GamifyService {
     }
     const unlockedSet = new Set(unlocked.map((row) => row.achievementCode));
     const ctx = await this.contextOf(userId);
-    const newly: string[] = [];
+    const newly: Array<{ code: string; name: string }> = [];
     for (const achievement of achievements) {
       if (unlockedSet.has(achievement.code)) {
         continue;
@@ -219,7 +219,7 @@ export class GamifyService {
         }
         throw error;
       }
-      newly.push(achievement.code);
+      newly.push({ code: achievement.code, name: achievement.name });
       if (achievement.rewardXp > 0) {
         await this.awardXp(userId, 'achievement', `achievement:${userId}:${achievement.code}`, achievement.rewardXp);
       }

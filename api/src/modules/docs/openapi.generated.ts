@@ -8389,36 +8389,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "客户端用户"
         ],
-        "summary": "分页列表（关键词 / 状态 / 性别）",
+        "summary": "分页列表（关键词 / 状态 / 性别）。 查询参数用 `Record<string, unknown>` 而非 DTO：全局 ValidationPipe 开了 whitelist， DTO 里未声明的字段（page / pageSize）会被剥掉，导致分页参数丢失——翻页时永远回第 1 页 （症状：列表里翻不到的人，一搜关键词却能搜到）。故与日志 / 任务模块保持一致， 筛选条件的解析全部放在 service 层",
         "operationId": "get__api_client_users",
         "parameters": [
-          {
-            "name": "keyword",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "gender",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
           {
             "name": "page",
             "in": "query",
@@ -8568,6 +8541,307 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "bearerAuth": []
           }
         ]
+      },
+      "delete": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "删除用户（级联清理学习数据；日志类表不动，保留审计痕迹）",
+        "operationId": "delete__api_client_users__id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/{id}/ai-quota": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "今日 AI 额度用量（运营排查「这个人是不是把 AI 刷爆了」用）",
+        "operationId": "get__api_client_users__id_ai_quota",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/{id}/growth": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "成长概览（XP / 等级 / 成就 / 场景地图）——与客户端个人中心「成长」同源",
+        "operationId": "get__api_client_users__id_growth",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/{id}/sentence-cards": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "已获得的句签列表（按获得时间倒序）",
+        "operationId": "get__api_client_users__id_sentence_cards",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/export": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）",
+        "operationId": "get__api_client_users_export",
+        "responses": {
+          "200": {
+            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/client-users/{id}/offline": {
@@ -8577,6 +8851,60 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "强制下线（不改密码，仅令旧令牌失效）",
         "operationId": "post__api_client_users__id_offline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/{id}/sentence-cards/backfill": {
+      "post": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "补发过往漏领的句签（历史达标日 + 当日句签已就绪；幂等，重复调用不重复发）",
+        "operationId": "post__api_client_users__id_sentence_cards_backfill",
         "parameters": [
           {
             "name": "id",
@@ -8852,42 +9180,6 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "summary": "分页列表（筛选：status/categoryId/difficulty/keyword）",
         "operationId": "get__api_sentences",
         "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "categoryId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "difficulty",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
           {
             "name": "page",
             "in": "query",
@@ -9346,12 +9638,39 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/export": {
+      "get": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "导出题库 CSV（流式；筛选与列表共用同一套条件）。 权限用 `sentence:query` 而不是新增 `sentence:export`：导出是只读操作， 且权限码是种子数据里写死的，为一个导出动作加码需要重跑 seed——收益不抵风险",
+        "operationId": "get__api_sentences_export",
+        "responses": {
+          "200": {
+            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/gen-tasks": {
       "get": {
         "tags": [
           "题库管理"
         ],
-        "summary": "生成批次列表（运营监控）",
+        "summary": "生成批次列表（运营监控）。 ⚠️ 必须声明在 `@Get(':id')` 之前：Nest 按声明顺序匹配，否则 `gen-tasks` 会被 `:id` 吃掉， 触发 IdParamDto 校验 → 报「id 必须为正整数」（2026-10-24 真实缺陷：点「生成题库」后 前端紧接着拉批次列表，于是刚提示成功就弹出这个错）",
         "operationId": "get__api_sentences_gen_tasks",
         "parameters": [
           {
@@ -9413,6 +9732,223 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                         }
                       }
                     }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/batch-status": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "批量上下架（运营清理题库用；上架只对已有配图的题生效）",
+        "operationId": "post__api_sentences_batch_status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchSentenceStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BatchSentenceStatusDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/gen-tasks/{id}/cancel": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "取消批次（终态 cancelled，之后可删除）",
+        "operationId": "post__api_sentences_gen_tasks__id_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/gen-tasks/{id}/pause": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "暂停批次（在下一个批次边界生效，最长等一个批次，约 1~2 分钟）",
+        "operationId": "post__api_sentences_gen_tasks__id_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/gen-tasks/{id}/resume": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "继续批次（从已完成进度接着跑，不会重复生成）",
+        "operationId": "post__api_sentences_gen_tasks__id_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
                   },
                   "required": [
                     "code",
@@ -9670,6 +10206,60 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/gen-tasks/{id}": {
+      "delete": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目）",
+        "operationId": "delete__api_sentences_gen_tasks__id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/analytics/ai-calls": {
       "get": {
         "tags": [
@@ -9764,23 +10354,90 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "operationId": "get__api_analytics_ai_logs",
         "parameters": [
           {
-            "name": "type",
+            "name": "page",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "default": 1
             },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+            "description": "页码"
           },
           {
-            "name": "status",
+            "name": "pageSize",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "integer",
+              "default": 10
             },
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/analytics/ai-logs/summary": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "AI 调用日志汇总（与列表同一套筛选）。 ⚠️ 必须声明在 `ai-logs` 之前不影响（两者都无参数段），但**必须在任何 `:param` 路由之前**",
+        "operationId": "get__api_analytics_ai_logs_summary",
+        "parameters": [
           {
             "name": "page",
             "in": "query",
@@ -10491,6 +11148,91 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/ai/quota": {
+      "get": {
+        "tags": [
+          "ClientAi"
+        ],
+        "summary": "今日 AI 额度（前端展示「剩余 N 次」并在用尽前置灰按钮）",
+        "operationId": "get__api_client_ai_quota",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/ai/expand": {
       "post": {
         "tags": [
@@ -10543,6 +11285,86 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/client/auth/captcha": {
+      "get": {
+        "tags": [
+          "ClientAuth"
+        ],
+        "summary": "图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）",
+        "operationId": "get__api_client_auth_captcha",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/client/auth/me": {
@@ -10871,6 +11693,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         }
       }
     },
+    "/api/client/auth/me/background": {
+      "put": {
+        "tags": [
+          "ClientAuth"
+        ],
+        "summary": "设置个人主页背景句签（cardId=0 恢复默认渐变；仅限已获得的句签）",
+        "operationId": "put__api_client_auth_me_background",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/auth/password": {
       "put": {
         "tags": [
@@ -11007,6 +11872,100 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "summary": "收藏夹（分页）",
         "operationId": "get__api_client_favorites",
         "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/history": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "学习记录（全量历史：全部/错题/对题 + 难度/场景/时间范围筛选）",
+        "operationId": "get__api_client_history",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
           {
             "name": "page",
             "in": "query",
@@ -11542,6 +12501,91 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/sentence-card/missing": {
+      "get": {
+        "tags": [
+          "SentenceCard"
+        ],
+        "summary": "未拥有的句签（已就绪 − 已获得；含总数与最近一批）",
+        "operationId": "get__api_client_sentence_card_missing",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/sentence-card/today": {
       "get": {
         "tags": [
@@ -11753,6 +12797,47 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "bearerAuth": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "WordRoot"
+        ],
+        "summary": "收录词条：把「AI 词根拆解」的结果落库（词库已有则不覆盖，幂等）",
+        "operationId": "post__api_client_word_roots",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/client/word-roots/{word}": {
@@ -11760,7 +12845,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "WordRoot"
         ],
-        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库",
+        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库。 缓存未命中会计一次 AI 额度（命中不扣）",
         "operationId": "get__api_client_word_roots__word",
         "parameters": [
           {
@@ -12719,6 +13804,26 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "categoryId",
           "sentenceEn",
           "translationZh"
+        ]
+      },
+      "BatchSentenceStatusDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "example": []
+          },
+          "status": {
+            "type": "string",
+            "example": "示例值"
+          }
+        },
+        "required": [
+          "ids",
+          "status"
         ]
       },
       "SaveCategoryDto": {

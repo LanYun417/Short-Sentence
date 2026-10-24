@@ -66,6 +66,12 @@ export interface AnswerResult {
   favorited: boolean;
   todayDone: number;
   todayGoal: number;
+  /** 本次作答获得的经验（重复作答 / 幂等命中为 0） */
+  xpEarned: number;
+  /** 本次作答恰好完成每日目标的额外奖励经验（未触发为 0） */
+  goalBonus: number;
+  /** 本次新解锁的成就（客户端可直接弹提示） */
+  newAchievements: Array<{ code: string; name: string }>;
 }
 
 /** 收藏夹条目。 */
@@ -327,16 +333,26 @@ export class QuestionsService {
     // 模式只决定用哪组规则，经验值恒由服务端算——拼词模式经验约为默写六成
     const rule = XP_EVENT[dto.mode === 'assemble' ? 'assemble' : 'input'];
     const eventType: keyof typeof XP_RULES = isCorrect ? (last ? rule.review : rule.first) : rule.wrong;
-    await this.gamify.awardXp(userId, eventType, `answer:${record.id}`, XP_RULES[eventType]);
+    // 返回值给客户端做「+N XP」的即时反馈：幂等命中（重复提交）时为 0，不虚报
+    const xpAwarded = await this.gamify.awardXp(userId, eventType, `answer:${record.id}`, XP_RULES[eventType]);
 
     const favorited = await this.isFavorited(userId, sentence.id);
     const today = await this.checkinService.getToday(userId);
 
     // 完成每日目标额外奖励（按日期幂等，一天一次）
+    let goalBonus = 0;
     if (today?.completed) {
-      await this.gamify.awardXp(userId, 'daily_goal', `daily_goal:${userId}:${today.date}`, XP_RULES.daily_goal);
+      const awarded = await this.gamify.awardXp(
+        userId,
+        'daily_goal',
+        `daily_goal:${userId}:${today.date}`,
+        XP_RULES.daily_goal,
+      );
+      if (awarded) {
+        goalBonus = XP_RULES.daily_goal;
+      }
     }
-    await this.gamify.checkAchievements(userId);
+    const newAchievements = await this.gamify.checkAchievements(userId);
 
     return {
       sentenceId: Number(sentence.id),
@@ -350,6 +366,9 @@ export class QuestionsService {
       favorited,
       todayDone: today?.doneCount ?? 0,
       todayGoal: config.sentence.dailyGoal,
+      xpEarned: xpAwarded ? XP_RULES[eventType] : 0,
+      goalBonus,
+      newAchievements,
     };
   }
 

@@ -4907,34 +4907,13 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client-users",
-        "summary": "分页列表（关键词 / 状态 / 性别）",
+        "summary": "分页列表（关键词 / 状态 / 性别）。 查询参数用 `Record<string, unknown>` 而非 DTO：全局 ValidationPipe 开了 whitelist， DTO 里未声明的字段（page / pageSize）会被剥掉，导致分页参数丢失——翻页时永远回第 1 页 （症状：列表里翻不到的人，一搜关键词却能搜到）。故与日志 / 任务模块保持一致， 筛选条件的解析全部放在 service 层",
         "permission": [
           "client:user:list"
         ],
         "isPublic": false,
         "action": "",
         "params": [
-          {
-            "name": "keyword",
-            "in": "query",
-            "type": "unknown",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "gender",
-            "in": "query",
-            "type": "unknown",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
           {
             "name": "page",
             "in": "query",
@@ -4987,6 +4966,98 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "GET",
+        "path": "/api/client-users/:id/ai-quota",
+        "summary": "今日 AI 额度用量（运营排查「这个人是不是把 AI 刷爆了」用）",
+        "permission": [
+          "client:user:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/1/ai-quota\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client-users/:id/growth",
+        "summary": "成长概览（XP / 等级 / 成就 / 场景地图）——与客户端个人中心「成长」同源",
+        "permission": [
+          "client:user:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/1/growth\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client-users/:id/sentence-cards",
+        "summary": "已获得的句签列表（按获得时间倒序）",
+        "permission": [
+          "client:user:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/1/sentence-cards\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client-users/export",
+        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）",
+        "permission": [
+          "client:user:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/export\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client-users/:id/offline",
         "summary": "强制下线（不改密码，仅令旧令牌失效）",
@@ -5007,6 +5078,32 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client-users/1/offline\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client-users/:id/sentence-cards/backfill",
+        "summary": "补发过往漏领的句签（历史达标日 + 当日句签已就绪；幂等，重复调用不重复发）",
+        "permission": [
+          "client:user:edit"
+        ],
+        "isPublic": false,
+        "action": "客户端用户 · 补发句签",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client-users/1/sentence-cards/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
           }
@@ -5059,6 +5156,32 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X PUT \"http://localhost:3000/api/client-users/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/client-users/:id",
+        "summary": "删除用户（级联清理学习数据；日志类表不动，保留审计痕迹）",
+        "permission": [
+          "client:user:delete"
+        ],
+        "isPublic": false,
+        "action": "客户端用户 · 删除用户",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/client-users/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
           }
@@ -5135,34 +5258,6 @@ export const API_DOCS: ApiDocGroup[] = [
         "isPublic": false,
         "action": "",
         "params": [
-          {
-            "name": "status",
-            "in": "query",
-            "type": "string",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "categoryId",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "difficulty",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "type": "string",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
           {
             "name": "page",
             "in": "query",
@@ -5251,8 +5346,22 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/sentences/export",
+        "summary": "导出题库 CSV（流式；筛选与列表共用同一套条件）。 权限用 `sentence:query` 而不是新增 `sentence:export`：导出是只读操作， 且权限码是种子数据里写死的，为一个导出动作加码需要重跑 seed——收益不抵风险",
+        "permission": [
+          "sentence:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/sentences/export\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/sentences/gen-tasks",
-        "summary": "生成批次列表（运营监控）",
+        "summary": "生成批次列表（运营监控）。 ⚠️ 必须声明在 `@Get(':id')` 之前：Nest 按声明顺序匹配，否则 `gen-tasks` 会被 `:id` 吃掉， 触发 IdParamDto 校验 → 报「id 必须为正整数」（2026-10-24 真实缺陷：点「生成题库」后 前端紧接着拉批次列表，于是刚提示成功就弹出这个错）",
         "permission": [
           "sentence:gen"
         ],
@@ -5366,6 +5475,41 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/sentences/batch-status",
+        "summary": "批量上下架（运营清理题库用；上架只对已有配图的题生效）",
+        "permission": [
+          "sentence:edit"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 批量上下架",
+        "params": [
+          {
+            "name": "ids",
+            "in": "body",
+            "type": "number[]",
+            "required": true,
+            "description": "",
+            "example": []
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "SentenceStatus",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/batch-status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"ids\": [],\n      \"status\": \"示例值\"\n    }'",
+          "requestBody": {
+            "ids": [],
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/sentences/categories",
         "summary": "新增分类",
         "permission": [
@@ -5423,6 +5567,84 @@ export const API_DOCS: ApiDocGroup[] = [
             "icon": "示例值",
             "sort": 1,
             "status": 1
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/gen-tasks/:id/cancel",
+        "summary": "取消批次（终态 cancelled，之后可删除）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 取消生成",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen-tasks/1/cancel\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/gen-tasks/:id/pause",
+        "summary": "暂停批次（在下一个批次边界生效，最长等一个批次，约 1~2 分钟）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 暂停生成",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen-tasks/1/pause\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/gen-tasks/:id/resume",
+        "summary": "继续批次（从已完成进度接着跑，不会重复生成）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 继续生成",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen-tasks/1/resume\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
           }
         }
       },
@@ -5722,6 +5944,32 @@ export const API_DOCS: ApiDocGroup[] = [
             "id": "1"
           }
         }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sentences/gen-tasks/:id",
+        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 删除批次",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/sentences/gen-tasks/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
       }
     ]
   },
@@ -5774,20 +6022,6 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "params": [
           {
-            "name": "type",
-            "in": "query",
-            "type": "unknown",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "type": "unknown",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
             "name": "page",
             "in": "query",
             "type": "integer",
@@ -5806,6 +6040,41 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/ai-logs/summary",
+        "summary": "AI 调用日志汇总（与列表同一套筛选）。 ⚠️ 必须声明在 `ai-logs` 之前不影响（两者都无参数段），但**必须在任何 `:param` 路由之前**",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs/summary?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -6080,6 +6349,39 @@ export const API_DOCS: ApiDocGroup[] = [
     "group": "ClientAi",
     "endpoints": [
       {
+        "method": "GET",
+        "path": "/api/client/ai/quota",
+        "summary": "今日 AI 额度（前端展示「剩余 N 次」并在用尽前置灰按钮）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/ai/quota?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client/ai/expand",
         "summary": "场景延展造句（SSE）",
@@ -6108,6 +6410,39 @@ export const API_DOCS: ApiDocGroup[] = [
   {
     "group": "ClientAuth",
     "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/auth/captcha",
+        "summary": "图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/captcha?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
       {
         "method": "GET",
         "path": "/api/client/auth/me",
@@ -6209,6 +6544,17 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "PUT",
+        "path": "/api/client/auth/me/background",
+        "summary": "设置个人主页背景句签（cardId=0 恢复默认渐变；仅限已获得的句签）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/me/background\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
         "path": "/api/client/auth/password",
         "summary": "修改密码",
         "permission": [],
@@ -6288,6 +6634,46 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X GET \"http://localhost:3000/api/client/favorites?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/history",
+        "summary": "学习记录（全量历史：全部/错题/对题 + 难度/场景/时间范围筛选）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "type",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/history?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -6493,6 +6879,39 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/client/sentence-card/missing",
+        "summary": "未拥有的句签（已就绪 − 已获得；含总数与最近一批）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/missing?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client/sentence-card/today",
         "summary": "今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）",
         "permission": [],
@@ -6576,7 +6995,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/word-roots/:word",
-        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库",
+        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库。 缓存未命中会计一次 AI 额度（命中不扣）",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -6595,6 +7014,17 @@ export const API_DOCS: ApiDocGroup[] = [
           "pathParams": {
             "word": "1"
           }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/word-roots",
+        "summary": "收录词条：把「AI 词根拆解」的结果落库（词库已有则不覆盖，幂等）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/word-roots\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

@@ -61,6 +61,12 @@ export interface AnswerResult {
   favorited: boolean;
   todayDone: number;
   todayGoal: number;
+  /** 本次作答获得的经验（重复提交命中幂等时为 0）——App 端用来做「+N XP」即时反馈 */
+  xpEarned?: number;
+  /** 本次作答恰好完成每日目标的额外奖励经验（未触发为 0） */
+  goalBonus?: number;
+  /** 本次新解锁的成就 */
+  newAchievements?: Array<{ code: string; name: string }>;
 }
 
 /** 收藏夹 / 复习池条目。 */
