@@ -10,6 +10,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../../../common/config/config.js';
 import { AppException } from '../../../common/exception/app.exception.js';
+import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -66,6 +67,7 @@ export class WordRootService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiCallLog: AiCallLogService,
+    private readonly aiQuota: AiQuotaService,
   ) {}
 
   /** 搜索：按包含匹配，按热度排序（关键词为空时返回热门词）。 */
@@ -79,8 +81,13 @@ export class WordRootService {
     return rows.map((row) => this.toItem(row));
   }
 
-  /** 查词：命中缓存直接返回并累加热度；未命中则实时解析并入库。 */
-  async lookup(word: string): Promise<WordRootItem> {
+  /**
+   * 查词：命中缓存直接返回并累加热度；未命中则实时解析并入库。
+   *
+   * @param userId 当前用户（用于计 AI 额度）。**只有缓存未命中、真要调上游时才扣**——
+   *   否则用户点「热门词」也要扣额度，体感极差；而词典正是靠这些调用长起来的。
+   */
+  async lookup(word: string, userId?: number): Promise<WordRootItem> {
     const normalized = this.normalize(word);
     const cached = await this.prisma.wordRoot.findUnique({ where: { word: normalized } });
     if (cached) {
@@ -90,7 +97,19 @@ export class WordRootService {
       });
       return this.toItem(cached);
     }
-    const analysis = await this.analyze(normalized);
+    if (userId !== undefined) {
+      await this.aiQuota.consume(userId, 'word_lookup');
+    }
+    let analysis: WordRootAnalysis;
+    try {
+      analysis = await this.analyze(normalized, userId);
+    } catch (error) {
+      // 解析失败退额度：上游抖动不该白扣用户次数
+      if (userId !== undefined) {
+        await this.aiQuota.refund(userId);
+      }
+      throw error;
+    }
     const row = await this.prisma.wordRoot.create({
       data: {
         word: normalized,
@@ -293,7 +312,7 @@ export class WordRootService {
   }
 
   /** 调上游做一次词根解析（非流式）。 */
-  private async analyze(word: string): Promise<WordRootAnalysis> {
+  private async analyze(word: string, userId?: number): Promise<WordRootAnalysis> {
     if (config.ai.agnes.apiKey.trim().length === 0) {
       throw new Error('AI 能力未配置（AI_AGNES_API_KEY 缺失）');
     }
@@ -329,7 +348,8 @@ export class WordRootService {
       type: 'word_root',
       provider: 'agnes',
       model: config.ai.agnes.textModel,
-      bizId: 0,
+      // 带 userId 便于按用户归集 AI 用量（做会员分档与运营报表的依据）
+      bizId: userId ?? 0,
       promptTokens: payload.usage?.prompt_tokens ?? 0,
       completionTokens: payload.usage?.completion_tokens ?? 0,
       latencyMs: Date.now() - startedAt,

@@ -12,6 +12,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { config } from '../../../common/config/config.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
+import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiProviderError } from '../../../common/ai/ai.types.js';
 
 /** 上游 SSE 解析产出。 */
@@ -33,7 +34,10 @@ export interface SseFrame {
 export class ClientAiService {
   private readonly logger = new Logger(ClientAiService.name);
 
-  constructor(private readonly aiCallLog: AiCallLogService) {}
+  constructor(
+    private readonly aiCallLog: AiCallLogService,
+    private readonly aiQuota: AiQuotaService,
+  ) {}
 
   /**
    * 场景延展造句：输入中文，流式返回地道英文 + 音标 + 场景说明。
@@ -48,7 +52,7 @@ export class ClientAiService {
       '{"sentence":"地道的英文句子","phonetic":"IPA 音标（含首尾斜杠）","note":"一句中文，说明适用场景或语气"}',
     ].join('\n');
     const user = sentenceId ? `参考场景句子 id：${sentenceId}\n我想表达：${chinese}` : `我想表达：${chinese}`;
-    return this.streamChat({ system, user, type: 'expand', bizId: sentenceId ?? userId });
+    return this.streamChat({ system, user, type: 'expand', bizId: sentenceId ?? userId, userId });
   }
 
   /**
@@ -64,11 +68,17 @@ export class ClientAiService {
       'parts 按单词从左到右顺序排列；若某词没有明显词缀，parts 至少给出词根。',
     ].join('\n');
     const user = sentenceId ? `单词：${word}\n上下文句子 id：${sentenceId}` : `单词：${word}`;
-    return this.streamChat({ system, user, type: 'word_root', bizId: sentenceId ?? userId });
+    return this.streamChat({ system, user, type: 'word_root', bizId: sentenceId ?? userId, userId });
   }
 
   /** 通用流式转发（上游 OpenAI 兼容 SSE → 前端 SseFrame）。 */
-  private streamChat(params: { system: string; user: string; type: string; bizId: number }): Observable<SseFrame> {
+  private streamChat(params: {
+    system: string;
+    user: string;
+    type: string;
+    bizId: number;
+    userId: number;
+  }): Observable<SseFrame> {
     return new Observable<SseFrame>((subscriber) => {
       const controller = new AbortController();
       const startedAt = Date.now();
@@ -137,6 +147,8 @@ export class ClientAiService {
           this.logger.error(
             `[ClientAi] ${params.type} 流式调用失败: ${error instanceof Error ? error.message : String(error)}`,
           );
+          // 上游失败退额度：没有产出不该白扣用户次数
+          await this.aiQuota.refund(params.userId);
           await this.aiCallLog.record({
             type: params.type,
             provider: 'agnes',

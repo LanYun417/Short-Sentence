@@ -6,10 +6,11 @@
  * 而 AI 生成必须 POST（输入体较长、且不想把用户输入暴露在 URL）。
  * 故用 @Res() 手动写 SSE，并把三个反代友好头带上（X-Accel-Buffering 防缓冲）。
  */
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Observable } from 'rxjs';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
+import { AiQuotaService, type AiQuotaUsage } from '../../../common/ai/ai-quota.service.js';
 import { RawResponse } from '../../../common/http/response.interceptor.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { ClientAiService, type SseFrame } from './client-ai.service.js';
@@ -17,19 +18,39 @@ import { ClientExpandDto, ClientWordRootDto } from './dto.js';
 
 @Controller('client/ai')
 export class ClientAiController {
-  constructor(private readonly clientAi: ClientAiService) {}
+  constructor(
+    private readonly clientAi: ClientAiService,
+    private readonly aiQuota: AiQuotaService,
+  ) {}
+
+  /** 今日 AI 额度（前端展示「剩余 N 次」并在用尽前置灰按钮）。 */
+  @Get('quota')
+  quota(@CurrentClientUser() user: ClientUserContext): Promise<AiQuotaUsage> {
+    return this.aiQuota.usage(user.userId);
+  }
 
   /** 场景延展造句（SSE）。 */
   @Post('expand')
   @RawResponse()
-  expand(@CurrentClientUser() user: ClientUserContext, @Body() dto: ClientExpandDto, @Res() res: Response): void {
+  async expand(
+    @CurrentClientUser() user: ClientUserContext,
+    @Body() dto: ClientExpandDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 额度必须在写 SSE 头之前扣：超限直接抛 429，前端拿到的是正常 JSON 错误（而不是半截流）
+    await this.aiQuota.consume(user.userId, 'expand');
     this.writeSse(res, this.clientAi.expandStream(user.userId, dto.chinese, dto.sentenceId));
   }
 
   /** 词根词缀拆解（SSE）。 */
   @Post('word-root')
   @RawResponse()
-  wordRoot(@CurrentClientUser() user: ClientUserContext, @Body() dto: ClientWordRootDto, @Res() res: Response): void {
+  async wordRoot(
+    @CurrentClientUser() user: ClientUserContext,
+    @Body() dto: ClientWordRootDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.aiQuota.consume(user.userId, 'word_root');
     this.writeSse(res, this.clientAi.wordRootStream(user.userId, dto.word, dto.sentenceId));
   }
 

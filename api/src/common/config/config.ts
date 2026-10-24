@@ -301,6 +301,12 @@ export const config = {
     maxAttempts: Math.max(1, toNumber(process.env.AI_MAX_ATTEMPTS, 3)),
     /** 单次 AI 请求超时（生图可能数十秒，官方建议 60s~360s） */
     requestTimeoutMs: Math.max(1000, toNumber(process.env.AI_REQUEST_TIMEOUT_MS, 180_000)),
+    /**
+     * 客户端用户每日免费 AI 次数（按自然日、Asia/Shanghai 计）。
+     * 实测单次约 450 token，50 次≈2.2 万 token/人/天（成本可忽略）；
+     * 先按 50 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
+     */
+    dailyQuota: Math.max(1, toNumber(process.env.AI_DAILY_QUOTA, 50)),
   },
   /** 「短句」业务配置 */
   sentence: {

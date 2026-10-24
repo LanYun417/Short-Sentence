@@ -144,6 +144,27 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * 原子自减（额度「失败退还」用）。
+   * 不会减到负数：值为 0 或键不存在时直接返回 0，不写负值。
+   */
+  async decr(key: string): Promise<number> {
+    if (!this.isReady()) {
+      return 0;
+    }
+    try {
+      const client = this.client!;
+      const current = Number((await client.get(key)) ?? 0) || 0;
+      if (current <= 0) {
+        return 0;
+      }
+      const value = await client.decr(key);
+      return Math.max(0, value);
+    } catch {
+      return 0;
+    }
+  }
+
   /** 集合：添加成员（在线会话索引等需要"去重且可枚举"的场景）。 */
   async sAdd(key: string, member: string): Promise<boolean> {
     if (!this.isReady()) {

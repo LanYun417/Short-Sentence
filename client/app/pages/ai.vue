@@ -12,7 +12,7 @@
 import { streamSse } from '~/composables/useSse';
 import { apiFetch } from '~/composables/useApi';
 import { normalizeExpandResult, normalizeWordRootResult, parseAiJson, toWordRootItem } from '~/utils/ai-result';
-import type { AiExpandResult, AiWordRootResult, WordRootCollectResult, WordRootItem } from '~/types';
+import type { AiExpandResult, AiWordRootResult, AiQuotaUsage, WordRootCollectResult, WordRootItem } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -31,6 +31,35 @@ const TABS = [
   { label: '词根词典', value: 'roots', slot: 'roots' },
 ];
 
+/* ------------------------------ 每日 AI 额度 ------------------------------ */
+
+const quota = ref<AiQuotaUsage | null>(null);
+
+/** 拉取今日剩余次数。 */
+async function loadQuota(): Promise<void> {
+  quota.value = await apiFetch<AiQuotaUsage>('/client/ai/quota').catch(() => null);
+}
+
+/** 剩余次数（0 视为已用完，用于置灰按钮）。 */
+const quotaLeft = computed(() => quota.value?.remaining ?? 0);
+/** 是否已用完（前端先拦一步，别等用户点了才报错）。 */
+const quotaExhausted = computed(() => quotaLeft.value <= 0);
+
+/**
+ * 本地扣一次额度（调用成功后立即更新计数，不用重新拉接口）。
+ * 后端已做权威校验，这里只是为了即时反馈。
+ */
+function spendQuota(): void {
+  if (!quota.value) {
+    return;
+  }
+  quota.value = {
+    ...quota.value,
+    used: quota.value.used + 1,
+    remaining: Math.max(0, quota.value.remaining - 1),
+  };
+}
+
 /* ------------------------------ 场景造句 ------------------------------ */
 
 const expandInput = ref('');
@@ -44,7 +73,7 @@ let expandAbort: (() => void) | null = null;
 /** 场景延展造句。 */
 async function runExpand(): Promise<void> {
   const chinese = expandInput.value.trim();
-  if (!chinese || expandRunning.value) {
+  if (!chinese || expandRunning.value || quotaExhausted.value) {
     return;
   }
   expandRunning.value = true;
@@ -62,6 +91,7 @@ async function runExpand(): Promise<void> {
         expandRunning.value = false;
         // 结构化解析；失败时保留 expandRaw 由模板回退为原文
         expandResult.value = normalizeExpandResult(parseAiJson(expandRaw.value));
+        spendQuota();
       },
       onError: () => {
         expandRunning.value = false;
@@ -87,7 +117,7 @@ let wordAbort: (() => void) | null = null;
 /** 词根词缀拆解（流式 → 结构化卡片 → 自动收录）。 */
 async function runWordRoot(): Promise<void> {
   const word = wordInput.value.trim();
-  if (!word || wordRunning.value) {
+  if (!word || wordRunning.value || quotaExhausted.value) {
     return;
   }
   wordRunning.value = true;
@@ -109,6 +139,7 @@ async function runWordRoot(): Promise<void> {
           wordResult.value = toWordRootItem(word, analysis);
           void collectWord(word, analysis);
         }
+        spendQuota();
       },
       onError: () => {
         wordRunning.value = false;
@@ -233,6 +264,7 @@ function resetRoot(): void {
 }
 
 onMounted(() => {
+  void loadQuota();
   void loadHotWords();
 });
 
@@ -257,6 +289,19 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- 额度提示条：用尽时置灰按钮并说明恢复时间（前端先拦，不等点了才报错） -->
+    <p
+      v-if="quota"
+      class="anim-in mb-3 flex items-center gap-1.5 text-xs"
+      :class="quotaExhausted ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'"
+    >
+      <UIcon :name="quotaExhausted ? 'i-lucide-triangle-alert' : 'i-lucide-sparkles'" class="h-3.5 w-3.5" />
+      <span v-if="quotaExhausted">今日 AI 次数已用完（每天 {{ quota.limit }} 次），明天 0 点恢复</span>
+      <span v-else
+        >今日 AI 剩余 <b class="font-semibold text-sky-600 dark:text-sky-400">{{ quotaLeft }}</b> 次</span
+      >
+    </p>
+
     <UTabs v-model="activeTab" :items="TABS" variant="pill" class="mb-4">
       <!-- 场景造句 -->
       <template #expand>
@@ -270,7 +315,12 @@ onBeforeUnmount(() => {
             :disabled="expandRunning"
             @keydown.enter.prevent="runExpand"
           />
-          <UButton size="lg" :loading="expandRunning" :disabled="!expandInput.trim()" @click="runExpand">
+          <UButton
+            size="lg"
+            :loading="expandRunning"
+            :disabled="!expandInput.trim() || quotaExhausted"
+            @click="runExpand"
+          >
             生成
           </UButton>
           <UButton
@@ -322,7 +372,14 @@ onBeforeUnmount(() => {
             :disabled="wordRunning"
             @keydown.enter.prevent="runWordRoot"
           />
-          <UButton size="lg" :loading="wordRunning" :disabled="!wordInput.trim()" @click="runWordRoot"> 拆解 </UButton>
+          <UButton
+            size="lg"
+            :loading="wordRunning"
+            :disabled="!wordInput.trim() || quotaExhausted"
+            @click="runWordRoot"
+          >
+            拆解
+          </UButton>
           <UButton
             v-if="wordRunning"
             size="lg"
@@ -416,14 +473,16 @@ onBeforeUnmount(() => {
           class="anim-pop mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-10 text-center dark:border-slate-700"
         >
           <UIcon name="i-lucide-book-search" class="h-8 w-8 text-slate-300 dark:text-slate-600" />
-          <p class="text-sm text-slate-500 dark:text-slate-400">词典里还没有「{{ rootQuery }}」</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            {{ quotaExhausted ? '今日 AI 次数已用完，明天 0 点恢复' : `词典里还没有「${rootQuery}」` }}
+          </p>
           <UButton
             :loading="rootAnalyzing"
             icon="i-lucide-sparkles"
-            :disabled="!rootQuery.trim()"
+            :disabled="!rootQuery.trim() || quotaExhausted"
             @click="lookupRoot(rootQuery.trim())"
           >
-            用 AI 解析这个词
+            {{ quotaExhausted ? '今日次数已用完' : '用 AI 解析这个词' }}
           </UButton>
         </div>
 

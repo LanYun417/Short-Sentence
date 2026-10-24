@@ -219,3 +219,15 @@ export interface WordRootCollectResult {
   item: WordRootItem;
   created: boolean;
 }
+
+/** 客户端用户每日 AI 额度。 */
+export interface AiQuotaUsage {
+  /** 今日已用次数 */
+  used: number;
+  /** 每日上限 */
+  limit: number;
+  /** 剩余次数 */
+  remaining: number;
+  /** 额度重置时间（次日 0 点，ISO） */
+  resetAt: string;
+}

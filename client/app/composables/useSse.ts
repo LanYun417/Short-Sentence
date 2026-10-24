@@ -20,6 +20,23 @@ export interface SseHandlers {
 }
 
 /**
+ * 从非 2xx 响应里取服务端错误文案（统一响应体 `{ code, message }`）。
+ * 读不到/解析失败时回退到兜底文案。
+ */
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const text = await response.text();
+    if (!text) {
+      return fallback;
+    }
+    const parsed = JSON.parse(text) as { message?: unknown };
+    return typeof parsed.message === 'string' && parsed.message ? parsed.message : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * 发起 SSE 请求并逐段解析。
  * @param path 接口路径（如 `/client/ai/expand`）
  * @param body 请求体
@@ -45,7 +62,9 @@ export async function streamSse(path: string, body: unknown, handlers: SseHandle
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
-        handlers.onError?.('AI 服务暂时不可用，请稍后重试');
+        // 非流式错误（如 429 额度用完）：读服务端 message 透出。
+        // 原来这里一律报「AI 服务暂时不可用」，用户看到的是服务挂了而不是额度用完。
+        handlers.onError?.(await readErrorMessage(response, 'AI 服务暂时不可用，请稍后重试'));
         return;
       }
       const reader = response.body.getReader();
