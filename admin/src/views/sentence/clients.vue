@@ -1,20 +1,31 @@
 <script setup lang="ts">
 /**
  * 客户端用户管理页（「短句」运营后台）。
- * 模块职责：分页筛选 / 详情（学习数据 + 最近答题）/ 启停 / 重置密码 / 强制下线。
+ * 模块职责：分页筛选 / 详情（学习数据 + 成长 + 句签 + 最近答题）/ 启停 / 重置密码 /
+ * 强制下线 / 删除 / 补发漏签句签。
  * 权限：v-permission（client:user:*），与种子菜单一致。
  */
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
+  backfillClientUserSentenceCardsApi,
+  deleteClientUserApi,
   forceClientUserOfflineApi,
   getClientUserDetailApi,
+  getClientUserGrowthApi,
   getClientUserListApi,
+  getClientUserSentenceCardsApi,
   resetClientUserPasswordApi,
   setClientUserStatusApi,
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
-import type { ClientUserDetail, ClientUserItem } from '@/types/api';
+import type {
+  BackfillSentenceCardsResult,
+  ClientUserDetail,
+  ClientUserGrowth,
+  ClientUserItem,
+  ClientUserSentenceCard,
+} from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
@@ -44,20 +55,96 @@ function correctRate(row: ClientUserItem): string {
   return `${((row.correctCount / row.answerCount) * 100).toFixed(1)}%`;
 }
 
-/* ------------------------------ 详情 ------------------------------ */
+/* ------------------------------ 详情（含成长 / 句签） ------------------------------ */
 
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detail = ref<ClientUserDetail | null>(null);
 
+/** 成长概览（对应客户端个人中心「成长」Tab）。 */
+const growth = ref<ClientUserGrowth | null>(null);
+const growthLoading = ref(false);
+const growthError = ref('');
+
+/** 已获得的句签。 */
+const cards = ref<ClientUserSentenceCard[]>([]);
+const cardsLoading = ref(false);
+const cardsError = ref('');
+
+/** 补发漏签中。 */
+const backfilling = ref(false);
+
+async function loadGrowth(id: number): Promise<void> {
+  growthLoading.value = true;
+  growthError.value = '';
+  try {
+    growth.value = await getClientUserGrowthApi(id);
+  } catch (error) {
+    growth.value = null;
+    growthError.value = error instanceof Error ? error.message : '加载失败';
+  } finally {
+    growthLoading.value = false;
+  }
+}
+
+async function loadCards(id: number): Promise<void> {
+  cardsLoading.value = true;
+  cardsError.value = '';
+  try {
+    cards.value = await getClientUserSentenceCardsApi(id);
+  } catch (error) {
+    cards.value = [];
+    cardsError.value = error instanceof Error ? error.message : '加载失败';
+  } finally {
+    cardsLoading.value = false;
+  }
+}
+
 async function handleDetail(row: ClientUserItem): Promise<void> {
   detailVisible.value = true;
   detailLoading.value = true;
   detail.value = null;
+  growth.value = null;
+  growthError.value = '';
+  cards.value = [];
+  cardsError.value = '';
   try {
     detail.value = await getClientUserDetailApi(row.id);
   } finally {
     detailLoading.value = false;
+  }
+  // 成长 / 句签与主详情解耦加载：任一侧失败都不影响另一侧展示
+  void loadGrowth(row.id);
+  void loadCards(row.id);
+}
+
+/* ------------------------------ 补发漏签句签 ------------------------------ */
+
+async function handleBackfill(): Promise<void> {
+  const target = detail.value;
+  if (!target) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      '将扫描该用户历史「已完成每日目标但未领取」的日期，并补发当日句签；已拥有的不会重复发。确定继续？',
+      '解锁漏签句签',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  backfilling.value = true;
+  try {
+    const result: BackfillSentenceCardsResult = await backfillClientUserSentenceCardsApi(target.id);
+    if (result.granted > 0) {
+      ElMessage.success(`已补发 ${result.granted} 张：${result.bizDates.join('、')}`);
+      await loadCards(target.id);
+    } else {
+      ElMessage.info('没有漏签的句签（该用户均已领取）');
+    }
+  } finally {
+    backfilling.value = false;
   }
 }
 
@@ -75,6 +162,31 @@ async function handleToggleStatus(row: ClientUserItem): Promise<void> {
   await setClientUserStatusApi(row.id, next);
   ElMessage.success(next === 1 ? '已启用' : '已禁用');
   await getList();
+}
+
+/* ------------------------------ 删除 ------------------------------ */
+
+const deleting = ref(false);
+
+async function handleDelete(row: ClientUserItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除「${row.nickname}（${row.email}）」吗？\n将同时清空其答题记录、收藏、打卡、举报、句签、经验与成就数据，且不可恢复（日志类记录保留）。`,
+      '删除用户',
+      { type: 'warning', confirmButtonText: '确认删除', confirmButtonClass: 'el-button--danger' },
+    );
+  } catch {
+    return;
+  }
+  deleting.value = true;
+  try {
+    await deleteClientUserApi(row.id);
+    ElMessage.success('已删除');
+    detailVisible.value = false;
+    await getList();
+  } finally {
+    deleting.value = false;
+  }
 }
 
 /* ------------------------------ 重置密码 ------------------------------ */
@@ -195,7 +307,7 @@ onMounted(() => {
         <el-table-column label="注册时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="230" fixed="right">
+        <el-table-column label="操作" width="290" fixed="right">
           <template #default="{ row }">
             <el-button
               v-permission="'client:user:query'"
@@ -229,6 +341,15 @@ onMounted(() => {
             >
               下线
             </el-button>
+            <el-button
+              v-permission="'client:user:delete'"
+              link
+              type="danger"
+              :loading="deleting"
+              @click="handleDelete(row as ClientUserItem)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -243,8 +364,8 @@ onMounted(() => {
     </el-card>
 
     <!-- 详情 -->
-    <BasicDialog v-model="detailVisible" title="用户详情" width="720px" :show-footer="false">
-      <div v-loading="detailLoading">
+    <BasicDialog v-model="detailVisible" title="用户详情" width="860px" :show-footer="false">
+      <div v-loading="detailLoading" class="max-h-[62vh] overflow-y-auto pr-1">
         <template v-if="detail">
           <div class="mb-4 flex items-center gap-3">
             <el-avatar :size="48" :src="detail.avatarUrl || undefined">
@@ -292,6 +413,109 @@ onMounted(() => {
               <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
             </el-table-column>
           </el-table>
+
+          <!-- 成长（与客户端个人中心「成长」Tab 同源） -->
+          <div class="mt-5">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-y-1">
+              <p class="text-sm font-medium">成长（客户端个人中心）</p>
+              <span v-if="growth" class="text-xs text-muted">
+                成就 {{ growth.unlockedAchievements }}/{{ growth.totalAchievements }} · 场景探索
+                {{ growth.unlockedScenes }}/{{ growth.totalScenes }}
+              </span>
+            </div>
+
+            <div v-if="growthLoading" class="py-6 text-center text-sm text-faint">加载中…</div>
+            <p v-else-if="growthError" class="py-4 text-center text-sm text-danger">
+              成长数据加载失败：{{ growthError }}
+            </p>
+            <template v-else-if="growth">
+              <el-descriptions :column="3" border size="small">
+                <el-descriptions-item label="经验值">{{ growth.xp }} XP</el-descriptions-item>
+                <el-descriptions-item label="当前等级">
+                  <el-tag size="small" type="primary" effect="dark">
+                    {{ growth.level.name }} · {{ growth.level.code }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="距下一级">
+                  <span v-if="growth.level.next" class="text-xs text-muted">还差 {{ growth.level.toNext }} XP</span>
+                  <span v-else class="text-xs text-muted">已满级</span>
+                </el-descriptions-item>
+              </el-descriptions>
+              <el-progress :percentage="growth.level.progress" :stroke-width="10" class="my-3" />
+
+              <p class="mb-2 text-sm text-muted">
+                成就（{{ growth.unlockedAchievements }}/{{ growth.totalAchievements }}）
+              </p>
+              <div class="mb-4 flex flex-wrap gap-1.5">
+                <el-tag
+                  v-for="item in growth.achievements"
+                  :key="item.code"
+                  size="small"
+                  :type="item.unlocked ? 'success' : 'info'"
+                  :effect="item.unlocked ? 'dark' : 'plain'"
+                  :title="item.description"
+                >
+                  {{ item.name }}
+                  <span class="ml-1 opacity-60">+{{ item.rewardXp }}</span>
+                </el-tag>
+              </div>
+
+              <p class="mb-2 text-sm text-muted">场景探索（{{ growth.unlockedScenes }}/{{ growth.totalScenes }}）</p>
+              <el-table :data="growth.sceneMap" border size="small" max-height="200">
+                <el-table-column prop="name" label="场景" min-width="120" show-overflow-tooltip />
+                <el-table-column label="状态" width="90">
+                  <template #default="{ row }">
+                    <el-tag :type="row.unlocked ? 'success' : 'info'" size="small">
+                      {{ row.unlocked ? '已解锁' : '未解锁' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="practicedCount" label="已练句子" width="90" />
+              </el-table>
+            </template>
+          </div>
+
+          <!-- 句签 -->
+          <div class="mt-5">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-y-1">
+              <p class="text-sm font-medium">句签（{{ cards.length }}）</p>
+              <el-button size="small" type="warning" :loading="backfilling" @click="handleBackfill">
+                解锁漏签句签
+              </el-button>
+            </div>
+
+            <div v-if="cardsLoading" class="py-6 text-center text-sm text-faint">加载中…</div>
+            <p v-else-if="cardsError" class="py-4 text-center text-sm text-danger">
+              句签数据加载失败：{{ cardsError }}
+            </p>
+            <template v-else-if="cards.length">
+              <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                <div
+                  v-for="card in cards"
+                  :key="card.id"
+                  class="overflow-hidden rounded-md border border-line-lighter bg-fill-light"
+                >
+                  <div class="flex-center aspect-video bg-page text-muted">
+                    <img
+                      v-if="card.imageUrl"
+                      :src="card.imageUrl"
+                      :alt="card.titleZh"
+                      class="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                    <span v-else class="text-[20px]">
+                      <el-icon aria-hidden="true"><i class="bi bi-file-earmark-image" /></el-icon>
+                    </span>
+                  </div>
+                  <div class="p-2">
+                    <p class="truncate text-xs font-medium" :title="card.titleZh">{{ card.titleZh }}</p>
+                    <p class="truncate text-xs text-faint">{{ card.bizDate }}</p>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p v-else class="py-6 text-center text-sm text-faint">还没有句签，完成每日目标即可获得当日 AI 闪卡</p>
+          </div>
         </template>
       </div>
     </BasicDialog>

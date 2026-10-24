@@ -987,6 +987,72 @@ export interface ClientUserQuery extends PageQuery {
   gender?: string;
 }
 
+/* ------------------------------ 客户端用户 · 成长与句签 ------------------------------ */
+
+/** 客户端用户成长：CEFR 等级信息 */
+export interface ClientUserGrowthLevel {
+  code: string;
+  name: string;
+  min: number;
+  next: number | null;
+  toNext: number;
+  progress: number;
+}
+
+/** 客户端用户成长：成就（含解锁状态） */
+export interface ClientUserGrowthAchievement {
+  code: string;
+  name: string;
+  description: string;
+  /** lucide 图标名（不含 i-lucide- 前缀） */
+  icon: string;
+  category: string;
+  rewardXp: number;
+  unlocked: boolean;
+  unlockedAt: string | null;
+}
+
+/** 客户端用户成长：场景探索地图条目 */
+export interface ClientUserGrowthScene {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  unlocked: boolean;
+  practicedCount: number;
+}
+
+/** 客户端用户成长概览（与客户端个人中心「成长」同源） */
+export interface ClientUserGrowth {
+  xp: number;
+  level: ClientUserGrowthLevel;
+  achievements: ClientUserGrowthAchievement[];
+  unlockedAchievements: number;
+  totalAchievements: number;
+  sceneMap: ClientUserGrowthScene[];
+  unlockedScenes: number;
+  totalScenes: number;
+}
+
+/** 客户端用户句签 */
+export interface ClientUserSentenceCard {
+  id: number;
+  bizDate: string;
+  title: string;
+  titleZh: string;
+  sentenceEn: string;
+  translationZh: string;
+  imageUrl: string | null;
+  /** 获得时间（ISO；补发的为补发时刻） */
+  obtainedAt: string | null;
+}
+
+/** 补发漏签结果 */
+export interface BackfillSentenceCardsResult {
+  granted: number;
+  bizDates: string[];
+}
+
 /* ------------------------------ 数据分析 ------------------------------ */
 
 /** 运营总览 */
