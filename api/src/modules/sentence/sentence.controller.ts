@@ -118,6 +118,46 @@ export class SentenceController {
     return buildPageResult(list, total, page, pageSize);
   }
 
+  /** 暂停批次（在下一个批次边界生效，最长等一个批次，约 1~2 分钟）。 */
+  @Post('gen-tasks/:id/pause')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '暂停生成')
+  async pauseGenTask(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceGen.pause(params.id);
+    return { __raw: true, data: null, message: '已请求暂停，将在当前批次完成后停止' };
+  }
+
+  /** 继续批次（从已完成进度接着跑，不会重复生成）。 */
+  @Post('gen-tasks/:id/resume')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '继续生成')
+  async resumeGenTask(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceGen.resume(params.id);
+    return { __raw: true, data: null, message: '已继续生成' };
+  }
+
+  /** 取消批次（终态 cancelled，之后可删除）。 */
+  @Post('gen-tasks/:id/cancel')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '取消生成')
+  async cancelGenTask(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceGen.cancel(params.id);
+    return { __raw: true, data: null, message: '已请求取消，将在当前批次完成后停止' };
+  }
+
+  /** 删除批次（保留已配图题目，只清理未生成配图的题目）。 */
+  @Delete('gen-tasks/:id')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '删除批次')
+  async removeGenTask(@Param() params: IdParamDto): Promise<ResponseEnvelope<{ removedSentences: number }>> {
+    const result = await this.sentenceGen.remove(params.id);
+    return {
+      __raw: true,
+      data: result,
+      message: result.removedSentences > 0 ? `已删除（清理未配图题目 ${result.removedSentences} 条）` : '已删除',
+    };
+  }
+
   /** 详情。 */
   @Get(':id')
   @RequirePermissions('sentence:query')

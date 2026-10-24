@@ -56,6 +56,26 @@ export function getGenTaskListApi(params: GenTaskQuery): Promise<PageResult<GenT
   return get<PageResult<GenTaskItem>>('/sentences/gen-tasks', params);
 }
 
+/** 暂停批次（在下一个批次边界生效） */
+export function pauseGenTaskApi(id: number): Promise<null> {
+  return post<null>(`/sentences/gen-tasks/${id}/pause`);
+}
+
+/** 继续批次（从已完成进度接着跑） */
+export function resumeGenTaskApi(id: number): Promise<null> {
+  return post<null>(`/sentences/gen-tasks/${id}/resume`);
+}
+
+/** 取消批次（终态，之后可删除） */
+export function cancelGenTaskApi(id: number): Promise<null> {
+  return post<null>(`/sentences/gen-tasks/${id}/cancel`);
+}
+
+/** 删除批次（保留已配图题目，只清理未配图的） */
+export function deleteGenTaskApi(id: number): Promise<{ removedSentences: number }> {
+  return del<{ removedSentences: number }>(`/sentences/gen-tasks/${id}`);
+}
+
 /** 场景分类（用于筛选与表单下拉） */
 export function getCategoryOptionsApi(): Promise<SentenceCategoryOption[]> {
   return get<SentenceCategoryOption[]>('/client/categories');

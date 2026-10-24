@@ -6,11 +6,15 @@
  */
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
+  cancelGenTaskApi,
   createSentenceApi,
+  deleteGenTaskApi,
   deleteSentenceApi,
   getCategoryOptionsApi,
   getGenTaskListApi,
   getSentenceListApi,
+  pauseGenTaskApi,
+  resumeGenTaskApi,
   triggerGenApi,
   updateSentenceApi,
   type SentenceCategoryOption,
@@ -41,6 +45,8 @@ const GEN_STATUS_TAG: Record<string, { type: 'primary' | 'success' | 'warning' |
   running: { type: 'primary', label: '进行中' },
   success: { type: 'success', label: '成功' },
   failed: { type: 'danger', label: '失败' },
+  paused: { type: 'warning', label: '已暂停' },
+  cancelled: { type: 'info' as unknown as 'primary', label: '已取消' },
 };
 
 /** 生成阶段文案（stage 为空 = 三阶段上线前的老批次，不显示）。 */
@@ -259,6 +265,63 @@ watch(genDialogVisible, (open) => {
 
 onBeforeUnmount(stopGenPolling);
 
+/* --------------------------- 批次操作：暂停 / 继续 / 取消 / 删除 --------------------------- */
+
+/** 暂停：后端在下一个批次边界生效，最长等一个批次（约 1~2 分钟）。 */
+async function handlePauseGen(row: GenTaskItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '暂停不会丢弃任何已生成内容：当前批次跑完（最长约 1~2 分钟）后停止，之后可随时「继续」。确认暂停？',
+      '暂停生成',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  await pauseGenTaskApi(row.id);
+  ElMessage.success('已请求暂停，将在当前批次完成后停止');
+  await loadGenTasks();
+}
+
+/** 继续：从已完成进度接着跑（计数器从批次表读回，不会重复生成）。 */
+async function handleResumeGen(row: GenTaskItem): Promise<void> {
+  await resumeGenTaskApi(row.id);
+  ElMessage.success('已继续生成');
+  await loadGenTasks();
+}
+
+/** 取消：终态，不能接着跑；已生成的题目与图片仍保留。 */
+async function handleCancelGen(row: GenTaskItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '取消后不能接着跑（已生成的题目与图片仍会保留）。若只是想临时停下，请用「暂停」。确认取消？',
+      '取消生成',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  await cancelGenTaskApi(row.id);
+  ElMessage.success('已请求取消，将在当前批次完成后停止');
+  await loadGenTasks();
+}
+
+/** 删除：只清理「还没生成配图」的题目，已配图的保留。 */
+async function handleRemoveGen(row: GenTaskItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '删除批次不会删除「已配图」的题目（它们仍是可用内容）；只会清理还没生成配图的题目。确认删除？',
+      '删除批次',
+      { type: 'warning', confirmButtonText: '确认删除', confirmButtonClass: 'el-button--danger' },
+    );
+  } catch {
+    return;
+  }
+  const result = await deleteGenTaskApi(row.id);
+  ElMessage.success(result.removedSentences > 0 ? `已删除，清理未配图题目 ${result.removedSentences} 条` : '已删除');
+  await loadGenTasks();
+}
+
 onMounted(async () => {
   categories.value = await getCategoryOptionsApi().catch(() => []);
   await getList();
@@ -452,6 +515,21 @@ onMounted(async () => {
         <el-table-column prop="errorMessage" label="错误摘要" min-width="140" show-overflow-tooltip />
         <el-table-column label="完成时间" width="170">
           <template #default="{ row }">{{ row.finishedAt ? formatDateTime(row.finishedAt) : '—' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right">
+          <template #default="{ row }">
+            <template v-if="row.status === 'running' || row.status === 'pending'">
+              <el-button link type="warning" @click="handlePauseGen(row as GenTaskItem)">暂停</el-button>
+              <el-button link type="danger" @click="handleCancelGen(row as GenTaskItem)">取消</el-button>
+            </template>
+            <template v-else-if="row.status === 'paused' || row.status === 'failed'">
+              <el-button link type="primary" @click="handleResumeGen(row as GenTaskItem)">继续</el-button>
+              <el-button link type="danger" @click="handleRemoveGen(row as GenTaskItem)">删除</el-button>
+            </template>
+            <template v-else>
+              <el-button link type="danger" @click="handleRemoveGen(row as GenTaskItem)">删除</el-button>
+            </template>
+          </template>
         </el-table-column>
       </el-table>
       <Pagination

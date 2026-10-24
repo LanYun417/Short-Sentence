@@ -77,26 +77,28 @@ export class SentenceGenService {
       return;
     }
     const bizDate = this.today();
-    // 一天一批：今天已成功 → 跳过（重复触发只会重复消耗上游配额）
-    const successToday = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: 'success' },
-      select: { id: true },
+    // bizDate 唯一：今天已有批次就复用它，**绝不能新建**（否则唯一键冲突）
+    const existing = await this.prisma.sentenceGenTask.findUnique({
+      where: { bizDate },
+      select: { id: true, status: true },
     });
-    if (successToday) {
+    if (existing) {
+      if (existing.status === 'paused') {
+        // 运营主动暂停的批次，定时任务不该擅自续跑
+        this.logger.log('[SentenceGen] 今日批次处于暂停状态，等运营手动继续');
+        return;
+      }
+      if (['success', 'cancelled', 'running'].includes(existing.status)) {
+        return;
+      }
+      // pending / failed：断点续跑
+      void this.execute(existing.id);
       return;
     }
-    // 断点续跑：优先跑今天未完成的批次
-    const unfinished = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: { in: ['pending', 'running', 'failed'] } },
-      orderBy: { id: 'desc' },
+    const task = await this.prisma.sentenceGenTask.create({
+      data: { bizDate, targetCount: config.sentence.dailyTarget, triggerType: 'cron', status: 'pending' },
       select: { id: true },
     });
-    const task =
-      unfinished ??
-      (await this.prisma.sentenceGenTask.create({
-        data: { bizDate, targetCount: config.sentence.dailyTarget, triggerType: 'cron', status: 'pending' },
-        select: { id: true },
-      }));
     void this.execute(task.id);
   }
 
@@ -110,24 +112,21 @@ export class SentenceGenService {
       throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
     }
     const bizDate = this.today();
-    // 一天一批：今天已成功 → 拒绝（重复触发只会重复消耗上游配额）
-    const successToday = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: 'success' },
-      select: { id: true },
+    const existing = await this.prisma.sentenceGenTask.findUnique({
+      where: { bizDate },
+      select: { id: true, status: true },
     });
-    if (successToday) {
+    if (existing?.status === 'success') {
       throw AppException.conflict('今日批次已成功完成，请勿重复触发');
     }
-    // 断点续跑：优先跑今天未完成的批次
-    const unfinished = await this.prisma.sentenceGenTask.findFirst({
-      where: { bizDate, status: { in: ['pending', 'running', 'failed'] } },
-      orderBy: { id: 'desc' },
-      select: { id: true },
-    });
+    if (existing?.status === 'cancelled') {
+      // bizDate 唯一，取消的批次不删掉就再也建不了今天的批次——给出可执行的提示
+      throw AppException.conflict('今日批次已取消，请先在「生成批次」里删除它再重新生成');
+    }
     const target = Math.max(1, count ?? config.sentence.dailyTarget);
-    const task = unfinished
+    const task = existing
       ? await this.prisma.sentenceGenTask.update({
-          where: { id: unfinished.id },
+          where: { id: existing.id },
           data: { targetCount: target, triggerType: 'manual' },
           select: { id: true },
         })
@@ -140,13 +139,127 @@ export class SentenceGenService {
     return { taskId: Number(task.id) };
   }
 
-  /** 主执行体（fire-and-forget 调用；结果全部落在批次表）。 */
+  /* --------------------------- 运营控制：暂停 / 继续 / 取消 / 删除 --------------------------- */
+
+  /**
+   * 读取运营控制指令（暂停 / 取消）。
+   * 读失败按「继续」处理——不能因为一次查询抖动把整批停掉；
+   * 批次被删则按「取消」处理，避免继续往不存在的行上写。
+   */
+  private async controlOf(taskId: bigint): Promise<'run' | 'pause' | 'cancel'> {
+    const row = await this.prisma.sentenceGenTask
+      .findUnique({ where: { id: taskId }, select: { status: true } })
+      .catch(() => null);
+    if (!row) {
+      return 'cancel';
+    }
+    if (row.status === 'paused') {
+      return 'pause';
+    }
+    if (row.status === 'cancelled') {
+      return 'cancel';
+    }
+    return 'run';
+  }
+
+  /**
+   * 暂停：只落标记，实际在**下一个批次边界**停下（正在飞的模型请求不打断，否则白烧配额）。
+   * 所以点击后最长要等一个批次（生题+优化+审核，约 1~2 分钟）才真正停。
+   */
+  async pause(id: number): Promise<void> {
+    const task = await this.requireTask(id);
+    if (task.status !== 'running' && task.status !== 'pending') {
+      throw AppException.badRequest('只有进行中的批次可以暂停');
+    }
+    await this.prisma.sentenceGenTask.update({
+      where: { id: BigInt(id) },
+      data: { status: 'paused', lastHeartbeatAt: new Date() },
+    });
+  }
+
+  /** 继续：接着跑已暂停 / 已失败的批次（计数器从批次表读回，不会重复生成）。 */
+  async resume(id: number): Promise<void> {
+    if (this.running) {
+      throw AppException.conflict('已有批次在执行，请等它结束再继续');
+    }
+    const task = await this.requireTask(id);
+    if (task.status !== 'paused' && task.status !== 'failed') {
+      throw AppException.badRequest('只有已暂停 / 失败的批次可以继续');
+    }
+    // 先落 running 再起执行体：否则控制点可能读到残留的 paused，刚续跑就被再次暂停
+    await this.prisma.sentenceGenTask.update({
+      where: { id: BigInt(id) },
+      data: { status: 'running', stage: 'generating', lastHeartbeatAt: new Date() },
+    });
+    void this.execute(BigInt(id));
+  }
+
+  /** 取消：同样在批次边界生效，终态 cancelled（之后可删除）。 */
+  async cancel(id: number): Promise<void> {
+    const task = await this.requireTask(id);
+    if (task.status === 'success' || task.status === 'cancelled') {
+      throw AppException.badRequest('该批次已结束');
+    }
+    await this.prisma.sentenceGenTask.update({
+      where: { id: BigInt(id) },
+      data: { status: 'cancelled', lastHeartbeatAt: new Date() },
+    });
+  }
+
+  /**
+   * 删除批次。
+   *
+   * 语义（按产品口径）：**不删已配图的题目**——它们是可用内容，只是不再挂在这条批次上；
+   * 只清理「还没生成配图」的 pending_image 题（没有可用产出，留着只会变成无人处理的孤儿）。
+   *
+   * 只允许删终态批次（含已暂停）：运行中的批次循环还在 update 它，删了会报 record not found。
+   */
+  async remove(id: number): Promise<{ removedSentences: number }> {
+    const task = await this.requireTask(id);
+    if (!['success', 'failed', 'cancelled', 'paused'].includes(task.status)) {
+      throw AppException.badRequest('批次正在执行，请先暂停或取消再删除');
+    }
+    const [pending] = await this.prisma.$transaction([
+      this.prisma.sentence.deleteMany({ where: { genTaskId: BigInt(id), status: 'pending_image' } }),
+      this.prisma.sentenceGenTask.delete({ where: { id: BigInt(id) } }),
+    ]);
+    this.logger.log(`[SentenceGen] 批次 ${id} 已删除，清理未配图题目 ${pending.count} 条`);
+    return { removedSentences: pending.count };
+  }
+
+  /** 取批次（不存在则 404）。 */
+  private async requireTask(id: number): Promise<{ status: string }> {
+    const task = await this.prisma.sentenceGenTask.findUnique({
+      where: { id: BigInt(id) },
+      select: { status: true },
+    });
+    if (!task) {
+      throw AppException.notFound('批次不存在');
+    }
+    return task;
+  }
+
+  /**
+   * 主执行体（fire-and-forget 调用；结果全部落在批次表）。
+   *
+   * 支持「继续」：计数器从批次表**读回来接着数**。否则续跑会从 0 重新生成一遍
+   * ——唯一键虽然会去重，但白烧上游配额，而且永远到不了目标数。
+   */
   private async execute(taskId: bigint): Promise<void> {
     this.running = true;
-    const startedAt = new Date();
-    let textDone = 0;
-    let imageDone = 0;
-    let failCount = 0;
+    const resumed = await this.prisma.sentenceGenTask.findUnique({
+      where: { id: taskId },
+      select: { targetCount: true, textDone: true, imageDone: true, failCount: true, startedAt: true },
+    });
+    if (!resumed) {
+      // 批次已被删除：直接退出，别再往不存在的行上写
+      this.running = false;
+      return;
+    }
+    const startedAt = resumed.startedAt ?? new Date();
+    let textDone = resumed.textDone;
+    let imageDone = resumed.imageDone;
+    let failCount = resumed.failCount;
 
     // 生图队列与生题**并行**推进：每批题目入库后立即排产配图，
     // 首批题在一两分钟内即可 ready，用户不必等 300 条题全部生成完
@@ -178,11 +291,12 @@ export class SentenceGenService {
       }
     };
 
-    /** 收尾：等待生图队列全部结束并汇总成功数。 */
+    /** 收尾：等待生图队列全部结束并汇总成功数（累加，兼容「继续」时的已有计数）。 */
     const drainImageQueue = async (): Promise<void> => {
       const results = await Promise.all(imageJobs);
-      imageDone = results.filter(Boolean).length;
-      failCount += results.length - imageDone;
+      const okCount = results.filter(Boolean).length;
+      imageDone += okCount;
+      failCount += results.length - okCount;
     };
 
     try {
@@ -202,9 +316,25 @@ export class SentenceGenService {
       };
       let emptyChunks = 0;
       let failedChunks = 0;
+      /** 运营控制指令（每轮循环开头读一次）。 */
+      let control: 'run' | 'pause' | 'cancel' = 'run';
       /** 审核阶段剔除的条数（未入库；单独统计，便于判断提示词是否过严） */
       let rejectedCount = 0;
+
+      // 续跑（继续 / 失败重跑）时可能还有上次没排产的待配图题目：
+      // 若文字已达标、循环一次都不进，这里不补排就永远不会有图。
+      await enqueuePendingImages();
+
       while (textDone < task.targetCount) {
+        // 控制点：暂停 / 取消只在这里生效。
+        // 不硬中断正在飞的上游请求（那会白烧配额），等当前批次跑完再停。
+        control = await this.controlOf(taskId);
+        if (control !== 'run') {
+          this.logger.log(
+            `[SentenceGen] 批次 ${taskId} 收到${control === 'pause' ? '暂停' : '取消'}指令，在批次边界停止`,
+          );
+          break;
+        }
         const need = Math.min(TEXT_CHUNK, task.targetCount - textDone);
         if (need <= 0) {
           break;
@@ -280,6 +410,26 @@ export class SentenceGenService {
       await drainImageQueue();
 
       // ---------- 3. 终态 ----------
+      // 暂停 / 取消：保留已有产出（已入库的题与已生成的图都不回滚），状态如实落库
+      if (control !== 'run') {
+        await this.prisma.sentenceGenTask.update({
+          where: { id: taskId },
+          data: {
+            status: control === 'pause' ? 'paused' : 'cancelled',
+            stage: 'done',
+            lastHeartbeatAt: new Date(),
+            textDone,
+            imageDone,
+            failCount: failCount + rejectedCount,
+            finishedAt: new Date(),
+          },
+        });
+        this.logger.log(
+          `[SentenceGen] 批次 ${taskId} 已${control === 'pause' ? '暂停' : '取消'}：题目 ${textDone}，图片 ${imageDone}`,
+        );
+        return;
+      }
+
       // 有净增题目或图片即算成功（部分失败进 failCount，供运营按补跑按钮处理）
       const ok = textDone > 0 || imageDone > 0;
       await this.prisma.sentenceGenTask.update({
