@@ -18,6 +18,12 @@ export interface ClientUserProfile {
   gender: string;
   signature: string | null;
   createdAt: string;
+  /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
+  bgCardId: number;
+  /** 背景句签配图 URL（未设置 / 配图缺失时为 null，回退渐变） */
+  bgImageUrl: string | null;
+  /** 背景句签标题（未设置为 null） */
+  bgCardTitle: string | null;
 }
 
 /** 登录/注册返回。 */
@@ -103,6 +109,14 @@ export interface SentenceCard {
   imageUrl: string | null;
   /** 获得时间（ISO；未领取为 null） */
   obtainedAt: string | null;
+}
+
+/** 未拥有的句签（总数 + 最近一批；列表按容量截断）。 */
+export interface MissingSentenceCards {
+  /** 未拥有总数（可能大于 list.length） */
+  total: number;
+  /** 最近的未拥有句签（按业务日期倒序） */
+  list: SentenceCard[];
 }
 
 /** 微游戏化：CEFR 等级信息。 */

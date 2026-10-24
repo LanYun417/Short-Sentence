@@ -8,7 +8,7 @@
 import { useAuthStore } from '~/stores/auth';
 import { apiFetch } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
-import type { ClientUserProfile, SentenceCard, TodayCheckin } from '~/types';
+import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -121,17 +121,83 @@ function closePreview(): void {
   previewCard.value = null;
 }
 
-/** 是否展开「过往句签」明细列表。 */
-const showPastCards = ref(false);
+/* ------------------------------ 未拥有的句签 ------------------------------ */
 
-/** 今日业务日期（app.vue 已全局预取，useState 共享；用于把今日句签从「过往」里择出）。 */
-const { status: todayCardStatus } = useTodayCard();
+const missingVisible = ref(false);
+const missingCards = ref<SentenceCard[]>([]);
+const missingTotal = ref(0);
+const missingLoading = ref(false);
+const missingError = ref('');
 
-/** 过往句签 = 已获得列表里除今日以外的（列表本身按获得时间倒序）。 */
-const pastCards = computed(() => {
-  const bizDate = todayCardStatus.value.bizDate;
-  return bizDate ? sentenceCards.value.filter((item) => item.bizDate !== bizDate) : sentenceCards.value;
+/**
+ * 打开「未拥有」弹窗并拉取。
+ * 每次打开都重新拉：漏领状态会随运营补发 / 当日领取变化，缓存会骗人。
+ */
+async function openMissing(): Promise<void> {
+  missingVisible.value = true;
+  if (missingLoading.value) {
+    return;
+  }
+  missingLoading.value = true;
+  missingError.value = '';
+  try {
+    const data = await apiFetch<MissingSentenceCards>('/client/sentence-card/missing');
+    missingCards.value = data.list;
+    missingTotal.value = data.total;
+  } catch (error) {
+    missingError.value = error instanceof Error ? error.message : '加载失败，请稍后重试';
+  } finally {
+    missingLoading.value = false;
+  }
+}
+
+/** 弹窗描述：总数 + 是否只显示最近一批（加载中/失败时 total 为 0，走默认文案）。 */
+const missingDescription = computed(() => {
+  if (missingTotal.value === 0) {
+    return '完成每日目标即可获得当日句签。';
+  }
+  const shown = missingCards.value.length;
+  const partial = shown < missingTotal.value ? `，此处显示最近 ${shown} 张` : '';
+  return `共 ${missingTotal.value} 张未获得${partial}；漏掉的日期可联系运营补发。`;
 });
+
+/* ------------------------------ 句签背景图 ------------------------------ */
+
+/** 当前自定义背景（句签配图）；null = 用默认品牌渐变。 */
+const bgImageUrl = computed(() => auth.user?.bgImageUrl ?? null);
+
+/** 背景设置保存中。 */
+const settingBg = ref(false);
+/** 背景设置结果提示（2s 后自动消失）。 */
+const bgMessage = ref('');
+
+/**
+ * 设为个人主页背景（cardId = 0 恢复默认渐变）。
+ * 接口直接返回最新资料，用 setProfile 整体覆盖本地态（同时刷新 localStorage 缓存），
+ * 封面立刻切换，不必再拉一次 /me。
+ */
+async function setBackground(cardId: number): Promise<void> {
+  if (settingBg.value) {
+    return;
+  }
+  settingBg.value = true;
+  bgMessage.value = '';
+  try {
+    const profile = await apiFetch<ClientUserProfile>('/client/auth/me/background', {
+      method: 'PUT',
+      body: { cardId },
+    });
+    auth.setProfile(profile);
+    bgMessage.value = cardId > 0 ? '已设为个人主页背景' : '已恢复默认背景';
+    setTimeout(() => {
+      bgMessage.value = '';
+    }, 2000);
+  } catch (error) {
+    bgMessage.value = error instanceof Error ? error.message : '设置失败，请稍后重试';
+  } finally {
+    settingBg.value = false;
+  }
+}
 
 if (ssrUser.value) {
   auth.user = ssrUser.value;
@@ -250,28 +316,35 @@ async function onChangePassword(): Promise<void> {
       <div
         class="relative overflow-hidden bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 px-5 pt-6 pb-16 md:px-7 md:pt-7 md:pb-20"
       >
-        <!-- 装饰光斑 -->
-        <div
-          class="anim-drift pointer-events-none absolute -right-10 -top-14 size-40 rounded-full bg-white/20 blur-2xl"
-        />
-        <div
-          class="anim-drift pointer-events-none absolute -bottom-16 -left-6 size-36 rounded-full bg-sky-200/25 blur-2xl"
-          style="animation-delay: -5s"
-        />
-        <div
-          class="anim-drift pointer-events-none absolute right-1/3 top-2 size-16 rounded-full bg-violet-200/20 blur-xl"
-          style="animation-delay: -9s"
-        />
-        <!--
+        <!-- 自定义背景（句签配图）：铺满封面 + 压一层深色蒙版保证文字可读 -->
+        <template v-if="bgImageUrl">
+          <img :src="bgImageUrl" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full object-cover" />
+          <div class="absolute inset-0 bg-linear-to-br from-slate-950/60 via-slate-900/45 to-slate-950/65" />
+        </template>
+        <template v-else>
+          <!-- 默认渐变时的装饰：换成照片后撤掉，避免光斑与同心环糊在图上显得脏 -->
+          <div
+            class="anim-drift pointer-events-none absolute -right-10 -top-14 size-40 rounded-full bg-white/20 blur-2xl"
+          />
+          <div
+            class="anim-drift pointer-events-none absolute -bottom-16 -left-6 size-36 rounded-full bg-sky-200/25 blur-2xl"
+            style="animation-delay: -5s"
+          />
+          <div
+            class="anim-drift pointer-events-none absolute right-1/3 top-2 size-16 rounded-full bg-violet-200/20 blur-xl"
+            style="animation-delay: -9s"
+          />
+          <!--
           同心环装饰：替代此前「昵称首字水印」——
           超大首字水印放在 overflow-hidden 的封面里会被裁成一根竖条（观感像渲染错误），已移除。
         -->
-        <div
-          class="pointer-events-none absolute -top-10 right-5 hidden size-56 rounded-full border border-white/20 sm:block"
-        />
-        <div
-          class="pointer-events-none absolute -top-1 right-14 hidden size-40 rounded-full border border-white/10 sm:block"
-        />
+          <div
+            class="pointer-events-none absolute -top-10 right-5 hidden size-56 rounded-full border border-white/20 sm:block"
+          />
+          <div
+            class="pointer-events-none absolute -top-1 right-14 hidden size-40 rounded-full border border-white/10 sm:block"
+          />
+        </template>
 
         <!-- 头像 + 身份 -->
         <div class="relative flex items-end gap-4">
@@ -444,17 +517,16 @@ async function onChangePassword(): Promise<void> {
           <div
             class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
           >
-            <!-- 头部：数量 + 「显示过往句签」开关 -->
+            <!-- 头部：数量 + 「查看未拥有」 -->
             <div class="mb-3 flex items-center justify-between gap-2">
               <p class="text-sm text-slate-400">共 {{ sentenceCards.length }} 张</p>
               <button
                 type="button"
                 class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:text-sky-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-sky-300"
-                :aria-expanded="showPastCards"
-                @click="showPastCards = !showPastCards"
+                @click="openMissing"
               >
-                <UIcon :name="showPastCards ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="h-3.5 w-3.5" />
-                {{ showPastCards ? '收起过往句签' : '显示过往句签' }}
+                <UIcon name="i-lucide-lock" class="h-3.5 w-3.5" />
+                查看未拥有
               </button>
             </div>
 
@@ -476,6 +548,14 @@ async function onChangePassword(): Promise<void> {
                   <div v-else class="flex h-full items-center justify-center text-slate-300 dark:text-slate-600">
                     <UIcon name="i-lucide-image-off" class="h-6 w-6" />
                   </div>
+                  <!-- 当前正被用作个人主页背景的那张 -->
+                  <span
+                    v-if="auth.user?.bgCardId === item.id"
+                    class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 text-[10px] font-medium text-white backdrop-blur"
+                  >
+                    <UIcon name="i-lucide-check" class="h-3 w-3" />
+                    背景中
+                  </span>
                   <span
                     class="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] font-medium text-white opacity-0 backdrop-blur transition-opacity duration-200 group-hover:opacity-100"
                   >
@@ -493,25 +573,6 @@ async function onChangePassword(): Promise<void> {
               <UIcon name="i-lucide-sparkles" class="h-8 w-8" />
               <p class="text-sm">还没有句签，完成每日目标即可获得当日 AI 闪卡</p>
             </div>
-
-            <!-- 过往句签明细：按日期倒序列出句子与释义（缩略图之外的「可读」视角） -->
-            <div
-              v-if="showPastCards"
-              class="anim-in mt-4 space-y-2 border-t border-slate-100 pt-4 dark:border-slate-800"
-            >
-              <p class="text-xs font-medium text-slate-400">过往句签（{{ pastCards.length }}）</p>
-              <div v-if="pastCards.length" class="space-y-2">
-                <div v-for="item in pastCards" :key="item.id" class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                  <div class="flex items-center justify-between gap-2">
-                    <p class="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{{ item.titleZh }}</p>
-                    <span class="shrink-0 text-xs text-slate-400">{{ item.bizDate }}</span>
-                  </div>
-                  <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{{ item.sentenceEn }}</p>
-                  <p class="text-xs text-slate-400">{{ item.translationZh }}</p>
-                </div>
-              </div>
-              <p v-else class="py-6 text-center text-sm text-slate-400">还没有过往句签</p>
-            </div>
           </div>
         </template>
       </UTabs>
@@ -525,8 +586,31 @@ async function onChangePassword(): Promise<void> {
           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
           @click.self="closePreview"
         >
-          <div class="w-[min(92vw,26rem)]">
+          <div class="flex w-[min(92vw,26rem)] flex-col items-center gap-3">
             <SentenceCard :card="previewCard" />
+
+            <!-- 设为个人主页背景；已是当前背景则提供恢复默认 -->
+            <UButton
+              v-if="auth.user?.bgCardId !== previewCard.id"
+              :loading="settingBg"
+              icon="i-lucide-layers"
+              @click="setBackground(previewCard.id)"
+            >
+              设为个人主页背景
+            </UButton>
+            <UButton
+              v-else
+              :loading="settingBg"
+              color="neutral"
+              variant="soft"
+              icon="i-lucide-rotate-ccw"
+              @click="setBackground(0)"
+            >
+              恢复默认背景
+            </UButton>
+
+            <p v-if="bgMessage" class="text-xs text-white/85">{{ bgMessage }}</p>
+            <p class="text-center text-xs text-white/60">移动鼠标可看到 3D 视差效果</p>
           </div>
           <button
             type="button"
@@ -536,9 +620,58 @@ async function onChangePassword(): Promise<void> {
           >
             <UIcon name="i-lucide-x" class="h-5 w-5" />
           </button>
-          <p class="absolute bottom-[8%] text-center text-xs text-white/70">移动鼠标可看到 3D 视差效果</p>
         </div>
       </Transition>
     </Teleport>
+
+    <!-- 未拥有的句签 -->
+    <UModal
+      v-model:open="missingVisible"
+      title="未拥有的句签"
+      :description="missingDescription"
+      :ui="{ content: 'max-w-xl' }"
+    >
+      <template #body>
+        <div v-if="missingLoading" class="flex items-center justify-center gap-2 py-10 text-sm text-slate-400">
+          <UIcon name="i-lucide-loader-circle" class="h-4 w-4 animate-spin" />
+          加载中…
+        </div>
+        <p v-else-if="missingError" class="py-8 text-center text-sm text-rose-500">{{ missingError }}</p>
+        <div v-else-if="missingCards.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div
+            v-for="item in missingCards"
+            :key="item.id"
+            class="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200/70 dark:bg-slate-800 dark:ring-slate-700/70"
+          >
+            <div class="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-700">
+              <img
+                v-if="item.imageUrl"
+                :src="sentenceCardImg(item.imageUrl)"
+                :alt="item.titleZh"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div v-else class="flex h-full items-center justify-center text-slate-300 dark:text-slate-600">
+                <UIcon name="i-lucide-image-off" class="h-5 w-5" />
+              </div>
+              <span
+                class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] font-medium text-white backdrop-blur"
+              >
+                <UIcon name="i-lucide-lock" class="h-3 w-3" />
+                未获得
+              </span>
+            </div>
+            <div class="p-3">
+              <p class="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{{ item.titleZh }}</p>
+              <p class="truncate text-xs text-slate-400">{{ item.bizDate }}</p>
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex flex-col items-center gap-2 py-10 text-center text-slate-400">
+          <UIcon name="i-lucide-check-check" class="h-8 w-8" />
+          <p class="text-sm">已收集全部句签，一张不漏</p>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
