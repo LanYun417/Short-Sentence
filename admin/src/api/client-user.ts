@@ -1,7 +1,7 @@
 /**
  * 客户端用户管理接口（「短句」运营后台）。
  */
-import { del, get, post, put } from './request';
+import { del, get, post, put, request } from './request';
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
@@ -26,6 +26,16 @@ export function getClientUserDetailApi(id: number): Promise<ClientUserDetail> {
 /** 用户今日 AI 额度用量（排查「把 AI 刷爆了」的用户） */
 export function getClientUserAiQuotaApi(id: number): Promise<AiQuotaUsage> {
   return get<AiQuotaUsage>(`/client-users/${id}/ai-quota`);
+}
+
+/** 导出客户端用户 CSV（流式；筛选与列表共用同一套条件） */
+export function exportClientUsersApi(params: ClientUserQuery): Promise<Blob> {
+  return request<Blob>({
+    url: '/client-users/export',
+    method: 'GET',
+    params,
+    responseType: 'blob',
+  });
 }
 
 /** 成长概览（XP / 等级 / 成就 / 场景地图） */

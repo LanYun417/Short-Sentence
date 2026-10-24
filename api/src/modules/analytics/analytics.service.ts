@@ -45,6 +45,12 @@ export interface AnalyticsOverview {
   aiCallToday: number;
   /** 今日打卡人数 */
   checkinToday: number;
+  /** 今日句签领取张数 */
+  cardToday: number;
+  /** 累计句签张数 */
+  cardTotal: number;
+  /** 今日 AI token 合计（输入+输出） */
+  aiTokenToday: number;
 }
 
 /** 答题趋势。 */
@@ -138,6 +144,9 @@ export class AnalyticsService {
       wordRootTotal,
       aiCallToday,
       checkinToday,
+      cardToday,
+      cardTotal,
+      aiTokenRows,
     ] = await Promise.all([
       this.prisma.sentence.count(),
       this.prisma.sentence.count({ where: { status: 'ready' } }),
@@ -157,6 +166,12 @@ export class AnalyticsService {
       this.prisma.wordRoot.count(),
       this.prisma.aiCallLog.count({ where: { createdAt: { gte: startOfToday, lte: endOfToday } } }),
       this.prisma.userCheckin.count({ where: { checkinDate: dayjs().format('YYYY-MM-DD') } }),
+      this.prisma.userSentenceCard.count({ where: { obtainedAt: { gte: startOfToday, lte: endOfToday } } }),
+      this.prisma.userSentenceCard.count(),
+      this.prisma.aiCallLog.findMany({
+        where: { createdAt: { gte: startOfToday, lte: endOfToday } },
+        select: { promptTokens: true, completionTokens: true },
+      }),
     ]);
 
     return {
@@ -172,6 +187,9 @@ export class AnalyticsService {
       wordRootTotal,
       aiCallToday,
       checkinToday,
+      cardToday,
+      cardTotal,
+      aiTokenToday: aiTokenRows.reduce((sum, row) => sum + row.promptTokens + row.completionTokens, 0),
     };
   }
 

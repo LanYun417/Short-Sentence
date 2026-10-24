@@ -14,8 +14,32 @@ import {
   PASSWORD_LENGTH_MESSAGE,
 } from '../../common/auth/password-policy.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { buildPageResult, hashPassword, parsePagination } from '../../common/utils/utils.js';
+import { buildPageResult, formatDateTimeInZone, hashPassword, parsePagination } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
+import type { CsvExportTask } from '../../common/utils/csv-stream.js';
+import { assertExportable } from '../../common/utils/csv-stream.js';
+import { config } from '../../common/config/config.js';
+
+/** 客户端用户导出表头（与列表列顺序一致）。 */
+const CLIENT_USER_CSV_HEADER = [
+  'ID',
+  '邮箱',
+  '昵称',
+  '性别',
+  '状态',
+  '生日',
+  '个性签名',
+  '经验值',
+  '最后登录',
+  '注册时间',
+];
+
+/** 性别文案（导出用；与注册表单的取值一致）。 */
+const USER_GENDER_LABEL: Record<string, string> = {
+  male: '男',
+  female: '女',
+  secret: '保密',
+};
 
 /** 列表项。 */
 export interface ClientUserItem {
@@ -59,22 +83,29 @@ export class ClientUsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** 分页查询（关键词匹配邮箱/昵称）。 */
-  async list(query: Record<string, unknown>): Promise<PageResult<ClientUserItem>> {
-    const { page, pageSize, offset, limit } = parsePagination(query);
-    const keyword = String(query.keyword ?? '').trim();
-    const status = query.status === undefined || query.status === '' ? undefined : Number(query.status);
-    const gender = String(query.gender ?? '').trim();
-
+  /**
+   * 客户端用户筛选条件（列表与导出共用同一套，理由同题库）。
+   */
+  private buildUserWhere(query: Record<string, unknown>): Record<string, unknown> {
     const where: Record<string, unknown> = {};
+    const keyword = String(query.keyword ?? '').trim();
     if (keyword) {
       where.OR = [{ email: { contains: keyword } }, { nickname: { contains: keyword } }];
     }
+    const status = query.status === undefined || query.status === '' ? undefined : Number(query.status);
     if (status === 0 || status === 1) {
       where.status = status;
     }
+    const gender = String(query.gender ?? '').trim();
     if (gender) {
       where.gender = gender;
     }
+    return where;
+  }
+
+  async list(query: Record<string, unknown>): Promise<PageResult<ClientUserItem>> {
+    const { page, pageSize, offset, limit } = parsePagination(query);
+    const where = this.buildUserWhere(query);
 
     const [rows, total] = await Promise.all([
       this.prisma.clientUser.findMany({
@@ -121,6 +152,62 @@ export class ClientUsersService {
       });
     }
     return buildPageResult(list, total, page, pageSize);
+  }
+
+  /** 创建任务（流式 CSV；筛选与列表共用 buildUserWhere）。 */
+  async createUserExport(query: Record<string, unknown>): Promise<CsvExportTask> {
+    const where = this.buildUserWhere(query);
+    const total = await this.prisma.clientUser.count({ where });
+    assertExportable(total, '客户端用户');
+    return {
+      filename: `client-users-${Date.now()}.csv`,
+      header: CLIENT_USER_CSV_HEADER,
+      total,
+      rows: this.userExportBatches(where, config.export.batchSize),
+    };
+  }
+
+  private async *userExportBatches(where: Record<string, unknown>, batchSize: number): AsyncGenerator<unknown[][]> {
+    let cursorId: bigint | undefined;
+    for (;;) {
+      const rows = await this.prisma.clientUser.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        take: batchSize,
+        select: {
+          id: true,
+          email: true,
+          nickname: true,
+          gender: true,
+          status: true,
+          birthday: true,
+          signature: true,
+          xp: true,
+          lastLoginAt: true,
+          createdAt: true,
+        },
+        ...(cursorId === undefined ? {} : { cursor: { id: cursorId }, skip: 1 }),
+      });
+      if (rows.length === 0) {
+        return;
+      }
+      cursorId = rows[rows.length - 1]!.id;
+      yield rows.map((row) => [
+        Number(row.id),
+        row.email,
+        row.nickname,
+        USER_GENDER_LABEL[row.gender] ?? row.gender,
+        row.status === 1 ? '启用' : '禁用',
+        row.birthday ? row.birthday.toISOString().slice(0, 10) : '',
+        row.signature ?? '',
+        Number(row.xp),
+        row.lastLoginAt ? formatDateTimeInZone(row.lastLoginAt) : '',
+        formatDateTimeInZone(row.createdAt),
+      ]);
+      if (rows.length < batchSize) {
+        return;
+      }
+    }
   }
 
   /** 详情（含最近 10 条答题）。 */

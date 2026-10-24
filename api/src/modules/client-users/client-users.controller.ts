@@ -2,12 +2,14 @@
  * 客户端用户管理控制器（/api/client-users）。
  * 权限口径：RBAC 权限码 client:user:*（超管直通）；写操作留痕。
  */
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { RequirePermissions } from '../../common/auth/permission.guard.js';
 import { OperationLog } from '../../common/log/operation-log.decorator.js';
-import { type ResponseEnvelope } from '../../common/http/response.interceptor.js';
+import { RawResponse, type ResponseEnvelope } from '../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import type { PageResult } from '../../common/types.js';
+import { writeCsvStream } from '../../common/utils/csv-stream.js';
 import { AiQuotaService, type AiQuotaUsage } from '../../common/ai/ai-quota.service.js';
 import { ClientUsersService, type ClientUserDetail, type ClientUserItem } from './client-users.service.js';
 import { ClientUserResetPasswordDto, ClientUserStatusDto } from './dto.js';
@@ -50,6 +52,15 @@ export class ClientUsersController {
   @RequirePermissions('client:user:query')
   detail(@Param() params: IdParamDto): Promise<ClientUserDetail> {
     return this.clientUsers.detail(params.id);
+  }
+
+  /** 导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。 */
+  @Get('export')
+  @RequirePermissions('client:user:query')
+  @RawResponse()
+  async exportUsers(@Query() query: Record<string, unknown>, @Res() res: Response): Promise<void> {
+    const task = await this.clientUsers.createUserExport(query);
+    await writeCsvStream(res, task.filename, task.header, task.rows);
   }
 
   /** 今日 AI 额度用量（运营排查「这个人是不是把 AI 刷爆了」用）。 */

@@ -15,6 +15,34 @@
  */
 import { once } from 'node:events';
 import type { Response } from 'express';
+import { config } from '../config/config.js';
+import { AppException } from '../exception/app.exception.js';
+
+/** CSV 导出任务（构造阶段做过行数上限预检；数据由分批生成器边查边写）。 */
+export interface CsvExportTask {
+  /** 下载文件名 */
+  filename: string;
+  /** 表头 */
+  header: string[];
+  /** 行数（已通过上限预检） */
+  total: number;
+  /** 分批行数据（每批为二维数组） */
+  rows: AsyncGenerator<unknown[][]>;
+}
+
+/**
+ * 导出行数上限预检。
+ * 超限时抛 400 而不是「截断后照常导出」：半截 CSV 会被当成完整数据使用，比报错更危险。
+ * `EXPORT_MAX_ROWS=0` 表示不限制（不建议）。
+ */
+export function assertExportable(total: number, label: string): void {
+  const max = config.export.maxRows;
+  if (max > 0 && total > max) {
+    throw AppException.badRequest(
+      `待导出的${label}共 ${total} 条，超过单次导出上限 ${max} 条；请缩小时间范围或补充筛选条件`,
+    );
+  }
+}
 
 /** 单元格转义：含分隔符 / 引号 / 换行时用双引号包裹，内部引号翻倍。 */
 function escapeCell(value: unknown): string {

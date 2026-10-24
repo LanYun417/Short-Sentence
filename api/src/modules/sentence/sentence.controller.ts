@@ -2,10 +2,12 @@
  * 题库管理控制器（/api/sentences）。
  * 权限口径：RBAC 权限码 sentence:*（超管直通）；写操作 @OperationLog 留痕。
  */
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { RequirePermissions } from '../../common/auth/permission.guard.js';
 import { OperationLog } from '../../common/log/operation-log.decorator.js';
-import { type ResponseEnvelope } from '../../common/http/response.interceptor.js';
+import { RawResponse, type ResponseEnvelope } from '../../common/http/response.interceptor.js';
+import { writeCsvStream } from '../../common/utils/csv-stream.js';
 import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -185,6 +187,21 @@ export class SentenceController {
       data: result,
       message: dto.difficulty ? `生成任务已启动（本批仅难度 ${dto.difficulty}）` : '生成任务已启动',
     };
+  }
+
+  /**
+   * 导出题库 CSV（流式；筛选与列表共用同一套条件）。
+   *
+   * 权限用 `sentence:query` 而不是新增 `sentence:export`：导出是只读操作，
+   * 且权限码是种子数据里写死的，为一个导出动作加码需要重跑 seed——收益不抵风险。
+   */
+  @Get('export')
+  @RequirePermissions('sentence:query')
+  @RawResponse()
+  async exportSentences(@Query() query: Record<string, unknown>, @Res() res: Response): Promise<void> {
+    // 任务构造阶段可能抛 400（超上限）；此时还没写响应头，前端能拿到正常 JSON 错误
+    const task = await this.sentenceService.createSentenceExport(query);
+    await writeCsvStream(res, task.filename, task.header, task.rows);
   }
 
   /** 批量上下架（运营清理题库用；上架只对已有配图的题生效）。 */

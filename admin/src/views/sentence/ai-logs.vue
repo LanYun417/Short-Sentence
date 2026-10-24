@@ -138,7 +138,7 @@ onMounted(async () => {
           title="Token 合计"
           :value="tokenText(summary?.totalTokens ?? 0)"
           :sub="`入 ${tokenText(summary?.promptTokens ?? 0)} · 出 ${tokenText(summary?.completionTokens ?? 0)}`"
-          icon="coins"
+          icon="coin"
           :color="STAT_COLORS[1]"
         />
       </el-col>
@@ -156,7 +156,7 @@ onMounted(async () => {
           title="近 7 日调用"
           :value="statsTotal"
           sub="全部类型合计"
-          icon="trending-up"
+          icon="graph-up-arrow"
           :color="STAT_COLORS[3]"
         />
       </el-col>

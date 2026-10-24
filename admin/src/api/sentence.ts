@@ -1,7 +1,7 @@
 /**
  * 题库管理接口（「短句」运营后台）。
  */
-import { del, get, post, put } from './request';
+import { del, get, post, put, request } from './request';
 import type {
   GenTaskItem,
   GenTaskQuery,
@@ -49,6 +49,16 @@ export function deleteSentenceApi(id: number): Promise<null> {
 /** 批量上下架（上架只对已有配图的题生效） */
 export function batchSentenceStatusApi(ids: number[], status: 'ready' | 'offline'): Promise<{ affected: number }> {
   return post<{ affected: number }>('/sentences/batch-status', { ids, status });
+}
+
+/** 导出题库 CSV（流式；筛选与列表共用同一套条件） */
+export function exportSentencesApi(params: SentenceQuery): Promise<Blob> {
+  return request<Blob>({
+    url: '/sentences/export',
+    method: 'GET',
+    params,
+    responseType: 'blob',
+  });
 }
 
 /** 手动触发批量生成（异步；进度看批次列表） */

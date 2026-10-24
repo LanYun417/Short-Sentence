@@ -8,8 +8,49 @@ import { AppException } from '../../common/exception/app.exception.js';
 import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination, readNumber, readString } from '../../common/utils/utils.js';
+import type { CsvExportTask } from '../../common/utils/csv-stream.js';
+import { assertExportable } from '../../common/utils/csv-stream.js';
 import type { PageResult } from '../../common/types.js';
+import { config } from '../../common/config/config.js';
 import { SENTENCE_STATUS, SaveCategoryDto, SaveSentenceDto, type SentenceStatus } from './sentence.dto.js';
+
+/** 导出表头（与列表列顺序一致，方便运营对照）。 */
+const SENTENCE_CSV_HEADER = [
+  'ID',
+  '英文句子',
+  '中文释义',
+  '音标',
+  '分类',
+  '难度',
+  '状态',
+  '来源',
+  '备用答案',
+  '生图提示词',
+  '生成批次',
+];
+
+/** 难度文案（导出用；与后台的 DIFFICULTY_LABEL 一致）。 */
+const DIFFICULTY_LABEL: Record<number, string> = { 1: '基础', 2: '进阶', 3: '挑战' };
+
+/** 状态文案（导出用；与后台的 STATUS_TAG 一致）。 */
+const SENTENCE_STATUS_LABEL: Record<string, string> = {
+  pending_image: '待生成',
+  ready: '就绪',
+  offline: '已下架',
+};
+
+/** 备用答案 JSON 列 → 可读字符串（解析失败原样返回，不丢数据也不中断导出）。 */
+function safeAlternates(raw: string | null): string {
+  if (!raw) {
+    return '';
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').join(' | ') : raw;
+  } catch {
+    return raw;
+  }
+}
 
 /** 列表条目（含配图 URL 与分类名）。 */
 export interface SentenceItem {
@@ -49,9 +90,13 @@ export class SentenceService {
     private readonly fileService: FileService,
   ) {}
 
-  /** 分页筛选（状态/分类/难度/关键词）。 */
-  async list(query: Record<string, unknown>): Promise<PageResult<SentenceItem>> {
-    const { page, pageSize, offset, limit } = parsePagination(query);
+  /**
+   * 题库筛选条件（列表与导出共用同一套）。
+   *
+   * 抽成方法而不是两处各写一遍：一旦漂移，导出的数据和页面上看到的就不一致
+   * （运营按页面筛选后导出，却发现多了几条——这种"S 级诡异"最难排查）。
+   */
+  private buildSentenceWhere(query: Record<string, unknown>): Record<string, unknown> {
     const where: Record<string, unknown> = {};
     const status = readString(query.status);
     if (status) {
@@ -69,6 +114,13 @@ export class SentenceService {
     if (keyword) {
       where.OR = [{ sentenceEn: { contains: keyword } }, { translationZh: { contains: keyword } }];
     }
+    return where;
+  }
+
+  /** 分页筛选（状态/分类/难度/关键词）。 */
+  async list(query: Record<string, unknown>): Promise<PageResult<SentenceItem>> {
+    const { page, pageSize, offset, limit } = parsePagination(query);
+    const where = this.buildSentenceWhere(query);
 
     const [rows, total] = await Promise.all([
       this.prisma.sentence.findMany({
@@ -234,6 +286,58 @@ export class SentenceService {
     }
     // 不允许把题目批量改回 pending_image（生图流程的中间态，只应由生图任务推进）
     throw AppException.badRequest('不支持的批量状态');
+  }
+
+  /**
+   * 题库导出任务（流式 CSV；筛选与列表共用 buildSentenceWhere）。
+   *
+   * 用游标分页而非 offset：导出期间可能有新题入库，offset 会重复/漏行，
+   * 游标按主键推进则稳定。
+   */
+  async createSentenceExport(query: Record<string, unknown>): Promise<CsvExportTask> {
+    const where = this.buildSentenceWhere(query);
+    const total = await this.prisma.sentence.count({ where });
+    assertExportable(total, '题库');
+    return {
+      filename: `sentences-${Date.now()}.csv`,
+      header: SENTENCE_CSV_HEADER,
+      total,
+      rows: this.sentenceExportBatches(where, config.export.batchSize),
+    };
+  }
+
+  private async *sentenceExportBatches(where: Record<string, unknown>, batchSize: number): AsyncGenerator<unknown[][]> {
+    let cursorId: bigint | undefined;
+    for (;;) {
+      const rows = await this.prisma.sentence.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        take: batchSize,
+        include: { category: { select: { name: true } } },
+        ...(cursorId === undefined ? {} : { cursor: { id: cursorId }, skip: 1 }),
+      });
+      if (rows.length === 0) {
+        return;
+      }
+      cursorId = rows[rows.length - 1]!.id;
+      yield rows.map((row) => [
+        Number(row.id),
+        row.sentenceEn,
+        row.translationZh,
+        row.ipa ?? '',
+        row.category?.name ?? '',
+        DIFFICULTY_LABEL[row.difficulty] ?? String(row.difficulty),
+        SENTENCE_STATUS_LABEL[row.status] ?? row.status,
+        row.source === 'ai' ? 'AI' : '手工',
+        // alternateAnswers 是 JSON 字符串列：解析失败就原样导出，别让一个字卡住整批
+        safeAlternates(row.alternateAnswers),
+        row.scenePrompt,
+        Number(row.genTaskId) > 0 ? Number(row.genTaskId) : '',
+      ]);
+      if (rows.length < batchSize) {
+        return;
+      }
+    }
   }
 
   /** 无生图提示词时的兜底构图（仍是两人对话场景）。 */

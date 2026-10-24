@@ -11,6 +11,7 @@ import {
   deleteClientUserApi,
   forceClientUserOfflineApi,
   getClientUserAiQuotaApi,
+  exportClientUsersApi,
   getClientUserDetailApi,
   getClientUserGrowthApi,
   getClientUserListApi,
@@ -19,7 +20,8 @@ import {
   setClientUserStatusApi,
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
-import { formatDateTime } from '@/utils/format';
+import { formatDate, formatDateTime } from '@/utils/format';
+import { downloadBlob } from '@/utils/download';
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
@@ -102,6 +104,29 @@ async function loadCards(id: number): Promise<void> {
     cardsError.value = error instanceof Error ? error.message : '加载失败';
   } finally {
     cardsLoading.value = false;
+  }
+}
+
+/** 导出客户端用户 CSV（按当前筛选条件）。 */
+const exporting = ref(false);
+
+async function handleExport(): Promise<void> {
+  if (exporting.value) {
+    return;
+  }
+  exporting.value = true;
+  try {
+    const blob = await exportClientUsersApi({
+      keyword: typeof query.keyword === 'string' ? query.keyword.trim() || undefined : undefined,
+      status: query.status ?? undefined,
+      gender: query.gender || undefined,
+    } as never);
+    downloadBlob(blob, `客户端用户_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
+    ElMessage.success('导出成功');
+  } catch {
+    ElMessage.error('导出失败（可能超过单次导出行数上限，请补充筛选条件）');
+  } finally {
+    exporting.value = false;
   }
 }
 
@@ -278,6 +303,7 @@ onMounted(() => {
       <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span class="text-[15px] font-semibold text-ink">客户端用户（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
+          <el-button :loading="exporting" @click="handleExport">导出</el-button>
           <el-button :loading="loading" @click="getList">刷新</el-button>
         </div>
       </div>

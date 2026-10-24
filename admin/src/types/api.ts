@@ -1086,6 +1086,12 @@ export interface AnalyticsOverview {
   wordRootTotal: number;
   aiCallToday: number;
   checkinToday: number;
+  /** 今日句签领取张数 */
+  cardToday: number;
+  /** 累计句签张数 */
+  cardTotal: number;
+  /** 今日 AI token 合计（输入 + 输出） */
+  aiTokenToday: number;
 }
 
 /** 答题趋势（双系列） */

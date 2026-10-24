@@ -6,12 +6,13 @@
  */
 
 import {
+  getAnalyticsOverviewApi,
   getDashboardStatsApi,
   getLoginTrendApi,
   getOperationDistributionApi,
   getRoleUserCountApi,
 } from '@/api/dashboard';
-import type { DashboardStats, LoginTrend, NameValue, RoleUserCount } from '@/types/api';
+import type { AnalyticsOverview, DashboardStats, LoginTrend, NameValue, RoleUserCount } from '@/types/api';
 import { useUserStore } from '@/store/modules/user';
 import StatCard from './components/StatCard.vue';
 import TrendChart from './components/TrendChart.vue';
@@ -33,6 +34,9 @@ const trend = ref<LoginTrend>({ dates: [], counts: [] });
 const distribution = ref<NameValue[]>([]);
 const roleUserCount = ref<RoleUserCount>({ names: [], counts: [] });
 
+/** 客户端内容总览（题库 / 用户 / AI / 句签），与系统统计并列展示。 */
+const overview = ref<AnalyticsOverview | null>(null);
+
 /** 加载全部仪表盘数据 */
 async function loadData(): Promise<void> {
   loading.value = true;
@@ -41,6 +45,7 @@ async function loadData(): Promise<void> {
     getLoginTrendApi(7),
     getOperationDistributionApi(),
     getRoleUserCountApi(),
+    getAnalyticsOverviewApi(),
   ]);
   if (tasks[0].status === 'fulfilled') {
     stats.value = tasks[0].value;
@@ -53,6 +58,9 @@ async function loadData(): Promise<void> {
   }
   if (tasks[3].status === 'fulfilled') {
     roleUserCount.value = tasks[3].value;
+  }
+  if (tasks[4].status === 'fulfilled') {
+    overview.value = tasks[4].value;
   }
   loading.value = false;
 }
@@ -98,6 +106,8 @@ const todayText = new Intl.DateTimeFormat('zh-CN', {
       <p class="mt-1.5 text-[13px] text-muted">今天是 {{ todayText }}，欢迎回来</p>
     </header>
 
+    <!-- 系统统计（后台自身） -->
+    <p class="anim-in mb-2 mt-1 text-xs font-medium text-faint">后台系统</p>
     <el-row :gutter="16">
       <el-col :xs="24" :sm="12" :md="6" class="my-1">
         <StatCard title="用户总数" :value="stats.userTotal" icon="person" color="#409eff" />
@@ -112,6 +122,49 @@ const todayText = new Intl.DateTimeFormat('zh-CN', {
         <StatCard title="今日登录" :value="stats.todayLoginCount" icon="graph-up" color="#f56c6c" />
       </el-col>
     </el-row>
+
+    <!-- 客户端内容统计（「短句」）；overview 拉取失败时整块不显示，不阻塞首页 -->
+    <template v-if="overview">
+      <p class="anim-in mb-2 mt-4 text-xs font-medium text-faint">短句</p>
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12" :md="6" class="my-1">
+          <StatCard
+            title="客户端用户"
+            :value="overview.userTotal"
+            :sub="`今日新增 ${overview.userToday} · 今日活跃 ${overview.activeToday}`"
+            icon="person"
+            color="#409eff"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6" class="my-1">
+          <StatCard
+            title="题库总量"
+            :value="overview.sentenceTotal"
+            :sub="`就绪 ${overview.sentenceReady} · 待生图 ${overview.sentencePending}`"
+            icon="journal-text"
+            color="#67c23a"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6" class="my-1">
+          <StatCard
+            title="今日 AI 调用"
+            :value="overview.aiCallToday"
+            :sub="`token ${overview.aiTokenToday.toLocaleString('zh-CN')}`"
+            icon="cpu"
+            color="#e6a23c"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6" class="my-1">
+          <StatCard
+            title="句签"
+            :value="overview.cardToday"
+            :sub="`今日领取 · 累计 ${overview.cardTotal} 张`"
+            icon="calendar-month"
+            color="#f56c6c"
+          />
+        </el-col>
+      </el-row>
+    </template>
 
     <el-row :gutter="16" class="mt-4">
       <el-col :xs="24" :md="16">

@@ -8,6 +8,9 @@ import { AppException } from '../../common/exception/app.exception.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, formatDateTimeInZone, parsePagination, readString } from '../../common/utils/utils.js';
 import { parseUserAgent } from '../../common/utils/user-agent.js';
+import { assertExportable, type CsvExportTask } from '../../common/utils/csv-stream.js';
+
+export type { CsvExportTask };
 
 /** HTTP 日志 count 缓存 TTL（毫秒）。 */
 const COUNT_CACHE_TTL_MS = 30_000;
@@ -219,18 +222,6 @@ function mapOperationRow(row: {
   };
 }
 
-/** 导出任务描述：控制器据此流式写出，服务层不接触响应对象。 */
-export interface CsvExportTask {
-  /** 下载文件名 */
-  filename: string;
-  /** 表头 */
-  header: string[];
-  /** 行数（已通过上限预检） */
-  total: number;
-  /** 分批行数据（每批为二维数组） */
-  rows: AsyncGenerator<unknown[][]>;
-}
-
 /** 三类日志的 CSV 表头（列表展示与导出列顺序一致）。 */
 const LOGIN_LOG_CSV_HEADER = ['ID', '账号', 'IP', '归属地', '结果', '描述', 'User-Agent', '登录时间'];
 const OPERATION_LOG_CSV_HEADER = [
@@ -263,20 +254,6 @@ const HTTP_LOG_CSV_HEADER = [
   '归属地',
   'User-Agent',
 ];
-
-/**
- * 导出行数上限预检。
- * 超限时抛 400 而不是「截断后照常导出」：半截 CSV 会被当成完整数据使用，比报错更危险。
- * `EXPORT_MAX_ROWS=0` 表示不限制（不建议）。
- */
-function assertExportable(total: number, label: string): void {
-  const max = config.export.maxRows;
-  if (max > 0 && total > max) {
-    throw AppException.badRequest(
-      `待导出的${label}共 ${total} 条，超过单次导出上限 ${max} 条；请缩小时间范围或补充筛选条件`,
-    );
-  }
-}
 
 @Injectable()
 export class LogsService {
