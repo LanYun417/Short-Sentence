@@ -47,6 +47,7 @@ export type SentenceMinAggregateOutputType = {
   categoryId: bigint | null
   difficulty: number | null
   sentenceEn: string | null
+  alternateAnswers: string | null
   translationZh: string | null
   ipa: string | null
   scenePrompt: string | null
@@ -63,6 +64,7 @@ export type SentenceMaxAggregateOutputType = {
   categoryId: bigint | null
   difficulty: number | null
   sentenceEn: string | null
+  alternateAnswers: string | null
   translationZh: string | null
   ipa: string | null
   scenePrompt: string | null
@@ -79,6 +81,7 @@ export type SentenceCountAggregateOutputType = {
   categoryId: number
   difficulty: number
   sentenceEn: number
+  alternateAnswers: number
   translationZh: number
   ipa: number
   scenePrompt: number
@@ -113,6 +116,7 @@ export type SentenceMinAggregateInputType = {
   categoryId?: true
   difficulty?: true
   sentenceEn?: true
+  alternateAnswers?: true
   translationZh?: true
   ipa?: true
   scenePrompt?: true
@@ -129,6 +133,7 @@ export type SentenceMaxAggregateInputType = {
   categoryId?: true
   difficulty?: true
   sentenceEn?: true
+  alternateAnswers?: true
   translationZh?: true
   ipa?: true
   scenePrompt?: true
@@ -145,6 +150,7 @@ export type SentenceCountAggregateInputType = {
   categoryId?: true
   difficulty?: true
   sentenceEn?: true
+  alternateAnswers?: true
   translationZh?: true
   ipa?: true
   scenePrompt?: true
@@ -248,6 +254,7 @@ export type SentenceGroupByOutputType = {
   categoryId: bigint
   difficulty: number
   sentenceEn: string
+  alternateAnswers: string | null
   translationZh: string
   ipa: string | null
   scenePrompt: string
@@ -287,6 +294,7 @@ export type SentenceWhereInput = {
   categoryId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   difficulty?: Prisma.IntFilter<"Sentence"> | number
   sentenceEn?: Prisma.StringFilter<"Sentence"> | string
+  alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
@@ -307,6 +315,7 @@ export type SentenceOrderByWithRelationInput = {
   categoryId?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
+  alternateAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrderInput | Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
@@ -331,6 +340,7 @@ export type SentenceWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.SentenceWhereInput | Prisma.SentenceWhereInput[]
   categoryId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   difficulty?: Prisma.IntFilter<"Sentence"> | number
+  alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
@@ -351,6 +361,7 @@ export type SentenceOrderByWithAggregationInput = {
   categoryId?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
+  alternateAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrderInput | Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
@@ -375,6 +386,7 @@ export type SentenceScalarWhereWithAggregatesInput = {
   categoryId?: Prisma.BigIntWithAggregatesFilter<"Sentence"> | bigint | number
   difficulty?: Prisma.IntWithAggregatesFilter<"Sentence"> | number
   sentenceEn?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
+  alternateAnswers?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
@@ -390,6 +402,7 @@ export type SentenceCreateInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -410,6 +423,7 @@ export type SentenceUncheckedCreateInput = {
   categoryId: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -428,6 +442,7 @@ export type SentenceUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -448,6 +463,7 @@ export type SentenceUncheckedUpdateInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -467,6 +483,7 @@ export type SentenceCreateManyInput = {
   categoryId: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -482,6 +499,7 @@ export type SentenceUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -498,6 +516,7 @@ export type SentenceUncheckedUpdateManyInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -530,6 +549,7 @@ export type SentenceCountOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
+  alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
@@ -554,6 +574,7 @@ export type SentenceMaxOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
+  alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
@@ -570,6 +591,7 @@ export type SentenceMinOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
+  alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
@@ -682,6 +704,7 @@ export type SentenceCreateWithoutCategoryInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -700,6 +723,7 @@ export type SentenceUncheckedCreateWithoutCategoryInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -748,6 +772,7 @@ export type SentenceScalarWhereInput = {
   categoryId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   difficulty?: Prisma.IntFilter<"Sentence"> | number
   sentenceEn?: Prisma.StringFilter<"Sentence"> | string
+  alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
@@ -763,6 +788,7 @@ export type SentenceCreateWithoutRecordsInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -782,6 +808,7 @@ export type SentenceUncheckedCreateWithoutRecordsInput = {
   categoryId: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -815,6 +842,7 @@ export type SentenceUpdateWithoutRecordsInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -834,6 +862,7 @@ export type SentenceUncheckedUpdateWithoutRecordsInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -851,6 +880,7 @@ export type SentenceCreateWithoutFavoritesInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -870,6 +900,7 @@ export type SentenceUncheckedCreateWithoutFavoritesInput = {
   categoryId: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -903,6 +934,7 @@ export type SentenceUpdateWithoutFavoritesInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -922,6 +954,7 @@ export type SentenceUncheckedUpdateWithoutFavoritesInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -939,6 +972,7 @@ export type SentenceCreateWithoutReportsInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -958,6 +992,7 @@ export type SentenceUncheckedCreateWithoutReportsInput = {
   categoryId: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -991,6 +1026,7 @@ export type SentenceUpdateWithoutReportsInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1010,6 +1046,7 @@ export type SentenceUncheckedUpdateWithoutReportsInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1027,6 +1064,7 @@ export type SentenceCreateManyCategoryInput = {
   id?: bigint | number
   difficulty?: number
   sentenceEn: string
+  alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
   scenePrompt: string
@@ -1042,6 +1080,7 @@ export type SentenceUpdateWithoutCategoryInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1060,6 +1099,7 @@ export type SentenceUncheckedUpdateWithoutCategoryInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1078,6 +1118,7 @@ export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   difficulty?: Prisma.IntFieldUpdateOperationsInput | number
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
+  alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1143,6 +1184,7 @@ export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   categoryId?: boolean
   difficulty?: boolean
   sentenceEn?: boolean
+  alternateAnswers?: boolean
   translationZh?: boolean
   ipa?: boolean
   scenePrompt?: boolean
@@ -1166,6 +1208,7 @@ export type SentenceSelectScalar = {
   categoryId?: boolean
   difficulty?: boolean
   sentenceEn?: boolean
+  alternateAnswers?: boolean
   translationZh?: boolean
   ipa?: boolean
   scenePrompt?: boolean
@@ -1177,7 +1220,7 @@ export type SentenceSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "translationZh" | "ipa" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
+export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
 export type SentenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
@@ -1211,6 +1254,10 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * 英文句子（唯一；批量生成的天然去重键）
      */
     sentenceEn: string
+    /**
+     * 其他可接受的英文表达（JSON 数组，最多 5 条；输入模式下用户写出任一条即算对）
+     */
+    alternateAnswers: string | null
     /**
      * 中文释义（用户端题干）
      */
@@ -1624,6 +1671,7 @@ export interface SentenceFieldRefs {
   readonly categoryId: Prisma.FieldRef<"Sentence", 'BigInt'>
   readonly difficulty: Prisma.FieldRef<"Sentence", 'Int'>
   readonly sentenceEn: Prisma.FieldRef<"Sentence", 'String'>
+  readonly alternateAnswers: Prisma.FieldRef<"Sentence", 'String'>
   readonly translationZh: Prisma.FieldRef<"Sentence", 'String'>
   readonly ipa: Prisma.FieldRef<"Sentence", 'String'>
   readonly scenePrompt: Prisma.FieldRef<"Sentence", 'String'>

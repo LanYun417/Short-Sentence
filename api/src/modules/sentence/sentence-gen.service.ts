@@ -384,6 +384,9 @@ export class SentenceGenService {
           categoryId,
           difficulty: Math.min(3, Math.max(1, draft.difficulty || 2)),
           sentenceEn: draft.sentenceEn.trim(),
+          // 备用答案落库为 JSON 字符串（判定时解析）；没有等价表达时留 null
+          alternateAnswers:
+            draft.alternateAnswers && draft.alternateAnswers.length > 0 ? JSON.stringify(draft.alternateAnswers) : null,
           translationZh: draft.translationZh || draft.sentenceEn,
           ipa: draft.ipa || null,
           scenePrompt: scenePrompt.slice(0, 500),

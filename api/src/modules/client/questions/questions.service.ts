@@ -57,6 +57,8 @@ export interface AnswerResult {
   sentenceId: number;
   isCorrect: boolean;
   sentenceEn: string;
+  /** 其他可接受的等价表达（输入模式用：写出任一条即算对；不含 sentenceEn 本身） */
+  validAnswers: string[];
   translationZh: string;
   ipa: string | null;
   imageUrl: string | null;
@@ -93,6 +95,43 @@ export function normalizeAnswer(value: string): string {
     .trim()
     .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
     .replace(/\s+/g, ' ');
+}
+
+/**
+ * 解析备用答案（Sentence.alternateAnswers 的 JSON 字符串）。
+ * 容错：非 JSON / 非法结构 / 空值一律回退空数组（等同于「只有主句一个答案」）。
+ * 去重与截断口径与生题侧一致，避免脏数据影响判定。
+ */
+export function parseAlternateAnswers(raw: string | null): string[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of parsed) {
+      if (typeof item !== 'string') {
+        continue;
+      }
+      const text = item.trim();
+      const key = normalizeAnswer(text);
+      if (!text || !key || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      out.push(text.slice(0, 300));
+      if (out.length >= 5) {
+        break;
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -228,14 +267,30 @@ export class QuestionsService {
   async answer(userId: number, sentenceId: number, dto: AnswerSentenceDto): Promise<AnswerResult> {
     const sentence = await this.prisma.sentence.findFirst({
       where: { id: BigInt(sentenceId), status: 'ready' },
-      select: { id: true, sentenceEn: true, translationZh: true, ipa: true, imageFileId: true },
+      select: {
+        id: true,
+        sentenceEn: true,
+        alternateAnswers: true,
+        translationZh: true,
+        ipa: true,
+        imageFileId: true,
+      },
     });
     if (!sentence) {
       throw AppException.notFound('题目不存在或未就绪');
     }
 
     const trimmed = dto.userAnswer.trim();
-    const isCorrect = trimmed.length > 0 && normalizeAnswer(trimmed) === normalizeAnswer(sentence.sentenceEn);
+    // 输入模式不唯一答案：命中「主句 或 任一备用表达」即算对（规范化后全等，与单答案同口径）。
+    // 拼词模式词块恒由主句拆分而来，实际只会命中主句，但走同一条判定链路，不特例分支。
+    const validAnswers = parseAlternateAnswers(sentence.alternateAnswers).filter(
+      (item) => normalizeAnswer(item) !== normalizeAnswer(sentence.sentenceEn),
+    );
+    const isCorrect =
+      trimmed.length > 0 &&
+      [sentence.sentenceEn, ...validAnswers].some(
+        (candidate) => normalizeAnswer(trimmed) === normalizeAnswer(candidate),
+      );
 
     // 间隔重复：同题取最近一次的等级递进
     const last = await this.prisma.sentenceRecord.findFirst({
@@ -283,6 +338,8 @@ export class QuestionsService {
       sentenceId: Number(sentence.id),
       isCorrect,
       sentenceEn: sentence.sentenceEn,
+      // 下发全部可接受写法（主句已单独展示，这里只给备用表达，供「其他正确写法」提示）
+      validAnswers,
       translationZh: sentence.translationZh,
       ipa: sentence.ipa,
       imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,

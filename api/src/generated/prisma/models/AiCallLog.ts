@@ -555,7 +555,7 @@ export type $AiCallLogPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      */
     id: bigint
     /**
-     * 调用类型：sentence_gen 生题 / image_gen 生图 / expand 造句 / word_root 词根
+     * 调用类型：sentence_gen 生题 / sentence_polish 优化 / sentence_review 审核 / sentence_card_gen 句签 / image_gen 生图 / expand 造句 / word_root 词根
      */
     type: string
     /**

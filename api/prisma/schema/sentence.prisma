@@ -76,6 +76,8 @@ model Sentence {
   difficulty    Int      @default(1) @db.TinyInt
   /// 英文句子（唯一；批量生成的天然去重键）
   sentenceEn    String   @unique @db.VarChar(300)
+  /// 其他可接受的英文表达（JSON 数组，最多 5 条；输入模式下用户写出任一条即算对）
+  alternateAnswers String? @map("alternate_answers") @db.VarChar(1000)
   /// 中文释义（用户端题干）
   translationZh String   @map("translation_zh") @db.VarChar(300)
   /// IPA 音标（英美合并，如 /ˈkɒfi ˈplez/）

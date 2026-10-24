@@ -35,6 +35,68 @@ function str(value: unknown, max: number): string {
 }
 
 /**
+ * 归一化备用答案数组，并剔除与主句重复的条目（避免模型把主句混进备用答案里）。
+ * @param primary 主句（用于去重）
+ * @param value 模型输出的备用答案
+ * @param max 最多保留条数
+ */
+function parseAlternatesWith(primary: string, value: unknown, max = 5): string[] {
+  const primaryKey = primary
+    .toLowerCase()
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+    .replace(/\s+/g, ' ');
+  return parseAlternates(value, max + 1)
+    .filter((item) => {
+      const key = item
+        .toLowerCase()
+        .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+        .replace(/\s+/g, ' ');
+      return key !== primaryKey;
+    })
+    .slice(0, max);
+}
+
+/** 优化阶段备用答案取值：模型给了新的就用新的，漏了就回退生题阶段版本。 */
+function withFallback(draft: SentenceDraft, rawAlternates: unknown, fallbackAlternates?: string[]): string[] {
+  const parsed = parseAlternatesWith(draft.sentenceEn, rawAlternates);
+  return parsed.length > 0 ? parsed : parseAlternatesWith(draft.sentenceEn, fallbackAlternates);
+}
+
+/**
+ * 把模型产出的备用答案归一为干净数组（最多 max 条、去重、去空）。
+ * 去重用与 normalizeAnswer 同口径的 key，避免同一句的不同标点写法重复。
+ */
+function parseAlternates(value: unknown, max = 5): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string') {
+      continue;
+    }
+    const t = item.trim();
+    if (!t) {
+      continue;
+    }
+    const key = t
+      .toLowerCase()
+      .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+      .replace(/\s+/g, ' ');
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(t.slice(0, 300));
+    if (out.length >= max) {
+      break;
+    }
+  }
+  return out;
+}
+
+/**
  * 难度分级标准：生题（generate）与优化（polish）共用同一套。
  *
  * **难度由词汇与语法决定，不由句子长短决定**——6 词的 `Keep your eyes on the prize`
@@ -82,11 +144,14 @@ const POLISH_SYSTEM_PROMPT = [
   '4. ipa: British IPA consistent with the rewritten English.',
   '5. scenePrompt: keep it a flat cartoon of TWO PEOPLE talking in the matching scene; fix it if it no longer matches.',
   '6. categoryName: keep the original Chinese category name unless clearly wrong.',
+  '7. alternateAnswers: rewrite the list so every entry still expresses the SAME meaning as the REWRITTEN',
+  '   sentenceEn. Each must be natural, grammatically correct, different from sentenceEn and from each other.',
+  '   Keep 3-5 entries; if the rewritten sentence made an entry invalid, replace or drop it. Never include sentenceEn.',
   '',
   DIFFICULTY_RULES,
   '',
   'Output JSON only:',
-  '{"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":""}]}',
+  '{"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}',
 ].join('\n');
 
 /** 三阶段（审核）的 system 提示词。 */
@@ -137,7 +202,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '1. Output JSON only, shaped as {"items": [...]}. No explanations.',
       '2. Each item has: sentenceEn (natural spoken English), translationZh (Chinese meaning), ipa (British IPA),',
       '   scenePrompt (English image prompt), difficulty (1/2/3, judged by rule 4 below),',
-      '   categoryName (Chinese category name, matching the theme or narrower).',
+      '   categoryName (Chinese category name, matching the theme or narrower),',
+      '   alternateAnswers (array of 3-5 OTHER natural English sentences that mean the SAME as sentenceEn).',
       '3. translationZh is the field most likely to go wrong. Three hard rules:',
       '   a. Natural Chinese: follow Chinese word order and collocations. Never translate English word order literally.',
       '      Example: "what the patient earth has grown" -> 「大地耐心孕育出的（果实）」,',
@@ -146,6 +212,13 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '      rewrite it. Bad: 「站台在最后一刻变了。」(what did the platform change into?)',
       '      Good: 「快到发车时站台临时换了」.',
       '   c. Complete: keep who / does what / where so there is no ambiguity. 8-25 Chinese characters.',
+      '8b. alternateAnswers rules:',
+      '   - Each entry is a DIFFERENT natural way to express the SAME meaning as sentenceEn',
+      '     (different wording, word order, or vocabulary). All must be grammatically correct and natural.',
+      '   - None may equal sentenceEn or each other (after ignoring case and punctuation).',
+      '   - Provide 3 to 5 entries. Only use fewer if the sentence is so formulaic that genuine alternatives',
+      '     do not exist (e.g. "Thank you." -> ["Thanks."]), and never invent awkward ones.',
+      '   - Do NOT include sentenceEn itself in this array.',
       '',
       DIFFICULTY_RULES,
       '',
@@ -161,7 +234,12 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       `7. Generate ${count} items this batch. Theme: ${theme}.`,
     ].join('\n');
 
-    const content = await this.chat('sentence_gen', systemPrompt, `Theme: ${theme}. Count: ${count}.`, 0.8);
+    const content = await this.chat(
+      'sentence_gen',
+      systemPrompt,
+      `Theme: ${theme}. Count: ${count}. Output JSON with shape {"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}.`,
+      0.8,
+    );
     const drafts = this.parseDrafts(content);
     if (drafts.length === 0) {
       throw new AiProviderError('生题接口未返回可用草稿', { retryable: true });
@@ -192,6 +270,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     );
 
     const polished = new Map<number, SentenceDraft>();
+    // 备用答案兜底：模型漏掉 alternateAnswers 时回退生题阶段版本（运行期不可变草稿，索引固定）
+    const draft = (index: number): SentenceDraft => drafts[index];
     for (const item of this.extractItems(content)) {
       if (!isUsableDraft(item)) {
         continue;
@@ -208,6 +288,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         scenePrompt: str(raw.scenePrompt, 500),
         difficulty: this.clampDifficulty(raw.difficulty),
         categoryName: str(raw.categoryName, 50) || drafts[index].categoryName,
+        // 优化改写常会调整句子表达，备用答案以改写后的为准；模型漏掉时回退生题阶段的版本
+        alternateAnswers: withFallback(draft(index), raw.alternateAnswers, drafts[index].alternateAnswers),
       });
     }
 
@@ -221,6 +303,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         translationZh: next.translationZh || draft.translationZh,
         ipa: next.ipa || draft.ipa,
         scenePrompt: next.scenePrompt || draft.scenePrompt,
+        // 优化改写句子后，主句对应的备用答案也要跟着换（漏了就留生题阶段版本）
+        alternateAnswers: withFallback(next, next.alternateAnswers, draft.alternateAnswers),
       };
     });
   }
@@ -461,8 +545,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       }
       // isUsableDraft 已把 item 收窄为 SentenceDraft；这里再按记录访问需要二次断言
       const draft = item as unknown as Record<string, unknown>;
+      const sentenceEn = str(draft.sentenceEn, 300);
       drafts.push({
-        sentenceEn: str(draft.sentenceEn, 300),
+        sentenceEn,
+        alternateAnswers: parseAlternatesWith(sentenceEn, draft.alternateAnswers),
         translationZh: str(draft.translationZh, 300),
         ipa: str(draft.ipa, 200),
         scenePrompt: str(draft.scenePrompt, 500),

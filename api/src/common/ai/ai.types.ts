@@ -8,6 +8,8 @@
 export interface SentenceDraft {
   /** 英文句子（入库唯一键） */
   sentenceEn: string;
+  /** 其他可接受的等价英文表达（最多 5 条；输入模式下写出任一即算对，拼词模式不涉及） */
+  alternateAnswers?: string[];
   /** 中文释义（用户端题干） */
   translationZh: string;
   /** IPA 音标 */

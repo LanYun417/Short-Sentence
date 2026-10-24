@@ -2833,6 +2833,7 @@ export const SentenceScalarFieldEnum = {
   categoryId: 'categoryId',
   difficulty: 'difficulty',
   sentenceEn: 'sentenceEn',
+  alternateAnswers: 'alternateAnswers',
   translationZh: 'translationZh',
   ipa: 'ipa',
   scenePrompt: 'scenePrompt',
@@ -3284,6 +3285,7 @@ export type SentenceCategoryOrderByRelevanceFieldEnum = (typeof SentenceCategory
 
 export const SentenceOrderByRelevanceFieldEnum = {
   sentenceEn: 'sentenceEn',
+  alternateAnswers: 'alternateAnswers',
   translationZh: 'translationZh',
   ipa: 'ipa',
   scenePrompt: 'scenePrompt',
