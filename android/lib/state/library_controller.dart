@@ -87,7 +87,10 @@ class LibraryState {
   LibraryTabData get current => tabs[tab] ?? const LibraryTabData();
   LibraryTabData of(LibraryTab tab) => tabs[tab] ?? const LibraryTabData();
 
-  LibraryState copyWith({LibraryTab? tab, Map<LibraryTab, LibraryTabData>? tabs}) {
+  LibraryState copyWith({
+    LibraryTab? tab,
+    Map<LibraryTab, LibraryTabData>? tabs,
+  }) {
     return LibraryState(tab: tab ?? this.tab, tabs: tabs ?? this.tabs);
   }
 }
@@ -119,6 +122,33 @@ class LibraryController extends Notifier<LibraryState> {
     await _load(tab ?? state.tab, refresh: true);
   }
 
+  /// 预取其它分区的**总数**（只发 pageSize=1 的轻请求，不动列表状态）。
+  ///
+  /// 目的只有一个：让分段控件上的「复习 22 / 历史 24」在点进去之前就可见。
+  /// 不预取内容——那是三份列表的流量，为一个数字不值当。
+  Future<void> prefetchCounts() async {
+    for (final tab in LibraryTab.values) {
+      final data = state.of(tab);
+      if (data.loadedOnce || data.total > 0) {
+        continue;
+      }
+      try {
+        final result = switch (tab) {
+          LibraryTab.favorites => await _api.favorites(page: 1, pageSize: 1),
+          LibraryTab.review => await _api.review(page: 1, pageSize: 1),
+          LibraryTab.history => await _api.history(page: 1, pageSize: 1),
+        };
+        // 期间用户可能已经切过去并加载了整页：以最新状态为准，别覆盖
+        final latest = state.of(tab);
+        if (!latest.loadedOnce) {
+          _update(tab, latest.copyWith(total: result.total));
+        }
+      } catch (_) {
+        // 预取失败静默：用户点进去时还会再拉一次，会看到真实错误
+      }
+    }
+  }
+
   /// 触底加载下一页。
   Future<void> loadMore() async {
     final tab = state.tab;
@@ -143,11 +173,22 @@ class LibraryController extends Notifier<LibraryState> {
 
     try {
       final result = switch (tab) {
-        LibraryTab.favorites => await _api.favorites(page: nextPage, pageSize: kLibraryPageSize),
-        LibraryTab.review => await _api.review(page: nextPage, pageSize: kLibraryPageSize),
-        LibraryTab.history => await _api.history(page: nextPage, pageSize: kLibraryPageSize),
+        LibraryTab.favorites => await _api.favorites(
+          page: nextPage,
+          pageSize: kLibraryPageSize,
+        ),
+        LibraryTab.review => await _api.review(
+          page: nextPage,
+          pageSize: kLibraryPageSize,
+        ),
+        LibraryTab.history => await _api.history(
+          page: nextPage,
+          pageSize: kLibraryPageSize,
+        ),
       };
-      final merged = refresh ? result.list : <SentenceLibraryItem>[...before.items, ...result.list];
+      final merged = refresh
+          ? result.list
+          : <SentenceLibraryItem>[...before.items, ...result.list];
       _update(
         tab,
         LibraryTabData(
@@ -211,7 +252,9 @@ class LibraryController extends Notifier<LibraryState> {
   }
 
   void _update(LibraryTab tab, LibraryTabData data) {
-    state = state.copyWith(tabs: <LibraryTab, LibraryTabData>{...state.tabs, tab: data});
+    state = state.copyWith(
+      tabs: <LibraryTab, LibraryTabData>{...state.tabs, tab: data},
+    );
   }
 
   static String _message(Object error) {
@@ -223,6 +266,5 @@ class LibraryController extends Notifier<LibraryState> {
 }
 
 /// 语句库控制器 Provider。
-final libraryControllerProvider = NotifierProvider<LibraryController, LibraryState>(
-  LibraryController.new,
-);
+final libraryControllerProvider =
+    NotifierProvider<LibraryController, LibraryState>(LibraryController.new);

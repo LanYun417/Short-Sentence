@@ -1,5 +1,9 @@
 /// 登录 / 注册页。
 ///
+/// 视觉上与新外壳对齐：柔光背景 + 白卡表单 + 品牌渐变主按钮，
+/// 而不是把输入框直接铺在页面上——登录是用户看到的第一屏，
+/// 观感不统一会让后面的页面显得「两个 App」。
+///
 /// **为什么带图形验证码**：后端 `CAPTCHA_ENABLED` 默认开启，
 /// 不带验证码的登录/注册请求会被直接拒绝（「验证码错误或已过期」）。
 /// 因此验证码不是可选项：先 [CaptchaField] 拉图，提交时连同 id / code 一起发。
@@ -13,10 +17,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api/auth_api.dart';
-import '../api/models/user.dart';
 import '../state/auth_controller.dart';
-import '../widgets/brand_header.dart';
+import '../theme.dart';
+import '../widgets/app_card.dart';
 import '../widgets/captcha_field.dart';
+import '../widgets/gradient_button.dart';
+import '../widgets/staggered.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -26,14 +32,21 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
+  /// 可替换：切换登录/注册时换一个新的 key，
+  /// 让表单字段重建——旧模式下的「请输入密码/验证码」红字会一起消失，
+  /// 而 TextEditingController 里的内容不受影响。
+  GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _captchaController = TextEditingController();
 
   bool _isRegister = false;
+  bool _obscure = true;
   String? _captchaId;
   String? _captchaImage;
+
+  /// 切换登录/注册时收起上一次的错误：换了模式还挂着旧报错会让人以为新表单也有问题。
+  bool _showError = true;
 
   @override
   void initState() {
@@ -85,6 +98,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
     _submitting = true;
+    setState(() => _showError = true);
     try {
       final auth = ref.read(authControllerProvider.notifier);
       final ok = _isRegister
@@ -116,120 +130,314 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  void _toggleMode() {
+    setState(() {
+      _isRegister = !_isRegister;
+      _showError = false;
+      _formKey = GlobalKey<FormState>();
+    });
+    _captchaController.clear();
+    _loadCaptcha();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final isRegister = _isRegister;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const BrandHeader(),
-                    const SizedBox(height: 32),
-                    Text(
-                      _isRegister ? '创建账号' : '欢迎回来',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              colors.canvasTint.withValues(alpha: 0.72),
+              colors.canvas.withValues(alpha: 0),
+            ],
+            stops: const <double>[0, 0.62],
+          ),
+        ),
+        child: Stack(
+          children: <Widget>[
+            // 两团柔光：让纯色背景有层次，又不会像插画那样抢主体
+            Positioned(
+              top: -110,
+              right: -80,
+              child: _Glow(
+                size: 300,
+                color: colors.brand.withValues(alpha: 0.16),
+              ),
+            ),
+            Positioned(
+              top: 140,
+              left: -120,
+              child: _Glow(
+                size: 260,
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.13),
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          StaggeredEntrance(index: 0, child: const _Brand()),
+                          const SizedBox(height: 30),
+                          StaggeredEntrance(
+                            index: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  isRegister ? '创建账号' : '欢迎回来',
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -1,
+                                      ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  isRegister
+                                      ? '一个账号，同步收藏、打卡与复习进度'
+                                      : '登录后继续今天的刷题',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colors.inkSoft,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isRegister ? '一个账号同步收藏、打卡与复习进度' : '登录后继续今天的刷题',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          const SizedBox(height: 22),
+                          StaggeredEntrance(
+                            index: 2,
+                            child: AppCard(
+                              padding: const EdgeInsets.fromLTRB(
+                                18,
+                                20,
+                                18,
+                                20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  TextFormField(
+                                    controller: _emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: const <String>[
+                                      AutofillHints.email,
+                                    ],
+                                    decoration: const InputDecoration(
+                                      hintText: '邮箱',
+                                      prefixIcon: Icon(
+                                        Icons.alternate_email_rounded,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      final text = value?.trim() ?? '';
+                                      if (text.isEmpty) {
+                                        return '请输入邮箱';
+                                      }
+                                      if (!text.contains('@')) {
+                                        return '邮箱格式不正确';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextFormField(
+                                    controller: _passwordController,
+                                    obscureText: _obscure,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: const <String>[
+                                      AutofillHints.password,
+                                    ],
+                                    decoration: InputDecoration(
+                                      hintText: '密码',
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline_rounded,
+                                        size: 20,
+                                      ),
+                                      suffixIcon: IconButton(
+                                        onPressed: () => setState(
+                                          () => _obscure = !_obscure,
+                                        ),
+                                        tooltip: _obscure ? '显示密码' : '隐藏密码',
+                                        icon: Icon(
+                                          _obscure
+                                              ? Icons.visibility_off_outlined
+                                              : Icons.visibility_outlined,
+                                          size: 19,
+                                          color: colors.inkFaint,
+                                        ),
+                                      ),
+                                      helperText: isRegister
+                                          ? '6~32 位，需同时包含字母和数字'
+                                          : null,
+                                    ),
+                                    validator: (value) {
+                                      final text = value ?? '';
+                                      if (text.isEmpty) {
+                                        return '请输入密码';
+                                      }
+                                      if (isRegister && text.length < 6) {
+                                        return '密码至少 6 位';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  if (_captchaImage != null) ...<Widget>[
+                                    const SizedBox(height: 12),
+                                    CaptchaField(
+                                      image: _captchaImage!,
+                                      controller: _captchaController,
+                                      onRefresh: _loadCaptcha,
+                                    ),
+                                  ],
+                                  if (state.error != null &&
+                                      _showError) ...<Widget>[
+                                    const SizedBox(height: 14),
+                                    _ErrorBanner(message: state.error!),
+                                  ],
+                                  const SizedBox(height: 20),
+                                  GradientButton(
+                                    label: isRegister ? '注册并登录' : '登录',
+                                    icon: isRegister
+                                        ? Icons.person_add_alt_1_rounded
+                                        : Icons.arrow_forward_rounded,
+                                    loading: state.submitting,
+                                    onPressed: state.submitting
+                                        ? null
+                                        : _submit,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: '邮箱',
-                        prefixIcon: Icon(Icons.mail_outline),
+                          const SizedBox(height: 10),
+                          StaggeredEntrance(
+                            index: 3,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Text(
+                                  isRegister ? '已经有账号了？' : '第一次来？',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: colors.inkFaint,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: state.submitting
+                                      ? null
+                                      : _toggleMode,
+                                  child: Text(isRegister ? '去登录' : '创建账号'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: Text(
+                              '每天 20 句 · 间隔重复 · 看图学英语',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: colors.inkFaint,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
-                        if (text.isEmpty) {
-                          return '请输入邮箱';
-                        }
-                        if (!text.contains('@')) {
-                          return '邮箱格式不正确';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [
-                        AutofillHints.password,
-                      ],
-                      decoration: InputDecoration(
-                        labelText: '密码',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        helperText: _isRegister ? '6~32 位，需同时包含字母和数字' : null,
-                      ),
-                      validator: (value) {
-                        final text = value ?? '';
-                        if (text.isEmpty) {
-                          return '请输入密码';
-                        }
-                        if (_isRegister && text.length < 6) {
-                          return '密码至少 6 位';
-                        }
-                        return null;
-                      },
-                    ),
-                    if (_captchaImage != null) ...[
-                      const SizedBox(height: 16),
-                      CaptchaField(
-                        image: _captchaImage!,
-                        controller: _captchaController,
-                        onRefresh: _loadCaptcha,
-                      ),
-                    ],
-                    if (state.error != null) ...[
-                      const SizedBox(height: 16),
-                      _ErrorBanner(message: state.error!),
-                    ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: state.submitting ? null : _submit,
-                      child: state.submitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(_isRegister ? '注册并登录' : '登录'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: state.submitting
-                          ? null
-                          : () {
-                                setState(() => _isRegister = !_isRegister);
-                                _captchaController.clear();
-                                _loadCaptcha();
-                              },
-                      child: Text(_isRegister ? '已有账号？去登录' : '还没有账号？去注册'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 品牌行：圆角 Logo + 渐变字标。
+class _Brand extends StatelessWidget {
+  const _Brand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.28),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Image.asset(
+              'assets/brand/logo.png',
+              width: 46,
+              height: 46,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ShaderMask(
+          shaderCallback: (bounds) => brandGradient.createShader(bounds),
+          blendMode: BlendMode.srcIn,
+          child: const Text(
+            '短句',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 柔光圆（径向渐变，比 blur 滤镜便宜）。
+class _Glow extends StatelessWidget {
+  const _Glow({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: <Color>[color, color.withValues(alpha: 0)],
           ),
         ),
       ),
@@ -244,21 +452,27 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: scheme.errorContainer,
+        color: colors.danger.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.danger.withValues(alpha: 0.2)),
       ),
       child: Row(
-        children: [
-          Icon(Icons.error_outline, size: 18, color: scheme.onErrorContainer),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(Icons.error_outline_rounded, size: 17, color: colors.danger),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: scheme.onErrorContainer, fontSize: 13),
+              style: TextStyle(
+                color: colors.danger,
+                fontSize: 12.5,
+                height: 1.45,
+              ),
             ),
           ),
         ],
@@ -266,6 +480,3 @@ class _ErrorBanner extends StatelessWidget {
     );
   }
 }
-
-/// 供路由使用的「当前用户」便捷读取（登录成功后 HomePage 立即展示）。
-UserProfile? currentUser(AuthState state) => state.user;

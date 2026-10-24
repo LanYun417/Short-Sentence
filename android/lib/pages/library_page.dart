@@ -36,10 +36,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     super.initState();
     _scroll.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(libraryControllerProvider.notifier);
       final state = ref.read(libraryControllerProvider);
       if (!state.current.loadedOnce) {
-        ref.read(libraryControllerProvider.notifier).refresh();
+        notifier.refresh();
       }
+      // 让另外两个分区的条数也显示出来（轻请求，失败静默）
+      notifier.prefetchCounts();
     });
   }
 
@@ -68,14 +71,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 
   Future<bool> _unfavorite(SentenceLibraryItem item, int index) async {
-    final ok = await ref.read(libraryControllerProvider.notifier).unfavorite(item);
+    final ok = await ref
+        .read(libraryControllerProvider.notifier)
+        .unfavorite(item);
     if (!mounted) {
       return ok;
     }
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('取消收藏失败，请稍后重试')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('取消收藏失败，请稍后重试')));
       return false;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -103,32 +107,34 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     return Material(
       color: Colors.transparent,
       child: SafeArea(
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          PageHeader(
-            title: '语句库',
-            subtitle: '收藏、复习与历史，都在这里',
-            trailing: _CountBadge(count: data.total),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: SegmentedControl<LibraryTab>(
-              value: state.tab,
-              onChanged: _switchTab,
-              segments: <Segment<LibraryTab>>[
-                for (final tab in LibraryTab.values)
-                  Segment<LibraryTab>(
-                    value: tab,
-                    label: tab.label,
-                    badge: state.of(tab).loadedOnce ? state.of(tab).total : null,
-                  ),
-              ],
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            PageHeader(
+              title: '语句库',
+              subtitle: '收藏、复习与历史，都在这里',
+              trailing: _CountBadge(count: data.total),
             ),
-          ),
-          Expanded(child: _buildBody(state, data)),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: SegmentedControl<LibraryTab>(
+                value: state.tab,
+                onChanged: _switchTab,
+                segments: <Segment<LibraryTab>>[
+                  for (final tab in LibraryTab.values)
+                    Segment<LibraryTab>(
+                      value: tab,
+                      label: tab.label,
+                      badge: state.of(tab).total > 0
+                          ? state.of(tab).total
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody(state, data)),
+          ],
         ),
       ),
     );
@@ -179,7 +185,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       );
     }
 
-    final showFooter = data.loadingMore || (data.loadedOnce && !data.hasMore && data.items.length > 4);
+    final showFooter =
+        data.loadingMore ||
+        (data.loadedOnce && !data.hasMore && data.items.length > 4);
     return RefreshIndicator(
       color: context.colors.brand,
       onRefresh: () => ref.read(libraryControllerProvider.notifier).refresh(),
@@ -230,7 +238,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Icon(Icons.star_outline_rounded, size: 18, color: context.colors.danger),
+                  Icon(
+                    Icons.star_outline_rounded,
+                    size: 18,
+                    color: context.colors.danger,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '取消收藏',
@@ -307,9 +319,17 @@ class _LoadingList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  ShimmerBox(height: 14, width: 190 + (index % 3) * 24, radius: 7),
+                  ShimmerBox(
+                    height: 14,
+                    width: 190 + (index % 3) * 24,
+                    radius: 7,
+                  ),
                   const SizedBox(height: 8),
-                  ShimmerBox(height: 11, width: 140 + (index % 2) * 30, radius: 6),
+                  ShimmerBox(
+                    height: 11,
+                    width: 140 + (index % 2) * 30,
+                    radius: 6,
+                  ),
                   const SizedBox(height: 10),
                   ShimmerBox(height: 18, width: 64, radius: 9),
                 ],
@@ -338,7 +358,10 @@ class _Footer extends StatelessWidget {
             ? SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: colors.brand),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.brand,
+                ),
               )
             : Row(
                 mainAxisSize: MainAxisSize.min,

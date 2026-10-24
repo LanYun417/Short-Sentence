@@ -40,9 +40,8 @@ class CaptchaField extends StatelessWidget {
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],
             decoration: const InputDecoration(
-              labelText: '验证码',
-              prefixIcon: Icon(Icons.shield_outlined),
-              hintText: '输入图片中的字符',
+              hintText: '验证码',
+              prefixIcon: Icon(Icons.shield_outlined, size: 20),
             ),
             validator: (value) {
               if ((value ?? '').trim().isEmpty) {

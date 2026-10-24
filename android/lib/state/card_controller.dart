@@ -16,6 +16,7 @@ class CardState {
     this.todayObtained = false,
     this.todayDate = '',
     this.mine = const <SentenceCard>[],
+    this.mineLoaded = false,
     this.loading = false,
     this.claiming = false,
     this.error,
@@ -29,6 +30,9 @@ class CardState {
 
   /// 我的句签册（按日期倒序）。
   final List<SentenceCard> mine;
+
+  /// 句签册是否已拉过（刷题页只查「今天领没领」，不需要整个册子）。
+  final bool mineLoaded;
 
   final bool loading;
   final bool claiming;
@@ -46,6 +50,7 @@ class CardState {
     bool? todayObtained,
     String? todayDate,
     List<SentenceCard>? mine,
+    bool? mineLoaded,
     bool? loading,
     bool? claiming,
     String? error,
@@ -55,6 +60,7 @@ class CardState {
       todayObtained: todayObtained ?? this.todayObtained,
       todayDate: todayDate ?? this.todayDate,
       mine: mine ?? this.mine,
+      mineLoaded: mineLoaded ?? this.mineLoaded,
       loading: loading ?? this.loading,
       claiming: claiming ?? this.claiming,
       error: clearError ? null : (error ?? this.error),
@@ -69,12 +75,32 @@ class CardController extends Notifier<CardState> {
 
   LibraryApi get _api => ref.read(libraryApiProvider);
 
-  /// 加载今日状态与句签册（已加载过则跳过，除非 [force]）。
+  /// 只查今日状态（刷题页用）。
+  ///
+  /// 刷题页只需要知道「今天领没领」，不需要整个句签册——
+  /// 少一个请求、少一份列表传输，首屏更快。
+  Future<void> loadStatus({bool force = false}) async {
+    if (state.todayDate.isNotEmpty && !force) {
+      return;
+    }
+    try {
+      final status = await _api.todayCardStatus();
+      state = state.copyWith(
+        todayObtained: status.obtained,
+        todayDate: status.bizDate,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(error: _message(error));
+    }
+  }
+
+  /// 加载今日状态与句签册（成长页用；已加载过则跳过，除非 [force]）。
   Future<void> load({bool force = false}) async {
     if (state.loading) {
       return;
     }
-    if (state.todayDate.isNotEmpty && !force) {
+    if (state.todayDate.isNotEmpty && state.mineLoaded && !force) {
       return;
     }
     state = state.copyWith(loading: true, clearError: true);
@@ -88,6 +114,7 @@ class CardController extends Notifier<CardState> {
         todayObtained: status.obtained,
         todayDate: status.bizDate,
         mine: (results[1] as List<SentenceCard>?) ?? const <SentenceCard>[],
+        mineLoaded: true,
       );
     } catch (error) {
       state = state.copyWith(loading: false, error: _message(error));
@@ -117,6 +144,7 @@ class CardController extends Notifier<CardState> {
         todayObtained: true,
         todayDate: state.todayDate,
         mine: mine,
+        mineLoaded: state.mineLoaded,
       );
       return card;
     } catch (error) {

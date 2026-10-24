@@ -34,90 +34,103 @@ class SentenceTile extends StatelessWidget {
     final colors = context.colors;
     final theme = Theme.of(context);
 
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(14),
-      radius: 20,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _Thumb(url: item.imageUrl),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  item.sentenceEn,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.translationZh,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.inkSoft),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: <Widget>[
-                    Pill(
-                      label: item.difficultyLabel,
-                      background: colors.brand.withValues(alpha: 0.08),
-                      foreground: colors.brand,
+    return RepaintBoundary(
+      child: AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(14),
+        radius: 20,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _Thumb(url: item.imageUrl),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    item.sentenceEn,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      height: 1.35,
+                      fontWeight: FontWeight.w600,
                     ),
-                    if (item.categoryName != null) ...<Widget>[
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          item.categoryName!,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colors.inkFaint,
-                          ),
-                        ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    item.translationZh,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.inkSoft,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      Pill(
+                        label: item.difficultyLabel,
+                        background: colors.brand.withValues(alpha: 0.08),
+                        foreground: colors.brand,
                       ),
-                    ],
-                    const Spacer(),
-                    if (showAccuracy && item.isCorrect != null)
-                      Icon(
-                        item.isCorrect! ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                        size: 16,
-                        color: item.isCorrect! ? colors.success : colors.danger,
-                      )
-                    else if (item.reviewLevel != null && item.reviewLevel! > 0)
-                      Row(
-                        children: <Widget>[
-                          Icon(Icons.repeat_rounded, size: 12, color: colors.inkFaint),
-                          const SizedBox(width: 3),
-                          Text(
-                            '已连对 ${item.reviewLevel} 次',
+                      if (item.categoryName != null) ...<Widget>[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            item.categoryName!,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: colors.inkFaint,
-                              fontSize: 10.5,
                             ),
                           ),
-                        ],
-                      )
-                    else
-                      Text(
-                        _dateLabel(item.createdAt),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.inkFaint,
-                          fontSize: 10.5,
                         ),
-                      ),
-                  ],
-                ),
-              ],
+                      ],
+                      const Spacer(),
+                      if (showAccuracy && item.isCorrect != null)
+                        Icon(
+                          item.isCorrect!
+                              ? Icons.check_circle_rounded
+                              : Icons.cancel_rounded,
+                          size: 16,
+                          color: item.isCorrect!
+                              ? colors.success
+                              : colors.danger,
+                        )
+                      else if (item.reviewLevel != null &&
+                          item.reviewLevel! > 0)
+                        Row(
+                          children: <Widget>[
+                            Icon(
+                              Icons.repeat_rounded,
+                              size: 12,
+                              color: colors.inkFaint,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '已连对 ${item.reviewLevel} 次',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colors.inkFaint,
+                                fontSize: 10.5,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          _dateLabel(item.createdAt),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colors.inkFaint,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -157,7 +170,11 @@ class _Thumb extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
         ),
-        child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: colors.brand),
+        child: Icon(
+          Icons.chat_bubble_outline_rounded,
+          size: 20,
+          color: colors.brand,
+        ),
       );
     }
     return ClipRRect(
@@ -167,17 +184,20 @@ class _Thumb extends StatelessWidget {
         width: 56,
         height: 56,
         fit: BoxFit.cover,
+        // 原图 1280px，列表里只显示 56dp：不限制解码尺寸会按原图占内存
+        memCacheWidth: 168,
         fadeInDuration: Motion.fast,
-        placeholder: (context, _) => Container(
-          width: 56,
-          height: 56,
-          color: colors.cardMuted,
-        ),
+        placeholder: (context, _) =>
+            Container(width: 56, height: 56, color: colors.cardMuted),
         errorWidget: (context, _, _) => Container(
           width: 56,
           height: 56,
           color: colors.cardMuted,
-          child: Icon(Icons.image_not_supported_outlined, size: 18, color: colors.inkFaint),
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            size: 18,
+            color: colors.inkFaint,
+          ),
         ),
       ),
     );

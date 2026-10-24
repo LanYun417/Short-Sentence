@@ -111,7 +111,11 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                 child: AnimatedOpacity(
                   opacity: keyboardOpen ? 0 : 1,
                   duration: reduce ? Duration.zero : Motion.fast,
-                  child: AppTabBar(items: _tabs, index: _index, onChanged: _select),
+                  child: AppTabBar(
+                    items: _tabs,
+                    index: _index,
+                    onChanged: _select,
+                  ),
                 ),
               ),
             ),
@@ -137,15 +141,17 @@ class _TabView extends StatelessWidget {
       // TickerMode 必须在**动画之外**：它会把子树里的所有 Ticker（包括
       // AnimatedOpacity 自己的控制器）一并停掉——套在外面会让淡出动画
       // 永远停在 opacity=1，旧页面就留在新页面底下透出来。
-      child: AnimatedOpacity(
-        opacity: active ? 1 : 0,
-        duration: reduce ? Duration.zero : Motion.normal,
-        curve: Motion.standard,
-        child: AnimatedScale(
-          scale: active ? 1 : 0.985,
+      child: RepaintBoundary(
+        child: AnimatedOpacity(
+          opacity: active ? 1 : 0,
           duration: reduce ? Duration.zero : Motion.normal,
           curve: Motion.standard,
-          child: TickerMode(enabled: active, child: child),
+          child: AnimatedScale(
+            scale: active ? 1 : 0.985,
+            duration: reduce ? Duration.zero : Motion.normal,
+            curve: Motion.standard,
+            child: TickerMode(enabled: active, child: child),
+          ),
         ),
       ),
     );

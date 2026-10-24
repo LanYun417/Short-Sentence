@@ -175,3 +175,19 @@ ShellPage（底部四 Tab，各页保留状态）
 
 7. **动画时长别只图快**：模拟器 debug 包首帧会掉 100+ 帧，看起来像卡死甚至触发 ANR；
    验证动效与截图用 `flutter run --release`，那才是真实表现。
+
+## 九、性能约定
+
+移动端的卡顿多半不是「代码慢」，而是**画了不该画的东西**或**解了不该解的图**。几条硬约定：
+
+| 场景         | 约定                                                             | 原因                                                         |
+| ------------ | ---------------------------------------------------------------- | ------------------------------------------------------------ |
+| 列表缩略图   | `CachedNetworkImage` 必须给 `memCacheWidth`（按显示宽 × 3 倍屏） | 原图 1280px，56dp 的缩略图按原尺寸解码，一张就吃掉几 MB 内存 |
+| 持续动画区域 | 外加 `RepaintBoundary`（进度 Hero、翻卡、每个 Tab）              | 柔光/翻转每帧重绘，不隔离会把整段列表一起标记为脏            |
+| 列表入场动画 | 只给前 8 项做错峰，其余直接显示                                  | 滚动回收后重建会重播动画，看起来像页面在抖，还反复创建控制器 |
+| 装饰性背景   | 用径向渐变画柔光，不用 `ImageFilter.blur`                        | 模糊滤镜在滚动时反复重绘整层，径向渐变由 GPU 直接插值        |
+| 图片占位     | 骨架屏用 `ShimmerBox`，可传 `animate: false` 静态化              | 骨架只在首屏短暂出现，不值得为它开一堆循环控制器             |
+
+对应实现：`widgets/staggered.dart` 的 `_animateLimit`、`widgets/aurora.dart` 的径向柔光、
+`quiz_page.dart` 的 RepaintBoundary，以及 `sentence_tile.dart` / `growth_page.dart` /
+`profile_page.dart` 里的 `memCacheWidth`。

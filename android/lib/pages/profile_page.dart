@@ -152,7 +152,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             subtitle: '账号与偏好',
             padding: EdgeInsets.fromLTRB(4, 8, 4, 14),
           ),
-          StaggeredEntrance(index: 0, child: _IdentityCard(user: user)),
+          StaggeredEntrance(
+            index: 0,
+            child: _IdentityCard(
+              user: user,
+              levelCode: growth.level?.code,
+              xp: growth.xp,
+            ),
+          ),
           const SizedBox(height: 14),
           StaggeredEntrance(
             index: 1,
@@ -236,9 +243,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 /* ------------------------------ 身份卡 ------------------------------ */
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user});
+  const _IdentityCard({required this.user, this.levelCode, this.xp = 0});
 
   final UserProfile? user;
+
+  /// 当前 CEFR 等级码（未加载到成长数据时为 null，不显示等级标签）。
+  final String? levelCode;
+  final int xp;
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +267,7 @@ class _IdentityCard extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: staticUrl(user!.bgImageUrl),
                 fit: BoxFit.cover,
+                memCacheWidth: 1080,
               ),
             ),
           if (hasCover)
@@ -294,6 +306,7 @@ class _IdentityCard extends StatelessWidget {
                                 width: 62,
                                 height: 62,
                                 fit: BoxFit.cover,
+                                memCacheWidth: 186,
                               ),
                             )
                           : Text(
@@ -340,13 +353,22 @@ class _IdentityCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Row(
+                // Wrap 而不是 Row：邮箱可能很长，三个标签挤在一行会把
+                // 「加入于」压没；换行比截断更易读
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: <Widget>[
+                    if (levelCode != null)
+                      _GlassPill(
+                        icon: Icons.workspace_premium_rounded,
+                        label: '$levelCode · $xp XP',
+                      ),
                     _GlassPill(
                       icon: Icons.mail_outline_rounded,
                       label: user?.email ?? '',
+                      maxWidth: 210,
                     ),
-                    const SizedBox(width: 8),
                     if (user != null)
                       _GlassPill(
                         icon: Icons.calendar_today_rounded,
@@ -364,40 +386,40 @@ class _IdentityCard extends StatelessWidget {
 }
 
 class _GlassPill extends StatelessWidget {
-  const _GlassPill({required this.icon, required this.label});
+  const _GlassPill({required this.icon, required this.label, this.maxWidth});
 
   final IconData icon;
   final String label;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, size: 11, color: Colors.white.withValues(alpha: 0.8)),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w500,
-                ),
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth ?? 260),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 11, color: Colors.white.withValues(alpha: 0.8)),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

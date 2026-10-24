@@ -931,6 +931,8 @@ class _CardTile extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: staticUrl(card.imageUrl),
                 fit: BoxFit.cover,
+                // 卡片宽 148dp，按 3 倍屏解码即可
+                memCacheWidth: 444,
                 fadeInDuration: Motion.normal,
                 placeholder: (context, _) => const ColoredBox(color: Color(0xFF1B2237)),
                 errorWidget: (context, _, _) => const ColoredBox(color: Color(0xFF1B2237)),

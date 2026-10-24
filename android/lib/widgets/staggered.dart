@@ -54,10 +54,23 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
     ),
   );
 
+  /// 超过这个序号就**不做入场动画**，直接显示。
+  ///
+  /// 列表滚动时 ListView 会回收并重建 item：如果每一项都带入场动画，
+  /// 往回滚时它们会集体重播一次「浮起 + 淡入」，看起来像页面在抖，
+  /// 而且每次滚动都要新建一批 AnimationController。首屏 8 项足够表达节奏。
+  static const int _animateLimit = 8;
+
+  bool get _animated => widget.index < _animateLimit;
+
   @override
   void initState() {
     super.initState();
-    _controller.forward();
+    if (_animated) {
+      _controller.forward();
+    } else {
+      _controller.value = 1;
+    }
   }
 
   @override
@@ -68,7 +81,7 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
 
   @override
   Widget build(BuildContext context) {
-    if (Motion.reduced(context)) {
+    if (!_animated || Motion.reduced(context)) {
       return widget.child;
     }
     return AnimatedBuilder(
@@ -92,7 +105,11 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
 }
 
 /// 给一组子节点统一加错峰（行内使用，避免逐个包）。
-List<Widget> staggerAll(List<Widget> children, {int start = 0, Offset? offset}) {
+List<Widget> staggerAll(
+  List<Widget> children, {
+  int start = 0,
+  Offset? offset,
+}) {
   return <Widget>[
     for (var i = 0; i < children.length; i++)
       StaggeredEntrance(

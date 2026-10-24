@@ -84,8 +84,8 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     // 首屏自动抽题（延到首帧后：此刻才能安全读 Riverpod 状态）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
-      // 句签入口需要知道今天领没领；连续天数在头部展示
-      ref.read(cardControllerProvider.notifier).load();
+      // 句签入口只需要「今天领没领」；句签册留给成长页去拉
+      ref.read(cardControllerProvider.notifier).loadStatus();
     });
   }
 
@@ -103,11 +103,7 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     if (!_scroll.hasClients) {
       return;
     }
-    _scroll.animateTo(
-      0,
-      duration: Motion.normal,
-      curve: Motion.standard,
-    );
+    _scroll.animateTo(0, duration: Motion.normal, curve: Motion.standard);
   }
 
   void _onFocusChanged() {
@@ -131,7 +127,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
       return;
     }
     final mode = ref.read(quizControllerProvider).mode;
-    final answer = mode == AnswerMode.assemble ? _picked.join(' ') : _answerController.text;
+    final answer = mode == AnswerMode.assemble
+        ? _picked.join(' ')
+        : _answerController.text;
     if (isBlankAnswer(answer)) {
       return;
     }
@@ -149,17 +147,17 @@ class _QuizPageState extends ConsumerState<QuizPage> {
 
   /// 抽下一题期间用于撑住背面外壳的占位结果（result 已被清空）。
   AnswerResult get _placeholderResult => const AnswerResult(
-        sentenceId: 0,
-        isCorrect: false,
-        sentenceEn: '',
-        validAnswers: <String>[],
-        translationZh: '',
-        ipa: null,
-        imageUrl: null,
-        favorited: false,
-        todayDone: 0,
-        todayGoal: 0,
-      );
+    sentenceId: 0,
+    isCorrect: false,
+    sentenceEn: '',
+    validAnswers: <String>[],
+    translationZh: '',
+    ipa: null,
+    imageUrl: null,
+    favorited: false,
+    todayDone: 0,
+    todayGoal: 0,
+  );
 
   void _next() {
     _resetInputs();
@@ -187,7 +185,11 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         SnackBar(
           content: Row(
             children: <Widget>[
-              const Icon(Icons.emoji_events_rounded, size: 18, color: Color(0xFFFBBF24)),
+              const Icon(
+                Icons.emoji_events_rounded,
+                size: 18,
+                color: Color(0xFFFBBF24),
+              ),
               const SizedBox(width: 8),
               Expanded(child: Text('解锁成就 · $names')),
             ],
@@ -197,11 +199,13 @@ class _QuizPageState extends ConsumerState<QuizPage> {
       );
     }
 
-    final before = previous?.result?.todayDone ??
+    final before =
+        previous?.result?.todayDone ??
         previous?.question?.todayDone ??
         next.question?.todayDone ??
         0;
-    final crossedGoal = result.todayGoal > 0 &&
+    final crossedGoal =
+        result.todayGoal > 0 &&
         before < result.todayGoal &&
         result.todayDone >= result.todayGoal;
     if (crossedGoal && !_celebrated) {
@@ -228,7 +232,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     final state = ref.watch(quizControllerProvider);
     final cards = ref.watch(cardControllerProvider);
     // 测试里（autoLoad=false）不触发网络：否则 Widget 测试会因为真实请求挂掉
-    final checkin = widget.autoLoad ? ref.watch(todayCheckinProvider).valueOrNull : null;
+    final checkin = widget.autoLoad
+        ? ref.watch(todayCheckinProvider).valueOrNull
+        : null;
 
     // 翻转目标角度**由 flipped 直接推导**（而不是累加）：
     // 累加方案依赖 didUpdateWidget 被可靠触发，但提交答案后 QuizPage 自身
@@ -238,7 +244,8 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     //
     // 抽下一题(loadingNext)时保持翻转——否则点「下一题」后 flipped 立刻变 false，
     // 卡片会当着用户的面从 180° 往回转、停在中间角度（就是截图里「卡片斜着」的来源）。
-    final flipped = state.phase == QuizPhase.answered ||
+    final flipped =
+        state.phase == QuizPhase.answered ||
         (state.phase == QuizPhase.loading && state.loadingNext);
 
     final done = state.result?.todayDone ?? state.question?.todayDone ?? 0;
@@ -252,18 +259,27 @@ class _QuizPageState extends ConsumerState<QuizPage> {
       child: SafeArea(
         bottom: false,
         child: switch (state.phase) {
-        // 首次抽题（还没有题）→ 骨架屏；「抽下一题」→ 保持背面走加载态
+          // 首次抽题（还没有题）→ 骨架屏；「抽下一题」→ 保持背面走加载态
           QuizPhase.loading when !state.loadingNext => const _SkeletonCard(),
-          _ when state.question != null =>
-            _buildBody(state, cards, checkin, flipped, done, goal, goalReached),
+          _ when state.question != null => _buildBody(
+            state,
+            cards,
+            checkin,
+            flipped,
+            done,
+            goal,
+            goalReached,
+          ),
           _ => EmptyState(
-              title: state.error ?? '准备抽题…',
-              message: state.error == null ? null : '检查一下网络，或者稍后再试',
-              icon: state.error == null ? Icons.hourglass_empty_rounded : Icons.cloud_off_rounded,
-              tone: state.error == null ? EmptyTone.neutral : EmptyTone.error,
-              actionLabel: '重新抽题',
-              onAction: _next,
-            ),
+            title: state.error ?? '准备抽题…',
+            message: state.error == null ? null : '检查一下网络，或者稍后再试',
+            icon: state.error == null
+                ? Icons.hourglass_empty_rounded
+                : Icons.cloud_off_rounded,
+            tone: state.error == null ? EmptyTone.neutral : EmptyTone.error,
+            actionLabel: '重新抽题',
+            onAction: _next,
+          ),
         },
       ),
     );
@@ -286,7 +302,14 @@ class _QuizPageState extends ConsumerState<QuizPage> {
       children: <Widget>[
         _QuizHeader(streak: checkin?.streak ?? 0, done: done),
         const SizedBox(height: 12),
-        StaggeredEntrance(index: 0, child: _ProgressHero(done: done, goal: goal)),
+        StaggeredEntrance(
+          index: 0,
+          // Hero 里有持续流动的柔光：单独一层重绘边界，
+          // 免得它每帧把整段列表（含卡片与图片）一起标记为需要重绘
+          child: RepaintBoundary(
+            child: _ProgressHero(done: done, goal: goal),
+          ),
+        ),
         const SizedBox(height: 12),
         if (goalReached && cards.claimable) ...<Widget>[
           StaggeredEntrance(
@@ -313,60 +336,66 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         ),
         const SizedBox(height: 14),
         _StackedCards(
-          child: _FlipCard(
-            flipped: flipped,
-            frontBuilder: (_) => _FrontFace(
-              question: question,
-              mode: state.mode,
-              busy: state.isBusy,
-              focused: _focused,
-              answerController: _answerController,
-              focusNode: _answerFocus,
-              picked: _picked,
-              onPick: _pickWord,
-              onUndoPick: () => setState(() {
-                if (_picked.isNotEmpty) {
-                  _picked.removeLast();
-                }
-              }),
-              onRemovePick: (index) => setState(() {
-                if (index >= 0 && index < _picked.length) {
-                  _picked.removeAt(index);
-                }
-              }),
-              onSubmit: _submit,
-              error: state.error,
-            ),
-            backBuilder: (_) {
-              final current = state.result;
-              // 抽下一题时 result 已被清空，但**仍要渲染背面**（显示加载态）：
-              // 否则卡片区域会整个消失，观感是「卡片没了」而不是「在加载」。
-              final shown = current ?? _placeholderResult;
-              return _BackFace(
-                result: shown,
-                userAnswer: _answerController.text,
-                onNext: _next,
-                loading: state.loadingNext,
-                xpAmount: _xpAmount,
-                xpToken: _xpToken,
-                onToggleFavorite: () =>
-                    ref.read(quizControllerProvider.notifier).toggleFavorite(),
-                onAi: () => showAiSheet(
-                  context,
-                  chinese: question.translationZh,
-                  word: _firstWord(shown.sentenceEn),
-                  sentenceId: question.sentenceId,
-                ),
-                onReport: () async {
-                  final submitted = await showReportSheet(context, sentenceId: question.sentenceId);
-                  if (submitted && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已收到，感谢你的反馈')),
-                    );
+          child: RepaintBoundary(
+            child: _FlipCard(
+              flipped: flipped,
+              frontBuilder: (_) => _FrontFace(
+                question: question,
+                mode: state.mode,
+                busy: state.isBusy,
+                focused: _focused,
+                answerController: _answerController,
+                focusNode: _answerFocus,
+                picked: _picked,
+                onPick: _pickWord,
+                onUndoPick: () => setState(() {
+                  if (_picked.isNotEmpty) {
+                    _picked.removeLast();
                   }
-                },
-              );
-            },
+                }),
+                onRemovePick: (index) => setState(() {
+                  if (index >= 0 && index < _picked.length) {
+                    _picked.removeAt(index);
+                  }
+                }),
+                onSubmit: _submit,
+                error: state.error,
+              ),
+              backBuilder: (_) {
+                final current = state.result;
+                // 抽下一题时 result 已被清空，但**仍要渲染背面**（显示加载态）：
+                // 否则卡片区域会整个消失，观感是「卡片没了」而不是「在加载」。
+                final shown = current ?? _placeholderResult;
+                return _BackFace(
+                  result: shown,
+                  userAnswer: _answerController.text,
+                  onNext: _next,
+                  loading: state.loadingNext,
+                  xpAmount: _xpAmount,
+                  xpToken: _xpToken,
+                  onToggleFavorite: () => ref
+                      .read(quizControllerProvider.notifier)
+                      .toggleFavorite(),
+                  onAi: () => showAiSheet(
+                    context,
+                    chinese: question.translationZh,
+                    word: _firstWord(shown.sentenceEn),
+                    sentenceId: question.sentenceId,
+                  ),
+                  onReport: () async {
+                    final submitted = await showReportSheet(
+                      context,
+                      sentenceId: question.sentenceId,
+                    );
+                    if (submitted && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('已收到，感谢你的反馈')),
+                      );
+                    }
+                  },
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -376,7 +405,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
             onPressed: state.isBusy ? null : _next,
             icon: const Icon(Icons.shuffle_rounded, size: 16),
             label: const Text('换一题'),
-            style: TextButton.styleFrom(foregroundColor: context.colors.inkSoft),
+            style: TextButton.styleFrom(
+              foregroundColor: context.colors.inkSoft,
+            ),
           ),
         ),
       ],
@@ -455,10 +486,10 @@ class _QuizHeader extends StatelessWidget {
                   Text(
                     _greeting(),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontSize: 25,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.8,
-                        ),
+                      fontSize: 25,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.8,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -470,7 +501,10 @@ class _QuizHeader extends StatelessWidget {
             ),
             if (streak > 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: colors.gold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(13),
@@ -478,7 +512,11 @@ class _QuizHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Icon(Icons.local_fire_department_rounded, size: 16, color: colors.gold),
+                    Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 16,
+                      color: colors.gold,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       '$streak',
@@ -510,17 +548,25 @@ class _ProgressHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = goal <= 0 ? 0.0 : (done / goal).clamp(0.0, 1.0);
     final reached = goal > 0 && done >= goal;
-    final stage = kHeroStages[heroStageOf(goalReached: reached, done: done, pct: pct * 100)]!;
+    final stage =
+        kHeroStages[heroStageOf(
+          goalReached: reached,
+          done: done,
+          pct: pct * 100,
+        )]!;
 
     return TweenAnimationBuilder<double>(
       // 阶段变化时轻顶一下（key 变→重建动画），而不是常驻缩放
-      key: ValueKey<HeroStageKey>(heroStageOf(goalReached: reached, done: done, pct: pct * 100)),
+      key: ValueKey<HeroStageKey>(
+        heroStageOf(goalReached: reached, done: done, pct: pct * 100),
+      ),
       tween: Tween<double>(begin: 1.012, end: 1),
       duration: Motion.reduced(context)
           ? Duration.zero
           : const Duration(milliseconds: 460),
       curve: Motion.spring,
-      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
       child: AnimatedContainer(
         duration: Motion.reduced(context) ? Duration.zero : Motion.slow,
         curve: Motion.standard,
@@ -580,7 +626,10 @@ class _ProgressHero extends StatelessWidget {
                         const Spacer(),
                         if (reached)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: stage.onColor.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(999),
@@ -588,7 +637,11 @@ class _ProgressHero extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
-                                Icon(Icons.check_circle_rounded, size: 12, color: stage.onColor),
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 12,
+                                  color: stage.onColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '已达标',
@@ -638,7 +691,11 @@ class _ProgressHero extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    _ProgressBar(pct: pct, reached: reached, tone: stage.onColor),
+                    _ProgressBar(
+                      pct: pct,
+                      reached: reached,
+                      tone: stage.onColor,
+                    ),
                   ],
                 ),
               ),
@@ -663,7 +720,11 @@ class _ProgressHero extends StatelessWidget {
 }
 
 class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.pct, required this.reached, required this.tone});
+  const _ProgressBar({
+    required this.pct,
+    required this.reached,
+    required this.tone,
+  });
 
   final double pct;
   final bool reached;
@@ -704,9 +765,9 @@ class _ProgressBar extends StatelessWidget {
                 height: 8,
                 child: Container(
                   decoration: BoxDecoration(
-                    // 达标档的 tone 是深棕：全不透明会像一条黑杠，
-                    // 半透明后是「深一号的金」，既看得见又不压色
-                    color: reached ? tone.withValues(alpha: 0.42) : tone,
+                    // 达标档用奶油色而不是深棕：深棕在金色底上像一条黑杠，
+                    // 奶油色与末端光点同色，观感是「整条亮了」
+                    color: reached ? const Color(0xFFFFF7E6) : tone,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -777,14 +838,23 @@ class _ClaimBanner extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: <Color>[colors.gold, const Color(0xFFF97316)]),
+                gradient: LinearGradient(
+                  colors: <Color>[colors.gold, const Color(0xFFF97316)],
+                ),
               ),
               child: busy
                   ? const Padding(
                       padding: EdgeInsets.all(9),
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Icon(Icons.auto_awesome_rounded, size: 17, color: Colors.white),
+                  : const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 17,
+                      color: Colors.white,
+                    ),
             ),
             const SizedBox(width: 11),
             Expanded(
@@ -793,10 +863,8 @@ class _ClaimBanner extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '今日句签已就绪',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
-                        ),
+                    style: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700, fontSize: 13.5),
                   ),
                   Text(
                     '轻点领取，收进你的册子',
@@ -885,11 +953,11 @@ class _ModeBar extends StatelessWidget {
   }
 
   static String _label(int value) => switch (value) {
-        1 => '基础',
-        2 => '进阶',
-        3 => '挑战',
-        _ => '进阶',
-      };
+    1 => '基础',
+    2 => '进阶',
+    3 => '挑战',
+    _ => '进阶',
+  };
 }
 
 /// 难度选择弹窗。
@@ -903,8 +971,18 @@ class _DifficultySheet extends StatelessWidget {
     final colors = context.colors;
     const options = <({int value, String label, String hint, IconData icon})>[
       (value: 1, label: '基础', hint: 'A1~A2 高频词，单句直陈', icon: Icons.eco_rounded),
-      (value: 2, label: '进阶', hint: '一个从句、进阶词或短语动词', icon: Icons.trending_up_rounded),
-      (value: 3, label: '挑战', hint: '习语、虚拟语气、多重从句', icon: Icons.local_fire_department_rounded),
+      (
+        value: 2,
+        label: '进阶',
+        hint: '一个从句、进阶词或短语动词',
+        icon: Icons.trending_up_rounded,
+      ),
+      (
+        value: 3,
+        label: '挑战',
+        hint: '习语、虚拟语气、多重从句',
+        icon: Icons.local_fire_department_rounded,
+      ),
     ];
 
     return Padding(
@@ -917,7 +995,8 @@ class _DifficultySheet extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '难度随词汇与语法，不随句子长短',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: colors.inkFaint),
           ),
           const SizedBox(height: 16),
           for (final option in options) ...<Widget>[
@@ -926,7 +1005,10 @@ class _DifficultySheet extends StatelessWidget {
               scale: 0.98,
               child: AnimatedContainer(
                 duration: Motion.fast,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   color: current == option.value
@@ -934,7 +1016,9 @@ class _DifficultySheet extends StatelessWidget {
                       : colors.cardMuted,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: current == option.value ? colors.brand.withValues(alpha: 0.5) : colors.line,
+                    color: current == option.value
+                        ? colors.brand.withValues(alpha: 0.5)
+                        : colors.line,
                   ),
                 ),
                 child: Row(
@@ -942,7 +1026,9 @@ class _DifficultySheet extends StatelessWidget {
                     Icon(
                       option.icon,
                       size: 19,
-                      color: current == option.value ? colors.brand : colors.inkSoft,
+                      color: current == option.value
+                          ? colors.brand
+                          : colors.inkSoft,
                     ),
                     const SizedBox(width: 11),
                     Expanded(
@@ -960,13 +1046,20 @@ class _DifficultySheet extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             option.hint,
-                            style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.inkFaint,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (current == option.value)
-                      Icon(Icons.check_circle_rounded, size: 18, color: colors.brand),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 18,
+                        color: colors.brand,
+                      ),
                   ],
                 ),
               ),
@@ -990,12 +1083,12 @@ class _StackedCards extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     Widget ghost(double opacity) => DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.card.withValues(alpha: opacity),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: colors.line.withValues(alpha: 0.6)),
-          ),
-        );
+      decoration: BoxDecoration(
+        color: colors.card.withValues(alpha: opacity),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.line.withValues(alpha: 0.6)),
+      ),
+    );
 
     return Stack(
       clipBehavior: Clip.none,
@@ -1025,7 +1118,8 @@ class _FlipCard extends StatefulWidget {
   State<_FlipCard> createState() => _FlipCardState();
 }
 
-class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
+class _FlipCardState extends State<_FlipCard>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     duration: Motion.flip,
     vsync: this,
@@ -1171,10 +1265,11 @@ class _FrontFace extends StatelessWidget {
                 foreground: question.source == QuestionSource.review
                     ? const Color(0xFF7C3AED)
                     : colors.brand,
-                background: (question.source == QuestionSource.review
-                        ? const Color(0xFF7C3AED)
-                        : colors.brand)
-                    .withValues(alpha: 0.1),
+                background:
+                    (question.source == QuestionSource.review
+                            ? const Color(0xFF7C3AED)
+                            : colors.brand)
+                        .withValues(alpha: 0.1),
               ),
               const SizedBox(width: 6),
               Pill(
@@ -1188,7 +1283,9 @@ class _FrontFace extends StatelessWidget {
                   child: Text(
                     question.categoryName!,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.inkFaint,
+                    ),
                   ),
                 ),
               ],
@@ -1220,7 +1317,9 @@ class _FrontFace extends StatelessWidget {
                       child: Center(
                         child: Text(
                           '配图缺失',
-                          style: theme.textTheme.bodySmall?.copyWith(color: colors.inkFaint),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.inkFaint,
+                          ),
                         ),
                       ),
                     )
@@ -1228,16 +1327,16 @@ class _FrontFace extends StatelessWidget {
                       imageUrl: staticUrl(question.imageUrl),
                       fit: BoxFit.cover,
                       fadeInDuration: Motion.normal,
-                      placeholder: (context, _) => const ShimmerBox(
-                        height: double.infinity,
-                        radius: 0,
-                      ),
+                      placeholder: (context, _) =>
+                          const ShimmerBox(height: double.infinity, radius: 0),
                       errorWidget: (context, _, _) => Container(
                         color: colors.cardMuted,
                         child: Center(
                           child: Text(
                             '配图加载失败',
-                            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkFaint),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.inkFaint,
+                            ),
                           ),
                         ),
                       ),
@@ -1286,9 +1385,7 @@ class _FrontFace extends StatelessWidget {
                     // 聚焦时把输入框滚到键盘上方，并给「确定」留出位置
                     scrollPadding: const EdgeInsets.only(bottom: 190),
                     onSubmitted: (_) => onSubmit(),
-                    decoration: const InputDecoration(
-                      hintText: '输入对应的英文句子',
-                    ),
+                    decoration: const InputDecoration(hintText: '输入对应的英文句子'),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1306,10 +1403,17 @@ class _FrontFace extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: <Widget>[
-                Icon(Icons.error_outline_rounded, size: 15, color: colors.danger),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 15,
+                  color: colors.danger,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(error!, style: TextStyle(color: colors.danger, fontSize: 12.5)),
+                  child: Text(
+                    error!,
+                    style: TextStyle(color: colors.danger, fontSize: 12.5),
+                  ),
                 ),
               ],
             ),
@@ -1353,7 +1457,8 @@ class _AssembleAreaState extends State<_AssembleArea> {
     super.didUpdateWidget(oldWidget);
     // 词块刚好用完时，按钮在折叠线以下（图片 + 词块占满了屏），
     // 用户拼完却看不到可以提交，会以为还缺点什么。这里主动滚一下。
-    final justCompleted = widget.picked.length == widget.words.length &&
+    final justCompleted =
+        widget.picked.length == widget.words.length &&
         oldWidget.picked.length != widget.words.length;
     if (justCompleted && widget.words.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1422,7 +1527,9 @@ class _AssembleAreaState extends State<_AssembleArea> {
             color: colors.cardMuted.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: picked.isEmpty ? colors.line : colors.brand.withValues(alpha: 0.35),
+              color: picked.isEmpty
+                  ? colors.line
+                  : colors.brand.withValues(alpha: 0.35),
               width: 1.2,
             ),
           ),
@@ -1433,7 +1540,9 @@ class _AssembleAreaState extends State<_AssembleArea> {
                     child: Text(
                       '点下面的词块，按顺序拼成句子',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(color: colors.inkFaint),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkFaint,
+                      ),
                     ),
                   )
                 : Wrap(
@@ -1614,7 +1723,9 @@ class _BackFace extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 '加载下一题…',
-                style: theme.textTheme.bodySmall?.copyWith(color: colors.inkSoft),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.inkSoft,
+                ),
               ),
             ],
           ),
@@ -1640,8 +1751,11 @@ class _BackFace extends StatelessWidget {
               ),
               child: Row(
                 children: <Widget>[
-                  Icon(correct ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                      size: 20, color: accent),
+                  Icon(
+                    correct ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    size: 20,
+                    color: accent,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     correct ? '答对了' : '再想想',
@@ -1654,7 +1768,10 @@ class _BackFace extends StatelessWidget {
                   const Spacer(),
                   if (xpAmount > 0) _XpBadge(amount: xpAmount, token: xpToken),
                   const SizedBox(width: 6),
-                  _FavoriteButton(favorited: result.favorited, onTap: onToggleFavorite),
+                  _FavoriteButton(
+                    favorited: result.favorited,
+                    onTap: onToggleFavorite,
+                  ),
                 ],
               ),
             ),
@@ -1819,7 +1936,9 @@ class _XpBadge extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey<int>(token),
       tween: Tween<double>(begin: 0.3, end: 1),
-      duration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 520),
+      duration: Motion.reduced(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 520),
       curve: Motion.spring,
       builder: (context, value, child) => Opacity(
         opacity: value.clamp(0.0, 1.0),
@@ -1906,7 +2025,11 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
 
 /// 次级操作（背面 AI / 反馈）。
 class _GhostAction extends StatelessWidget {
-  const _GhostAction({required this.icon, required this.label, required this.onTap});
+  const _GhostAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
