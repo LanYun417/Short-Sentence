@@ -80,9 +80,10 @@ class QuizState {
     DateTime? startedAt,
     bool clearError = false,
     bool clearResult = false,
+    bool clearQuestion = false,
   }) {
     return QuizState(
-      question: question ?? this.question,
+      question: clearQuestion ? null : (question ?? this.question),
       result: clearResult ? null : (result ?? this.result),
       phase: phase ?? this.phase,
       error: clearError ? null : (error ?? this.error),
@@ -147,9 +148,12 @@ class QuizController extends Notifier<QuizState> {
         clearResult: true,
       );
     } catch (error) {
+      // 必须清掉旧题：否则用户点「下一题」失败后，看到的还是上一张卡，
+      // 会误以为已经抽到新题（而它其实已经答过了）。
       state = state.copyWith(
         phase: QuizPhase.idle,
         error: _message(error),
+        clearQuestion: true,
       );
     }
   }

@@ -18,7 +18,13 @@ import '../api/models/question.dart';
 import '../state/quiz_controller.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
-  const QuizPage({super.key});
+  const QuizPage({this.autoLoad = true, super.key});
+
+  /// 进入页面时是否自动抽题。
+  ///
+  /// 生产恒为 true；测试里传 false，避免 `initState` 触发真实网络请求
+  /// （测试环境没有后端，且会留下悬挂定时器让用例失败）。
+  final bool autoLoad;
 
   @override
   ConsumerState<QuizPage> createState() => _QuizPageState();
@@ -34,7 +40,10 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   @override
   void initState() {
     super.initState();
-    // 首屏自动抽题
+    if (!widget.autoLoad) {
+      return;
+    }
+    // 首屏自动抽题（延到首帧后：此刻才能安全读 Riverpod 状态）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
     });
@@ -108,13 +117,19 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         ],
       ),
       body: SafeArea(
+        // 判定顺序：先看有没有题，再看阶段。
+        //
+        // 原来的写法是 `QuizPhase.idle when question == null → 空态`，
+        // 其余一律 `_buildCard`——一旦阶段已是 answering/submitting/answered
+        // 而题目因故是 null，就会走到 `state.question!` 崩掉。
+        // 现在**只有确实拿到题**才渲染卡片，空态兜住其余所有情况。
         child: switch (state.phase) {
-          QuizPhase.idle when state.question == null => _EmptyState(
+          QuizPhase.loading => const Center(child: CircularProgressIndicator()),
+          _ when state.question != null => _buildCard(context, state),
+          _ => _EmptyState(
               error: state.error,
               onRetry: () => ref.read(quizControllerProvider.notifier).loadNext(),
             ),
-          QuizPhase.loading => const Center(child: CircularProgressIndicator()),
-          _ => _buildCard(context, state),
         },
       ),
     );
@@ -132,7 +147,7 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         const SizedBox(height: 12),
         _FlipCard(
           flipped: flipped,
-          front: _FrontFace(
+          frontBuilder: (_) => _FrontFace(
             question: question,
             mode: state.mode,
             busy: state.isBusy,
@@ -152,12 +167,18 @@ class _QuizPageState extends ConsumerState<QuizPage> {
             },
             error: state.error,
           ),
-          back: _BackFace(
-            result: result!,
-            onNext: _next,
-            onToggleFavorite: () =>
-                ref.read(quizControllerProvider.notifier).toggleFavorite(),
-          ),
+          // 兜底：万一翻牌动画进行中结果被清空（切题），渲染空而不是崩
+          backBuilder: (_) {
+            final current = state.result;
+            return current == null
+                ? const SizedBox.shrink()
+                : _BackFace(
+                    result: current,
+                    onNext: _next,
+                    onToggleFavorite: () =>
+                        ref.read(quizControllerProvider.notifier).toggleFavorite(),
+                  );
+          },
         ),
       ],
     );
@@ -226,13 +247,22 @@ class _ProgressHeader extends StatelessWidget {
 class _FlipCard extends StatelessWidget {
   const _FlipCard({
     required this.flipped,
-    required this.front,
-    required this.back,
+    required this.frontBuilder,
+    required this.backBuilder,
   });
 
   final bool flipped;
-  final Widget front;
-  final Widget back;
+
+  /// 正面 / 背面的**构造器**（不是构造好的 Widget）。
+  ///
+  /// 为什么必须是 builder：背面依赖判分结果（`AnswerResult`），
+  /// 而它在提交前一直是 null。若把 `back: _BackFace(result: result!)`
+  /// 作为实参直接传进来，这个表达式会在 `_buildCard` 运行时**立即求值**，
+  /// 于是「卡片还没翻」也会解引用 null → 每次进刷题页必崩
+  /// （Null check operator used on a null value）。
+  /// 改成 builder 后，只有 `showBack` 为真时才构造背面。
+  final WidgetBuilder frontBuilder;
+  final WidgetBuilder backBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +278,7 @@ class _FlipCard extends StatelessWidget {
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()..rotateY(angle),
-          child: showBack ? back : front,
+          child: showBack ? backBuilder(context) : frontBuilder(context),
         );
       },
     );
