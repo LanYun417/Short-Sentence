@@ -1,12 +1,15 @@
 /// 刷题页（闪卡）。
 ///
-/// 交互与 Web 端 `pages/index.vue` 保持一致：
-/// - 正面：场景图 + 中文题干 + 作答区（默写 / 拼词）；
-/// - 提交 → 服务端判分 → **翻卡**到背面（正确答案 + 音标 + 收藏）；
-/// - 背面点「下一题」抽新题；拼词模式提交后自动切回默写。
+/// 与 Web 端 `pages/index.vue` + `components/QuestionCard.vue` 逐项对齐：
+/// - **今日进度 Hero**：配色随完成度升温（青蓝 - 品牌蓝紫 - 紫 - 玫红橙 - 金橙），
+///   见 theme.dart 的 kHeroStages / heroStageOf，取值与 Web 端 HERO_STAGES 一致；
+/// - **三段式翻转**：提交 -> +180 度看背面；下一题 -> 再 +180 度回正面，
+///   一路同方向（从左往右）不回翻；
+/// - 正面 = 题干 + 16:9 场景图 + 作答区；背面 = 结果条 + 答案 + 音标 + 等价表达；
+/// - 加载用骨架屏（而不是转圈），错误态可重试，另有「换一题」跳过当前题。
 ///
-/// 翻卡用 `AnimatedBuilder` + `Transform` 的正反面切换：
-/// 旋转到 90° 时更换内容（既看不到接缝，也避免文字镜像）。
+/// **翻转不镜像的关键**：背面必须**预旋转 180 度**（Web 端 .card-face--back 的做法）。
+/// 只在 90 度时换内容而不预旋转，翻过去看到的就是镜像文字。
 library;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,6 +19,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/answer_normalize.dart';
 import '../api/models/question.dart';
 import '../state/quiz_controller.dart';
+import '../theme.dart';
+import '../theme/brand.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
   const QuizPage({this.autoLoad = true, super.key});
@@ -37,6 +42,13 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   /// 拼词模式：已选中的词块（有序）。
   final List<String> _picked = <String>[];
 
+  /// 累计翻转角度（度）。每次 flipped 变化 +180，**不对 360 取模**——
+  /// 取模会让 180->360 变回 180->0，又成了反向回翻（与 Web 端 flipDeg 同思路）。
+  double _flipDeg = 0;
+
+  /// 上一帧的翻转态（用于 didUpdateWidget 里判断是否该 +180）。
+  bool _lastAnswered = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +59,24 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
     });
+  }
+
+  /// 翻转态变化时推进累计角度。
+  ///
+  /// 为什么在这里而不是 build / ref.listen：
+  /// - `ref.listen` **只能在 build 内调用**，放 initState 会直接抛断言
+  ///   （`ref.listen can only be used within the build method`）；
+  /// - build 阶段改状态是反模式，会触发额外重建。
+  /// didUpdateWidget 在每次父级重建后调用，此时 provider 已是最新值，
+  /// 正好用来对比上一帧的翻转态。
+  @override
+  void didUpdateWidget(covariant QuizPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final answered = ref.read(quizControllerProvider).isAnswered;
+    if (answered != _lastAnswered) {
+      _lastAnswered = answered;
+      _flipDeg += 180;
+    }
   }
 
   @override
@@ -61,10 +91,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     _picked.clear();
   }
 
-  /// 本地提交闸门（同 LoginPage）：`_submit()` 是 async，Riverpod 的 busy
-  /// 回写到按钮有窗口期，键盘「完成」键 + 按钮可各触发一次 → 同一答案提交两次。
-  /// 判分本身虽不「单次有效」，但会**重复记一次 sentence_record / 多发一次 XP**，
-  /// 属于服务端数据污染。用同步布尔量从机制上堵住。
+  /// 提交闸门（同 LoginPage）：`_submit()` 是 async，Riverpod 的 busy
+  /// 回写到按钮有窗口期，键盘「完成」键 + 按钮可各触发一次 -> 同一答案提交两次，
+  /// 会重复记 sentence_record、重复发 XP（服务端数据污染）。
   bool _submitting = false;
 
   Future<void> _submit() async {
@@ -80,7 +109,6 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     _answerFocus.unfocus();
     try {
       await ref.read(quizControllerProvider.notifier).submit(answer);
-      // 拼词模式提交后切回默写（下一次抽题按更难的模式走）
       if (mode == AnswerMode.assemble) {
         ref.read(quizControllerProvider.notifier).resetMode();
       }
@@ -98,18 +126,21 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(quizControllerProvider);
 
+    // 翻转角度由 didUpdateWidget 推进（每次 flipped 变化 +180 度），
+    // 这里只读取目标值；不在 build 阶段改状态（反模式，会触发额外重建）。
+    final flipped = state.isAnswered && state.result != null;
+    final targetDeg = _flipDeg;
+
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       appBar: AppBar(
         title: const Text('刷题'),
         actions: [
-          // 会话统计（正确率）
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                state.stats.done == 0
-                    ? '—'
-                    : '${state.stats.correct}/${state.stats.done}',
+                state.stats.done == 0 ? '—' : '${state.stats.correct}/${state.stats.done}',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
@@ -117,15 +148,9 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         ],
       ),
       body: SafeArea(
-        // 判定顺序：先看有没有题，再看阶段。
-        //
-        // 原来的写法是 `QuizPhase.idle when question == null → 空态`，
-        // 其余一律 `_buildCard`——一旦阶段已是 answering/submitting/answered
-        // 而题目因故是 null，就会走到 `state.question!` 崩掉。
-        // 现在**只有确实拿到题**才渲染卡片，空态兜住其余所有情况。
         child: switch (state.phase) {
-          QuizPhase.loading => const Center(child: CircularProgressIndicator()),
-          _ when state.question != null => _buildCard(context, state),
+          QuizPhase.loading when state.question == null => const _SkeletonCard(),
+          _ when state.question != null => _buildCard(context, state, targetDeg, flipped),
           _ => _EmptyState(
               error: state.error,
               onRetry: () => ref.read(quizControllerProvider.notifier).loadNext(),
@@ -135,17 +160,27 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     );
   }
 
-  Widget _buildCard(BuildContext context, QuizState state) {
+  Widget _buildCard(BuildContext context, QuizState state, double deg, bool flipped) {
     final question = state.question!;
-    final result = state.result;
-    final flipped = state.isAnswered && result != null;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        _ProgressHeader(question: question),
+        _ProgressHero(
+          done: state.result?.todayDone ?? question.todayDone,
+          goal: state.result?.todayGoal ?? question.todayGoal,
+        ),
+        const SizedBox(height: 12),
+        _ModePicker(
+          mode: state.mode,
+          onChanged: (mode) {
+            _resetInputs();
+            ref.read(quizControllerProvider.notifier).setMode(mode);
+          },
+        ),
         const SizedBox(height: 12),
         _FlipCard(
+          deg: deg,
           flipped: flipped,
           frontBuilder: (_) => _FrontFace(
             question: question,
@@ -161,83 +196,284 @@ class _QuizPageState extends ConsumerState<QuizPage> {
               }
             }),
             onSubmit: _submit,
-            onToggleMode: (mode) {
-              _resetInputs();
-              ref.read(quizControllerProvider.notifier).setMode(mode);
-            },
             error: state.error,
           ),
-          // 兜底：万一翻牌动画进行中结果被清空（切题），渲染空而不是崩
           backBuilder: (_) {
             final current = state.result;
             return current == null
                 ? const SizedBox.shrink()
                 : _BackFace(
                     result: current,
+                    userAnswer: _answerController.text,
                     onNext: _next,
                     onToggleFavorite: () =>
                         ref.read(quizControllerProvider.notifier).toggleFavorite(),
                   );
           },
         ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: state.isBusy ? null : _next,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('换一题'),
+          ),
+        ),
       ],
     );
   }
 }
 
-/* ------------------------------ 进度头 ------------------------------ */
+/* ------------------------------ 今日进度 Hero ------------------------------ */
 
-class _ProgressHeader extends StatelessWidget {
-  const _ProgressHeader({required this.question});
+class _ProgressHero extends StatelessWidget {
+  const _ProgressHero({required this.done, required this.goal});
 
-  final Question question;
+  final int done;
+  final int goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = goal <= 0 ? 0.0 : (done / goal).clamp(0.0, 1.0);
+    final reached = goal > 0 && done >= goal;
+    final stage = kHeroStages[heroStageOf(goalReached: reached, done: done, pct: pct * 100)]!;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: stage.gradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: stage.shadow, blurRadius: 18, offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.local_fire_department,
+                            size: 16, color: Colors.white70),
+                        const SizedBox(width: 6),
+                        Text(
+                          '今日刷题',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$done',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' / $goal 句',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (reached)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 14, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text('已达标',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  done <= 0 ? '今天还没开始' : _hint(done, goal),
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // 进度条：末端光点跟住完成度（Web 端 ss-hero-dot 的做法）
+          LayoutBuilder(builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOut,
+                  height: 8,
+                  width: w * pct,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOut,
+                  left: (w * pct - 6).clamp(0.0, w - 12),
+                  top: -2,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: reached ? const Color(0xFFFDE68A) : Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: reached
+                              ? const Color(0xFFFBBF24).withValues(alpha: 0.75)
+                              : Colors.white.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// 进度提示语：不说「还差 N 句」（像催作业），与 Web 端 heroHint 同口径。
+  String _hint(int done, int goal) {
+    final remain = goal - done;
+    if (remain <= 0) {
+      return '';
+    }
+    if (remain == 1) {
+      return '最后一句';
+    }
+    return '加油，还剩 $remain 句';
+  }
+}
+
+/* ------------------------------ 作答方式切换 ------------------------------ */
+
+class _ModePicker extends StatelessWidget {
+  const _ModePicker({required this.mode, required this.onChanged});
+
+  final AnswerMode mode;
+  final ValueChanged<AnswerMode> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          _ModeTab(
+            label: '默写',
+            icon: Icons.keyboard,
+            active: mode == AnswerMode.input,
+            onTap: () => onChanged(AnswerMode.input),
+          ),
+          _ModeTab(
+            label: '拼词',
+            icon: Icons.extension,
+            active: mode == AnswerMode.assemble,
+            onTap: () => onChanged(AnswerMode.assemble),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModeTab extends StatelessWidget {
+  const _ModeTab({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: BoxDecoration(
-            color: question.source == QuestionSource.review
-                ? scheme.tertiaryContainer
-                : scheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(8),
+            gradient: active ? brandGradient : null,
+            color: active ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
           ),
-          child: Text(
-            question.source == QuestionSource.review ? '复习' : '新题',
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '${question.difficultyLabel}'
-          '${question.categoryName == null ? '' : ' · ${question.categoryName}'}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: active ? Colors.white : scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : scheme.onSurfaceVariant,
+                ),
               ),
-        ),
-        const Spacer(),
-        Text(
-          '今日 ${question.todayDone}/${question.todayGoal}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 56,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: question.todayProgress,
-              minHeight: 6,
-              backgroundColor: scheme.surfaceContainerHighest,
-            ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -246,41 +482,78 @@ class _ProgressHeader extends StatelessWidget {
 
 class _FlipCard extends StatelessWidget {
   const _FlipCard({
+    required this.deg,
     required this.flipped,
     required this.frontBuilder,
     required this.backBuilder,
   });
 
+  /// 目标角度（度）。**值发生变化时** TweenAnimationBuilder 会自动补间动画——
+  /// 这就是翻牌的驱动源。相同值不动画（首屏 0->0 不动画，正确）。
+  final double deg;
+
+  /// 是否已翻到背面。**由它决定显示哪一面**（而不是从动画值反推）：
+  /// 动画值只负责「转的过程」，若因时序没跟上，内容也不会错。
   final bool flipped;
 
-  /// 正面 / 背面的**构造器**（不是构造好的 Widget）。
-  ///
-  /// 为什么必须是 builder：背面依赖判分结果（`AnswerResult`），
-  /// 而它在提交前一直是 null。若把 `back: _BackFace(result: result!)`
-  /// 作为实参直接传进来，这个表达式会在 `_buildCard` 运行时**立即求值**，
-  /// 于是「卡片还没翻」也会解引用 null → 每次进刷题页必崩
-  /// （Null check operator used on a null value）。
-  /// 改成 builder 后，只有 `showBack` 为真时才构造背面。
   final WidgetBuilder frontBuilder;
   final WidgetBuilder backBuilder;
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: flipped ? 1 : 0),
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeInOutCubic,
+      tween: Tween<double>(end: deg),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
       builder: (context, t, child) {
-        // 前半段转正面、后半段转背面：在 90° 处换内容，
-        // 用户看不到接缝，文字也不会镜像
-        final showBack = t >= 0.5;
-        final angle = t * 3.14159;
         return Transform(
           alignment: Alignment.center,
-          transform: Matrix4.identity()..rotateY(angle),
-          child: showBack ? backBuilder(context) : frontBuilder(context),
+          transform: Matrix4.identity()
+            ..setEntry(3, 0, 0.001) // 一点透视，让 3D 感更真实
+            ..rotateY(t * 3.1415926 / 180),
+          child: flipped
+              // 背面**预旋转 180 度**：否则翻过去看到的是镜像文字
+              // （Web 端 .card-face--back 的做法）
+              ? Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()..rotateY(3.1415926),
+                  child: backBuilder(context),
+                )
+              : frontBuilder(context),
         );
       },
+    );
+  }
+}
+
+/* ------------------------------ 卡片正反面共用外壳 ------------------------------ */
+
+/// 卡面容器：白底 + 大圆角 + 柔和投影 + 细描边。
+/// 对应 Web 端 `card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5`。
+class _CardFace extends StatelessWidget {
+  const _CardFace({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
@@ -298,7 +571,6 @@ class _FrontFace extends StatelessWidget {
     required this.onPick,
     required this.onUndoPick,
     required this.onSubmit,
-    required this.onToggleMode,
     this.error,
   });
 
@@ -311,115 +583,207 @@ class _FrontFace extends StatelessWidget {
   final ValueChanged<String> onPick;
   final VoidCallback onUndoPick;
   final VoidCallback onSubmit;
-  final ValueChanged<AnswerMode> onToggleMode;
   final String? error;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // 场景图
-        if (question.imageUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 16 / 10,
-              child: CachedNetworkImage(
-                imageUrl: question.imageUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, _) => Container(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Center(child: CircularProgressIndicator()),
+    final scheme = theme.colorScheme;
+
+    return _CardFace(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 题头：来源 / 难度 / 分类
+          Row(
+            children: [
+              _Pill(
+                text: question.source == QuestionSource.review ? '复习' : '新题',
+                background: question.source == QuestionSource.review
+                    ? scheme.tertiaryContainer
+                    : scheme.primaryContainer,
+                foreground: question.source == QuestionSource.review
+                    ? scheme.onTertiaryContainer
+                    : scheme.onPrimaryContainer,
+              ),
+              const SizedBox(width: 6),
+              _Pill(
+                text: question.difficultyLabel,
+                background: scheme.secondaryContainer,
+                foreground: scheme.onSecondaryContainer,
+              ),
+              if (question.categoryName != null) ...[
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    question.categoryName!,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-                errorWidget: (context, _, _) => Container(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Center(child: Icon(Icons.broken_image_outlined)),
-                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 题干（浅底圆角块，居中——与 Web 端一致）
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              question.translationZh,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
           ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-        // 中文题干
-        Text(
-          question.translationZh,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // 作答区
-        if (mode == AnswerMode.assemble && question.words != null)
-          _AssembleArea(
-            words: question.words!,
-            picked: picked,
-            onPick: onPick,
-            onUndoPick: onUndoPick,
-            busy: busy,
-          )
-        else
-          TextField(
-            controller: answerController,
-            focusNode: focusNode,
-            enabled: !busy,
-            textInputAction: TextInputAction.done,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            minLines: 1,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '英文',
-              hintText: '敲出对应的英文句子',
+          // 场景图 16:9
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: question.imageUrl == null
+                  ? Container(
+                      color: scheme.surfaceContainerHighest,
+                      child: Center(
+                        child: Text(
+                          '配图缺失',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: question.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, _) => Container(
+                        color: scheme.surfaceContainerHighest,
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, _, _) => Container(
+                        color: scheme.surfaceContainerHighest,
+                        child: Center(
+                          child: Text(
+                            '配图加载失败',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
             ),
-            onSubmitted: (_) => onSubmit(),
           ),
+          const SizedBox(height: 16),
 
-        if (error != null) ...[
-          const SizedBox(height: 12),
-          Text(error!, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
-        ],
-
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: busy ? null : onSubmit,
-          child: busy
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('提交'),
-        ),
-        const SizedBox(height: 8),
-        // 模式切换
-        TextButton.icon(
-          onPressed: busy
-              ? null
-              : () => onToggleMode(
-                    mode == AnswerMode.assemble ? AnswerMode.input : AnswerMode.assemble,
+          // 作答区
+          if (mode == AnswerMode.assemble && question.words != null)
+            _AssembleArea(
+              words: question.words!,
+              picked: picked,
+              onPick: onPick,
+              onUndoPick: onUndoPick,
+              onSubmit: onSubmit,
+              busy: busy,
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: answerController,
+                    focusNode: focusNode,
+                    enabled: !busy,
+                    textInputAction: TextInputAction.done,
+                    textCapitalization: TextCapitalization.none,
+                    autocorrect: false,
+                    onSubmitted: (_) => onSubmit(),
+                    decoration: const InputDecoration(
+                      hintText: '输入对应的英文句子',
+                      isDense: true,
+                    ),
                   ),
-          icon: Icon(
-            mode == AnswerMode.assemble ? Icons.keyboard : Icons.extension,
-            size: 18,
-          ),
-          label: Text(mode == AnswerMode.assemble ? '切换为默写' : '切换为拼词'),
-        ),
-      ],
+                ),
+                const SizedBox(width: 10),
+                FilledButton(
+                  onPressed: busy ? null : onSubmit,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(84, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: busy
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('确定'),
+                ),
+              ],
+            ),
+
+          if (error != null) ...[
+            const SizedBox(height: 10),
+            Text(error!, style: TextStyle(color: scheme.error, fontSize: 13)),
+          ],
+        ],
+      ),
     );
   }
 }
 
-/// 拼词作答区：已选词块（可撤销）+ 候选词块。
+/// 小 pill 标签（来源 / 难度）。
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.text,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String text;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: foreground,
+        ),
+      ),
+    );
+  }
+}
+
+/// 拼词作答区：已选（可撤销）+ 候选词块。
 class _AssembleArea extends StatelessWidget {
   const _AssembleArea({
     required this.words,
     required this.picked,
     required this.onPick,
     required this.onUndoPick,
+    required this.onSubmit,
     required this.busy,
   });
 
@@ -427,11 +791,14 @@ class _AssembleArea extends StatelessWidget {
   final List<String> picked;
   final ValueChanged<String> onPick;
   final VoidCallback onUndoPick;
+  final VoidCallback onSubmit;
   final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     // 候选里扣掉已选中的（同词多处时按出现次数扣）
     final remaining = List<String>.from(words);
     for (final word in picked) {
@@ -446,11 +813,11 @@ class _AssembleArea extends StatelessWidget {
       children: [
         // 已选
         Container(
-          constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.all(12),
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Wrap(
             spacing: 8,
@@ -460,27 +827,26 @@ class _AssembleArea extends StatelessWidget {
                 Text(
                   '点下面的词块拼句子',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
               for (final word in picked)
                 Chip(
                   label: Text(word),
                   visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
             ],
           ),
         ),
-        if (picked.isNotEmpty)
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: busy ? null : onUndoPick,
-              icon: const Icon(Icons.undo, size: 16),
-              label: const Text('撤销'),
-            ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: busy || picked.isEmpty ? null : onUndoPick,
+            icon: const Icon(Icons.undo, size: 15),
+            label: const Text('撤销'),
           ),
-        const SizedBox(height: 8),
+        ),
         // 候选
         Wrap(
           spacing: 8,
@@ -493,6 +859,26 @@ class _AssembleArea extends StatelessWidget {
               ),
           ],
         ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton(
+            onPressed: busy ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(120, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: busy
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('确定'),
+          ),
+        ),
       ],
     );
   }
@@ -503,11 +889,16 @@ class _AssembleArea extends StatelessWidget {
 class _BackFace extends StatelessWidget {
   const _BackFace({
     required this.result,
+    required this.userAnswer,
     required this.onNext,
     required this.onToggleFavorite,
   });
 
   final AnswerResult result;
+
+  /// 用户提交的答案（答错时展示并划掉，与 Web 端一致）。
+  final String userAnswer;
+
   final VoidCallback onNext;
   final VoidCallback onToggleFavorite;
 
@@ -517,120 +908,268 @@ class _BackFace extends StatelessWidget {
     final scheme = theme.colorScheme;
     final correct = result.isCorrect;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // 判定条
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: correct
-                ? scheme.primaryContainer
-                : scheme.errorContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                correct ? Icons.check_circle_outline : Icons.cancel_outlined,
-                color: correct ? scheme.onPrimaryContainer : scheme.onErrorContainer,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                correct ? '答对了' : '答错了',
-                style: TextStyle(
-                  color: correct ? scheme.onPrimaryContainer : scheme.onErrorContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
+    // 结果条配色：对 = 绿，错 = 玫红（Web 端 emerald / rose）
+    final barBg = correct
+        ? const Color(0xFFECFDF5)
+        : const Color(0xFFFFF1F2);
+    final barFg = correct
+        ? const Color(0xFF047857)
+        : const Color(0xFFBE123C);
 
-        // 配图（判分后同样能看）
-        if (result.imageUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 16 / 10,
-              child: CachedNetworkImage(
-                imageUrl: result.imageUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, _) => Container(
-                  color: scheme.surfaceContainerHighest,
-                  child: const Center(child: CircularProgressIndicator()),
+    return _CardFace(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 结果条
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: barBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  correct ? Icons.check_circle : Icons.cancel,
+                  size: 20,
+                  color: barFg,
                 ),
-                errorWidget: (context, _, _) => const SizedBox.shrink(),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  correct ? '答对了' : '再想想',
+                  style: TextStyle(
+                    color: barFg,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                const Spacer(),
+                // 收藏（点击有缩放反馈）
+                _FavoriteButton(
+                  favorited: result.favorited,
+                  onTap: onToggleFavorite,
+                ),
+              ],
             ),
           ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // 中文
-        Text(
-          result.translationZh,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // 标准答案
-        Text(
-          result.sentenceEn,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.35,
-          ),
-        ),
-        if (result.ipa != null && result.ipa!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(result.ipa!, style: theme.textTheme.bodySmall),
-        ],
-
-        // 等价表达
-        if (result.validAnswers.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text('也可接受：', style: theme.textTheme.labelSmall),
-          const SizedBox(height: 4),
-          ...result.validAnswers.map(
-            (answer) => Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text('· $answer', style: theme.textTheme.bodySmall),
+          // 标准答案
+          Text(
+            result.sentenceEn,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
           ),
-        ],
 
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onToggleFavorite,
-                icon: Icon(
-                  result.favorited ? Icons.star : Icons.star_border,
-                  size: 18,
-                ),
-                label: Text(result.favorited ? '已收藏' : '收藏'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: onNext,
-                child: const Text('下一题'),
+          // 音标
+          if (result.ipa != null && result.ipa!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              result.ipa!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: brandColor,
+                fontFamily: 'monospace',
               ),
             ),
           ],
+
+          // 等价表达
+          if (result.validAnswers.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              '这些说法也算对',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...result.validAnswers.map(
+              (answer) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  answer,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          Text(
+            result.translationZh,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+
+          // 答错时展示用户的答案（划掉）
+          if (!correct && userAnswer.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '你的答案',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    userAnswer.trim(),
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      decoration: TextDecoration.lineThrough,
+                      decorationColor: scheme.error,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          // 底部：提示 + 下一题
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '回车继续',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: onNext,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(120, 46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                label: const Text('下一题'),
+                icon: const Icon(Icons.arrow_forward, size: 17),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 收藏按钮：点击瞬时放大（Web 端 favPop 的反馈）。
+class _FavoriteButton extends StatefulWidget {
+  const _FavoriteButton({required this.favorited, required this.onTap});
+
+  final bool favorited;
+  final VoidCallback onTap;
+
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton> {
+  bool _pop = false;
+
+  void _handleTap() {
+    setState(() => _pop = true);
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        setState(() => _pop = false);
+      }
+    });
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedScale(
+        scale: _pop ? 1.25 : 1,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutBack,
+        child: Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Icon(
+            widget.favorited ? Icons.star : Icons.star_border,
+            size: 20,
+            color: widget.favorited
+                ? const Color(0xFFF59E0B)
+                : Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ------------------------------ 骨架屏 / 空态 ------------------------------ */
+
+/// 加载骨架屏（Web 端用 USkeleton，这里用 shimmer 容器模拟）。
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bone = scheme.surfaceContainerHighest.withValues(alpha: 0.6);
+    Widget box(double height, {double? width, double radius = 16}) => Container(
+          height: height,
+          width: width,
+          decoration: BoxDecoration(
+            color: bone,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        box(96, radius: 24),
+        const SizedBox(height: 12),
+        box(44, radius: 14),
+        const SizedBox(height: 12),
+        _CardFace(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              box(56, radius: 16),
+              const SizedBox(height: 14),
+              box(160, radius: 16),
+              const SizedBox(height: 14),
+              box(150, radius: 16),
+              const SizedBox(height: 16),
+              box(48, radius: 12),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-/* ------------------------------ 空态 ------------------------------ */
-
+/// 空态（抽题失败 / 题库为空）。
 class _EmptyState extends StatelessWidget {
   const _EmptyState({this.error, required this.onRetry});
 

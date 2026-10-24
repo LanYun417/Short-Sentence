@@ -62,7 +62,7 @@ void main() {
     );
 
     expect(find.text('我一到就会给你打电话。'), findsOneWidget);
-    expect(find.text('提交'), findsOneWidget);
+    expect(find.text('确定'), findsOneWidget);
     // 背面元素不在（还没翻卡）——这一条正是当年崩溃的场景
     expect(find.text('下一题'), findsNothing);
     expect(find.text('收藏'), findsNothing);
@@ -95,7 +95,9 @@ void main() {
 
     expect(find.text('I will call you as soon as I arrive.'), findsOneWidget);
     expect(find.text('下一题'), findsOneWidget);
-    expect(find.text('收藏'), findsOneWidget);
+    // 收藏是星形图标（对齐 Web 端 favPop 设计），不是文字按钮
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
+    expect(find.text('这些说法也算对'), findsNothing); // 本题无等价表达
   });
 
   testWidgets('拼词模式展示候选词块', (tester) async {
@@ -115,6 +117,7 @@ void main() {
 
     expect(find.text('call'), findsOneWidget);
     expect(find.text('you'), findsOneWidget);
-    expect(find.text('撤销'), findsNothing); // 未选中时不显示撤销
+    // 「撤销」常驻显示（未选中时置灰），这是设计调整后的行为
+    expect(find.text('撤销'), findsOneWidget);
   });
 }
