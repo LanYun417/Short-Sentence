@@ -191,7 +191,12 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
    * 提示词策略：system 规定输出 JSON 形状与字段约束；user 给出主题与数量。
    * 要求模型返回 `{"items": [...]}`（json_object 模式必须是对象，不能是裸数组）。
    */
-  async generateBatch(theme: string, count: number, focusDifficulty?: number): Promise<SentenceDraft[]> {
+  async generateBatch(
+    theme: string,
+    count: number,
+    focusDifficulty?: number,
+    bizId?: number,
+  ): Promise<SentenceDraft[]> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
@@ -234,16 +239,24 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       `7. Generate ${count} items this batch. Theme: ${theme}.`,
     ].join('\n');
 
-    const content = await this.chat(
+    // 解析放进 chat 的 validate 钩子：解析不出条目必须在「记 success」之前抛，
+    // 否则 withRetry 的每次重试都会留下一条 success，日志里的生题成功率是虚的。
+    let drafts: SentenceDraft[] = [];
+    await this.chat(
       'sentence_gen',
       systemPrompt,
       `Theme: ${theme}. Count: ${count}. Output JSON with shape {"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}.`,
       0.8,
+      {
+        bizId,
+        validate: (content) => {
+          drafts = this.parseDrafts(content);
+          if (drafts.length === 0) {
+            throw new AiProviderError('生题接口未返回可用草稿', { retryable: true });
+          }
+        },
+      },
     );
-    const drafts = this.parseDrafts(content);
-    if (drafts.length === 0) {
-      throw new AiProviderError('生题接口未返回可用草稿', { retryable: true });
-    }
     return drafts;
   }
 
@@ -253,7 +266,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
    * 返回**同数量、同顺序**：模型漏掉的条目保留原稿，字段被写空的也回填原值——
    * 「优化」不该让题目变少或丢字段，否则调用方还要额外做对齐与兜底。
    */
-  async polishBatch(drafts: SentenceDraft[], theme: string): Promise<SentenceDraft[]> {
+  async polishBatch(drafts: SentenceDraft[], theme: string, bizId?: number): Promise<SentenceDraft[]> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
@@ -267,6 +280,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       POLISH_SYSTEM_PROMPT,
       `Theme: ${theme}\nDraft items:\n${JSON.stringify(payload)}`,
       0.3,
+      { bizId },
     );
 
     const polished = new Map<number, SentenceDraft>();
@@ -313,7 +327,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
    * 三阶段（审核）：语法 / 对译 / 语义自足 / 难度标注 / 内容适当性五道关。
    * 模型没给结论的条目按通过处理（fail-open）——审核调用本身失败不该让整批题目蒸发。
    */
-  async reviewBatch(drafts: SentenceDraft[]): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }> {
+  async reviewBatch(
+    drafts: SentenceDraft[],
+    bizId?: number,
+  ): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
@@ -322,7 +339,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     }
 
     const payload = drafts.map((draft, index) => ({ index, ...draft }));
-    const content = await this.chat('sentence_review', REVIEW_SYSTEM_PROMPT, JSON.stringify(payload), 0.1);
+    const content = await this.chat('sentence_review', REVIEW_SYSTEM_PROMPT, JSON.stringify(payload), 0.1, { bizId });
 
     const verdicts = new Map<number, { pass: boolean; reason: string }>();
     for (const item of this.extractItems(content)) {
@@ -353,6 +370,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   /**
    * 统一的上游调用：请求 + 错误归一 + AI 调用日志（三阶段共用，避免各写一套日志口径）。
    * @param callType ai_call_log.type（sentence_gen / sentence_polish / sentence_review）
+   * @param options bizId：关联批次 id（便于按批次核对三阶段是否都跑了）；
+   *                validate：**内容可用性校验**，在「记 success」之前执行，抛错即记 failed
    * @returns 模型输出文本（content 为空时回退 reasoning_content）
    */
   private async chat(
@@ -360,6 +379,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     systemPrompt: string,
     userContent: string,
     temperature: number,
+    options: { bizId?: number; validate?: (content: string) => void } = {},
   ): Promise<string> {
     const startedAt = Date.now();
     try {
@@ -402,10 +422,17 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         throw new AiProviderError(`${callType} 返回为空`, { retryable: true });
       }
 
+      // 关键：内容可用性校验放在「记 success」之前。
+      // HTTP 200 不等于内容可用——生题最常见的失败是「返回了内容但解析不出条目」，
+      // 过去先记 success 再抛错，导致 ai_call_log 的生题成功率虚高
+      // （2026-10-24 实测：19 次 success 只换来 8 次优化，日志与真实产出对不上）。
+      options.validate?.(content);
+
       await this.aiCallLog.record({
         type: callType,
         provider: 'agnes',
         model: config.ai.agnes.textModel,
+        bizId: options.bizId ?? 0,
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
         latencyMs: Date.now() - startedAt,
@@ -417,6 +444,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         type: callType,
         provider: 'agnes',
         model: config.ai.agnes.textModel,
+        bizId: options.bizId ?? 0,
         latencyMs: Date.now() - startedAt,
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : String(error),

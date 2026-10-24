@@ -212,7 +212,10 @@ export class SentenceGenService {
         let drafts: SentenceDraft[] = [];
         try {
           drafts = await textSemaphore.run(() =>
-            withRetry(() => this.sentenceGen.generateBatch(theme, need, this.focusDifficulty ?? undefined), retry),
+            withRetry(
+              () => this.sentenceGen.generateBatch(theme, need, this.focusDifficulty ?? undefined, Number(taskId)),
+              retry,
+            ),
           );
         } catch (error) {
           // 单批失败（多为上游超时）不中断整轮：计数后继续下一批。
@@ -230,10 +233,14 @@ export class SentenceGenService {
 
         // ---------- 二阶段：优化（地道性 / 中文可读性 / 难度校准）----------
         // 失败降级为原稿：优化是「加分项」，挂掉不该让整批题目作废
-        const polished = await this.runStage('优化', () => this.sentenceGen.polishBatch(drafts, theme), drafts);
+        const polished = await this.runStage(
+          '优化',
+          () => this.sentenceGen.polishBatch(drafts, theme, Number(taskId)),
+          drafts,
+        );
 
         // ---------- 三阶段：审核（不通过的直接丢弃，不进生图）----------
-        const reviewed = await this.runStage('审核', () => this.sentenceGen.reviewBatch(polished), {
+        const reviewed = await this.runStage('审核', () => this.sentenceGen.reviewBatch(polished, Number(taskId)), {
           approved: polished,
           rejected: [] as Array<{ draft: SentenceDraft; reason: string }>,
         });
@@ -375,7 +382,10 @@ export class SentenceGenService {
 
     const seen = new Set<string>();
     const rows = drafts
-      .filter((draft) => draft.sentenceEn.trim().length > 0)
+      // 英文为空 / 中文释义为空都直接丢弃：
+      // 过去中文缺失时用 `draft.translationZh || draft.sentenceEn` 兜底，
+      // 结果「中文释义」字段里会显示一句英文（2026-10-24 发现的数据质量漏洞）。
+      .filter((draft) => draft.sentenceEn.trim().length > 0 && draft.translationZh.trim().length > 0)
       .map((draft) => {
         const categoryId = byName.get(draft.categoryName) ?? fallbackCategoryId;
         const scenePrompt =
@@ -387,7 +397,7 @@ export class SentenceGenService {
           // 备用答案落库为 JSON 字符串（判定时解析）；没有等价表达时留 null
           alternateAnswers:
             draft.alternateAnswers && draft.alternateAnswers.length > 0 ? JSON.stringify(draft.alternateAnswers) : null,
-          translationZh: draft.translationZh || draft.sentenceEn,
+          translationZh: draft.translationZh.trim(),
           ipa: draft.ipa || null,
           scenePrompt: scenePrompt.slice(0, 500),
           source: 'ai',

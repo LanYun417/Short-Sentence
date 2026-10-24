@@ -40,20 +40,26 @@ export interface SentenceGenProvider {
    * @param theme 当日主题（如「日常生活」）
    * @param count 目标条数
    * @param focusDifficulty 强制本批全部为该难度（1/2/3），省略则按自然分布
+   * @param bizId 关联业务 id（批次 id），落 ai_call_log 便于按批次核对三阶段是否都跑了
    */
-  generateBatch(theme: string, count: number, focusDifficulty?: number): Promise<SentenceDraft[]>;
+  generateBatch(theme: string, count: number, focusDifficulty?: number, bizId?: number): Promise<SentenceDraft[]>;
 
   /**
    * 二阶段：优化地道性、中文可读性与难度标注。
    * 返回**同数量、同顺序**的草稿（模型漏掉的条目保留原稿，不会因为「优化」丢题）。
+   * @param bizId 关联业务 id（批次 id）
    */
-  polishBatch(drafts: SentenceDraft[], theme: string): Promise<SentenceDraft[]>;
+  polishBatch(drafts: SentenceDraft[], theme: string, bizId?: number): Promise<SentenceDraft[]>;
 
   /**
    * 三阶段：审核并剔除不合格题目（语法/对译/语义自足/难度标注/内容适当性）。
    * 模型未给出结论的条目按通过处理——审核本身失败不该让整批题目蒸发。
+   * @param bizId 关联业务 id（批次 id）
    */
-  reviewBatch(drafts: SentenceDraft[]): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }>;
+  reviewBatch(
+    drafts: SentenceDraft[],
+    bizId?: number,
+  ): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }>;
 }
 
 /** 每日句签主题（AI 输出解析后的单条）。 */
