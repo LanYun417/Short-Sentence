@@ -2857,6 +2857,8 @@ export const SentenceGenTaskScalarFieldEnum = {
   imageDone: 'imageDone',
   failCount: 'failCount',
   status: 'status',
+  stage: 'stage',
+  lastHeartbeatAt: 'lastHeartbeatAt',
   triggerType: 'triggerType',
   errorMessage: 'errorMessage',
   startedAt: 'startedAt',
@@ -3300,6 +3302,7 @@ export type SentenceOrderByRelevanceFieldEnum = (typeof SentenceOrderByRelevance
 export const SentenceGenTaskOrderByRelevanceFieldEnum = {
   bizDate: 'bizDate',
   status: 'status',
+  stage: 'stage',
   triggerType: 'triggerType',
   errorMessage: 'errorMessage'
 } as const

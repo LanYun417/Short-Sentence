@@ -50,6 +50,8 @@ export type SentenceGenTaskMinAggregateOutputType = {
   imageDone: number | null
   failCount: number | null
   status: string | null
+  stage: string | null
+  lastHeartbeatAt: Date | null
   triggerType: string | null
   errorMessage: string | null
   startedAt: Date | null
@@ -66,6 +68,8 @@ export type SentenceGenTaskMaxAggregateOutputType = {
   imageDone: number | null
   failCount: number | null
   status: string | null
+  stage: string | null
+  lastHeartbeatAt: Date | null
   triggerType: string | null
   errorMessage: string | null
   startedAt: Date | null
@@ -82,6 +86,8 @@ export type SentenceGenTaskCountAggregateOutputType = {
   imageDone: number
   failCount: number
   status: number
+  stage: number
+  lastHeartbeatAt: number
   triggerType: number
   errorMessage: number
   startedAt: number
@@ -116,6 +122,8 @@ export type SentenceGenTaskMinAggregateInputType = {
   imageDone?: true
   failCount?: true
   status?: true
+  stage?: true
+  lastHeartbeatAt?: true
   triggerType?: true
   errorMessage?: true
   startedAt?: true
@@ -132,6 +140,8 @@ export type SentenceGenTaskMaxAggregateInputType = {
   imageDone?: true
   failCount?: true
   status?: true
+  stage?: true
+  lastHeartbeatAt?: true
   triggerType?: true
   errorMessage?: true
   startedAt?: true
@@ -148,6 +158,8 @@ export type SentenceGenTaskCountAggregateInputType = {
   imageDone?: true
   failCount?: true
   status?: true
+  stage?: true
+  lastHeartbeatAt?: true
   triggerType?: true
   errorMessage?: true
   startedAt?: true
@@ -251,6 +263,8 @@ export type SentenceGenTaskGroupByOutputType = {
   imageDone: number
   failCount: number
   status: string
+  stage: string
+  lastHeartbeatAt: Date | null
   triggerType: string
   errorMessage: string | null
   startedAt: Date | null
@@ -290,6 +304,8 @@ export type SentenceGenTaskWhereInput = {
   imageDone?: Prisma.IntFilter<"SentenceGenTask"> | number
   failCount?: Prisma.IntFilter<"SentenceGenTask"> | number
   status?: Prisma.StringFilter<"SentenceGenTask"> | string
+  stage?: Prisma.StringFilter<"SentenceGenTask"> | string
+  lastHeartbeatAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringFilter<"SentenceGenTask"> | string
   errorMessage?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
@@ -306,6 +322,8 @@ export type SentenceGenTaskOrderByWithRelationInput = {
   imageDone?: Prisma.SortOrder
   failCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  stage?: Prisma.SortOrder
+  lastHeartbeatAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerType?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -326,6 +344,8 @@ export type SentenceGenTaskWhereUniqueInput = Prisma.AtLeast<{
   imageDone?: Prisma.IntFilter<"SentenceGenTask"> | number
   failCount?: Prisma.IntFilter<"SentenceGenTask"> | number
   status?: Prisma.StringFilter<"SentenceGenTask"> | string
+  stage?: Prisma.StringFilter<"SentenceGenTask"> | string
+  lastHeartbeatAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringFilter<"SentenceGenTask"> | string
   errorMessage?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
@@ -342,6 +362,8 @@ export type SentenceGenTaskOrderByWithAggregationInput = {
   imageDone?: Prisma.SortOrder
   failCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  stage?: Prisma.SortOrder
+  lastHeartbeatAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerType?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -366,6 +388,8 @@ export type SentenceGenTaskScalarWhereWithAggregatesInput = {
   imageDone?: Prisma.IntWithAggregatesFilter<"SentenceGenTask"> | number
   failCount?: Prisma.IntWithAggregatesFilter<"SentenceGenTask"> | number
   status?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
+  stage?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
+  lastHeartbeatAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SentenceGenTask"> | Date | string | null
@@ -382,6 +406,8 @@ export type SentenceGenTaskCreateInput = {
   imageDone?: number
   failCount?: number
   status?: string
+  stage?: string
+  lastHeartbeatAt?: Date | string | null
   triggerType?: string
   errorMessage?: string | null
   startedAt?: Date | string | null
@@ -398,6 +424,8 @@ export type SentenceGenTaskUncheckedCreateInput = {
   imageDone?: number
   failCount?: number
   status?: string
+  stage?: string
+  lastHeartbeatAt?: Date | string | null
   triggerType?: string
   errorMessage?: string | null
   startedAt?: Date | string | null
@@ -414,6 +442,8 @@ export type SentenceGenTaskUpdateInput = {
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
   failCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  stage?: Prisma.StringFieldUpdateOperationsInput | string
+  lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -430,6 +460,8 @@ export type SentenceGenTaskUncheckedUpdateInput = {
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
   failCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  stage?: Prisma.StringFieldUpdateOperationsInput | string
+  lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -446,6 +478,8 @@ export type SentenceGenTaskCreateManyInput = {
   imageDone?: number
   failCount?: number
   status?: string
+  stage?: string
+  lastHeartbeatAt?: Date | string | null
   triggerType?: string
   errorMessage?: string | null
   startedAt?: Date | string | null
@@ -462,6 +496,8 @@ export type SentenceGenTaskUpdateManyMutationInput = {
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
   failCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  stage?: Prisma.StringFieldUpdateOperationsInput | string
+  lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -478,6 +514,8 @@ export type SentenceGenTaskUncheckedUpdateManyInput = {
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
   failCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  stage?: Prisma.StringFieldUpdateOperationsInput | string
+  lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -500,6 +538,8 @@ export type SentenceGenTaskCountOrderByAggregateInput = {
   imageDone?: Prisma.SortOrder
   failCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  stage?: Prisma.SortOrder
+  lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -524,6 +564,8 @@ export type SentenceGenTaskMaxOrderByAggregateInput = {
   imageDone?: Prisma.SortOrder
   failCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  stage?: Prisma.SortOrder
+  lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -540,6 +582,8 @@ export type SentenceGenTaskMinOrderByAggregateInput = {
   imageDone?: Prisma.SortOrder
   failCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  stage?: Prisma.SortOrder
+  lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -566,6 +610,8 @@ export type SentenceGenTaskSelect<ExtArgs extends runtime.Types.Extensions.Inter
   imageDone?: boolean
   failCount?: boolean
   status?: boolean
+  stage?: boolean
+  lastHeartbeatAt?: boolean
   triggerType?: boolean
   errorMessage?: boolean
   startedAt?: boolean
@@ -584,6 +630,8 @@ export type SentenceGenTaskSelectScalar = {
   imageDone?: boolean
   failCount?: boolean
   status?: boolean
+  stage?: boolean
+  lastHeartbeatAt?: boolean
   triggerType?: boolean
   errorMessage?: boolean
   startedAt?: boolean
@@ -592,7 +640,7 @@ export type SentenceGenTaskSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "triggerType" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
+export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "stage" | "lastHeartbeatAt" | "triggerType" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
 
 export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SentenceGenTask"
@@ -626,6 +674,14 @@ export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.Int
      * 状态：pending 待处理 / running 进行中 / success 成功 / failed 失败
      */
     status: string
+    /**
+     * 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / imaging 生图 / done 收尾
+     */
+    stage: string
+    /**
+     * 最近心跳（每完成一批题/一张图更新）：前端据此区分「还在跑」与「卡住了」
+     */
+    lastHeartbeatAt: Date | null
     /**
      * 触发方式：cron 定时 / manual 手动
      */
@@ -1026,6 +1082,8 @@ export interface SentenceGenTaskFieldRefs {
   readonly imageDone: Prisma.FieldRef<"SentenceGenTask", 'Int'>
   readonly failCount: Prisma.FieldRef<"SentenceGenTask", 'Int'>
   readonly status: Prisma.FieldRef<"SentenceGenTask", 'String'>
+  readonly stage: Prisma.FieldRef<"SentenceGenTask", 'String'>
+  readonly lastHeartbeatAt: Prisma.FieldRef<"SentenceGenTask", 'DateTime'>
   readonly triggerType: Prisma.FieldRef<"SentenceGenTask", 'String'>
   readonly errorMessage: Prisma.FieldRef<"SentenceGenTask", 'String'>
   readonly startedAt: Prisma.FieldRef<"SentenceGenTask", 'DateTime'>

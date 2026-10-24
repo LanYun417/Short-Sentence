@@ -932,6 +932,10 @@ export interface GenTaskItem {
   imageDone: number;
   failCount: number;
   status: string;
+  /** 当前阶段：generating / polishing / reviewing / imaging / done（空串 = 老数据） */
+  stage: string;
+  /** 最近心跳时间：据此区分「还在跑」与「卡住了」 */
+  lastHeartbeatAt: string | null;
   triggerType: string;
   errorMessage: string | null;
   startedAt: string | null;

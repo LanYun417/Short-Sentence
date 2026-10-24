@@ -21,7 +21,7 @@ import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } f
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
-import { ref } from 'vue';
+import { onBeforeUnmount, ref, watch } from 'vue';
 
 defineOptions({ name: 'SentenceList' });
 
@@ -42,6 +42,41 @@ const GEN_STATUS_TAG: Record<string, { type: 'primary' | 'success' | 'warning' |
   success: { type: 'success', label: '成功' },
   failed: { type: 'danger', label: '失败' },
 };
+
+/** 生成阶段文案（stage 为空 = 三阶段上线前的老批次，不显示）。 */
+const GEN_STAGE_LABEL: Record<string, string> = {
+  generating: '生题',
+  polishing: '优化',
+  reviewing: '审核',
+  imaging: '生图',
+  done: '收尾',
+};
+
+/** 心跳停滞阈值：运行中且超过这么久没有心跳，大概率卡住了。 */
+const HEARTBEAT_STALE_MS = 120_000;
+
+/** 心跳是否已停滞。 */
+function heartbeatStale(row: GenTaskItem): boolean {
+  if (row.status !== 'running' || !row.lastHeartbeatAt) {
+    return false;
+  }
+  return Date.now() - new Date(row.lastHeartbeatAt).getTime() > HEARTBEAT_STALE_MS;
+}
+
+/** 心跳相对时间（「23 秒前」）。轮询每 3s 刷新列表，渲染时重算即为准实时。 */
+function heartbeatText(row: GenTaskItem): string {
+  if (!row.lastHeartbeatAt) {
+    return '—';
+  }
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(row.lastHeartbeatAt).getTime()) / 1000));
+  if (seconds < 60) {
+    return `${seconds} 秒前`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)} 分钟前`;
+  }
+  return formatDateTime(row.lastHeartbeatAt);
+}
 
 const categories = ref<SentenceCategoryOption[]>([]);
 
@@ -174,23 +209,55 @@ async function handleTriggerGen(): Promise<void> {
   await loadGenTasks();
 }
 
-/** 加载批次列表。 */
-async function loadGenTasks(): Promise<void> {
-  genLoading.value = true;
+/** 加载批次列表。silent = 轮询刷新时不显示 loading（避免表格每 3s 闪一次）。 */
+async function loadGenTasks(silent = false): Promise<void> {
+  if (!silent) {
+    genLoading.value = true;
+  }
   try {
     const data = await getGenTaskListApi({ page: genPage.value, pageSize: genPageSize.value });
     genList.value = data.list;
     genTotal.value = data.total;
   } finally {
-    genLoading.value = false;
+    if (!silent) {
+      genLoading.value = false;
+    }
+  }
+}
+
+/** 批次弹窗轮询定时器。 */
+let genTimer: ReturnType<typeof setInterval> | null = null;
+
+/** 停止轮询（关弹窗 / 卸载时）。 */
+function stopGenPolling(): void {
+  if (genTimer) {
+    clearInterval(genTimer);
+    genTimer = null;
   }
 }
 
 /** 打开批次监控。 */
+/**
+ * 打开批次弹窗：加载后每 3s 静默刷新。
+ * 一批要跑几分钟、中途几十秒计数器都不动，不轮询就只能看到静止的数字，
+ * 分不清「在跑」还是「卡死」——这正是运营反馈的问题。
+ */
 async function handleOpenGenTasks(): Promise<void> {
   genDialogVisible.value = true;
   await loadGenTasks();
+  stopGenPolling();
+  genTimer = setInterval(() => {
+    void loadGenTasks(true);
+  }, 3000);
 }
+
+watch(genDialogVisible, (open) => {
+  if (!open) {
+    stopGenPolling();
+  }
+});
+
+onBeforeUnmount(stopGenPolling);
 
 onMounted(async () => {
   categories.value = await getCategoryOptionsApi().catch(() => []);
@@ -345,7 +412,7 @@ onMounted(async () => {
     </BasicDialog>
 
     <!-- 生成批次监控 -->
-    <BasicDialog v-model="genDialogVisible" title="生成批次" width="760px" :show-footer="false">
+    <BasicDialog v-model="genDialogVisible" title="生成批次" width="920px" :show-footer="false">
       <el-table v-loading="genLoading" :data="genList" border max-height="420">
         <el-table-column prop="id" label="批次" width="70" />
         <el-table-column prop="bizDate" label="业务日期" width="120" />
@@ -360,6 +427,23 @@ onMounted(async () => {
             <el-tag :type="GEN_STATUS_TAG[row.status]?.type ?? 'info'" size="small">
               {{ GEN_STATUS_TAG[row.status]?.label ?? row.status }}
             </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="阶段 / 心跳" width="150">
+          <template #default="{ row }">
+            <template v-if="row.status === 'running'">
+              <el-tag size="small" effect="plain" :type="heartbeatStale(row as GenTaskItem) ? 'danger' : 'primary'">
+                {{ GEN_STAGE_LABEL[row.stage] ?? '进行中' }}
+              </el-tag>
+              <span
+                class="ml-1 text-xs"
+                :class="heartbeatStale(row as GenTaskItem) ? 'text-danger' : 'text-muted'"
+                :title="row.lastHeartbeatAt ? formatDateTime(row.lastHeartbeatAt) : ''"
+              >
+                {{ heartbeatText(row as GenTaskItem) }}
+              </span>
+            </template>
+            <span v-else class="text-xs text-faint">—</span>
           </template>
         </el-table-column>
         <el-table-column label="触发" width="80">

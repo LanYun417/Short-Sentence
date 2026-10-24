@@ -174,7 +174,7 @@ export class SentenceGenService {
           continue;
         }
         queuedIds.add(key);
-        imageJobs.push(imageSemaphore.run(() => this.generateImage(sentence, imageRetry)));
+        imageJobs.push(imageSemaphore.run(() => this.generateImage(sentence, imageRetry, taskId)));
       }
     };
 
@@ -188,7 +188,7 @@ export class SentenceGenService {
     try {
       const task = await this.prisma.sentenceGenTask.update({
         where: { id: taskId },
-        data: { status: 'running', startedAt, errorMessage: null },
+        data: { status: 'running', stage: 'generating', startedAt, lastHeartbeatAt: startedAt, errorMessage: null },
         select: { targetCount: true },
       });
 
@@ -233,6 +233,7 @@ export class SentenceGenService {
 
         // ---------- 二阶段：优化（地道性 / 中文可读性 / 难度校准）----------
         // 失败降级为原稿：优化是「加分项」，挂掉不该让整批题目作废
+        await this.heartbeat(taskId, 'polishing');
         const polished = await this.runStage(
           '优化',
           () => this.sentenceGen.polishBatch(drafts, theme, Number(taskId)),
@@ -240,6 +241,7 @@ export class SentenceGenService {
         );
 
         // ---------- 三阶段：审核（不通过的直接丢弃，不进生图）----------
+        await this.heartbeat(taskId, 'reviewing');
         const reviewed = await this.runStage('审核', () => this.sentenceGen.reviewBatch(polished, Number(taskId)), {
           approved: polished,
           rejected: [] as Array<{ draft: SentenceDraft; reason: string }>,
@@ -255,7 +257,11 @@ export class SentenceGenService {
 
         const inserted = await this.persistDrafts(reviewed.approved, taskId);
         textDone += inserted;
-        await this.prisma.sentenceGenTask.update({ where: { id: taskId }, data: { textDone } });
+        // 计数器与心跳一起更新：前端每 3s 轮询，看到心跳就不再判断「卡住」
+        await this.prisma.sentenceGenTask.update({
+          where: { id: taskId },
+          data: { textDone, lastHeartbeatAt: new Date() },
+        });
         // 入库即排产：让生图与生题重叠
         await enqueuePendingImages();
         if (inserted === 0) {
@@ -270,6 +276,7 @@ export class SentenceGenService {
       }
 
       // ---------- 2. 生图收尾 ----------
+      await this.heartbeat(taskId, 'imaging');
       await drainImageQueue();
 
       // ---------- 3. 终态 ----------
@@ -279,6 +286,8 @@ export class SentenceGenService {
         where: { id: taskId },
         data: {
           status: ok ? 'success' : 'failed',
+          stage: 'done',
+          lastHeartbeatAt: new Date(),
           textDone,
           imageDone,
           // failCount 记「未入库条数」：调用失败 + 审核剔除（运营只看这个数字判断要不要补跑）
@@ -337,10 +346,30 @@ export class SentenceGenService {
     }
   }
 
+  /**
+   * 上报阶段 / 心跳。
+   *
+   * 为什么需要：批次表原来只有三个计数器，且**每批 20 条完成才更新一次**，
+   * 中间 40~70s 的模型请求期间前端数字完全不动——运营无法区分「在跑」和「卡死」。
+   * 这里在每次阶段切换与每张图完成时更新 lastHeartbeatAt，前端据此显示「N 秒前有心跳」。
+   *
+   * 生图与生题是并行的：生图只碰 lastHeartbeatAt、不传 stage，否则会把文字阶段覆盖成 imaging。
+   */
+  private async heartbeat(taskId: bigint, stage?: string): Promise<void> {
+    await this.prisma.sentenceGenTask
+      .update({
+        where: { id: taskId },
+        data: stage ? { stage, lastHeartbeatAt: new Date() } : { lastHeartbeatAt: new Date() },
+      })
+      // 心跳失败不该影响整批生成
+      .catch(() => undefined);
+  }
+
   /** 生成单题配图：生图 → 转 webp → 入库 → 置 ready（失败只记日志，不影响其它题）。 */
   private async generateImage(
     sentence: { id: bigint; scenePrompt: string },
     retry: { maxAttempts: number; baseDelayMs: number; maxDelayMs: number },
+    taskId: bigint,
   ): Promise<boolean> {
     try {
       const image = await withRetry(
@@ -360,6 +389,7 @@ export class SentenceGenService {
         where: { id: sentence.id },
         data: { imageFileId: BigInt(saved.file.id), status: 'ready' },
       });
+      await this.heartbeat(taskId);
       return true;
     } catch (error) {
       this.logger.error(`[SentenceGen] 生图失败（sentence ${sentence.id}）: ${this.errText(error)}`);

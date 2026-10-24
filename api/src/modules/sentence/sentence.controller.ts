@@ -22,6 +22,10 @@ export interface GenTaskItem {
   imageDone: number;
   failCount: number;
   status: string;
+  /** 当前阶段：generating / polishing / reviewing / imaging / done（空串 = 老数据） */
+  stage: string;
+  /** 最近心跳时间：前端据此区分「还在跑」与「卡住了」 */
+  lastHeartbeatAt: Date | null;
   triggerType: string;
   errorMessage: string | null;
   startedAt: Date | null;
@@ -103,6 +107,8 @@ export class SentenceController {
       imageDone: row.imageDone,
       failCount: row.failCount,
       status: row.status,
+      stage: row.stage,
+      lastHeartbeatAt: row.lastHeartbeatAt,
       triggerType: row.triggerType,
       errorMessage: row.errorMessage,
       startedAt: row.startedAt,
