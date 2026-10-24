@@ -26,6 +26,18 @@ export class ClientRegisterDto {
   @IsString({ message: '昵称必须为字符串' })
   @MaxLength(50, { message: '昵称最长 50 个字符' })
   nickname?: string;
+
+  /** 图形验证码 id（服务端开启验证码时必填） */
+  @IsOptional()
+  @IsString({ message: '验证码 id 必须为字符串' })
+  @MaxLength(64, { message: '验证码 id 最长 64 个字符' })
+  captchaId?: string;
+
+  /** 图形验证码字符（服务端开启验证码时必填；大小写不敏感） */
+  @IsOptional()
+  @IsString({ message: '验证码必须为字符串' })
+  @MaxLength(10, { message: '验证码最长 10 个字符' })
+  captchaCode?: string;
 }
 
 /** 登录入参。 */
@@ -35,6 +47,18 @@ export class ClientLoginDto {
 
   @IsString({ message: '密码必须为字符串' })
   password!: string;
+
+  /** 图形验证码 id（服务端开启验证码时必填） */
+  @IsOptional()
+  @IsString({ message: '验证码 id 必须为字符串' })
+  @MaxLength(64, { message: '验证码 id 最长 64 个字符' })
+  captchaId?: string;
+
+  /** 图形验证码字符（服务端开启验证码时必填；大小写不敏感） */
+  @IsOptional()
+  @IsString({ message: '验证码必须为字符串' })
+  @MaxLength(10, { message: '验证码最长 10 个字符' })
+  captchaCode?: string;
 }
 
 /** 刷新令牌入参。 */

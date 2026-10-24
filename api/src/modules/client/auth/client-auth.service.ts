@@ -23,6 +23,8 @@ import { comparePassword, hashPassword } from '../../../common/utils/utils.js';
 import type { Express } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { FilesService } from '../../files/files.service.js';
+import { CaptchaService } from '../../../common/auth/captcha.service.js';
+import type { CaptchaResult } from '../../../common/types.js';
 
 /** 对外返回的客户端用户信息（不含口令）。 */
 export interface ClientUserProfile {
@@ -58,11 +60,27 @@ export class ClientAuthUserService {
     private readonly blacklist: TokenBlacklistService,
     private readonly clientAuth: ClientAuthService,
     private readonly filesService: FilesService,
+    private readonly captchaService: CaptchaService,
   ) {}
 
+  /** 图形验证码（登录/注册用；服务端关闭验证码时 enabled=false，前端不渲染输入框）。 */
+  async createCaptcha(): Promise<CaptchaResult> {
+    return this.captchaService.createCaptcha();
+  }
+
   /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。 */
-  async register(email: string, password: string, nickname?: string): Promise<ClientTokenPair> {
+  async register(
+    email: string,
+    password: string,
+    nickname?: string,
+    captchaId?: string,
+    captchaCode?: string,
+  ): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
+    // 图形验证码先校验（廉价、无 DB 查询）：挡掉脚本批量注册，失败直接拒绝
+    if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
+      throw AppException.badRequest('验证码错误或已过期');
+    }
     this.assertPasswordStrength(password, normalizedEmail);
 
     const existing = await this.clientAuth.findByEmail(normalizedEmail);
@@ -84,8 +102,12 @@ export class ClientAuthUserService {
   }
 
   /** 登录（邮箱 + 密码）。 */
-  async login(email: string, password: string): Promise<ClientTokenPair> {
+  async login(email: string, password: string, captchaId?: string, captchaCode?: string): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
+    // 同注册：先校验验证码再查库，避免爆破消耗数据库
+    if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
+      throw AppException.badRequest('验证码错误或已过期');
+    }
     const user = await this.clientAuth.findByEmail(normalizedEmail);
     // 统一文案：不区分「邮箱不存在」与「密码错误」，防账号枚举
     if (!user || !(await comparePassword(password, user.password))) {

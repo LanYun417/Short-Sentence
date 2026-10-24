@@ -61,10 +61,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** 登录（成功后缓存令牌与资料）。 */
-  async function login(email: string, password: string): Promise<void> {
+  async function login(
+    email: string,
+    password: string,
+    captcha?: { captchaId?: string; captchaCode?: string },
+  ): Promise<void> {
     const data = await apiFetch<{ accessToken: string; refreshToken: string; user: ClientUserProfile }>(
       '/client/auth/login',
-      { method: 'POST', body: { email, password } },
+      { method: 'POST', body: { email, password, ...captcha } },
     );
     applyToken(data.accessToken, data.refreshToken);
     setCachedUser(data.user);
@@ -72,10 +76,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** 注册（成功后直接登录）。 */
-  async function register(email: string, password: string, nickname?: string): Promise<void> {
+  async function register(
+    email: string,
+    password: string,
+    nickname?: string,
+    captcha?: { captchaId?: string; captchaCode?: string },
+  ): Promise<void> {
     const data = await apiFetch<{ accessToken: string; refreshToken: string; user: ClientUserProfile }>(
       '/client/auth/register',
-      { method: 'POST', body: { email, password, nickname } },
+      { method: 'POST', body: { email, password, nickname, ...captcha } },
     );
     applyToken(data.accessToken, data.refreshToken);
     setCachedUser(data.user);

@@ -4,6 +4,7 @@
  * 与登录页共用 AuthShell：版式完全同构，仅标题与字段数不同。
  */
 import { useAuthStore } from '~/stores/auth';
+import { useCaptcha } from '~/composables/useCaptcha';
 
 definePageMeta({ layout: 'auth' });
 
@@ -15,12 +16,23 @@ usePageSeo({
 
 const auth = useAuthStore();
 const route = useRoute();
+const {
+  captcha,
+  code: captchaCode,
+  loading: captchaLoading,
+  refresh: refreshCaptcha,
+  payload: captchaPayload,
+} = useCaptcha();
 
 const email = ref('');
 const password = ref('');
 const nickname = ref('');
 const errorMessage = ref('');
 const submitting = ref(false);
+
+onMounted(() => {
+  void refreshCaptcha();
+});
 
 /** 注册成功后跳回来源页（缺省首页）。 */
 async function onSubmit(): Promise<void> {
@@ -30,11 +42,13 @@ async function onSubmit(): Promise<void> {
   submitting.value = true;
   errorMessage.value = '';
   try {
-    await auth.register(email.value.trim(), password.value, nickname.value.trim() || undefined);
+    await auth.register(email.value.trim(), password.value, nickname.value.trim() || undefined, captchaPayload());
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
     await navigateTo(redirect);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '注册失败';
+    // 同登录：验证码单次有效，失败后必须换一张
+    void refreshCaptcha();
   } finally {
     submitting.value = false;
   }
@@ -80,9 +94,23 @@ async function onSubmit(): Promise<void> {
           />
         </UFormField>
 
+        <CaptchaField
+          v-if="captcha?.enabled && captcha.image"
+          v-model="captchaCode"
+          :image="captcha.image"
+          :loading="captchaLoading"
+          @refresh="refreshCaptcha"
+        />
+
         <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
-        <UButton type="submit" block size="lg" :loading="submitting" :disabled="!email || password.length < 6">
+        <UButton
+          type="submit"
+          block
+          size="lg"
+          :loading="submitting"
+          :disabled="!email || password.length < 6 || (captcha?.enabled === true && !captchaCode)"
+        >
           {{ submitting ? '注册中…' : '注册并登录' }}
           <template #trailing>
             <UIcon name="i-lucide-arrow-right" class="h-4 w-4" />

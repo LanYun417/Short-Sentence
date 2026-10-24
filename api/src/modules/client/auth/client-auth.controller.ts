@@ -11,6 +11,7 @@ import { Public } from '../../../common/auth/auth.guard.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { UPLOAD_MULTER_OPTIONS } from '../../../common/file/upload.config.js';
+import type { CaptchaResult } from '../../../common/types.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { ClientAuthUserService, type ClientUserProfile } from './client-auth.service.js';
 import {
@@ -33,11 +34,24 @@ export interface ClientAuthResult {
 export class ClientAuthController {
   constructor(private readonly clientAuth: ClientAuthUserService) {}
 
+  /** 图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）。 */
+  @Public()
+  @Get('captcha')
+  captcha(): Promise<CaptchaResult> {
+    return this.clientAuth.createCaptcha();
+  }
+
   /** 注册。 */
   @Public()
   @Post('register')
   async register(@Body() dto: ClientRegisterDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.register(dto.email, dto.password, dto.nickname);
+    const tokens = await this.clientAuth.register(
+      dto.email,
+      dto.password,
+      dto.nickname,
+      dto.captchaId,
+      dto.captchaCode,
+    );
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
   }
@@ -46,7 +60,7 @@ export class ClientAuthController {
   @Public()
   @Post('login')
   async login(@Body() dto: ClientLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.login(dto.email, dto.password);
+    const tokens = await this.clientAuth.login(dto.email, dto.password, dto.captchaId, dto.captchaCode);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }

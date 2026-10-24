@@ -5,6 +5,7 @@
  */
 import { useAuthStore } from '~/stores/auth';
 import { getToken } from '~/composables/useApi';
+import { useCaptcha } from '~/composables/useCaptcha';
 import { setTokenCookie } from '~/utils/auth-cookie';
 
 definePageMeta({ layout: 'auth' });
@@ -18,11 +19,22 @@ usePageSeo({
 const auth = useAuthStore();
 const route = useRoute();
 const tokenCookie = useCookie<string | null>('ss_token');
+const {
+  captcha,
+  code: captchaCode,
+  loading: captchaLoading,
+  refresh: refreshCaptcha,
+  payload: captchaPayload,
+} = useCaptcha();
 
 const email = ref('');
 const password = ref('');
 const errorMessage = ref('');
 const submitting = ref(false);
+
+onMounted(() => {
+  void refreshCaptcha();
+});
 
 /** 跳回来源页（缺省首页）。 */
 function redirectTarget(): string {
@@ -52,10 +64,12 @@ async function onSubmit(): Promise<void> {
   submitting.value = true;
   errorMessage.value = '';
   try {
-    await auth.login(email.value.trim(), password.value);
+    await auth.login(email.value.trim(), password.value, captchaPayload());
     await navigateTo(redirectTarget());
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登录失败';
+    // 验证码单次有效：失败后已作废，必须换一张，否则用户重试只会再吃一次「验证码错误」
+    void refreshCaptcha();
   } finally {
     submitting.value = false;
   }
@@ -96,9 +110,23 @@ async function onSubmit(): Promise<void> {
           />
         </UFormField>
 
+        <CaptchaField
+          v-if="captcha?.enabled && captcha.image"
+          v-model="captchaCode"
+          :image="captcha.image"
+          :loading="captchaLoading"
+          @refresh="refreshCaptcha"
+        />
+
         <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
-        <UButton type="submit" block size="lg" :loading="submitting" :disabled="!email || !password">
+        <UButton
+          type="submit"
+          block
+          size="lg"
+          :loading="submitting"
+          :disabled="!email || !password || (captcha?.enabled === true && !captchaCode)"
+        >
           {{ submitting ? '登录中…' : '登录' }}
           <template #trailing>
             <UIcon name="i-lucide-arrow-right" class="h-4 w-4" />
