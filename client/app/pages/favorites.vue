@@ -4,7 +4,7 @@ definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: '我的收藏',
-  description: '收藏的句子随时回看，按收藏时间倒序排列。',
+  description: '收藏的句子随时回看，支持按难度、场景和收藏时间范围筛选。',
 });
 </script>
 

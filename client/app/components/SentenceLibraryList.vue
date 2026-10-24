@@ -1,8 +1,11 @@
 <script setup lang="ts">
 /**
  * 列表组件（收藏夹 / 学习记录共用）。
- * 模块职责：按 mode 拉取对应接口并渲染卡片列表；history 模式支持多维度筛选 +
- * 滚动到底自动加载（IntersectionObserver），favorites 模式保留「加载更多」按钮。
+ * 模块职责：按 mode 拉取对应接口并渲染卡片列表；两者都支持多维度筛选 +
+ * 「滚动到底自动加载」的无限滚动与「返回顶部」悬浮按钮。
+ *
+ * 差异点：history 额外提供「全部/错题/对题」分段与作答详情（对错徽章、你的作答），
+ * favorites 仅有难度 / 场景 / 收藏时间范围筛选。
  *
  * 为什么做成组件而不是单页面：/favorites 与 /review 是两个独立路由，
  * 早期实现把它们塞在 pages/library.vue 里靠 route.path 判断，
@@ -34,7 +37,7 @@ const errorMessage = ref('');
 
 const hasMore = computed(() => items.value.length < total.value);
 
-/* ----------------------------- 筛选状态（仅 history） ----------------------------- */
+/* ----------------------------- 筛选状态（两种模式共用） ----------------------------- */
 const TYPE_OPTIONS = [
   { label: '全部', value: 'all' as const },
   { label: '错题', value: 'wrong' as const },
@@ -53,9 +56,11 @@ const to = ref('');
 const categories = ref<SentenceCategory[]>([]);
 
 const categoryOptions = computed(() => categories.value.map((c) => ({ label: c.name, value: c.id })));
-const hasActiveFilter = computed(
-  () => type.value !== 'all' || difficulty.value !== null || categoryId.value !== null || !!from.value || !!to.value,
-);
+/** 是否有非默认筛选（据此展示「清除筛选」）。 */
+const hasActiveFilter = computed(() => {
+  const base = difficulty.value !== null || categoryId.value !== null || !!from.value || !!to.value;
+  return isHistory.value ? type.value !== 'all' || base : base;
+});
 
 function clearFilters(): void {
   type.value = 'all';
@@ -75,10 +80,18 @@ function fmtDate(value: string): string {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/* ----------------------------- 无限滚动哨兵 ----------------------------- */
+/* ----------------------------- 无限滚动哨兵 + 返回顶部 ----------------------------- */
 const sentinel = ref<HTMLElement | null>(null);
 let observer: IntersectionObserver | null = null;
+let scrollEl: HTMLElement | null = null;
 let queryToken = 0;
+/** 滚动超过阈值后展示「返回顶部」。 */
+const showBackToTop = ref(false);
+
+/** 当前内容滚动容器（.ss-viewport，页面本身 overflow-hidden 不滚）。 */
+function rootEl(): HTMLElement | null {
+  return (sentinel.value?.closest('.ss-viewport') as HTMLElement | null) ?? null;
+}
 
 /** 哨兵是否仍在滚动视口内（内容不足一屏时用于自动续拉）。 */
 function sentinelInView(root: HTMLElement | null): boolean {
@@ -93,6 +106,14 @@ function sentinelInView(root: HTMLElement | null): boolean {
     return rect.top < r.bottom + margin && rect.bottom > r.top - margin;
   }
   return rect.top < (window.innerHeight || 0) + margin && rect.bottom > -margin;
+}
+
+function onScroll(): void {
+  showBackToTop.value = (scrollEl?.scrollTop ?? 0) > 240;
+}
+
+function scrollToTop(): void {
+  scrollEl?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /** 列表错落入场延迟（新页只让前几项错落，避免长列表等待过久）。 */
@@ -115,11 +136,11 @@ async function loadMore(): Promise<void> {
     const query: Record<string, unknown> = { page: page.value, pageSize };
     if (isHistory.value) {
       query.type = type.value;
-      if (difficulty.value) query.difficulty = difficulty.value;
-      if (categoryId.value) query.categoryId = categoryId.value;
-      if (from.value) query.from = from.value;
-      if (to.value) query.to = to.value;
     }
+    if (difficulty.value) query.difficulty = difficulty.value;
+    if (categoryId.value) query.categoryId = categoryId.value;
+    if (from.value) query.from = from.value;
+    if (to.value) query.to = to.value;
     const data = await apiFetch<{ list: SentenceLibraryItem[]; total: number }>(
       isHistory.value ? '/client/history' : '/client/favorites',
       { query },
@@ -132,12 +153,9 @@ async function loadMore(): Promise<void> {
   } finally {
     loading.value = false;
     loaded.value = true;
-    // history 模式：若哨兵仍在视口内（内容不足一屏），自动续拉直到填满或到底
-    if (isHistory.value && hasMore.value) {
-      const root = (sentinel.value?.closest('.ss-viewport') as HTMLElement | null) ?? null;
-      if (sentinelInView(root)) {
-        void loadMore();
-      }
+    // 内容不足一屏时自动续拉，直到填满或到底
+    if (hasMore.value && sentinelInView(rootEl())) {
+      void loadMore();
     }
   }
 }
@@ -153,13 +171,11 @@ async function runQuery(): Promise<void> {
   if (token !== queryToken) {
     return;
   }
-  sentinel.value?.closest('.ss-viewport')?.scrollTo({ top: 0 });
+  rootEl()?.scrollTo({ top: 0 });
 }
 
 watch([type, difficulty, categoryId, from, to], () => {
-  if (isHistory.value) {
-    void runQuery();
-  }
+  void runQuery();
 });
 
 /**
@@ -189,31 +205,32 @@ watch(ssrPage, (data) => {
 });
 
 onMounted(async () => {
-  if (isHistory.value) {
-    // 场景分类下拉（公开接口；失败仅降级为不可用，不影响主列表）
-    try {
-      const data = await apiFetch<SentenceCategory[]>('/client/categories');
-      if (data) {
-        categories.value = data;
-      }
-    } catch {
-      /* 忽略：场景筛选降级 */
+  // 场景分类下拉（公开接口；失败仅降级为不可用，不影响主列表）
+  try {
+    const data = await apiFetch<SentenceCategory[]>('/client/categories');
+    if (data) {
+      categories.value = data;
     }
-    // 无限滚动：以内容滚动容器 .ss-viewport 为 root，越过底部 160px 即预加载
-    const root = (sentinel.value?.closest('.ss-viewport') as HTMLElement | null) ?? null;
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          void loadMore();
-        }
-      },
-      { root, rootMargin: '160px', threshold: 0 },
-    );
-    if (sentinel.value) {
-      observer.observe(sentinel.value);
-    }
+  } catch {
+    /* 忽略：场景筛选降级 */
   }
-  // SSR 已带首屏数据时跳过，「加载更多」/ 自动加载从第 2 页继续
+  // 无限滚动：以内容滚动容器 .ss-viewport 为 root，越过底部 160px 即预加载
+  scrollEl = rootEl();
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        void loadMore();
+      }
+    },
+    { root: scrollEl, rootMargin: '160px', threshold: 0 },
+  );
+  if (sentinel.value) {
+    observer.observe(sentinel.value);
+  }
+  // 「返回顶部」按钮显隐：滚动位移 > 240px 才出现
+  scrollEl?.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  // SSR 已带首屏数据时跳过，自动加载从第 2 页继续
   if (!loaded.value) {
     void loadMore();
   }
@@ -221,6 +238,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   observer?.disconnect();
+  scrollEl?.removeEventListener('scroll', onScroll);
+  scrollEl = null;
 });
 
 /* ----------------------------- 文案 ----------------------------- */
@@ -234,7 +253,9 @@ const emptyText = computed(() => {
       ? { title: '没有符合筛选条件的记录', desc: '试着放宽筛选条件' }
       : { title: '还没有学习记录', desc: '去刷几道题，再来这里回顾吧' };
   }
-  return { title: '还没有收藏', desc: '刷题时点 ☆ 即可收藏句子' };
+  return hasActiveFilter.value
+    ? { title: '没有符合筛选条件的收藏', desc: '试着放宽筛选条件' }
+    : { title: '还没有收藏', desc: '刷题时点 ☆ 即可收藏句子' };
 });
 </script>
 
@@ -256,10 +277,11 @@ const emptyText = computed(() => {
       <UBadge v-if="total > 0" color="neutral" variant="soft" size="lg">共 {{ total }} 条</UBadge>
     </div>
 
-    <!-- 筛选栏（仅学习记录） -->
-    <div v-if="isHistory" class="anim-in mb-4 space-y-3">
+    <!-- 筛选栏 -->
+    <div class="anim-in mb-4 space-y-3">
       <div class="flex flex-wrap items-center gap-2">
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+        <!-- 类型分段（仅学习记录：对错筛选对收藏无意义） -->
+        <div v-if="isHistory" class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
           <button
             v-for="opt in TYPE_OPTIONS"
             :key="opt.value"
@@ -391,39 +413,39 @@ const emptyText = computed(() => {
               <UBadge v-if="item.difficulty" color="neutral" variant="subtle" size="sm"
                 >难度 {{ item.difficulty }}</UBadge
               >
-              <UBadge v-if="isHistory" color="neutral" variant="soft" size="sm">{{ fmtDate(item.createdAt) }}</UBadge>
-              <UBadge v-if="!isHistory && item.reviewLevel !== undefined" color="neutral" variant="subtle" size="sm">
-                已答对 {{ item.reviewLevel }} 次
-              </UBadge>
+              <UBadge color="neutral" variant="soft" size="sm">{{ fmtDate(item.createdAt) }}</UBadge>
             </div>
           </div>
         </div>
       </UCard>
     </div>
 
-    <!-- 底部：history 自动加载 / favorites 手动加载更多 -->
-    <template v-if="isHistory">
-      <div v-if="loading" class="flex items-center justify-center gap-2 py-5 text-sm text-slate-400">
-        <UIcon name="i-lucide-loader-circle" class="h-4 w-4 animate-spin" />
-        加载中…
-      </div>
-      <p v-else-if="loaded && !hasMore && items.length > 0" class="py-5 text-center text-sm text-slate-400">
-        已经到底啦
-      </p>
-      <!-- 滚动哨兵：始终挂载，observer 据此触发下一页 -->
-      <div ref="sentinel" class="h-px w-full" aria-hidden="true" />
-    </template>
-    <div v-else class="py-6 text-center">
-      <UButton
-        v-if="hasMore"
-        color="neutral"
-        variant="soft"
-        icon="i-lucide-chevron-down"
-        :loading="loading"
-        @click="loadMore"
-      >
-        加载更多
-      </UButton>
+    <!-- 底部：加载指示 / 到底提示 + 常驻滚动哨兵 -->
+    <div v-if="loading" class="flex items-center justify-center gap-2 py-5 text-sm text-slate-400">
+      <UIcon name="i-lucide-loader-circle" class="h-4 w-4 animate-spin" />
+      加载中…
     </div>
+    <p v-else-if="loaded && !hasMore && items.length > 0" class="py-5 text-center text-sm text-slate-400">已经到底啦</p>
+    <!-- 哨兵常驻挂载：observer 据此触发下一页，勿用 v-if 挂在 hasMore 上 -->
+    <div ref="sentinel" class="h-px w-full" aria-hidden="true" />
+
+    <!-- 返回顶部悬浮按钮（滚动到一定位置才出现，移动端避开底部 Tab 栏） -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="translate-y-2 opacity-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-to-class="translate-y-2 opacity-0"
+    >
+      <button
+        v-if="showBackToTop"
+        type="button"
+        class="fixed bottom-20 right-4 z-30 grid h-10 w-10 place-items-center rounded-full bg-white text-slate-500 shadow-lg ring-1 ring-slate-200 hover:text-sky-600 md:bottom-6 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:text-sky-300"
+        aria-label="返回顶部"
+        title="返回顶部"
+        @click="scrollToTop"
+      >
+        <UIcon name="i-lucide-arrow-up-to-line" class="h-5 w-5" />
+      </button>
+    </Transition>
   </div>
 </template>
