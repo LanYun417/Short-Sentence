@@ -21,4 +21,10 @@ export class LibraryController {
   review(@CurrentClientUser() user: ClientUserContext, @Query() query: Record<string, unknown>) {
     return this.questions.listReview(user.userId, query);
   }
+
+  /** 学习记录（全量历史：全部/错题/对题 + 难度/场景/时间范围筛选）。 */
+  @Get('history')
+  history(@CurrentClientUser() user: ClientUserContext, @Query() query: Record<string, unknown>) {
+    return this.questions.listHistory(user.userId, query);
+  }
 }

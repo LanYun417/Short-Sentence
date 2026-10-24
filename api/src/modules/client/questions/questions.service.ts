@@ -14,7 +14,7 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
+import { buildPageResult, parsePagination, readNumber } from '../../../common/utils/utils.js';
 import type { PageResult } from '../../../common/types.js';
 import { CheckinService } from '../checkin/checkin.service.js';
 import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
@@ -83,6 +83,10 @@ export interface SentenceLibraryItem {
   reviewLevel?: number;
   /** 复习池专用：下次复习时间 */
   nextReviewAt: Date | null;
+  /** 历史记录专用：本次作答是否正确（仅 listHistory 返回） */
+  isCorrect?: boolean;
+  /** 历史记录专用：用户本次的实际作答（答错时回显；仅 listHistory 返回） */
+  userAnswer?: string | null;
 }
 
 /**
@@ -473,6 +477,109 @@ export class QuestionsService {
         difficulty: sentence.difficulty,
         createdAt: row.createdAt,
         reviewLevel: row.reviewLevel,
+        nextReviewAt: row.nextReviewAt,
+      });
+    }
+    return buildPageResult(list, total, page, pageSize);
+  }
+
+  /**
+   * 学习记录（全量历史，分页 + 多维度筛选）。
+   *
+   * 与 listReview（仅「答错且到期」的复习池）不同，这里返回**用户答过的每一条记录**，
+   * 不做 isCorrect / nextReviewAt 的限制，因此可以看到所有过往作答（含已掌握的）。
+   *
+   * 筛选维度：
+   * - `type`：all 全部 / wrong 仅错题(isCorrect=0) / right 仅对题(isCorrect=1)
+   * - `difficulty`：句子难度（1/2/3）
+   * - `categoryId`：场景分类
+   * - `from` / `to`：作答时间范围（按 UTC 自然日边界；to 含当天 23:59:59.999）
+   * 排序：最近作答时间倒序。
+   *
+   * 已软删除 / 不存在的句子（sentence 为 null）会被跳过，不计入总数。
+   */
+  async listHistory(userId: number, query: Record<string, unknown>): Promise<PageResult<SentenceLibraryItem>> {
+    const { page, pageSize, offset, limit } = parsePagination(query);
+    const typeFilter = typeof query.type === 'string' ? query.type : 'all';
+    const difficulty = readNumber(query.difficulty);
+    const categoryId = readNumber(query.categoryId);
+    const from = typeof query.from === 'string' && query.from ? query.from : undefined;
+    const to = typeof query.to === 'string' && query.to ? query.to : undefined;
+
+    const sentenceWhere: Record<string, unknown> = {};
+    if (difficulty) {
+      sentenceWhere.difficulty = difficulty;
+    }
+    if (categoryId) {
+      sentenceWhere.categoryId = BigInt(categoryId);
+    }
+
+    const where: Record<string, unknown> = { userId: BigInt(userId) };
+    if (Object.keys(sentenceWhere).length > 0) {
+      where.sentence = sentenceWhere;
+    }
+    if (typeFilter === 'wrong') {
+      where.isCorrect = 0;
+    } else if (typeFilter === 'right') {
+      where.isCorrect = 1;
+    }
+    const dateWhere: Record<string, unknown> = {};
+    if (from) {
+      dateWhere.gte = new Date(`${from}T00:00:00.000Z`);
+    }
+    if (to) {
+      dateWhere.lte = new Date(`${to}T23:59:59.999Z`);
+    }
+    if (Object.keys(dateWhere).length > 0) {
+      where.createdAt = dateWhere;
+    }
+
+    const [rows, total] = await Promise.all([
+      this.prisma.sentenceRecord.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        select: {
+          id: true,
+          createdAt: true,
+          isCorrect: true,
+          userAnswer: true,
+          reviewLevel: true,
+          nextReviewAt: true,
+          sentence: {
+            select: {
+              id: true,
+              sentenceEn: true,
+              translationZh: true,
+              ipa: true,
+              imageFileId: true,
+              difficulty: true,
+              category: { select: { name: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.sentenceRecord.count({ where }),
+    ]);
+
+    const list: SentenceLibraryItem[] = [];
+    for (const row of rows) {
+      const sentence = row.sentence;
+      if (!sentence) {
+        continue;
+      }
+      list.push({
+        sentenceId: Number(sentence.id),
+        sentenceEn: sentence.sentenceEn,
+        translationZh: sentence.translationZh,
+        ipa: sentence.ipa,
+        imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
+        categoryName: sentence.category?.name ?? null,
+        difficulty: sentence.difficulty,
+        createdAt: row.createdAt,
+        isCorrect: row.isCorrect === 1,
+        userAnswer: row.userAnswer,
         nextReviewAt: row.nextReviewAt,
       });
     }
