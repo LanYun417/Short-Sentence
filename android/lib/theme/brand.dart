@@ -14,6 +14,7 @@ class HeroStage {
     required this.via,
     required this.to,
     required this.shadow,
+    this.onColor = Colors.white,
   });
 
   final Color from;
@@ -22,6 +23,12 @@ class HeroStage {
 
   /// 阴影色（带透明度，直接用于 BoxShadow）。
   final Color shadow;
+
+  /// 前景色（文字/图标）。
+  ///
+  /// 达标档是亮金色，白字对比度只有 1.7:1，几乎看不清；
+  /// 换成深棕后既保住金色底，文字也读得出来。
+  final Color onColor;
 
   LinearGradient get gradient => LinearGradient(
         colors: <Color>[from, via, to],
@@ -69,6 +76,7 @@ const Map<HeroStageKey, HeroStage> kHeroStages = <HeroStageKey, HeroStage>{
     via: Color(0xFFF59E0B),
     to: Color(0xFFF97316),
     shadow: Color(0x59F97316),
+    onColor: Color(0xFF4A2400),
   ),
 };
 

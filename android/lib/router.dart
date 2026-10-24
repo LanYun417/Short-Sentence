@@ -4,16 +4,15 @@
 /// `middleware/auth.ts`）：未登录访问首页 → 回登录页；
 /// 已登录访问登录页 → 回首页。
 ///
-/// 令牌判断直接读 Riverpod 的登录态（首屏 already 由
-/// `authController.initialize()` 从安全存储恢复完成，见 [redirect] 注释）。
+/// 首页是 [ShellPage]（四个 Tab），不再有单独的 `/quiz` 路由：
+/// 刷题是 Tab 之一，用路由栈再压一层会让「返回」行为变得费解。
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'pages/home_page.dart';
 import 'pages/login_page.dart';
-import 'pages/quiz_page.dart';
+import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
 import 'state/auth_controller.dart';
 
@@ -41,8 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/', builder: (context, state) => const HomePage()),
-      GoRoute(path: '/quiz', builder: (context, state) => const QuizPage()),
+      GoRoute(path: '/', builder: (context, state) => const ShellPage()),
     ],
   );
 });

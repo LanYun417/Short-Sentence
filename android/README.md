@@ -1,11 +1,12 @@
 # android —「短句」Flutter App
 
 「短句」App 的移动端（Android / iOS）工程，基于 Flutter。
+接口与 Web 端（`client/`）**同源同契约**，视觉与交互按移动端重做（设计语言见
+[`docs/android-app-规范.md`](../docs/android-app-规范.md)）。
 
-> **当前状态：基础设施已搭好，业务开发进行中。**
-> 已完成：技术栈定选、网络层（Dio + 401 单飞刷新）、令牌安全存储、
-> 认证闭环（登录/注册 + **图形验证码**）、路由与品牌主题、静态检查与单测。
-> 见下方「目录结构」。
+> **当前状态：主要功能已完成，可日常使用。**
+> 刷题（默写 / 拼词）、语句库（收藏 / 复习 / 历史）、成长（等级 / 成就 / 场景 / 句签）、
+> 我的（资料 / 改密 / 登出）、每日句签领取与回看、AI 拓展（流式造句 / 词根）、题目反馈。
 
 ## 技术栈
 
@@ -20,6 +21,9 @@
 | 配图缓存 | **cached_network_image**                                                      |
 | 最低版本 | Android API 24+（`flutter.minSdkVersion`，见 `android/app/build.gradle.kts`） |
 
+**零新增运行时依赖**：彩带、微光、数字滚动、按压反馈、等级环全部自绘
+（`CustomPainter` / `AnimationController`），没有为视觉效果引入第三方包。
+
 ## 目录结构
 
 ```
@@ -27,41 +31,54 @@ android/
 ├─ lib/
 │  ├─ main.dart              # 入口：ProviderScope + MaterialApp.router
 │  ├─ router.dart            # go_router 路由表 + 登录守卫
-│  ├─ theme.dart             # 品牌主题（sky→indigo→violet 渐变，亮/暗）
-│  ├─ config/app_config.dart # 接口基址（默认 10.0.2.2，见下）
+│  ├─ theme.dart             # 主题（品牌色 / 文字层级 / 组件默认样式 / 页面转场）
+│  ├─ theme/
+│  │  ├─ palette.dart        # 语义色板（画布/卡面/主次文/成功失败金），亮暗各一份
+│  │  ├─ motion.dart         # 动效令牌（时长/曲线/错峰/减弱动效降级）
+│  │  ├─ brand.dart          # 进度 Hero 五档配色（与 Web 端逐值一致）
+│  │  └─ icon_map.dart       # 后端图标名 → 本地图标
+│  ├─ config/app_config.dart # 接口基址（默认 10.0.2.2）
 │  ├─ api/
 │  │  ├─ dio_client.dart     # Dio + 自动 Bearer + 401 单飞刷新 + 重放
-│  │  ├─ api_exception.dart  # 错误归一（优先透传服务端中文 message）
-│  │  ├─ auth_api.dart       # 登录/注册/验证码/登出/我的资料
-│  │  └─ models/user.dart    # ClientUserProfile（与后端契约同构）
-│  ├─ state/
-│  │  ├─ auth_storage.dart   # 令牌安全存储（ss_ 前缀，与 Web 不共用）
-│  │  └─ auth_controller.dart# 登录态/注册/登出/启动恢复
+│  │  ├─ auth_api.dart       # 登录/注册/验证码/资料/改密/登出/静态资源 URL
+│  │  ├─ questions_api.dart  # 抽题/判分/收藏
+│  │  ├─ library_api.dart    # 收藏夹/复习池/历史/打卡/成长/句签/反馈
+│  │  ├─ ai_api.dart         # 流式 SSE（造句 / 词根）与额度
+│  │  ├─ ai_result.dart      # 流式 JSON 的宽容解析
+│  │  └─ models/             # 与后端逐字段同构的模型
+│  ├─ state/                 # Riverpod 控制器（认证/刷题/语句库/成长/句签/打卡）
 │  ├─ pages/
-│  │  ├─ splash_page.dart    # 启动恢复（避免先进首页再被弹回登录页）
-│  │  ├─ login_page.dart     # 登录/注册（含验证码）
-│  │  └─ home_page.dart      # 落地页 + 接口连通性自检
-│  └─ widgets/
-│     ├─ brand_header.dart   # Logo + 渐变字标
-│     └─ captcha_field.dart  # 验证码输入（图片即刷新按钮）
-├─ test/                 # Dart 单元 / Widget 测试
-├─ android/              # Android 原生工程（Gradle Kotlin DSL）
-│  ├─ app/
-│  └─ gradle/wrapper/
-├─ assets/brand/logo.png  # 品牌标（由 client/public/favicon.svg 渲染，源改了要重跑生成）
-├─ pubspec.yaml          # 依赖与资源声明
-├─ analysis_options.yaml # 静态检查配置（启用 flutter_lints）
-└─ .metadata             # Flutter 工具链版本锁定
+│  │  ├─ shell_page.dart     # 四 Tab 外壳（交叉淡入 + 悬浮底栏）
+│  │  ├─ quiz_page.dart      # 刷题（进度 Hero / 翻卡 / 拼词 / 经验 / 达标庆祝）
+│  │  ├─ library_page.dart   # 语句库（收藏 / 复习 / 历史）
+│  │  ├─ growth_page.dart    # 成长（等级环 / 成就 / 场景 / 句签墙）
+│  │  ├─ profile_page.dart   # 我的（身份卡 / 资料 / 改密 / 退出）
+│  │  ├─ login_page.dart     # 登录 / 注册（含验证码）
+│  │  └─ splash_page.dart    # 启动恢复
+│  ├─ sheets/                # 底部弹窗（句签海报 / 领取 / AI / 反馈 / 资料 / 改密 / 句子详情）
+│  └─ widgets/               # 通用件（卡片/分段控件/词块/骨架/彩带/极光/按压…）
+├─ test/                     # 单元 / Widget 测试
+├─ android/                  # Android 原生工程（Gradle Kotlin DSL）
+├─ assets/brand/logo.png     # 品牌标（由 client/public/favicon.svg 渲染）
+└─ pubspec.yaml
 ```
+
+## 页面与交互要点
+
+| 页面   | 关键交互                                                                                           |
+| ------ | -------------------------------------------------------------------------------------------------- |
+| 刷题   | 看中文 → 默写或拼词 → 提交翻卡 → 上一题结果与经验；达标弹彩带并可领句签；卡片背面可 AI 拓展 / 反馈 |
+| 语句库 | 三段切换（收藏 / 复习 / 历史），下拉刷新、触底加载、左滑取消收藏（可撤销）、点开详情               |
+| 成长   | 等级环与 XP、连续打卡、成就墙（解锁 / 未解锁）、场景地图、句签墙                                   |
+| 我的   | 身份卡（渐变或句签背景）、三项统计、编辑资料、修改密码、关于、退出登录                             |
 
 ## 与后端的关系
 
 - 接口基址与 `client/`（Nuxt 用户端）**同源**，复用同一套后端接口：
-  - 认证：`POST /api/client/auth/login` → 拿 `accessToken`（`tokenType=client`）
-  - 刷题：`GET /api/client/questions/next`
-  - 其余接口见 `docs/client-nuxt-规范.md`
+  - 认证：`POST /api/client/auth/login` → `accessToken`（`tokenType=client`）
+  - 刷题：`GET /api/client/questions/next`、`POST /api/client/questions/:id/answer`
+  - 其余见 `docs/client-nuxt-规范.md` 与后端 `src/modules/client/**`
 - 令牌存储 key 前缀 `ss_`，与 Web 端同构但**不共用**（不同端的登录态相互独立）。
-- 后端契约以 `api/` 为准；本端不新增后端接口时，接口层应与 `client/` 保持字段同构。
 
 ## 本地开发
 
@@ -87,6 +104,9 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
 > 已在 `android/app/src/main/res/xml/network_security_config.xml`
 > 对 `10.0.2.2` / `localhost` / 私网段放行（**仅此配置，release 不放行**）。
 
+> 💡 **看动效与截图建议用 `--release`**：debug 包在模拟器上首帧会掉 100+ 帧，
+> 容易被系统判 ANR，也不代表真实流畅度。`flutter run --release` 走 AOT，接近真机。
+
 静态检查与测试：
 
 ```bash
@@ -94,8 +114,8 @@ flutter analyze      # 等价于 dart analyze，覆盖类型检查与 lint
 flutter test
 ```
 
-> 若本机 Flutter 版本与 `pubspec.yaml` 的 SDK 约束冲突，以 `flutter --version` 输出为准调整，
-> 或用 `fvm` 固定版本；CI 侧固定为 stable 3.47.6。
+> **Widget 测试必须把 `Motion.loopAnimations` 置为 false**（见 `quiz_page_test.dart`）：
+> 极光与骨架微光是无限循环动画，会让 `pumpAndSettle` 永远等不到静止。
 
 ## 构建
 
@@ -105,10 +125,12 @@ flutter build appbundle --release  # 上架 Google Play 用 AAB
 flutter build ipa --release        # iOS（需 macOS + Xcode）
 ```
 
-签名配置不入库：`android/key.properties` 与 `*.jks` 均已在 `.gitignore` 中排除。
+签名配置不入库：`android/key.properties` 与 `*.jks` 均已在 `.gitignore` 中排除；
+当前 release 仍复用 debug 签名（模板默认），正式发版前需替换。
 
 ## 相关文档
 
-- `docs/client-nuxt-规范.md` —— Web 端规范，业务交互（刷题卡、答案判定、打卡海报）与本端保持一致
+- `docs/android-app-规范.md` —— 设计语言、动效规范、交付范围与验收标准
+- `docs/client-nuxt-规范.md` —— Web 端规范，业务交互（抽题、判分、句签）与本端一致
 - `docs/api-nestjs-规范.md` —— 后端接口契约与双鉴权体系（`tokenType=client`）
 - `docs/git-提交规范.md` —— 提交规范，`scope` 使用 `android`

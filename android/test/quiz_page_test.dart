@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:short_sentence/api/models/question.dart';
 import 'package:short_sentence/pages/quiz_page.dart';
 import 'package:short_sentence/state/quiz_controller.dart';
+import 'package:short_sentence/theme/motion.dart';
 
 Question _question() => Question.fromJson(const <String, dynamic>{
       'sentenceId': 1117,
@@ -56,6 +57,11 @@ Future<ProviderContainer> _pump(WidgetTester tester, QuizState state) async {
 }
 
 void main() {
+  // 页面里的极光/微光是无限循环动画，会让 pumpAndSettle 永远等不到静止；
+  // 测试里统一关掉（生产默认开启，见 Motion.loopAnimations 注释）。
+  setUp(() => Motion.loopAnimations = false);
+  tearDown(() => Motion.loopAnimations = true);
+
   testWidgets('未提交答案时渲染正面，不解引用 null 的 result', (tester) async {
     await _pump(
       tester,
@@ -97,7 +103,7 @@ void main() {
     expect(find.text('I will call you as soon as I arrive.'), findsOneWidget);
     expect(find.text('下一题'), findsOneWidget);
     // 收藏是星形图标（对齐 Web 端 favPop 设计），不是文字按钮
-    expect(find.byIcon(Icons.star_border), findsOneWidget);
+    expect(find.byIcon(Icons.star_border_rounded), findsOneWidget);
     expect(find.text('这些说法也算对'), findsNothing); // 本题无等价表达
   });
 

@@ -138,6 +138,50 @@ class AuthApi {
     }
   }
 
+  /// 修改资料（昵称 / 生日 / 性别 / 签名）。
+  ///
+  /// 只传要改的字段：后端按「未传即不更新」处理，
+  /// 全量提交会把并发修改（例如另一端改了昵称）覆盖掉。
+  Future<UserProfile> updateProfile({
+    String? nickname,
+    String? birthday,
+    String? gender,
+    String? signature,
+  }) async {
+    try {
+      final response = await _dio.put<dynamic>(
+        '/client/auth/me',
+        data: <String, dynamic>{
+          if (nickname != null) 'nickname': nickname.trim(),
+          'birthday': ?birthday,
+          'gender': ?gender,
+          if (signature != null) 'signature': signature.trim(),
+        },
+      );
+      return UserProfile.fromJson(_unwrap(response));
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
+  /// 修改密码（成功后服务端会吊销旧令牌，需重新登录）。
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.put<dynamic>(
+        '/client/auth/password',
+        data: <String, dynamic>{
+          'oldPassword': oldPassword,
+          'newPassword': newPassword,
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
   /// 退出登录。
   Future<void> logout() async {
     try {

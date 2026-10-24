@@ -155,6 +155,44 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState(initialized: true);
   }
 
+  /// 修改资料：成功返回 null，失败返回可展示的错误文案。
+  ///
+  /// 成功后**立刻回写本地缓存**：下次冷启动时 `initialize()` 先用缓存渲染，
+  /// 不回写会短暂显示旧昵称/旧头像。
+  Future<String?> updateProfile({
+    String? nickname,
+    String? birthday,
+    String? gender,
+    String? signature,
+  }) async {
+    try {
+      final profile = await _api.updateProfile(
+        nickname: nickname,
+        birthday: birthday,
+        gender: gender,
+        signature: signature,
+      );
+      await _storage.writeUser(encodeProfile(profile));
+      state = state.copyWith(user: profile);
+      return null;
+    } catch (error) {
+      return _message(error);
+    }
+  }
+
+  /// 修改密码：成功返回 null，失败返回可展示的错误文案。
+  Future<String?> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _api.changePassword(oldPassword: oldPassword, newPassword: newPassword);
+      return null;
+    } catch (error) {
+      return _message(error);
+    }
+  }
+
   /// 令牌被后端判失效时由 Dio 回调触发：静默清理并回到未登录态。
   void handleUnauthorized() {
     // 不清 initialized：App 已在运行中，直接回登录页即可

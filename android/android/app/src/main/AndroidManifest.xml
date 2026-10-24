@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- release 构建不会继承 debug/profile 清单里的联网权限：
+         漏了这一行，打包出来的正式版所有接口都会失败（表现为「格式异常」）。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="短句"
         android:name="${applicationName}"

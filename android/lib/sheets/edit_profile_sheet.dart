@@ -1,0 +1,309 @@
+/// 编辑资料弹窗：昵称 / 性别 / 生日 / 签名。
+///
+/// 生日用三个下拉而不是 `showDatePicker`：后者在本工程未接本地化代理时
+/// 会显示英文月份（`October`），在一个全中文的界面里很突兀；
+/// 自己拼三个下拉既保持中文，也不用为此引入 `flutter_localizations` 与 `intl`。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../api/models/user.dart';
+import '../state/auth_controller.dart';
+import '../theme/palette.dart';
+import '../widgets/segmented.dart';
+
+/// 打开编辑资料弹窗。
+Future<void> showEditProfileSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => const _EditProfileSheet(),
+  );
+}
+
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet();
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  late final UserProfile? _user = ref.read(authControllerProvider).user;
+  late final TextEditingController _nickname =
+      TextEditingController(text: _user?.nickname ?? '');
+  late final TextEditingController _signature =
+      TextEditingController(text: _user?.signature ?? '');
+
+  late String _gender = _user?.gender ?? 'secret';
+  late int? _year;
+  late int? _month;
+  late int? _day;
+
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final birthday = _user?.birthday;
+    if (birthday != null && birthday.length >= 10) {
+      final parts = birthday.split('-');
+      if (parts.length == 3) {
+        _year = int.tryParse(parts[0]);
+        _month = int.tryParse(parts[1]);
+        _day = int.tryParse(parts[2]);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nickname.dispose();
+    _signature.dispose();
+    super.dispose();
+  }
+
+  int get _daysInMonth {
+    if (_year == null || _month == null) {
+      return 31;
+    }
+    return DateTime(_year!, _month! + 1, 0).day;
+  }
+
+  Future<void> _save() async {
+    if (_saving) {
+      return;
+    }
+    final nickname = _nickname.text.trim();
+    if (nickname.isEmpty) {
+      setState(() => _error = '昵称不能为空');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    String? birthday;
+    if (_year != null && _month != null && _day != null) {
+      final month = _month!.toString().padLeft(2, '0');
+      final day = _day!.clamp(1, _daysInMonth).toString().padLeft(2, '0');
+      birthday = '$_year-$month-$day';
+    }
+
+    final error = await ref.read(authControllerProvider.notifier).updateProfile(
+          nickname: nickname,
+          gender: _gender,
+          signature: _signature.text.trim(),
+          // 未选全就不提交生日：后端「未传即不更新」，传半个日期只会得到 400
+          birthday: birthday,
+        );
+    if (!mounted) {
+      return;
+    }
+    if (error != null) {
+      setState(() {
+        _saving = false;
+        _error = error;
+      });
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final years = <int>[for (var y = DateTime.now().year - 6; y >= 1940; y--) y];
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text('编辑资料', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                '资料只用于你自己的首页展示',
+                style: theme.textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+              ),
+              const SizedBox(height: 20),
+              _Label(text: '昵称'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nickname,
+                maxLength: 20,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: '给自己起个名字',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 18),
+              _Label(text: '性别'),
+              const SizedBox(height: 8),
+              SegmentedControl<String>(
+                value: _gender,
+                height: 40,
+                onChanged: (value) => setState(() => _gender = value),
+                segments: const <Segment<String>>[
+                  Segment<String>(value: 'male', label: '男'),
+                  Segment<String>(value: 'female', label: '女'),
+                  Segment<String>(value: 'secret', label: '保密'),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _Label(text: '生日'),
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 4,
+                    child: _Dropdown<int>(
+                      value: _year,
+                      hint: '年',
+                      items: years,
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() {
+                        _year = value;
+                        _day = _day?.clamp(1, _daysInMonth);
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: _Dropdown<int>(
+                      value: _month,
+                      hint: '月',
+                      items: List<int>.generate(12, (index) => index + 1),
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() {
+                        _month = value;
+                        _day = _day?.clamp(1, _daysInMonth);
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: _Dropdown<int>(
+                      value: _day,
+                      hint: '日',
+                      items: List<int>.generate(_daysInMonth, (index) => index + 1),
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() => _day = value),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _Label(text: '个性签名'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _signature,
+                maxLength: 60,
+                maxLines: 3,
+                minLines: 2,
+                decoration: const InputDecoration(
+                  hintText: '写一句想对自己说的话',
+                ),
+              ),
+              if (_error != null) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(
+                  _error!,
+                  style: TextStyle(color: colors.danger, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('保存'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Label extends StatelessWidget {
+  const _Label({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: context.colors.inkSoft,
+          ),
+    );
+  }
+}
+
+/// 表单下拉（去掉下划线与多余内边距，观感与输入框一致）。
+class _Dropdown<T> extends StatelessWidget {
+  const _Dropdown({
+    required this.value,
+    required this.hint,
+    required this.items,
+    required this.labelOf,
+    required this.onChanged,
+  });
+
+  final T? value;
+  final String hint;
+  final List<T> items;
+  final String Function(T value) labelOf;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: colors.cardMuted,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.line),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          borderRadius: BorderRadius.circular(16),
+          hint: Text(hint, style: TextStyle(fontSize: 14, color: colors.inkFaint)),
+          icon: Icon(Icons.expand_more_rounded, size: 18, color: colors.inkFaint),
+          style: TextStyle(fontSize: 14, color: colors.ink, fontWeight: FontWeight.w600),
+          items: <DropdownMenuItem<T>>[
+            for (final item in items)
+              DropdownMenuItem<T>(
+                value: item,
+                child: Text(labelOf(item)),
+              ),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}

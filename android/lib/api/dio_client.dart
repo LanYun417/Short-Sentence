@@ -78,15 +78,25 @@ Dio createDio(AuthStorage storage) {
       onError: (error, handler) async {
         final response = error.response;
 
-        // 1) 网络层错误：归一为带中文 message 的响应体，
-        //    调用方解析时统一走 ApiException.fromResponse
+        // 1) 网络层错误：归一成带中文 message 的响应体后**仍然 reject**。
+        //    曾经这里用 resolve 伪装成成功响应，调用方的 _unwrap 找不到 data，
+        //    于是断网/超时全被报成「服务端返回格式异常」——完全误导排查方向。
         if (response == null) {
-          return handler.resolve(
-            Response(requestOptions: error.requestOptions, statusCode: -1)
-              ..data = <String, dynamic>{
-                'code': -1,
-                'message': ApiException.network(error.error).message,
-              },
+          final normalized = Response<dynamic>(
+            requestOptions: error.requestOptions,
+            statusCode: -1,
+            data: <String, dynamic>{
+              'code': -1,
+              'message': ApiException.network(error.error).message,
+            },
+          );
+          return handler.reject(
+            DioException(
+              requestOptions: error.requestOptions,
+              response: normalized,
+              type: error.type,
+              error: error.error,
+            ),
           );
         }
 

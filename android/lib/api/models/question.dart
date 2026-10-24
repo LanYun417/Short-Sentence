@@ -116,6 +116,9 @@ class AnswerResult {
     required this.favorited,
     required this.todayDone,
     required this.todayGoal,
+    this.xpEarned = 0,
+    this.goalBonus = 0,
+    this.newAchievements = const <AchievementUnlock>[],
   });
 
   final int sentenceId;
@@ -140,8 +143,39 @@ class AnswerResult {
   final int todayDone;
   final int todayGoal;
 
+  /// 本次作答获得的经验（重复提交命中幂等时为 0）。
+  final int xpEarned;
+
+  /// 本次恰好完成每日目标的额外奖励经验。
+  final int goalBonus;
+
+  /// 本次新解锁的成就。
+  final List<AchievementUnlock> newAchievements;
+
+  /// 本次总共该展示的经验（作答 + 目标奖励）。
+  int get totalXp => xpEarned + goalBonus;
+
+  AnswerResult copyWith({bool? favorited}) {
+    return AnswerResult(
+      sentenceId: sentenceId,
+      isCorrect: isCorrect,
+      sentenceEn: sentenceEn,
+      validAnswers: validAnswers,
+      translationZh: translationZh,
+      ipa: ipa,
+      imageUrl: imageUrl,
+      favorited: favorited ?? this.favorited,
+      todayDone: todayDone,
+      todayGoal: todayGoal,
+      xpEarned: xpEarned,
+      goalBonus: goalBonus,
+      newAchievements: newAchievements,
+    );
+  }
+
   factory AnswerResult.fromJson(Map<String, dynamic> json) {
     final valid = json['validAnswers'];
+    final unlocked = json['newAchievements'];
     return AnswerResult(
       sentenceId: (json['sentenceId'] as num?)?.toInt() ?? 0,
       isCorrect: json['isCorrect'] as bool? ?? false,
@@ -153,6 +187,29 @@ class AnswerResult {
       favorited: json['favorited'] as bool? ?? false,
       todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,
       todayGoal: (json['todayGoal'] as num?)?.toInt() ?? 0,
+      xpEarned: (json['xpEarned'] as num?)?.toInt() ?? 0,
+      goalBonus: (json['goalBonus'] as num?)?.toInt() ?? 0,
+      newAchievements: unlocked is List
+          ? unlocked
+              .whereType<Map<String, dynamic>>()
+              .map(AchievementUnlock.fromJson)
+              .toList()
+          : const <AchievementUnlock>[],
+    );
+  }
+}
+
+/// 新解锁的成就。
+class AchievementUnlock {
+  const AchievementUnlock({required this.code, required this.name});
+
+  final String code;
+  final String name;
+
+  factory AchievementUnlock.fromJson(Map<String, dynamic> json) {
+    return AchievementUnlock(
+      code: json['code'] as String? ?? '',
+      name: json['name'] as String? ?? '',
     );
   }
 }

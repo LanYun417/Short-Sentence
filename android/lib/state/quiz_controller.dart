@@ -43,6 +43,7 @@ class QuizState {
     this.mode = AnswerMode.input,
     this.startedAt,
     this.loadingNext = false,
+    this.difficulty = 2,
   });
 
   /// 当前题目（null = 尚未抽到）
@@ -70,6 +71,9 @@ class QuizState {
   /// 本题开始时间（计时费用）
   final DateTime? startedAt;
 
+  /// 目标难度（1 易 / 2 中 / 3 难）。只作用于新题；复习题仍按间隔重复排期走。
+  final int difficulty;
+
   bool get isAnswered => phase == QuizPhase.answered;
 
   bool get isBusy => phase == QuizPhase.loading || phase == QuizPhase.submitting;
@@ -89,6 +93,7 @@ class QuizState {
     bool clearResult = false,
     bool clearQuestion = false,
     bool? loadingNext,
+    int? difficulty,
   }) {
     return QuizState(
       question: clearQuestion ? null : (question ?? this.question),
@@ -98,6 +103,10 @@ class QuizState {
       stats: stats ?? this.stats,
       mode: mode ?? this.mode,
       startedAt: startedAt ?? this.startedAt,
+      // 曾经漏掉这一行：loadingNext 永远回到 false，
+      // 于是「点下一题」时卡片会当着用户的面往回翻（见 quiz_page 注释）。
+      loadingNext: loadingNext ?? this.loadingNext,
+      difficulty: difficulty ?? this.difficulty,
     );
   }
 }
@@ -148,7 +157,7 @@ class QuizController extends Notifier<QuizState> {
     );
     try {
       final question = await _api.next(
-        NextQuestionQuery(difficulty: difficulty, mode: state.mode),
+        NextQuestionQuery(difficulty: difficulty ?? state.difficulty, mode: state.mode),
       );
       state = state.copyWith(
         question: question,
@@ -156,6 +165,7 @@ class QuizController extends Notifier<QuizState> {
         startedAt: DateTime.now(),
         clearError: true,
         clearResult: true,
+        loadingNext: false,
       );
     } catch (error) {
       // 必须清掉旧题：否则用户点「下一题」失败后，看到的还是上一张卡，
@@ -164,8 +174,19 @@ class QuizController extends Notifier<QuizState> {
         phase: QuizPhase.idle,
         error: _message(error),
         clearQuestion: true,
+        loadingNext: false,
       );
     }
+  }
+
+  /// 切换难度（立刻按新难度抽题；只影响新题）。
+  Future<void> setDifficulty(int value) async {
+    final next = value.clamp(1, 3);
+    if (state.difficulty == next) {
+      return;
+    }
+    state = state.copyWith(difficulty: next, clearResult: true, error: null);
+    await loadNext();
   }
 
   /// 提交答案（提交后服务端返回判分与完整答案）。
@@ -211,20 +232,7 @@ class QuizController extends Notifier<QuizState> {
     }
     try {
       final favorited = await _api.toggleFavorite(question.sentenceId);
-      state = state.copyWith(
-        result: AnswerResult(
-          sentenceId: result.sentenceId,
-          isCorrect: result.isCorrect,
-          sentenceEn: result.sentenceEn,
-          validAnswers: result.validAnswers,
-          translationZh: result.translationZh,
-          ipa: result.ipa,
-          imageUrl: result.imageUrl,
-          favorited: favorited,
-          todayDone: result.todayDone,
-          todayGoal: result.todayGoal,
-        ),
-      );
+      state = state.copyWith(result: result.copyWith(favorited: favorited));
     } catch (error) {
       state = state.copyWith(error: _message(error));
     }
