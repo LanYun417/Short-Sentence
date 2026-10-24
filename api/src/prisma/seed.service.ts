@@ -740,6 +740,13 @@ const MENU_TREE: MenuSeedNode[] = [
             permission: 'client:user:offline',
             sort: 4,
           },
+          {
+            key: 'client:user:delete',
+            menuName: '删除用户',
+            menuType: MenuType.BUTTON,
+            permission: 'client:user:delete',
+            sort: 5,
+          },
         ],
       },
       {

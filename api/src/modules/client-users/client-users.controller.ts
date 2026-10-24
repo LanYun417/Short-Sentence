@@ -2,24 +2,45 @@
  * 客户端用户管理控制器（/api/client-users）。
  * 权限口径：RBAC 权限码 client:user:*（超管直通）；写操作留痕。
  */
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { RequirePermissions } from '../../common/auth/permission.guard.js';
 import { OperationLog } from '../../common/log/operation-log.decorator.js';
 import { type ResponseEnvelope } from '../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import type { PageResult } from '../../common/types.js';
 import { ClientUsersService, type ClientUserDetail, type ClientUserItem } from './client-users.service.js';
-import { ClientUserQueryDto, ClientUserResetPasswordDto, ClientUserStatusDto } from './dto.js';
+import { ClientUserResetPasswordDto, ClientUserStatusDto } from './dto.js';
+import { GamifyService, type GamifyOverview } from '../client/gamify/gamify.service.js';
+import { SentenceCardService, type SentenceCardView } from '../client/sentence-card/sentence-card.service.js';
+
+/** 补发漏签结果。 */
+export interface BackfillSentenceCardsResult {
+  /** 本次实际补发的张数（已拥有的不计） */
+  granted: number;
+  /** 本次补发的业务日期（YYYY-MM-DD） */
+  bizDates: string[];
+}
 
 @Controller('client-users')
 export class ClientUsersController {
-  constructor(private readonly clientUsers: ClientUsersService) {}
+  constructor(
+    private readonly clientUsers: ClientUsersService,
+    private readonly gamify: GamifyService,
+    private readonly sentenceCard: SentenceCardService,
+  ) {}
 
-  /** 分页列表（关键词 / 状态 / 性别）。 */
+  /**
+   * 分页列表（关键词 / 状态 / 性别）。
+   *
+   * 查询参数用 `Record<string, unknown>` 而非 DTO：全局 ValidationPipe 开了 whitelist，
+   * DTO 里未声明的字段（page / pageSize）会被剥掉，导致分页参数丢失——翻页时永远回第 1 页
+   * （症状：列表里翻不到的人，一搜关键词却能搜到）。故与日志 / 任务模块保持一致，
+   * 筛选条件的解析全部放在 service 层。
+   */
   @Get()
   @RequirePermissions('client:user:list')
-  list(@Query() query: ClientUserQueryDto): Promise<PageResult<ClientUserItem>> {
-    return this.clientUsers.list(query as unknown as Record<string, unknown>);
+  list(@Query() query: Record<string, unknown>): Promise<PageResult<ClientUserItem>> {
+    return this.clientUsers.list(query);
   }
 
   /** 详情（含学习数据与最近答题）。 */
@@ -27,6 +48,33 @@ export class ClientUsersController {
   @RequirePermissions('client:user:query')
   detail(@Param() params: IdParamDto): Promise<ClientUserDetail> {
     return this.clientUsers.detail(params.id);
+  }
+
+  /** 成长概览（XP / 等级 / 成就 / 场景地图）——与客户端个人中心「成长」同源。 */
+  @Get(':id/growth')
+  @RequirePermissions('client:user:query')
+  async growth(@Param() params: IdParamDto): Promise<GamifyOverview> {
+    await this.clientUsers.ensureExists(params.id);
+    return this.gamify.overview(params.id);
+  }
+
+  /** 已获得的句签列表（按获得时间倒序）。 */
+  @Get(':id/sentence-cards')
+  @RequirePermissions('client:user:query')
+  async sentenceCards(@Param() params: IdParamDto): Promise<SentenceCardView[]> {
+    await this.clientUsers.ensureExists(params.id);
+    return this.sentenceCard.listMine(params.id);
+  }
+
+  /** 补发过往漏领的句签（历史达标日 + 当日句签已就绪；幂等，重复调用不重复发）。 */
+  @Post(':id/sentence-cards/backfill')
+  @RequirePermissions('client:user:edit')
+  @OperationLog('客户端用户', '补发句签')
+  async backfillSentenceCards(@Param() params: IdParamDto): Promise<ResponseEnvelope<BackfillSentenceCardsResult>> {
+    await this.clientUsers.ensureExists(params.id);
+    const result = await this.sentenceCard.backfillMissed(params.id);
+    const message = result.granted > 0 ? `已补发 ${result.granted} 张漏签句签` : '没有漏签的句签（该用户均已领取）';
+    return { __raw: true, data: result, message };
   }
 
   /** 启用 / 禁用。 */
@@ -57,5 +105,14 @@ export class ClientUsersController {
   async forceOffline(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
     await this.clientUsers.forceOffline(params.id);
     return { __raw: true, data: null, message: '已强制下线' };
+  }
+
+  /** 删除用户（级联清理学习数据；日志类表不动，保留审计痕迹）。 */
+  @Delete(':id')
+  @RequirePermissions('client:user:delete')
+  @OperationLog('客户端用户', '删除用户')
+  async remove(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
+    await this.clientUsers.remove(params.id);
+    return { __raw: true, data: null, message: '已删除' };
   }
 }

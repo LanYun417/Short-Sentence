@@ -164,6 +164,62 @@ export class SentenceCardService {
     return this.toView(card, grant.obtainedAt, imageUrl);
   }
 
+  /**
+   * 补发过往漏领的句签（运营后台用）。
+   *
+   * 「漏签」= 用户某天已完成每日目标（doneCount >= goalCount）却没能领到当天句签——
+   * 典型场景：当日句签生成失败 / 用户当天没打开 App / 达标后接口失败。
+   * 规则：历史达标日 × 当天句签已就绪 − 已拥有 = 本次补发范围。
+   *
+   * 幂等：先按 (userId, sentenceCardId) 过滤掉已拥有的，再 createMany + skipDuplicates
+   * 双保险（唯一键兜底并发），重复调用不会重复发、也不会多发。
+   */
+  async backfillMissed(userId: number): Promise<{ granted: number; bizDates: string[] }> {
+    const uid = BigInt(userId);
+    // 1) 用户所有「已达标」的打卡日期
+    const checkins = await this.prisma.userCheckin.findMany({
+      where: { userId: uid },
+      select: { checkinDate: true, doneCount: true, goalCount: true },
+    });
+    const qualifiedDates = checkins
+      .filter((row) => row.goalCount > 0 && row.doneCount >= row.goalCount)
+      .map((row) => row.checkinDate);
+    if (qualifiedDates.length === 0) {
+      return { granted: 0, bizDates: [] };
+    }
+
+    // 2) 这些日期里已就绪的句签
+    const cards = await this.prisma.dailySentenceCard.findMany({
+      where: { bizDate: { in: qualifiedDates }, status: 'ready' },
+      select: { id: true, bizDate: true },
+      orderBy: { bizDate: 'asc' },
+    });
+    if (cards.length === 0) {
+      return { granted: 0, bizDates: [] };
+    }
+
+    // 3) 扣掉已拥有的
+    const owned = await this.prisma.userSentenceCard.findMany({
+      where: { userId: uid, sentenceCardId: { in: cards.map((card) => card.id) } },
+      select: { sentenceCardId: true },
+    });
+    const ownedIds = new Set(owned.map((row) => String(row.sentenceCardId)));
+    const missing = cards.filter((card) => !ownedIds.has(String(card.id)));
+    if (missing.length === 0) {
+      return { granted: 0, bizDates: [] };
+    }
+
+    // 4) 补发（skipDuplicates 在 MySQL/MariaDB 下由 INSERT IGNORE 兜底）
+    await this.prisma.userSentenceCard.createMany({
+      data: missing.map((card) => ({ userId: uid, sentenceCardId: card.id })),
+      skipDuplicates: true,
+    });
+    this.logger.log(
+      `[SentenceCard] 用户 ${userId} 补发漏签 ${missing.length} 张：${missing.map((c) => c.bizDate).join(', ')}`,
+    );
+    return { granted: missing.length, bizDates: missing.map((card) => card.bizDate) };
+  }
+
   /** 我的句签列表（按获得时间倒序）。 */
   async listMine(userId: number): Promise<SentenceCardView[]> {
     const rows = await this.prisma.userSentenceCard.findMany({

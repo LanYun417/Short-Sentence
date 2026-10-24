@@ -1,6 +1,6 @@
 /**
  * 客户端用户管理服务（运营后台）。
- * 模块职责：分页查询 / 详情（含学习数据）/ 启停 / 重置密码 / 强制下线。
+ * 模块职责：分页查询 / 详情（含学习数据）/ 启停 / 重置密码 / 强制下线 / 删除（级联清理）。
  *
  * 与系统用户（sys_user）完全隔离：这里操作的是 client_user（「短句」App 用户）。
  * 强制下线利用「改密后旧 Token 失效」的既有机制：只把 passwordChangedAt 推到当前时刻，
@@ -227,6 +227,29 @@ export class ClientUsersService {
     });
   }
 
+  /**
+   * 删除用户（级联清理学习数据）。
+   *
+   * 只删 client_user 自身拥有的业务表：答题 / 收藏 / 举报 / 打卡 / 句签 / 经验账本 / 成就。
+   * **不动日志表**（login_log / http_log / operation_log / ai_call_log）：其 user_id 列与
+   * 系统用户共用（同一列两种身份），且日志属审计痕迹——删用户不应抹掉历史操作记录。
+   * 全部放在一个事务里，避免删到一半失败留下「半残用户」。
+   */
+  async remove(id: number): Promise<void> {
+    await this.ensureExists(id);
+    const userId = BigInt(id);
+    await this.prisma.$transaction([
+      this.prisma.sentenceRecord.deleteMany({ where: { userId } }),
+      this.prisma.sentenceFavorite.deleteMany({ where: { userId } }),
+      this.prisma.sentenceReport.deleteMany({ where: { userId } }),
+      this.prisma.userCheckin.deleteMany({ where: { userId } }),
+      this.prisma.userSentenceCard.deleteMany({ where: { userId } }),
+      this.prisma.clientXpLog.deleteMany({ where: { userId } }),
+      this.prisma.userAchievement.deleteMany({ where: { userId } }),
+      this.prisma.clientUser.delete({ where: { id: userId } }),
+    ]);
+  }
+
   /** 批量统计（一次查询取齐，避免 N+1）。 */
   private async batchStats(
     ids: number[],
@@ -308,8 +331,8 @@ export class ClientUsersService {
     return file?.fileUrl ?? null;
   }
 
-  /** 存在性校验（返回基础字段）。 */
-  private async ensureExists(id: number): Promise<{ email: string }> {
+  /** 存在性校验（返回基础字段）。公开给 controller 做成长 / 句签等接口的前置校验。 */
+  async ensureExists(id: number): Promise<{ email: string }> {
     const row = await this.prisma.clientUser.findUnique({
       where: { id: BigInt(id) },
       select: { email: true },

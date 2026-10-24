@@ -2,29 +2,7 @@
  * 客户端用户管理 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
-
-/** 列表查询。 */
-export class ClientUserQueryDto {
-  /** 关键词（邮箱 / 昵称） */
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  keyword?: string;
-
-  /** 状态：1 启用 / 0 禁用 */
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @IsIn([0, 1], { message: '状态只能是 0 或 1' })
-  status?: number;
-
-  /** 性别：male / female / secret */
-  @IsOptional()
-  @IsString()
-  @MaxLength(10)
-  gender?: string;
-}
+import { IsIn, IsInt, IsString, Min, Max } from 'class-validator';
 
 /** 设置状态。 */
 export class ClientUserStatusDto {
