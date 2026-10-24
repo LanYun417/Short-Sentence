@@ -53,23 +53,30 @@ class CaptchaField extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // 图片即刷新按钮；固定尺寸避免键盘弹出时布局跳动
+        // 图片即刷新按钮。
+        //
+        // 尺寸按后端原图比例（120×40 = 3:1）给，**不要写死高度**：
+        // 后端 `CaptchaService.buildSvg` 生成的就是 120×40，容器一旦比它「高」，
+        // BoxFit.cover 会按短边缩放并把长边裁掉——字符被切头去尾，
+        // 用户自然输不对（曾经的 bug：容器 116×52 把图上下各裁了一截）。
         SizedBox(
-          width: 116,
-          height: 52,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onRefresh,
-                child: Image.memory(
-                  _decodeBase64(image),
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  errorBuilder: (context, error, stack) => const ColoredBox(
-                    color: Color(0xFFE2E8F0),
-                    child: Center(child: Icon(Icons.refresh, size: 20)),
+          width: 120,
+          child: AspectRatio(
+            aspectRatio: 3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onRefresh,
+                  child: Image.memory(
+                    _decodeBase64(image),
+                    fit: BoxFit.fill,
+                    gaplessPlayback: true,
+                    errorBuilder: (context, error, stack) => const ColoredBox(
+                      color: Color(0xFFE2E8F0),
+                      child: Center(child: Icon(Icons.refresh, size: 20)),
+                    ),
                   ),
                 ),
               ),

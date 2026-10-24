@@ -8,8 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../state/auth_controller.dart';
 import '../theme.dart';
+
+import '../state/auth_controller.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -42,14 +43,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: brandGradient,
-                borderRadius: BorderRadius.circular(18),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/brand/logo.png',
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 32),
             ),
             const SizedBox(height: 20),
             ShaderMask(

@@ -41,7 +41,7 @@ class QuestionsApi {
   Future<Question> next([NextQuestionQuery query = const NextQuestionQuery()]) async {
     try {
       final response = await _dio.get<dynamic>(
-        '/questions/next',
+        '/client/questions/next',
         queryParameters: query.toQuery(),
       );
       return Question.fromJson(_data(response));
@@ -61,7 +61,7 @@ class QuestionsApi {
   }) async {
     try {
       final response = await _dio.post<dynamic>(
-        '/questions/$sentenceId/answer',
+        '/client/questions/$sentenceId/answer',
         data: <String, dynamic>{
           'userAnswer': userAnswer,
           // 这里不用 `if (?elapsedMs)`（null-aware 元素）：该语法要求 Dart 3.9+，
@@ -81,7 +81,7 @@ class QuestionsApi {
   /// 收藏 / 取消收藏（服务端是同一个 toggle 接口）。
   Future<bool> toggleFavorite(int sentenceId) async {
     try {
-      final response = await _dio.post<dynamic>('/questions/$sentenceId/favorite');
+      final response = await _dio.post<dynamic>('/client/questions/$sentenceId/favorite');
       final data = _data(response);
       return data['favorited'] as bool? ?? false;
     } on DioException catch (error) {

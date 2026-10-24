@@ -42,10 +42,10 @@ final dioProvider = Provider<Dio>((ref) {
 
 /// 无需鉴权的公开接口（登录 / 注册 / 刷新 / 验证码）。
 const Set<String> _publicPaths = <String>{
-  '/auth/login',
-  '/auth/register',
-  '/auth/refresh',
-  '/auth/captcha',
+  '/client/auth/login',
+  '/client/auth/register',
+  '/client/auth/refresh',
+  '/client/auth/captcha',
 };
 
 /// 单飞：保证并发 401 只触发一次刷新。
@@ -116,7 +116,7 @@ Dio createDio(AuthStorage storage) {
 }
 
 /// 是否正在调刷新接口（避免刷新本身的 401 又触发刷新 → 死循环）。
-bool _isRefreshCall(String path) => path.contains('/auth/refresh');
+bool _isRefreshCall(String path) => path.contains('/client/auth/refresh');
 
 /// 单飞刷新：并发调用共享同一个 Future。
 Future<String?> _refreshOnce(AuthStorage storage) {
@@ -134,7 +134,7 @@ Future<String?> _doRefresh(AuthStorage storage) async {
     // 用裸 Dio：避免刷新请求再走进拦截器，也避免被并发 401 互相触发
     final dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
     final response = await dio.post<dynamic>(
-      '/auth/refresh',
+      '/client/auth/refresh',
       data: <String, dynamic>{'refreshToken': refreshToken},
     );
     final body = response.data;

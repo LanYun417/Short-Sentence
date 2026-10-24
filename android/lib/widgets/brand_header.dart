@@ -1,12 +1,16 @@
-/// 品牌头（Logo + 字标），登录/注册页共用。
+/// 品牌头（品牌标 + 字标），登录/注册页共用。
 ///
-/// 与 Web 端 `AuthShell.vue` 的做法一致：图标 + 渐变字标，
-/// 刻意不用 logo.svg（它的 viewBox 留白大，缩放后显小且不居中）。
+/// 图形用的是 `assets/brand/logo.png`——由 Web 端 `client/public/favicon.svg`
+/// 渲染而来（对话泡笑脸）。**不要**退回 Material 的通用图标
+/// （Icons.auto_awesome 之类）：与品牌无关，看着像没做完的占位符。
+///
+/// 与 Web 端 `AuthShell.vue` 的取向一致：图标 + 渐变字标，居中排布。
 library;
 
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+
 
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key});
@@ -15,21 +19,16 @@ class BrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: brandGradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: brandGradientMid.withValues(alpha: 0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        // 品牌标直接用 Web 端 favicon.svg 渲染出的 PNG（见 assets/brand/logo.png），
+        // 不再用 Material 的通用图标——那个 sparkles 与品牌无关，看着像占位符。
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset(
+            'assets/brand/logo.png',
+            width: 56,
+            height: 56,
+            fit: BoxFit.cover,
           ),
-          child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
         ),
         const SizedBox(height: 12),
         ShaderMask(

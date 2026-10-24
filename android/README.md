@@ -48,6 +48,7 @@ android/
 ├─ android/              # Android 原生工程（Gradle Kotlin DSL）
 │  ├─ app/
 │  └─ gradle/wrapper/
+├─ assets/brand/logo.png  # 品牌标（由 client/public/favicon.svg 渲染，源改了要重跑生成）
 ├─ pubspec.yaml          # 依赖与资源声明
 ├─ analysis_options.yaml # 静态检查配置（启用 flutter_lints）
 └─ .metadata             # Flutter 工具链版本锁定

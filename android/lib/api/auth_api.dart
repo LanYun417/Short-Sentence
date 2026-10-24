@@ -78,7 +78,7 @@ class AuthApi {
     String? captchaId,
     String? captchaCode,
   }) async {
-    return _postAuth('/auth/login', <String, dynamic>{
+    return _postAuth('/client/auth/login', <String, dynamic>{
       'email': email.trim(),
       'password': password,
       if (captchaId != null && captchaCode != null) ...{
@@ -96,7 +96,7 @@ class AuthApi {
     String? captchaId,
     String? captchaCode,
   }) async {
-    return _postAuth('/auth/register', <String, dynamic>{
+    return _postAuth('/client/auth/register', <String, dynamic>{
       'email': email.trim(),
       'password': password,
       if (nickname != null && nickname.trim().isNotEmpty) 'nickname': nickname.trim(),
@@ -120,7 +120,7 @@ class AuthApi {
   /// 拉取图形验证码。
   Future<Captcha> fetchCaptcha() async {
     try {
-      final response = await _dio.get<dynamic>('/auth/captcha');
+      final response = await _dio.get<dynamic>('/client/auth/captcha');
       final data = _unwrap(response);
       return Captcha.fromJson(data);
     } on DioException catch (error) {
@@ -131,7 +131,7 @@ class AuthApi {
   /// 我的资料。
   Future<UserProfile> me() async {
     try {
-      final response = await _dio.get<dynamic>('/auth/me');
+      final response = await _dio.get<dynamic>('/client/auth/me');
       return UserProfile.fromJson(_unwrap(response));
     } on DioException catch (error) {
       throw _toApiException(error);
@@ -141,7 +141,7 @@ class AuthApi {
   /// 退出登录。
   Future<void> logout() async {
     try {
-      await _dio.post<dynamic>('/auth/logout');
+      await _dio.post<dynamic>('/client/auth/logout');
     } on DioException catch (error) {
       // 登出失败不阻断本地清理：令牌该失效的已经失效，
       // 网络问题导致的失败由本地状态保证用户体验一致。

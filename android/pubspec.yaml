@@ -41,3 +41,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    # 品牌标：由 Web 端 client/public/favicon.svg 经 api 的 sharp 渲染而来
+    # （重新生成：见 api/scripts 里用 sharp 转 PNG 的一次性脚本，源文件改了就重跑）
+    - assets/brand/logo.png
