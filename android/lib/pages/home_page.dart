@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/api_exception.dart';
 import '../api/auth_api.dart';
@@ -124,8 +125,14 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ],
             const Spacer(),
+            FilledButton.icon(
+              onPressed: () => context.push('/quiz'),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('开始刷题'),
+            ),
+            const SizedBox(height: 12),
             Text(
-              '刷题主链路开发中',
+              '刷题主链路已接入：默写 / 拼词 · 自动翻卡 · 收藏',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

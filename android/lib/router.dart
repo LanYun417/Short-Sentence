@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'pages/quiz_page.dart';
 import 'pages/splash_page.dart';
 import 'state/auth_controller.dart';
 
@@ -41,6 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
+      GoRoute(path: '/quiz', builder: (context, state) => const QuizPage()),
     ],
   );
 });
