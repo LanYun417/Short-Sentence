@@ -24,6 +24,8 @@ model ClientUser {
   gender            String    @default("secret") @db.VarChar(10)
   /// 个性签名
   signature         String?   @db.VarChar(200)
+  /// 个人主页背景句签 id（0 = 未设置，用默认品牌渐变；须为本人已获得的句签）
+  bgCardId          BigInt    @default(0) @map("bg_card_id") @db.BigInt
   /// 累计经验值（只增不减；由 gamify 服务端按事件发放，幂等账本见 gamify.prisma）
   xp                Int       @default(0) @db.Int
   /// 1 启用 / 0 禁用

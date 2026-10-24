@@ -5,7 +5,7 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import type { ClientUserContext } from '../../../common/types.js';
-import { SentenceCardService, type SentenceCardView } from './sentence-card.service.js';
+import { SentenceCardService, type MissingSentenceCards, type SentenceCardView } from './sentence-card.service.js';
 
 @Controller('client/sentence-card')
 export class SentenceCardController {
@@ -21,6 +21,12 @@ export class SentenceCardController {
   @Get('mine')
   async mine(@CurrentClientUser() user: ClientUserContext): Promise<SentenceCardView[]> {
     return this.sentenceCard.listMine(user.userId);
+  }
+
+  /** 未拥有的句签（已就绪 − 已获得；含总数与最近一批）。 */
+  @Get('missing')
+  async missing(@CurrentClientUser() user: ClientUserContext): Promise<MissingSentenceCards> {
+    return this.sentenceCard.listMissing(user.userId);
   }
 
   /** 今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）。 */

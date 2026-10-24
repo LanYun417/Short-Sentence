@@ -306,6 +306,7 @@ export const ClientUserScalarFieldEnum = {
   birthday: 'birthday',
   gender: 'gender',
   signature: 'signature',
+  bgCardId: 'bgCardId',
   xp: 'xp',
   status: 'status',
   lastLoginAt: 'lastLoginAt',

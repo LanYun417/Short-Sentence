@@ -18,6 +18,7 @@ import {
   ClientLoginDto,
   ClientRefreshDto,
   ClientRegisterDto,
+  SetClientBackgroundDto,
   UpdateClientProfileDto,
 } from './dto.js';
 
@@ -85,6 +86,20 @@ export class ClientAuthController {
   ): Promise<ResponseEnvelope<ClientUserProfile>> {
     const profile = await this.clientAuth.uploadAvatar(user.userId, files ?? []);
     return { __raw: true, data: profile, message: '头像已更新' };
+  }
+
+  /** 设置个人主页背景句签（cardId=0 恢复默认渐变；仅限已获得的句签）。 */
+  @Put('me/background')
+  async setBackground(
+    @CurrentClientUser() user: ClientUserContext,
+    @Body() dto: SetClientBackgroundDto,
+  ): Promise<ResponseEnvelope<ClientUserProfile>> {
+    const profile = await this.clientAuth.setBackgroundCard(user.userId, dto.cardId);
+    return {
+      __raw: true,
+      data: profile,
+      message: dto.cardId > 0 ? '背景已更新' : '已恢复默认背景',
+    };
   }
 
   /** 修改密码。 */

@@ -2,7 +2,7 @@
  * 客户端鉴权 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsDateString, IsEmail, IsEnum, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsDateString, IsEmail, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
 
 /** 性别取值（保密为默认）。 */
 export const CLIENT_GENDER = {
@@ -69,6 +69,15 @@ export class UpdateClientProfileDto {
   @IsString({ message: '个性签名必须为字符串' })
   @MaxLength(200, { message: '个性签名最长 200 个字符' })
   signature?: string;
+}
+
+/** 设置个人主页背景句签入参。 */
+export class SetClientBackgroundDto {
+  /** 句签 id（0 = 恢复默认品牌渐变；须为本人已获得的句签） */
+  @Type(() => Number)
+  @IsInt({ message: '句签 id 必须为整数' })
+  @Min(0, { message: '句签 id 不能为负' })
+  cardId!: number;
 }
 
 /** 修改密码入参。 */

@@ -34,6 +34,12 @@ export interface ClientUserProfile {
   gender: string;
   signature: string | null;
   createdAt: Date;
+  /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
+  bgCardId: number;
+  /** 背景句签配图 URL（未设置 / 配图缺失时为 null，前端回退渐变） */
+  bgImageUrl: string | null;
+  /** 背景句签标题（未设置为 null） */
+  bgCardTitle: string | null;
 }
 
 /** 登录/刷新返回的令牌对。 */
@@ -139,6 +145,7 @@ export class ClientAuthUserService {
         birthday: true,
         gender: true,
         signature: true,
+        bgCardId: true,
         createdAt: true,
       },
     });
@@ -154,6 +161,53 @@ export class ClientAuthUserService {
       gender: row.gender,
       signature: row.signature,
       createdAt: row.createdAt,
+      ...(await this.resolveBackground(Number(row.bgCardId))),
+    };
+  }
+
+  /**
+   * 设置个人主页背景句签（cardId = 0 表示恢复默认渐变）。
+   * 只允许用**本人已获得**的句签——否则等于能拿别人的收藏当背景。
+   */
+  async setBackgroundCard(userId: number, cardId: number): Promise<ClientUserProfile> {
+    const uid = BigInt(userId);
+    const normalized = Math.max(0, Math.floor(cardId));
+    if (normalized > 0) {
+      const owned = await this.prisma.userSentenceCard.findUnique({
+        where: { userId_sentenceCardId: { userId: uid, sentenceCardId: BigInt(normalized) } },
+        select: { id: true },
+      });
+      if (!owned) {
+        throw AppException.badRequest('只能用已获得的句签作为背景');
+      }
+    }
+    await this.prisma.clientUser.update({
+      where: { id: uid },
+      data: { bgCardId: BigInt(normalized) },
+    });
+    return this.getProfile(userId);
+  }
+
+  /** 解析背景句签（配图 URL + 标题）；未设置或配图缺失时回退到 null。 */
+  private async resolveBackground(bgCardId: number): Promise<{
+    bgCardId: number;
+    bgImageUrl: string | null;
+    bgCardTitle: string | null;
+  }> {
+    if (bgCardId <= 0) {
+      return { bgCardId: 0, bgImageUrl: null, bgCardTitle: null };
+    }
+    const card = await this.prisma.dailySentenceCard.findUnique({
+      where: { id: BigInt(bgCardId) },
+      select: { titleZh: true, imageFileId: true },
+    });
+    if (!card) {
+      return { bgCardId: 0, bgImageUrl: null, bgCardTitle: null };
+    }
+    return {
+      bgCardId,
+      bgImageUrl: card.imageFileId > 0n ? await this.resolveFileUrl(Number(card.imageFileId)) : null,
+      bgCardTitle: card.titleZh,
     };
   }
 

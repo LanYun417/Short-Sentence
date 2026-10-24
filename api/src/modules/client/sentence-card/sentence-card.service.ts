@@ -21,6 +21,9 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 const SENTENCE_CARD_STYLE_SUFFIX =
   'dreamy healing illustration, soft watercolor and pastel tones, warm golden sunlight, serene atmosphere, high detail, wide 16:9 composition, no text in image';
 
+/** 「未拥有」列表容量上限：句签按天累积，一年就是 365 张，不能一次全塞给前端。 */
+const MISSING_CARD_LIMIT = 60;
+
 /** 句签视图（客户端）。 */
 export interface SentenceCardView {
   id: number;
@@ -32,6 +35,14 @@ export interface SentenceCardView {
   imageUrl: string | null;
   /** 获得时间（ISO；未领取为 null） */
   obtainedAt: string | null;
+}
+
+/** 未拥有的句签（总数 + 最近一批）。 */
+export interface MissingSentenceCards {
+  /** 未拥有总数（可能大于 list.length） */
+  total: number;
+  /** 最近的未拥有句签（按业务日期倒序，容量见 MISSING_CARD_LIMIT） */
+  list: SentenceCardView[];
 }
 
 @Injectable()
@@ -236,6 +247,42 @@ export class SentenceCardService {
     return rows.map((row) =>
       this.toView(row.sentenceCard, row.obtainedAt, urlMap.get(String(row.sentenceCard.imageFileId)) ?? null),
     );
+  }
+
+  /**
+   * 未拥有的句签（已就绪的每日句签 − 已获得），按业务日期倒序。
+   * 供「查看未拥有」弹窗使用：让用户看到集卡还差哪些（含过往漏领的）。
+   * 列表按 MISSING_CARD_LIMIT 截断，另返回 total 让前端说明「共 N 张，显示最近一批」。
+   */
+  async listMissing(userId: number): Promise<MissingSentenceCards> {
+    const uid = BigInt(userId);
+    const owned = await this.prisma.userSentenceCard.findMany({
+      where: { userId: uid },
+      select: { sentenceCardId: true },
+    });
+    const ownedIds = owned.map((row) => row.sentenceCardId);
+    const where = {
+      status: 'ready',
+      ...(ownedIds.length > 0 ? { id: { notIn: ownedIds } } : {}),
+    };
+    const [total, rows] = await Promise.all([
+      this.prisma.dailySentenceCard.count({ where }),
+      this.prisma.dailySentenceCard.findMany({
+        where,
+        orderBy: { bizDate: 'desc' },
+        take: MISSING_CARD_LIMIT,
+      }),
+    ]);
+    // 批量取图片 URL，避免 N+1（与 listMine 同一套路）
+    const ids = [...new Set(rows.map((row) => row.imageFileId).filter((id) => id > 0n))];
+    const files = ids.length
+      ? await this.prisma.file.findMany({ where: { id: { in: ids } }, select: { id: true, fileUrl: true } })
+      : [];
+    const urlMap = new Map(files.map((file) => [String(file.id), file.fileUrl]));
+    return {
+      total,
+      list: rows.map((row) => this.toView(row, null, urlMap.get(String(row.imageFileId)) ?? null)),
+    };
   }
 
   /**
