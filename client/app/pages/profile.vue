@@ -230,35 +230,41 @@ async function onChangePassword(): Promise<void> {
     <section
       class="anim-in overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
     >
-      <!-- 渐变封面 -->
-      <div class="relative h-32 overflow-hidden bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 md:h-36">
+      <!--
+        渐变英雄区：头像与身份信息都压在渐变上。
+        此前是「空渐变封面 + 下方窄白条放昵称」，信息与装饰割裂；
+        现在渐变区自身承载身份，视觉重心回到卡片上部。
+      -->
+      <div
+        class="relative overflow-hidden bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 px-5 pt-6 pb-16 md:px-7 md:pt-7 md:pb-20"
+      >
+        <!-- 装饰光斑 -->
         <div
-          class="anim-drift pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-white/20 blur-2xl"
+          class="anim-drift pointer-events-none absolute -right-10 -top-14 size-40 rounded-full bg-white/20 blur-2xl"
         />
         <div
-          class="anim-drift pointer-events-none absolute -bottom-12 left-8 h-28 w-28 rounded-full bg-sky-200/25 blur-2xl"
+          class="anim-drift pointer-events-none absolute -bottom-16 -left-6 size-36 rounded-full bg-sky-200/25 blur-2xl"
           style="animation-delay: -5s"
         />
         <div
-          class="anim-drift pointer-events-none absolute right-1/3 top-4 h-16 w-16 rounded-full bg-violet-200/20 blur-xl"
+          class="anim-drift pointer-events-none absolute right-1/3 top-2 size-16 rounded-full bg-violet-200/20 blur-xl"
           style="animation-delay: -9s"
         />
-        <!-- 昵称首字水印 -->
-        <span
-          class="pointer-events-none absolute -bottom-5 right-5 select-none text-[7rem] leading-none font-black text-white/10"
-          aria-hidden="true"
-        >
-          {{ avatarText }}
-        </span>
-      </div>
+        <!--
+          同心环装饰：替代此前「昵称首字水印」——
+          超大首字水印放在 overflow-hidden 的封面里会被裁成一根竖条（观感像渲染错误），已移除。
+        -->
+        <div
+          class="pointer-events-none absolute -top-10 right-5 hidden size-56 rounded-full border border-white/20 sm:block"
+        />
+        <div
+          class="pointer-events-none absolute -top-1 right-14 hidden size-40 rounded-full border border-white/10 sm:block"
+        />
 
-      <div class="relative px-5 pb-5 md:px-7 md:pb-6">
-        <!-- 头像 + 身份信息（头像手搓 96px：v4 的 UAvatar 3xl 只有 48px，角标会盖掉大半） -->
-        <div class="-mt-14 flex items-end gap-4">
+        <!-- 头像 + 身份 -->
+        <div class="relative flex items-end gap-4">
           <div class="relative shrink-0">
-            <div
-              class="rounded-full bg-white p-1.5 shadow-lg ring-1 ring-slate-200/60 dark:bg-slate-900 dark:ring-slate-700/60"
-            >
+            <div class="rounded-full bg-white/95 p-1.5 shadow-xl ring-2 ring-white/25 backdrop-blur-sm">
               <div
                 class="grid size-24 place-items-center overflow-hidden rounded-full bg-slate-100 text-3xl font-bold text-slate-400 dark:bg-slate-800 dark:text-slate-500"
               >
@@ -268,7 +274,7 @@ async function onChangePassword(): Promise<void> {
             </div>
             <button
               type="button"
-              class="absolute right-0 bottom-0 grid h-9 w-9 translate-x-1/4 translate-y-1/4 place-items-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:scale-110 hover:text-primary active:scale-90 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+              class="absolute right-0 bottom-0 grid size-9 translate-x-1/4 translate-y-1/4 place-items-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:scale-110 hover:text-primary active:scale-90 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
               :disabled="uploading"
               title="更换头像"
               aria-label="更换头像"
@@ -286,46 +292,66 @@ async function onChangePassword(): Promise<void> {
             />
           </div>
 
-          <div class="min-w-0 pb-1.5">
-            <h1 class="truncate text-2xl font-bold text-slate-900 dark:text-slate-50">{{ auth.user?.nickname }}</h1>
-            <p class="truncate text-sm text-slate-400">{{ auth.user?.email }}</p>
+          <div class="min-w-0 flex-1 pb-1">
+            <h1 class="truncate text-2xl font-bold text-white drop-shadow-sm md:text-[28px]">
+              {{ auth.user?.nickname }}
+            </h1>
+            <p class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-white/75">
+              <UIcon name="i-lucide-mail" class="h-3.5 w-3.5 shrink-0 opacity-70" />
+              <span class="truncate">{{ auth.user?.email }}</span>
+            </p>
           </div>
         </div>
+      </div>
 
-        <!-- 签名 -->
-        <p
-          v-if="auth.user?.signature"
-          class="mt-3 border-l-2 border-sky-300/60 pl-3 text-sm text-slate-500 dark:text-slate-400"
+      <!--
+        统计面板：通栏叠压在渐变下缘。
+        此前面板左右内缩（px-5）而渐变仍是整块通栏，导致渐变底边在面板两侧
+        露出一截紫色「硬边」；改为面板也通栏、只保留上圆角，渐变底边被完整盖住。
+      -->
+      <div class="relative">
+        <div
+          class="-mt-10 rounded-t-2xl bg-white px-5 pt-5 pb-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-200/70 ring-t-0 md:-mt-12 md:px-7 md:pt-6 md:pb-6 dark:bg-slate-900 dark:shadow-none dark:ring-slate-800"
         >
-          {{ auth.user.signature }}
-        </p>
-
-        <!-- 今日统计 -->
-        <template v-if="today">
-          <div class="mt-5 grid grid-cols-3">
-            <div
-              v-for="(s, i) in STATS"
-              :key="s.key"
-              class="anim-pop flex flex-col items-center gap-0.5 border-l border-slate-100 py-2 text-center first:border-l-0 dark:border-slate-800"
-              :style="{ animationDelay: `${140 + i * 90}ms` }"
-            >
-              <UIcon :name="s.icon" class="h-4 w-4 text-slate-300 dark:text-slate-600" />
-              <p class="text-2xl leading-none font-bold tabular-nums text-slate-900 dark:text-slate-50">
-                {{ displays[s.key] }}
-              </p>
-              <p class="text-xs text-slate-400">{{ s.label }}</p>
+          <!-- 今日统计 -->
+          <template v-if="today">
+            <div class="grid grid-cols-3">
+              <div
+                v-for="(s, i) in STATS"
+                :key="s.key"
+                class="anim-pop flex flex-col items-center gap-0.5 border-l border-slate-100 py-1 text-center first:border-l-0 dark:border-slate-800"
+                :style="{ animationDelay: `${140 + i * 90}ms` }"
+              >
+                <UIcon :name="s.icon" class="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                <p class="text-2xl leading-none font-bold tabular-nums text-slate-900 dark:text-slate-50">
+                  {{ displays[s.key] }}
+                </p>
+                <p class="text-xs text-slate-400">{{ s.label }}</p>
+              </div>
             </div>
-          </div>
 
-          <!-- 今日目标进度 -->
-          <div class="mt-3">
-            <div class="mb-1.5 flex items-center justify-between text-xs text-slate-400">
-              <span>今日目标</span>
-              <span class="tabular-nums">{{ goalPercent }}%</span>
+            <!-- 今日目标进度 -->
+            <div class="mt-4 border-t border-slate-100 pt-3.5 dark:border-slate-800">
+              <div class="mb-1.5 flex items-center justify-between text-xs text-slate-400">
+                <span class="flex items-center gap-1.5">
+                  <UIcon name="i-lucide-target" class="h-3.5 w-3.5" />
+                  今日目标
+                </span>
+                <span class="tabular-nums">{{ goalPercent }}%</span>
+              </div>
+              <UProgress :model-value="goalPercent" size="sm" />
             </div>
-            <UProgress :model-value="goalPercent" size="sm" />
-          </div>
-        </template>
+          </template>
+
+          <!-- 签名 -->
+          <p
+            v-if="auth.user?.signature"
+            class="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
+          >
+            <UIcon name="i-lucide-quote" class="mt-0.5 h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+            <span class="min-w-0 break-words">{{ auth.user.signature }}</span>
+          </p>
+        </div>
       </div>
     </section>
 
