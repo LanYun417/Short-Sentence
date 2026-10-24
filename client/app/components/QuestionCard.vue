@@ -341,11 +341,11 @@ async function onSubmitReport(): Promise<void> {
           <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
             <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
             <p
-              v-for="answer in result.validAnswers"
-              :key="answer"
+              v-for="alternative in result.validAnswers"
+              :key="alternative"
               class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
             >
-              {{ answer }}
+              {{ alternative }}
             </p>
           </div>
           <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">

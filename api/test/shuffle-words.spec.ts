@@ -12,7 +12,7 @@ describe('shuffleWords', () => {
   it('词块不丢词、不增词、保留原标点', () => {
     const words = shuffleWords(sentence);
     expect(words).toHaveLength(sentence.split(' ').length);
-    expect([...words].sort()).toEqual([...sentence.split(' ')].sort());
+    expect([...words].sort()).toEqual(sentence.split(' ').sort());
   });
 
   it('按原文顺序选词拼回后，与原文同口径（判分不受词块影响）', () => {
