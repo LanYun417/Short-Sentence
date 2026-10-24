@@ -121,6 +121,18 @@ function closePreview(): void {
   previewCard.value = null;
 }
 
+/** 是否展开「过往句签」明细列表。 */
+const showPastCards = ref(false);
+
+/** 今日业务日期（app.vue 已全局预取，useState 共享；用于把今日句签从「过往」里择出）。 */
+const { status: todayCardStatus } = useTodayCard();
+
+/** 过往句签 = 已获得列表里除今日以外的（列表本身按获得时间倒序）。 */
+const pastCards = computed(() => {
+  const bizDate = todayCardStatus.value.bizDate;
+  return bizDate ? sentenceCards.value.filter((item) => item.bizDate !== bizDate) : sentenceCards.value;
+});
+
 if (ssrUser.value) {
   auth.user = ssrUser.value;
 }
@@ -432,6 +444,20 @@ async function onChangePassword(): Promise<void> {
           <div
             class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
           >
+            <!-- 头部：数量 + 「显示过往句签」开关 -->
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <p class="text-sm text-slate-400">共 {{ sentenceCards.length }} 张</p>
+              <button
+                type="button"
+                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:text-sky-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-sky-300"
+                :aria-expanded="showPastCards"
+                @click="showPastCards = !showPastCards"
+              >
+                <UIcon :name="showPastCards ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="h-3.5 w-3.5" />
+                {{ showPastCards ? '收起过往句签' : '显示过往句签' }}
+              </button>
+            </div>
+
             <div v-if="sentenceCards.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <button
                 v-for="item in sentenceCards"
@@ -466,6 +492,25 @@ async function onChangePassword(): Promise<void> {
             <div v-else class="flex flex-col items-center gap-2 py-10 text-center text-slate-400">
               <UIcon name="i-lucide-sparkles" class="h-8 w-8" />
               <p class="text-sm">还没有句签，完成每日目标即可获得当日 AI 闪卡</p>
+            </div>
+
+            <!-- 过往句签明细：按日期倒序列出句子与释义（缩略图之外的「可读」视角） -->
+            <div
+              v-if="showPastCards"
+              class="anim-in mt-4 space-y-2 border-t border-slate-100 pt-4 dark:border-slate-800"
+            >
+              <p class="text-xs font-medium text-slate-400">过往句签（{{ pastCards.length }}）</p>
+              <div v-if="pastCards.length" class="space-y-2">
+                <div v-for="item in pastCards" :key="item.id" class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{{ item.titleZh }}</p>
+                    <span class="shrink-0 text-xs text-slate-400">{{ item.bizDate }}</span>
+                  </div>
+                  <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{{ item.sentenceEn }}</p>
+                  <p class="text-xs text-slate-400">{{ item.translationZh }}</p>
+                </div>
+              </div>
+              <p v-else class="py-6 text-center text-sm text-slate-400">还没有过往句签</p>
             </div>
           </div>
         </template>

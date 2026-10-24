@@ -13,8 +13,8 @@ definePageMeta({ middleware: ['auth'] });
 
 // 页面描述只进 <head>（SEO / 分享卡片），不在页面上渲染
 usePageSeo({
-  title: '今日刷题',
-  description: '看图学地道英语口语：看中文写英文，提交后翻卡对照。每天 20 句，间隔重复记得住。',
+  title: '刷题',
+  description: '看图学地道英语：看中文写英文，提交后翻卡对照。每天 20 句，间隔重复记得住。',
 });
 
 const {
