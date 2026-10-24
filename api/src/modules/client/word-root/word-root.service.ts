@@ -9,6 +9,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../../../common/config/config.js';
+import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -101,6 +102,51 @@ export class WordRootService {
       },
     });
     return this.toItem(row);
+  }
+
+  /**
+   * 收录词条：把「AI 词根拆解」的结果落进词典。
+   *
+   * 与 lookup 的分工：lookup 是**查不到才调 AI**（读多写少）；collect 是**前端已经拿到
+   * AI 拆解结果，回传来落库**（写路径）。这样 AI 拆解页不必为了收录再调一次上游。
+   *
+   * 幂等且**不覆盖**：词库已有该词时原样返回既有词条（词典以先入库者为准——每日批量
+   * 入库经过筛选，质量通常高于临时拆解），仅在缺失时以 source='ai' 落库。
+   * 入参结构一律经 sanitizeAnalysis 清洗，不信任客户端字段。
+   */
+  async collect(word: string, analysis: WordRootAnalysis): Promise<{ item: WordRootItem; created: boolean }> {
+    let normalized: string;
+    try {
+      normalized = this.normalize(word);
+    } catch {
+      throw AppException.badRequest('请输入合法的英文单词');
+    }
+    const cleaned = this.sanitizeAnalysis(analysis);
+
+    const existing = await this.prisma.wordRoot.findUnique({ where: { word: normalized } });
+    if (existing) {
+      return { item: this.toItem(existing), created: false };
+    }
+
+    try {
+      const row = await this.prisma.wordRoot.create({
+        data: {
+          word: normalized,
+          phonetic: cleaned.phonetic ?? null,
+          meaning: cleaned.meaning ?? null,
+          analysis: cleaned as unknown as object,
+          source: 'ai',
+        },
+      });
+      return { item: this.toItem(row), created: true };
+    } catch {
+      // 并发收录导致唯一键冲突：当作「已存在」，读回既有词条
+      const fallback = await this.prisma.wordRoot.findUnique({ where: { word: normalized } });
+      if (!fallback) {
+        throw new Error('收录失败，请稍后重试');
+      }
+      return { item: this.toItem(fallback), created: false };
+    }
   }
 
   /**
@@ -320,6 +366,58 @@ export class WordRootService {
       throw new Error('请输入合法的英文单词');
     }
     return normalized;
+  }
+
+  /**
+   * 清洗外部传入的解析结果（collect 的入参来自客户端回传的 AI 输出，**不可信**）：
+   * 字段截断、构件类型白名单、数组限量、丢弃脏项——保证落库结构永远规整。
+   */
+  private sanitizeAnalysis(raw: WordRootAnalysis | undefined): WordRootAnalysis {
+    const source = (raw ?? {}) as Record<string, unknown>;
+    const str = (value: unknown, len: number): string | undefined =>
+      typeof value === 'string' && value.trim() ? value.trim().slice(0, len) : undefined;
+
+    const parts: WordPart[] = [];
+    if (Array.isArray(source.parts)) {
+      for (const item of source.parts) {
+        if (!item || typeof item !== 'object') {
+          continue;
+        }
+        const { type, text, meaning } = item as Record<string, unknown>;
+        if (typeof text !== 'string' || !text.trim()) {
+          continue;
+        }
+        parts.push({
+          type: typeof type === 'string' && ['prefix', 'root', 'suffix'].includes(type) ? type : 'root',
+          text: text.trim().slice(0, 60),
+          meaning: typeof meaning === 'string' ? meaning.trim().slice(0, 120) : '',
+        });
+        if (parts.length >= 12) {
+          break;
+        }
+      }
+    }
+
+    const related: string[] = [];
+    if (Array.isArray(source.related)) {
+      for (const item of source.related) {
+        if (typeof item !== 'string' || !item.trim()) {
+          continue;
+        }
+        related.push(item.trim().slice(0, 60));
+        if (related.length >= 12) {
+          break;
+        }
+      }
+    }
+
+    return {
+      phonetic: str(source.phonetic, 120),
+      meaning: str(source.meaning, 300),
+      parts,
+      explanation: str(source.explanation, 500),
+      related,
+    };
   }
 
   /** 数据库行 → 对外结构。 */

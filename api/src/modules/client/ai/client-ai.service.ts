@@ -35,23 +35,33 @@ export class ClientAiService {
 
   constructor(private readonly aiCallLog: AiCallLogService) {}
 
-  /** 场景延展造句：输入中文，流式返回地道英文 + 音标。 */
+  /**
+   * 场景延展造句：输入中文，流式返回地道英文 + 音标 + 场景说明。
+   * 输出约定为**单行紧凑 JSON**（sentence / phonetic / note）——SSE 的 data 行按行 trim
+   * 后拼接， payload 里一旦出现换行会被空行分帧拆散，故提示词必须禁止换行；
+   * 前端凭此直接渲染结构化卡片，不再面对一坨纯文本。
+   */
   expandStream(userId: number, chinese: string, sentenceId?: number): Observable<SseFrame> {
     const system = [
       '你是英语外教。用户给出想表达的中文，你输出最地道的英文口语句。',
-      '输出格式：第一行英文句子，第二行 IPA 音标（放 / / 里），第三行一句中文说明使用场景。',
-      '只输出这三行，不要解释、不要标题。',
+      '只输出一个单行紧凑 JSON 对象：不要 markdown 代码块、不要换行、不要任何解释文字。结构：',
+      '{"sentence":"地道的英文句子","phonetic":"IPA 音标（含首尾斜杠）","note":"一句中文，说明适用场景或语气"}',
     ].join('\n');
     const user = sentenceId ? `参考场景句子 id：${sentenceId}\n我想表达：${chinese}` : `我想表达：${chinese}`;
     return this.streamChat({ system, user, type: 'expand', bizId: sentenceId ?? userId });
   }
 
-  /** 词根词缀拆解：输入单词，流式返回拆解。 */
+  /**
+   * 词根词缀拆解：输入单词，流式返回结构化拆解。
+   * 输出与词根词典（WordRootAnalysis）**完全同构**，前端因此能用同一张卡片渲染，
+   * 并可直接把结果回传收录进词典。同样要求单行紧凑 JSON（理由见 expandStream）。
+   */
   wordRootStream(userId: number, word: string, sentenceId?: number): Observable<SseFrame> {
     const system = [
       '你是英语词源学老师。用户给出英文单词，你拆解它的词根、前缀、后缀与记忆钩子。',
-      '输出格式：第一行「词根：xxx（含义）」，其后每行一个构件「前缀/后缀/词根：xxx = 含义」；',
-      '最后一行「记忆法：一句联想口诀」。只输出这些行，不要额外解释。',
+      '只输出一个单行紧凑 JSON 对象：不要 markdown 代码块、不要换行、不要任何解释文字。结构：',
+      '{"phonetic":"/.../","meaning":"中文释义（含词性）","parts":[{"type":"prefix|root|suffix","text":"un-","meaning":"否定"}],"explanation":"一句话说明这个词是怎么构成的","related":["同根词1","同根词2"]}',
+      'parts 按单词从左到右顺序排列；若某词没有明显词缀，parts 至少给出词根。',
     ].join('\n');
     const user = sentenceId ? `单词：${word}\n上下文句子 id：${sentenceId}` : `单词：${word}`;
     return this.streamChat({ system, user, type: 'word_root', bizId: sentenceId ?? userId });
