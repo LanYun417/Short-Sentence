@@ -27,6 +27,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       user,
       password,
       database: name,
+      // MySQL 8 默认 caching_sha2_password 鉴权：mysql2 需开启公钥检索才能完成握手，
+      // 否则连接池拿不到连接、启动期 onModuleInit 会 pool timeout 崩溃
+      allowPublicKeyRetrieval: true,
       // 连接池上限：避免高并发下耗尽 MySQL 连接数（DB_CONNECTION_LIMIT，默认 10）
       connectionLimit: config.db.connectionLimit,
     });

@@ -206,6 +206,7 @@ async function main(): Promise<void> {
       user: dbConfig.user,
       password: dbConfig.password,
       database: dbConfig.name,
+      allowPublicKeyRetrieval: true,
       connectionLimit: 2,
     }),
   });
