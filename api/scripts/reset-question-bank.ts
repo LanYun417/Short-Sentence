@@ -1,14 +1,15 @@
 /**
  * 题库重置 + 重新生成（破坏性运维脚本）。
  *
- * ⚠️ 破坏性：删除全部题目、答题记录、收藏、生成批次历史，以及题目配图
+ * ⚠️ 破坏性：删除全部题目、答题记录、收藏、举报、生成批次历史，以及题目配图
  *    （数据库记录 + 磁盘文件 + 缩略图缓存）。用户的刷题历史会一并清空——
  *    这是「重新做题库」的必然代价，执行前请确认。
  *
  * 用法：
- *   npm run reset:question-bank            # 预演：只打印将删除什么，不动数据
- *   npm run reset:question-bank -- --yes   # 执行
- *   RESET_TARGET=100 ...                   # 重新生成的目标题数（默认 100）
+ *   npm run reset:question-bank                    # 预演：只打印将删除什么，不动数据
+ *   npm run reset:question-bank -- --yes           # 执行：清空后立即重新生成
+ *   npm run reset:question-bank -- --yes --no-gen  # 只清空，不重新生成
+ *   RESET_TARGET=100 ...                           # 重新生成的目标题数（默认 100）
  *
  * 为什么手动实例化而不是引导 Nest 应用上下文：
  * AppModule 里多个模块的 onModuleInit 依赖 HTTP 服务器（FileLoggerService 的 Prisma
@@ -28,12 +29,16 @@ import { FilesService } from '../src/modules/files/files.service.js';
 const TARGET = Math.max(1, Number(process.env.RESET_TARGET ?? 100));
 /** 是否真删（不带 --yes 只预演）。 */
 const CONFIRMED = process.argv.includes('--yes');
+/** 只清空、不重新生成（--no-gen 或 RESET_NO_GEN=1）。 */
+const NO_GEN = process.argv.includes('--no-gen') || process.env.RESET_NO_GEN === '1';
 
 /** 轮询间隔（毫秒）。 */
 const POLL_INTERVAL = 5000;
 
 async function main(): Promise<void> {
-  console.log(`目标题数：${TARGET}｜模式：${CONFIRMED ? '执行（真删）' : '预演（不改数据）'}`);
+  console.log(
+    `目标题数：${TARGET}｜模式：${CONFIRMED ? '执行（真删）' : '预演（不改数据）'}${NO_GEN ? '｜不重新生成' : ''}`,
+  );
 
   const prisma = new PrismaService();
   await prisma.$connect();
@@ -67,14 +72,15 @@ async function main(): Promise<void> {
       .map((row) => Number(row.id))
       .filter((id) => !referencedIds.includes(id));
 
-    const [sentenceCount, recordCount, favoriteCount, genTaskCount] = await Promise.all([
+    const [sentenceCount, recordCount, favoriteCount, reportCount, genTaskCount] = await Promise.all([
       prisma.sentence.count(),
       prisma.sentenceRecord.count(),
       prisma.sentenceFavorite.count(),
+      prisma.sentenceReport.count(),
       prisma.sentenceGenTask.count(),
     ]);
     console.log(
-      `将删除：题目 ${sentenceCount} / 答题记录 ${recordCount} / 收藏 ${favoriteCount} / 生成批次 ${genTaskCount}\n` +
+      `将删除：题目 ${sentenceCount} / 答题记录 ${recordCount} / 收藏 ${favoriteCount} / 举报 ${reportCount} / 生成批次 ${genTaskCount}\n` +
         `将删除配图文件：被题目引用 ${referencedIds.length} + 孤儿 ${orphanIds.length}`,
     );
 
@@ -83,13 +89,18 @@ async function main(): Promise<void> {
       return;
     }
 
-    // 2. 按外键依赖顺序清库：record / favorite 依赖 sentence，必须先删
-    const records = await prisma.sentenceRecord.deleteMany({});
-    const favorites = await prisma.sentenceFavorite.deleteMany({});
-    const genTasks = await prisma.sentenceGenTask.deleteMany({});
-    const sentences = await prisma.sentence.deleteMany({});
+    // 2. 按外键依赖顺序清库，并放进一个事务：record / favorite / report 都外键依赖
+    //    sentence，必须先删；漏掉 report 会因外键约束让 sentence.deleteMany 失败，
+    //    而前面几步已执行（非事务时就是半清空状态）。
+    const [records, favorites, reports, genTasks, sentences] = await prisma.$transaction([
+      prisma.sentenceRecord.deleteMany({}),
+      prisma.sentenceFavorite.deleteMany({}),
+      prisma.sentenceReport.deleteMany({}),
+      prisma.sentenceGenTask.deleteMany({}),
+      prisma.sentence.deleteMany({}),
+    ]);
     console.log(
-      `已删：题目 ${sentences.count} / 答题记录 ${records.count} / 收藏 ${favorites.count} / 生成批次 ${genTasks.count}`,
+      `已删：题目 ${sentences.count} / 答题记录 ${records.count} / 收藏 ${favorites.count} / 举报 ${reports.count} / 生成批次 ${genTasks.count}`,
     );
 
     // 3. 删配图（数据库记录 + 磁盘文件 + 缩略图缓存，逻辑复用 FilesService）
@@ -104,6 +115,11 @@ async function main(): Promise<void> {
       }
     }
     console.log(`已删配图文件：${removed}/${allFileIds.length}`);
+
+    if (NO_GEN) {
+      console.log('已按 --no-gen 跳过重新生成，题库现在是空的。');
+      return;
+    }
 
     // 4. 触发重新生成
     const { taskId } = await gen.triggerManual(TARGET);
