@@ -10,6 +10,7 @@ import {
   backfillClientUserSentenceCardsApi,
   deleteClientUserApi,
   forceClientUserOfflineApi,
+  getClientUserAiQuotaApi,
   getClientUserDetailApi,
   getClientUserGrowthApi,
   getClientUserListApi,
@@ -20,6 +21,7 @@ import {
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
 import type {
+  AiQuotaUsage,
   BackfillSentenceCardsResult,
   ClientUserDetail,
   ClientUserGrowth,
@@ -61,6 +63,9 @@ const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detail = ref<ClientUserDetail | null>(null);
 
+/** 今日 AI 额度用量（与客户端每日额度同一数据源）。 */
+const aiQuota = ref<AiQuotaUsage | null>(null);
+
 /** 成长概览（对应客户端个人中心「成长」Tab）。 */
 const growth = ref<ClientUserGrowth | null>(null);
 const growthLoading = ref(false);
@@ -100,6 +105,11 @@ async function loadCards(id: number): Promise<void> {
   }
 }
 
+/** 加载今日 AI 额度（失败静默：这是辅助信息，不该让详情弹窗报错）。 */
+async function loadAiQuota(id: number): Promise<void> {
+  aiQuota.value = await getClientUserAiQuotaApi(id).catch(() => null);
+}
+
 async function handleDetail(row: ClientUserItem): Promise<void> {
   detailVisible.value = true;
   detailLoading.value = true;
@@ -108,14 +118,16 @@ async function handleDetail(row: ClientUserItem): Promise<void> {
   growthError.value = '';
   cards.value = [];
   cardsError.value = '';
+  aiQuota.value = null;
   try {
     detail.value = await getClientUserDetailApi(row.id);
   } finally {
     detailLoading.value = false;
   }
-  // 成长 / 句签与主详情解耦加载：任一侧失败都不影响另一侧展示
+  // 成长 / 句签 / AI 额度与主详情解耦加载：任一侧失败都不影响另一侧展示
   void loadGrowth(row.id);
   void loadCards(row.id);
+  void loadAiQuota(row.id);
 }
 
 /* ------------------------------ 补发漏签句签 ------------------------------ */
@@ -396,6 +408,16 @@ onMounted(() => {
               {{ detail.lastLoginAt ? formatDateTime(detail.lastLoginAt) : '—' }}
             </el-descriptions-item>
             <el-descriptions-item label="注册时间">{{ formatDateTime(detail.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="今日 AI">
+              <span v-if="aiQuota">{{ aiQuota.used }} / {{ aiQuota.limit }} 次</span>
+              <span v-else class="text-gray-400">—</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="AI 剩余">
+              <span v-if="aiQuota" :class="aiQuota.remaining > 0 ? '' : 'text-red-500'">
+                {{ aiQuota.remaining }} 次
+              </span>
+              <span v-else class="text-gray-400">—</span>
+            </el-descriptions-item>
           </el-descriptions>
 
           <p class="mb-2 mt-4 text-sm font-medium">最近答题</p>

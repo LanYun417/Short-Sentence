@@ -11,7 +11,13 @@ import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { SentenceService } from './sentence.service.js';
 import { SentenceGenService } from './sentence-gen.service.js';
-import { SaveCategoryDto, SaveSentenceDto, TriggerGenDto } from './sentence.dto.js';
+import {
+  SaveCategoryDto,
+  SaveSentenceDto,
+  TriggerGenDto,
+  SENTENCE_STATUS,
+  BatchSentenceStatusDto,
+} from './sentence.dto.js';
 
 /** 生成批次列表项。 */
 export interface GenTaskItem {
@@ -178,6 +184,22 @@ export class SentenceController {
       __raw: true,
       data: result,
       message: dto.difficulty ? `生成任务已启动（本批仅难度 ${dto.difficulty}）` : '生成任务已启动',
+    };
+  }
+
+  /** 批量上下架（运营清理题库用；上架只对已有配图的题生效）。 */
+  @Post('batch-status')
+  @RequirePermissions('sentence:edit')
+  @OperationLog('题库管理', '批量上下架')
+  async batchSetStatus(@Body() dto: BatchSentenceStatusDto): Promise<ResponseEnvelope<{ affected: number }>> {
+    const affected = await this.sentenceService.batchSetStatus(dto.ids, dto.status);
+    return {
+      __raw: true,
+      data: { affected },
+      message:
+        affected > 0
+          ? `已${dto.status === SENTENCE_STATUS.OFFLINE ? '下架' : '上架'} ${affected} 条`
+          : '没有符合条件的题目（上架仅对已生成配图的题生效）',
     };
   }
 

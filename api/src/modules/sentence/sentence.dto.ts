@@ -2,7 +2,20 @@
  * 题库管理 DTO（管理端）。
  */
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 /** 句子状态（与 schema 注释一致）。 */
 export const SENTENCE_STATUS = {
@@ -10,6 +23,23 @@ export const SENTENCE_STATUS = {
   READY: 'ready',
   OFFLINE: 'offline',
 } as const;
+
+/** 题目状态取值。 */
+export type SentenceStatus = (typeof SENTENCE_STATUS)[keyof typeof SENTENCE_STATUS];
+
+/** 批量上下架入参。 */
+export class BatchSentenceStatusDto {
+  @Type(() => Number)
+  @ArrayNotEmpty({ message: '题目 id 列表不能为空' })
+  @ArrayMaxSize(200, { message: '单次最多操作 200 条' })
+  @IsArray({ message: '题目 id 列表必须为数组' })
+  @IsInt({ each: true, message: '每个题目 id 都必须为整数' })
+  @Min(1, { each: true, message: '题目 id 必须为正整数' })
+  ids!: number[];
+
+  @IsIn([SENTENCE_STATUS.READY, SENTENCE_STATUS.OFFLINE], { message: '只允许上架(ready)或下架(offline)' })
+  status!: SentenceStatus;
+}
 
 /** 手工创建/编辑句子入参。 */
 export class SaveSentenceDto {

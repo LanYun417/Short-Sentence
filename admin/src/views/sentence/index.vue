@@ -8,6 +8,7 @@ import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
   cancelGenTaskApi,
   createSentenceApi,
+  batchSentenceStatusApi,
   deleteGenTaskApi,
   deleteSentenceApi,
   getCategoryOptionsApi,
@@ -178,7 +179,7 @@ async function handleSave(): Promise<void> {
   }
 }
 
-/** 下架（软删除）。 */
+/** 下架题目（软删除：前端二次确认后调用）。 */
 async function handleOffline(row: SentenceItem): Promise<void> {
   try {
     await ElMessageBox.confirm(`确定下架「${row.sentenceEn}」吗？`, '提示', { type: 'warning' });
@@ -187,6 +188,56 @@ async function handleOffline(row: SentenceItem): Promise<void> {
   }
   await deleteSentenceApi(row.id);
   ElMessage.success('已下架');
+  await getList();
+}
+
+/* ------------------------------ 批量上下架 ------------------------------ */
+
+/** 表格勾选的题目 id（翻页后仍保留，靠 reserve-selection + row-key）。 */
+const selectedIds = ref<number[]>([]);
+
+/** 勾选变化：同步 id 列表。 */
+function handleSelectionChange(rows: SentenceItem[]): void {
+  selectedIds.value = rows.map((row) => row.id);
+}
+
+/** 批量下架。 */
+async function handleBatchOffline(): Promise<void> {
+  if (selectedIds.value.length === 0) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定下架选中的 ${selectedIds.value.length} 条题目吗？软删除，图片仍保留。`,
+      '批量下架',
+      {
+        type: 'warning',
+      },
+    );
+  } catch {
+    return;
+  }
+  await batchSentenceStatusApi(selectedIds.value, 'offline');
+  ElMessage.success('已批量下架');
+  await getList();
+}
+
+/** 批量上架（只对已有配图的题生效，后端会过滤）。 */
+async function handleBatchOnline(): Promise<void> {
+  if (selectedIds.value.length === 0) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定上架选中的 ${selectedIds.value.length} 条题目吗？只有已生成配图的题会被上架。`,
+      '批量上架',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  const result = await batchSentenceStatusApi(selectedIds.value, 'ready');
+  ElMessage.success(result.affected > 0 ? `已上架 ${result.affected} 条` : '没有符合条件的题目（需已生成配图）');
   await getList();
 }
 
@@ -356,6 +407,12 @@ onMounted(async () => {
         <span class="text-[15px] font-semibold text-ink">题库列表（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'sentence:add'" type="primary" @click="handleCreate">新增题目</el-button>
+          <el-button v-permission="'sentence:edit'" :disabled="selectedIds.length === 0" @click="handleBatchOffline">
+            批量下架<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
+          </el-button>
+          <el-button v-permission="'sentence:edit'" :disabled="selectedIds.length === 0" @click="handleBatchOnline">
+            批量上架<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
+          </el-button>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
           <el-button @click="handleOpenGenTasks">生成批次</el-button>
           <el-button :loading="loading" @click="getList">刷新</el-button>
@@ -363,7 +420,8 @@ onMounted(async () => {
       </div>
 
       <!-- 题目表 -->
-      <el-table v-loading="loading" :data="list" border row-key="id">
+      <el-table v-loading="loading" :data="list" border row-key="id" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" :reserve-selection="true" />
         <el-table-column label="配图" width="110">
           <template #default="{ row }">
             <el-image

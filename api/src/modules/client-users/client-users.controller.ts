@@ -8,6 +8,7 @@ import { OperationLog } from '../../common/log/operation-log.decorator.js';
 import { type ResponseEnvelope } from '../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import type { PageResult } from '../../common/types.js';
+import { AiQuotaService, type AiQuotaUsage } from '../../common/ai/ai-quota.service.js';
 import { ClientUsersService, type ClientUserDetail, type ClientUserItem } from './client-users.service.js';
 import { ClientUserResetPasswordDto, ClientUserStatusDto } from './dto.js';
 import { GamifyService, type GamifyOverview } from '../client/gamify/gamify.service.js';
@@ -27,6 +28,7 @@ export class ClientUsersController {
     private readonly clientUsers: ClientUsersService,
     private readonly gamify: GamifyService,
     private readonly sentenceCard: SentenceCardService,
+    private readonly aiQuota: AiQuotaService,
   ) {}
 
   /**
@@ -50,7 +52,15 @@ export class ClientUsersController {
     return this.clientUsers.detail(params.id);
   }
 
+  /** 今日 AI 额度用量（运营排查「这个人是不是把 AI 刷爆了」用）。 */
+  @Get(':id/ai-quota')
+  @RequirePermissions('client:user:query')
+  getAiQuota(@Param() params: IdParamDto): Promise<AiQuotaUsage> {
+    return this.aiQuota.usage(params.id);
+  }
+
   /** 成长概览（XP / 等级 / 成就 / 场景地图）——与客户端个人中心「成长」同源。 */
+  /** 成长概览（微游戏化）。 */
   @Get(':id/growth')
   @RequirePermissions('client:user:query')
   async growth(@Param() params: IdParamDto): Promise<GamifyOverview> {

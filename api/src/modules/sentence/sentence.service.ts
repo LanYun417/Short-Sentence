@@ -9,7 +9,7 @@ import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination, readNumber, readString } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
-import { SENTENCE_STATUS, SaveCategoryDto, SaveSentenceDto } from './sentence.dto.js';
+import { SENTENCE_STATUS, SaveCategoryDto, SaveSentenceDto, type SentenceStatus } from './sentence.dto.js';
 
 /** 列表条目（含配图 URL 与分类名）。 */
 export interface SentenceItem {
@@ -204,6 +204,36 @@ export class SentenceService {
       where: { id: existing.id },
       data: { status: SENTENCE_STATUS.OFFLINE },
     });
+  }
+
+  /**
+   * 批量上下架（运营清理题库用）。
+   *
+   * @returns 实际变更条数
+   *
+   * 上架的额外约束：只对**已有配图**的题目置 ready。否则会把 pending_image
+   * （还没生成图片）的题直接放出去，用户刷到一张没有图的闪卡。
+   */
+  async batchSetStatus(ids: number[], status: SentenceStatus): Promise<number> {
+    if (ids.length === 0) {
+      return 0;
+    }
+    if (status === SENTENCE_STATUS.READY) {
+      const result = await this.prisma.sentence.updateMany({
+        where: { id: { in: ids }, imageFileId: { gt: BigInt(0) }, status: { not: SENTENCE_STATUS.READY } },
+        data: { status: SENTENCE_STATUS.READY },
+      });
+      return result.count;
+    }
+    if (status === SENTENCE_STATUS.OFFLINE) {
+      const result = await this.prisma.sentence.updateMany({
+        where: { id: { in: ids }, status: { not: SENTENCE_STATUS.OFFLINE } },
+        data: { status: SENTENCE_STATUS.OFFLINE },
+      });
+      return result.count;
+    }
+    // 不允许把题目批量改回 pending_image（生图流程的中间态，只应由生图任务推进）
+    throw AppException.badRequest('不支持的批量状态');
   }
 
   /** 无生图提示词时的兜底构图（仍是两人对话场景）。 */

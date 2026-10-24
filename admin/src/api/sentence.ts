@@ -46,6 +46,11 @@ export function deleteSentenceApi(id: number): Promise<null> {
   return del<null>(`/sentences/${id}`);
 }
 
+/** 批量上下架（上架只对已有配图的题生效） */
+export function batchSentenceStatusApi(ids: number[], status: 'ready' | 'offline'): Promise<{ affected: number }> {
+  return post<{ affected: number }>('/sentences/batch-status', { ids, status });
+}
+
 /** 手动触发批量生成（异步；进度看批次列表） */
 export function triggerGenApi(count?: number): Promise<{ taskId: number }> {
   return post<{ taskId: number }>('/sentences/gen/batch', count ? { count } : undefined);

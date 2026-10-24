@@ -1039,6 +1039,19 @@ export interface ClientUserGrowth {
 }
 
 /** 客户端用户句签 */
+/** 客户端用户每日 AI 额度（后台排查用，与客户端的 AiQuotaUsage 同结构）。 */
+export interface AiQuotaUsage {
+  /** 今日已用次数 */
+  used: number;
+  /** 每日上限 */
+  limit: number;
+  /** 剩余次数 */
+  remaining: number;
+  /** 额度重置时间（次日 0 点，ISO） */
+  resetAt: string;
+}
+
+/** 用户句签（与客户端「我的句签」同源）。 */
 export interface ClientUserSentenceCard {
   id: number;
   bizDate: string;

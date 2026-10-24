@@ -3,6 +3,7 @@
  */
 import { del, get, post, put } from './request';
 import type {
+  AiQuotaUsage,
   BackfillSentenceCardsResult,
   ClientUserDetail,
   ClientUserGrowth,
@@ -20,6 +21,11 @@ export function getClientUserListApi(params: ClientUserQuery): Promise<PageResul
 /** 用户详情（含学习数据与最近答题） */
 export function getClientUserDetailApi(id: number): Promise<ClientUserDetail> {
   return get<ClientUserDetail>(`/client-users/${id}`);
+}
+
+/** 用户今日 AI 额度用量（排查「把 AI 刷爆了」的用户） */
+export function getClientUserAiQuotaApi(id: number): Promise<AiQuotaUsage> {
+  return get<AiQuotaUsage>(`/client-users/${id}/ai-quota`);
 }
 
 /** 成长概览（XP / 等级 / 成就 / 场景地图） */
