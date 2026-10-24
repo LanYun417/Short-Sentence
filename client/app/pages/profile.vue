@@ -388,7 +388,11 @@ async function onChangePassword(): Promise<void> {
             <h1 class="truncate text-2xl font-bold text-white drop-shadow-sm md:text-[28px]">
               {{ auth.user?.nickname }}
             </h1>
-            <p class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-white/75">
+            <!-- 邮箱压在自定义背景（句签配图）上容易糊，加一层 text-shadow 保证可读；
+                 用任意属性而非 drop-shadow：后者是 filter，会连邮件图标一起糊掉 -->
+            <p
+              class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-white/75 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]"
+            >
               <UIcon name="i-lucide-mail" class="h-3.5 w-3.5 shrink-0 opacity-70" />
               <span class="truncate">{{ auth.user?.email }}</span>
             </p>
