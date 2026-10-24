@@ -379,10 +379,47 @@ export class QuestionsService {
     return { favorited: true };
   }
 
-  /** 收藏夹（分页，按收藏时间倒序）。 */
+  /**
+   * 收藏夹 / 学习记录共用的筛选构造（难度 / 场景 / 时间范围）。
+   * 日期按 UTC 自然日边界（to 含当天 23:59:59.999）；空集时不拼接，避免多余条件影响索引。
+   */
+  private buildRecordFilters(query: Record<string, unknown>): {
+    sentenceWhere: Record<string, unknown>;
+    dateWhere: Record<string, unknown>;
+  } {
+    const difficulty = readNumber(query.difficulty);
+    const categoryId = readNumber(query.categoryId);
+    const from = typeof query.from === 'string' && query.from ? query.from : undefined;
+    const to = typeof query.to === 'string' && query.to ? query.to : undefined;
+
+    const sentenceWhere: Record<string, unknown> = {};
+    if (difficulty) {
+      sentenceWhere.difficulty = difficulty;
+    }
+    if (categoryId) {
+      sentenceWhere.categoryId = BigInt(categoryId);
+    }
+    const dateWhere: Record<string, unknown> = {};
+    if (from) {
+      dateWhere.gte = new Date(`${from}T00:00:00.000Z`);
+    }
+    if (to) {
+      dateWhere.lte = new Date(`${to}T23:59:59.999Z`);
+    }
+    return { sentenceWhere, dateWhere };
+  }
+
+  /** 收藏夹（分页，支持难度 / 场景 / 收藏时间范围筛选，按收藏时间倒序）。 */
   async listFavorites(userId: number, query: Record<string, unknown>): Promise<PageResult<SentenceLibraryItem>> {
     const { page, pageSize, offset, limit } = parsePagination(query);
-    const where = { userId: BigInt(userId) };
+    const { sentenceWhere, dateWhere } = this.buildRecordFilters(query);
+    const where: Record<string, unknown> = { userId: BigInt(userId) };
+    if (Object.keys(sentenceWhere).length > 0) {
+      where.sentence = sentenceWhere;
+    }
+    if (Object.keys(dateWhere).length > 0) {
+      where.createdAt = dateWhere;
+    }
     const [rows, total] = await Promise.all([
       this.prisma.sentenceFavorite.findMany({
         where,
@@ -501,18 +538,7 @@ export class QuestionsService {
   async listHistory(userId: number, query: Record<string, unknown>): Promise<PageResult<SentenceLibraryItem>> {
     const { page, pageSize, offset, limit } = parsePagination(query);
     const typeFilter = typeof query.type === 'string' ? query.type : 'all';
-    const difficulty = readNumber(query.difficulty);
-    const categoryId = readNumber(query.categoryId);
-    const from = typeof query.from === 'string' && query.from ? query.from : undefined;
-    const to = typeof query.to === 'string' && query.to ? query.to : undefined;
-
-    const sentenceWhere: Record<string, unknown> = {};
-    if (difficulty) {
-      sentenceWhere.difficulty = difficulty;
-    }
-    if (categoryId) {
-      sentenceWhere.categoryId = BigInt(categoryId);
-    }
+    const { sentenceWhere, dateWhere } = this.buildRecordFilters(query);
 
     const where: Record<string, unknown> = { userId: BigInt(userId) };
     if (Object.keys(sentenceWhere).length > 0) {
@@ -522,13 +548,6 @@ export class QuestionsService {
       where.isCorrect = 0;
     } else if (typeFilter === 'right') {
       where.isCorrect = 1;
-    }
-    const dateWhere: Record<string, unknown> = {};
-    if (from) {
-      dateWhere.gte = new Date(`${from}T00:00:00.000Z`);
-    }
-    if (to) {
-      dateWhere.lte = new Date(`${to}T23:59:59.999Z`);
     }
     if (Object.keys(dateWhere).length > 0) {
       where.createdAt = dateWhere;
