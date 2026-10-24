@@ -81,14 +81,12 @@ export class SentenceController {
     return { __raw: true, data: null, message: '已删除' };
   }
 
-  /** 详情。 */
-  @Get(':id')
-  @RequirePermissions('sentence:query')
-  detail(@Param() params: IdParamDto) {
-    return this.sentenceService.detail(params.id);
-  }
-
-  /** 生成批次列表（运营监控）。 */
+  /**
+   * 生成批次列表（运营监控）。
+   * ⚠️ 必须声明在 `@Get(':id')` 之前：Nest 按声明顺序匹配，否则 `gen-tasks` 会被 `:id` 吃掉，
+   * 触发 IdParamDto 校验 → 报「id 必须为正整数」（2026-10-24 真实缺陷：点「生成题库」后
+   * 前端紧接着拉批次列表，于是刚提示成功就弹出这个错）。
+   */
   @Get('gen-tasks')
   @RequirePermissions('sentence:gen')
   async genTasks(@Query() query: Record<string, unknown>) {
@@ -112,6 +110,13 @@ export class SentenceController {
       createdAt: row.createdAt,
     }));
     return buildPageResult(list, total, page, pageSize);
+  }
+
+  /** 详情。 */
+  @Get(':id')
+  @RequirePermissions('sentence:query')
+  detail(@Param() params: IdParamDto) {
+    return this.sentenceService.detail(params.id);
   }
 
   /**
