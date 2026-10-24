@@ -349,24 +349,31 @@ async function onChangePassword(): Promise<void> {
         <!-- 头像 + 身份 -->
         <div class="relative flex items-end gap-4">
           <div class="relative shrink-0">
-            <div class="rounded-full bg-white/95 p-1.5 shadow-xl ring-2 ring-white/25 backdrop-blur-sm">
-              <div
+            <!-- 头像即入口：移入 / 聚焦时浮出「设置头像」遮罩（原来的相机小圆钮已移除） -->
+            <button
+              type="button"
+              class="group/avatar relative block cursor-pointer rounded-full bg-white/95 p-1.5 shadow-xl ring-2 ring-white/25 backdrop-blur-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-default"
+              :disabled="uploading"
+              aria-label="设置头像"
+              @click="pickAvatar"
+            >
+              <span
                 class="grid size-24 place-items-center overflow-hidden rounded-full bg-slate-100 text-3xl font-bold text-slate-400 dark:bg-slate-800 dark:text-slate-500"
               >
                 <img v-if="avatarSrc" :src="avatarSrc" alt="头像" class="h-full w-full object-cover" />
                 <span v-else aria-hidden="true">{{ avatarText }}</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="absolute right-0 bottom-0 grid size-9 translate-x-1/4 translate-y-1/4 place-items-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:scale-110 hover:text-primary active:scale-90 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
-              :disabled="uploading"
-              title="更换头像"
-              aria-label="更换头像"
-              @click="pickAvatar"
-            >
-              <UIcon v-if="!uploading" name="i-lucide-camera" class="h-4 w-4" />
-              <UIcon v-else name="i-lucide-loader-circle" class="h-4 w-4 animate-spin" />
+              </span>
+              <!-- 悬停 / 聚焦遮罩：提示可设置头像；上传中常显并换文案 -->
+              <span
+                class="pointer-events-none absolute inset-1.5 grid place-items-center rounded-full bg-slate-950/55 text-[11px] font-medium text-white opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover/avatar:opacity-100 group-focus-visible/avatar:opacity-100"
+                :class="uploading && 'opacity-100'"
+              >
+                <span v-if="uploading" class="flex flex-col items-center gap-1">
+                  <UIcon name="i-lucide-loader-circle" class="h-4 w-4 animate-spin" />
+                  上传中
+                </span>
+                <span v-else>设置头像</span>
+              </span>
             </button>
             <input
               ref="fileInput"
