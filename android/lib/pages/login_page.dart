@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
@@ -63,28 +64,55 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  /// 本地提交闸门。
+  ///
+  /// 为什么不能只靠按钮的 `state.submitting` 置灰：`_submit()` 是 async，
+  /// 第一次 `await` 返回前 Riverpod 的 submitting 还没回写到按钮上，
+  /// 这段窗口里按钮仍是可点的；键盘「完成」键也能再触发一次。
+  /// 结果是**同一个 captchaId 被提交两次**——服务端验证码单次有效，
+  /// 第一次明明成功了，第二次必然 400，于是用户看到「验证码错误」，
+  /// 而账号其实已经登录（服务端日志可见 200 紧跟 400）。
+  ///
+  /// 用同步的本地布尔量做闸门：进函数即置位，finally 才释放，
+  /// 不依赖任何异步状态回写。
+  bool _submitting = false;
+
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    final auth = ref.read(authControllerProvider.notifier);
-    final ok = _isRegister
-        ? await auth.register(
-            _emailController.text,
-            _passwordController.text,
-            captchaId: _captchaId,
-            captchaCode: _captchaController.text,
-          )
-        : await auth.login(
-            _emailController.text,
-            _passwordController.text,
-            captchaId: _captchaId,
-            captchaCode: _captchaController.text,
-          );
-    if (!ok) {
+    _submitting = true;
+    try {
+      final auth = ref.read(authControllerProvider.notifier);
+      final ok = _isRegister
+          ? await auth.register(
+              _emailController.text,
+              _passwordController.text,
+              captchaId: _captchaId,
+              captchaCode: _captchaController.text,
+            )
+          : await auth.login(
+              _emailController.text,
+              _passwordController.text,
+              captchaId: _captchaId,
+              captchaCode: _captchaController.text,
+            );
+      if (ok) {
+        // 登录态变化**不会**自动触发 go_router 的 redirect（它只认路由事件），
+        // 所以这里必须显式跳转，否则用户会停在登录页、以为没登上。
+        if (mounted) {
+          context.go('/');
+        }
+        return;
+      }
       // 失败即换一张（单次有效，见文件头注释）
       _captchaController.clear();
       await _loadCaptcha();
+    } finally {
+      _submitting = false;
     }
   }
 

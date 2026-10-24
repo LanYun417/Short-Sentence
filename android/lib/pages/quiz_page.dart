@@ -52,17 +52,31 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     _picked.clear();
   }
 
+  /// 本地提交闸门（同 LoginPage）：`_submit()` 是 async，Riverpod 的 busy
+  /// 回写到按钮有窗口期，键盘「完成」键 + 按钮可各触发一次 → 同一答案提交两次。
+  /// 判分本身虽不「单次有效」，但会**重复记一次 sentence_record / 多发一次 XP**，
+  /// 属于服务端数据污染。用同步布尔量从机制上堵住。
+  bool _submitting = false;
+
   Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
     final mode = ref.read(quizControllerProvider).mode;
     final answer = mode == AnswerMode.assemble ? _picked.join(' ') : _answerController.text;
     if (isBlankAnswer(answer)) {
       return;
     }
+    _submitting = true;
     _answerFocus.unfocus();
-    await ref.read(quizControllerProvider.notifier).submit(answer);
-    // 拼词模式提交后切回默写（下一次抽题按更难的模式走）
-    if (mode == AnswerMode.assemble) {
-      ref.read(quizControllerProvider.notifier).resetMode();
+    try {
+      await ref.read(quizControllerProvider.notifier).submit(answer);
+      // 拼词模式提交后切回默写（下一次抽题按更难的模式走）
+      if (mode == AnswerMode.assemble) {
+        ref.read(quizControllerProvider.notifier).resetMode();
+      }
+    } finally {
+      _submitting = false;
     }
   }
 
