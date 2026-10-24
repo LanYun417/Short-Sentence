@@ -1118,6 +1118,24 @@ export interface AiCallLogItem {
 export interface AiCallLogQuery extends PageQuery {
   type?: string;
   status?: string;
+  /** 关联 id：expand / word_root 是 userId，sentence_* 是批次 id，image_gen 恒 0 */
+  bizId?: number;
+  /** 起始日期（YYYY-MM-DD，闭区间） */
+  dateStart?: string;
+  /** 结束日期（YYYY-MM-DD，闭区间） */
+  dateEnd?: string;
+}
+
+/** AI 调用日志汇总（与列表同一套筛选） */
+export interface AiCallLogSummary {
+  calls: number;
+  failed: number;
+  /** 失败率（百分比，一位小数） */
+  failRate: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  avgLatencyMs: number;
 }
 
 /** 打卡统计 */

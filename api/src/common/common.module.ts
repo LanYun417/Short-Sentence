@@ -14,6 +14,7 @@ import { ClientAuthService } from './auth/client-auth.service.js';
 import { CaptchaService } from './auth/captcha.service.js';
 import { DataScopeService } from './auth/data-scope.service.js';
 import { LoginRateLimiterService } from './auth/login-rate-limit.service.js';
+import { AccountLockService } from './auth/account-lock.service.js';
 import { OperationLogService } from './log/operation-log.service.js';
 import { FileLoggerService } from './log/file-logger.service.js';
 import { HttpLogQueueService } from './log/http-log-queue.service.js';
@@ -39,6 +40,8 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     CaptchaService,
     DataScopeService,
     LoginRateLimiterService,
+    // 按账号维度的登录失败锁定（与按 IP 的 LoginRateLimiterService 互补）
+    AccountLockService,
     OperationLogService,
     FileLoggerService,
     HttpLogQueueService,
@@ -65,6 +68,8 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     CaptchaService,
     DataScopeService,
     LoginRateLimiterService,
+    // 按账号维度的登录失败锁定（与按 IP 的 LoginRateLimiterService 互补）
+    AccountLockService,
     OperationLogService,
     FileLoggerService,
     HttpLogQueueService,

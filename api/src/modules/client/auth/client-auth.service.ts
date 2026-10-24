@@ -23,6 +23,7 @@ import { comparePassword, hashPassword } from '../../../common/utils/utils.js';
 import type { Express } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { FilesService } from '../../files/files.service.js';
+import { AccountLockService } from '../../../common/auth/account-lock.service.js';
 import { CaptchaService } from '../../../common/auth/captcha.service.js';
 import type { CaptchaResult } from '../../../common/types.js';
 
@@ -61,6 +62,7 @@ export class ClientAuthUserService {
     private readonly clientAuth: ClientAuthService,
     private readonly filesService: FilesService,
     private readonly captchaService: CaptchaService,
+    private readonly accountLock: AccountLockService,
   ) {}
 
   /** 图形验证码（登录/注册用；服务端关闭验证码时 enabled=false，前端不渲染输入框）。 */
@@ -108,9 +110,13 @@ export class ClientAuthUserService {
     if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
       throw AppException.badRequest('验证码错误或已过期');
     }
+    // 按账号维度的失败锁定（与按 IP 的限流互补；不透露账号是否存在）
+    await this.accountLock.assertNotLocked('client', normalizedEmail);
+
     const user = await this.clientAuth.findByEmail(normalizedEmail);
     // 统一文案：不区分「邮箱不存在」与「密码错误」，防账号枚举
     if (!user || !(await comparePassword(password, user.password))) {
+      await this.accountLock.recordFailure('client', normalizedEmail);
       throw AppException.unauthorized('邮箱或密码错误');
     }
     if (user.status !== Status.ENABLED) {
@@ -118,6 +124,7 @@ export class ClientAuthUserService {
     }
     // 登录成功即建立新会话：清掉旧登出标记（iat 秒级精度防误杀，同后台口径）
     await this.blacklist.clearLogout(Number(user.id), 'client');
+    await this.accountLock.clear('client', normalizedEmail);
     await this.prisma.clientUser.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },

@@ -8,6 +8,7 @@ import type { PageResult } from '../../common/types.js';
 import {
   AnalyticsService,
   type AiCallLogItem,
+  type AiCallLogSummary,
   type AiCallStat,
   type AnalyticsOverview,
   type AnswerTrend,
@@ -60,6 +61,16 @@ export class AnalyticsController {
   @RequirePermissions('analytics:view')
   aiLogs(@Query() query: Record<string, unknown>): Promise<PageResult<AiCallLogItem>> {
     return this.analytics.aiLogs(query);
+  }
+
+  /**
+   * AI 调用日志汇总（与列表同一套筛选）。
+   * ⚠️ 必须声明在 `ai-logs` 之前不影响（两者都无参数段），但**必须在任何 `:param` 路由之前**。
+   */
+  @Get('ai-logs/summary')
+  @RequirePermissions('analytics:view')
+  aiLogSummary(@Query() query: Record<string, unknown>): Promise<AiCallLogSummary> {
+    return this.analytics.aiLogSummary(query);
   }
 
   /** 打卡统计。 */

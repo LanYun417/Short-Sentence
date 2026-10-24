@@ -86,6 +86,24 @@ export interface AiCallLogItem {
   createdAt: Date;
 }
 
+/** AI 调用日志汇总项（与列表同一套筛选条件）。 */
+export interface AiCallLogSummary {
+  /** 调用总次数 */
+  calls: number;
+  /** 失败次数 */
+  failed: number;
+  /** 失败率（百分比，一位小数） */
+  failRate: number;
+  /** 输入 token 合计 */
+  promptTokens: number;
+  /** 输出 token 合计 */
+  completionTokens: number;
+  /** token 总计 */
+  totalTokens: number;
+  /** 平均耗时（毫秒） */
+  avgLatencyMs: number;
+}
+
 /** 打卡统计。 */
 export interface CheckinStat {
   /** 今日打卡人数 */
@@ -245,17 +263,10 @@ export class AnalyticsService {
   }
 
   /** AI 调用日志（分页，可按类型/状态筛选）。 */
+  /** AI 调用日志（分页）。 */
   async aiLogs(query: Record<string, unknown>): Promise<PageResult<AiCallLogItem>> {
     const { page, pageSize, offset, limit } = parsePagination(query);
-    const type = String(query.type ?? '').trim();
-    const status = String(query.status ?? '').trim();
-    const where: Record<string, unknown> = {};
-    if (type) {
-      where.type = type;
-    }
-    if (status) {
-      where.status = status;
-    }
+    const where = this.aiLogWhere(query);
     const [rows, total] = await Promise.all([
       this.prisma.aiCallLog.findMany({
         where,
@@ -279,6 +290,71 @@ export class AnalyticsService {
       createdAt: row.createdAt,
     }));
     return buildPageResult(list, total, page, pageSize);
+  }
+
+  /**
+   * AI 调用日志汇总（与列表**同一套筛选**，运营查看当前范围的总量 / 失败率 / token）。
+   * 按 userId 筛就是「这个用户今天/本周用了多少 AI」——与客户端每日额度配套。
+   */
+  async aiLogSummary(query: Record<string, unknown>): Promise<AiCallLogSummary> {
+    const where = this.aiLogWhere(query);
+    const [agg, failed] = await Promise.all([
+      this.prisma.aiCallLog.aggregate({
+        where,
+        _count: { _all: true },
+        _avg: { latencyMs: true },
+        _sum: { promptTokens: true, completionTokens: true },
+      }),
+      this.prisma.aiCallLog.count({ where: { ...where, status: 'failed' } }),
+    ]);
+    const calls = agg._count._all ?? 0;
+    return {
+      calls,
+      failed,
+      failRate: calls > 0 ? Math.round((failed / calls) * 1000) / 10 : 0,
+      promptTokens: agg._sum.promptTokens ?? 0,
+      completionTokens: agg._sum.completionTokens ?? 0,
+      totalTokens: (agg._sum.promptTokens ?? 0) + (agg._sum.completionTokens ?? 0),
+      avgLatencyMs: Math.round(agg._avg.latencyMs ?? 0),
+    };
+  }
+
+  /** 列表与汇总共用的筛选（类型 / 状态 / 关联 id / 日期区间）。 */
+  private aiLogWhere(query: Record<string, unknown>): Record<string, unknown> {
+    const where: Record<string, unknown> = {};
+    const type = String(query.type ?? '').trim();
+    if (type) {
+      where.type = type;
+    }
+    const status = String(query.status ?? '').trim();
+    if (status) {
+      where.status = status;
+    }
+    // 关联 id：expand / word_root 是 userId，sentence_* 是批次 id，image_gen 恒 0
+    const bizId = Number(query.bizId ?? 0);
+    if (Number.isFinite(bizId) && bizId > 0) {
+      where.bizId = BigInt(Math.floor(bizId));
+    }
+    // 日期区间（YYYY-MM-DD，闭区间；只传一端也生效）
+    const dateStart = String(query.dateStart ?? '').trim();
+    const dateEnd = String(query.dateEnd ?? '').trim();
+    const range: Record<string, Date> = {};
+    if (dateStart) {
+      const from = new Date(`${dateStart}T00:00:00`);
+      if (!Number.isNaN(from.getTime())) {
+        range.gte = from;
+      }
+    }
+    if (dateEnd) {
+      const to = new Date(`${dateEnd}T23:59:59`);
+      if (!Number.isNaN(to.getTime())) {
+        range.lte = to;
+      }
+    }
+    if (Object.keys(range).length > 0) {
+      where.createdAt = range;
+    }
+    return where;
   }
 
   /** 打卡统计。 */

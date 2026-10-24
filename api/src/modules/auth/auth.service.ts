@@ -5,6 +5,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../common/exception/app.exception.js';
 import { AuthCacheService } from '../../common/auth/auth-cache.service.js';
+import { AccountLockService } from '../../common/auth/account-lock.service.js';
 import { CaptchaService } from '../../common/auth/captcha.service.js';
 import { ERROR_MESSAGE, LogResult, Status } from '../../common/config/constants.js';
 import { lookupDeptName } from '../../common/utils/dept-lookup.js';
@@ -45,6 +46,7 @@ export class AuthService {
     private readonly ipRegion: IpRegionService,
     private readonly sessionService: SessionService,
     private readonly redis: RedisService,
+    private readonly accountLock: AccountLockService,
   ) {}
 
   /** 将用户记录转换为对外简要信息。 */
@@ -131,18 +133,23 @@ export class AuthService {
       throw AppException.badRequest('验证码错误或已过期');
     }
 
+    // 按账号的失败锁定：不透露账号是否存在，达到阈值直接拒（挡「多 IP 盯一个账号」）
+    await this.accountLock.assertNotLocked('admin', username);
+
     // 归属地解析一次即可：登录成功/失败共用（解析失败返回空串，不影响登录流程）
     const location = await this.ipRegion.locate(ip);
 
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) {
       await this.writeLoginLog(username, ip, userAgent, LogResult.FAIL, ERROR_MESSAGE.LOGIN_FAILED, location);
+      await this.accountLock.recordFailure('admin', username);
       throw AppException.unauthorized(ERROR_MESSAGE.LOGIN_FAILED);
     }
 
     const matched = await comparePassword(password, user.password);
     if (!matched) {
       await this.writeLoginLog(username, ip, userAgent, LogResult.FAIL, ERROR_MESSAGE.LOGIN_FAILED, location);
+      await this.accountLock.recordFailure('admin', username);
       throw AppException.unauthorized(ERROR_MESSAGE.LOGIN_FAILED);
     }
 
@@ -154,6 +161,8 @@ export class AuthService {
     // 登录成功即重新建立会话：清掉上一次登出的时间标记，
     // 否则同秒内签发的令牌会被判为"登出前签发"而立刻失效（iat 精度是秒）
     await this.blacklist.clearLogout(Number(user.id));
+    // 登录成功清掉账号失败计数（与锁定）
+    await this.accountLock.clear('admin', username);
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     await this.writeLoginLog(username, ip, userAgent, LogResult.SUCCESS, '登录成功', location);

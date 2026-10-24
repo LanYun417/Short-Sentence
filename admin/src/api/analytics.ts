@@ -5,6 +5,7 @@ import { get } from './request';
 import type {
   AiCallLogItem,
   AiCallLogQuery,
+  AiCallLogSummary,
   AiCallStat,
   AnalyticsOverview,
   AnswerTrend,
@@ -42,6 +43,11 @@ export function getAiCallStatsApi(days = 7): Promise<AiCallStat[]> {
 /** AI 调用日志（分页） */
 export function getAiLogListApi(params: AiCallLogQuery): Promise<PageResult<AiCallLogItem>> {
   return get<PageResult<AiCallLogItem>>('/analytics/ai-logs', params);
+}
+
+/** AI 调用日志汇总（与列表同一套筛选，用于「当前范围」统计卡） */
+export function getAiLogSummaryApi(params: AiCallLogQuery): Promise<AiCallLogSummary> {
+  return get<AiCallLogSummary>('/analytics/ai-logs/summary', params);
 }
 
 /** 打卡统计 */

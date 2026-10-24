@@ -250,6 +250,14 @@ export const config = {
      * 故默认跟随 NODE_ENV=production，可由 SECURITY_HSTS 覆盖。
      */
     hsts: toBoolean(process.env.SECURITY_HSTS, process.env.NODE_ENV === 'production'),
+    /**
+     * 同一账号连续登录失败多少次后锁定（默认 5）。
+     * 与 rateLimit / LoginRateLimiterService 的**按 IP**限流互补：
+     * 那两个挡「一个 IP 到处试」，这里挡「很多 IP 盯同一个账号」。
+     */
+    accountFailLimit: Math.max(1, toNumber(process.env.LOGIN_ACCOUNT_FAIL_LIMIT, 5)),
+    /** 账号锁定时长（分钟，默认 15） */
+    accountLockMinutes: Math.max(1, toNumber(process.env.LOGIN_ACCOUNT_LOCK_MINUTES, 15)),
   },
   /** 接口限流（按 IP 固定窗口；Redis 不可用时自动降级放行，不阻断业务） */
   rateLimit: {
