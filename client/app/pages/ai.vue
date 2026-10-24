@@ -1,17 +1,24 @@
 <script setup lang="ts">
 /**
- * AI 拓展页：场景造句（流式）+ 词根拆解（流式）+ 词根词典（搜索/AI 解析）。
- * 前两个面板共用 useSse；词根词典走后端缓存（未命中由后端实时解析并入库）。
+ * AI 拓展页：场景造句 + 词根拆解 + 词根词典。
+ *
+ * 输出约定（2026-10-24 起）：前两个面板的 AI 输出为**单行紧凑 JSON**，流式累积完后
+ * 解析成结构化卡片渲染——场景造句用 ExpandResultCard，词根拆解用 WordRootCard
+ * （与「词根词典」同一个组件，呈现天然一致）。解析失败则回退为原文，绝不渲染脏数据。
+ *
+ * 词根拆解额外做**自动收录**：拆解成功后把结果回传 POST /client/word-roots，
+ * 词库没有该词即入库（已有则不覆盖），用户随后可在「词根词典」直接查到。
  */
 import { streamSse } from '~/composables/useSse';
 import { apiFetch } from '~/composables/useApi';
-import type { WordRootItem } from '~/types';
+import { normalizeExpandResult, normalizeWordRootResult, parseAiJson, toWordRootItem } from '~/utils/ai-result';
+import type { AiExpandResult, AiWordRootResult, WordRootCollectResult, WordRootItem } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: 'AI 拓展',
-  description: '场景造句与词根拆解，流式生成；词根词典可搜索任意单词的词根词缀解析。',
+  description: '场景造句与词根拆解，结构化呈现；词根词典可搜索任意单词的词根词缀解析。',
 });
 
 /** 当前 Tab。宽度按 string 声明：UTabs 的 v-model 类型是 string | number。 */
@@ -27,8 +34,11 @@ const TABS = [
 /* ------------------------------ 场景造句 ------------------------------ */
 
 const expandInput = ref('');
-const expandOutput = ref('');
+/** 流式原文（仅用于解析失败时兜底展示）。 */
+const expandRaw = ref('');
+const expandResult = ref<AiExpandResult | null>(null);
 const expandRunning = ref(false);
+const expandFailed = ref(false);
 let expandAbort: (() => void) | null = null;
 
 /** 场景延展造句。 */
@@ -38,20 +48,24 @@ async function runExpand(): Promise<void> {
     return;
   }
   expandRunning.value = true;
-  expandOutput.value = '';
+  expandResult.value = null;
+  expandRaw.value = '';
+  expandFailed.value = false;
   const stream = await streamSse(
     '/client/ai/expand',
     { chinese },
     {
       onChunk: (text) => {
-        expandOutput.value += text;
+        expandRaw.value += text;
       },
       onDone: () => {
         expandRunning.value = false;
+        // 结构化解析；失败时保留 expandRaw 由模板回退为原文
+        expandResult.value = normalizeExpandResult(parseAiJson(expandRaw.value));
       },
-      onError: (message) => {
-        expandOutput.value += `\n[${message}]`;
+      onError: () => {
         expandRunning.value = false;
+        expandFailed.value = true;
       },
     },
   );
@@ -61,36 +75,92 @@ async function runExpand(): Promise<void> {
 /* ------------------------------ 词根拆解 ------------------------------ */
 
 const wordInput = ref('');
-const wordOutput = ref('');
+/** 流式原文（仅用于解析失败时兜底展示）。 */
+const wordRaw = ref('');
+const wordResult = ref<WordRootItem | null>(null);
 const wordRunning = ref(false);
+const wordFailed = ref(false);
+/** 收录状态：saving 收录中 / created 新入库 / exists 词库已有 / failed 收录失败。 */
+const collectState = ref<'saving' | 'created' | 'exists' | 'failed' | ''>('');
 let wordAbort: (() => void) | null = null;
 
-/** 词根词缀拆解（流式）。 */
+/** 词根词缀拆解（流式 → 结构化卡片 → 自动收录）。 */
 async function runWordRoot(): Promise<void> {
   const word = wordInput.value.trim();
   if (!word || wordRunning.value) {
     return;
   }
   wordRunning.value = true;
-  wordOutput.value = '';
+  wordResult.value = null;
+  wordRaw.value = '';
+  wordFailed.value = false;
+  collectState.value = '';
   const stream = await streamSse(
     '/client/ai/word-root',
     { word },
     {
       onChunk: (text) => {
-        wordOutput.value += text;
+        wordRaw.value += text;
       },
       onDone: () => {
         wordRunning.value = false;
+        const analysis = normalizeWordRootResult(parseAiJson(wordRaw.value));
+        if (analysis) {
+          wordResult.value = toWordRootItem(word, analysis);
+          void collectWord(word, analysis);
+        }
       },
-      onError: (message) => {
-        wordOutput.value += `\n[${message}]`;
+      onError: () => {
         wordRunning.value = false;
+        wordFailed.value = true;
       },
     },
   );
   wordAbort = stream.abort;
 }
+
+/**
+ * 收录进词根词典（词库没有该词才入库；已有则不覆盖）。
+ * 失败只提示、不影响本次查看——收录是增益，不是主流程的依赖。
+ */
+async function collectWord(word: string, analysis: AiWordRootResult): Promise<void> {
+  collectState.value = 'saving';
+  try {
+    const result = await apiFetch<WordRootCollectResult>('/client/word-roots', {
+      method: 'POST',
+      body: { word, analysis },
+    });
+    collectState.value = result.created ? 'created' : 'exists';
+  } catch {
+    collectState.value = 'failed';
+  }
+}
+
+/** 收录状态提示（图标 / 文案 / 配色三元组，模板直接取用）。 */
+const collectHint = computed<{ icon: string; text: string; spin: boolean; cls: string } | null>(() => {
+  switch (collectState.value) {
+    case 'saving':
+      return { icon: 'i-lucide-loader-circle', text: '正在收录进词根词典…', spin: true, cls: 'text-slate-400' };
+    case 'created':
+      return {
+        icon: 'i-lucide-check-circle-2',
+        text: '已收录进词根词典，之后可在「词根词典」直接查到',
+        spin: false,
+        cls: 'text-emerald-600 dark:text-emerald-400',
+      };
+    case 'exists':
+      return { icon: 'i-lucide-info', text: '词根词典中已有该词，未覆盖既有词条', spin: false, cls: 'text-slate-400' };
+    case 'failed':
+      return {
+        icon: 'i-lucide-triangle-alert',
+        text: '收录失败（不影响本次查看）',
+        spin: false,
+        cls: 'text-amber-600 dark:text-amber-400',
+      };
+    default:
+      return null;
+  }
+});
 
 /* ------------------------------ 词根词典 ------------------------------ */
 
@@ -102,13 +172,6 @@ const rootSearching = ref(false);
 const rootAnalyzing = ref(false);
 const rootSearched = ref(false);
 const rootError = ref('');
-
-/** 构件配色：前缀 / 词根 / 后缀三色区分。 */
-const PART_CLASS: Record<string, string> = {
-  prefix: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
-  root: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300',
-  suffix: 'bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300',
-};
 
 /** 热门词（空关键词 = 按搜索热度取前 20）。 */
 async function loadHotWords(): Promise<void> {
@@ -140,7 +203,7 @@ async function searchRoots(): Promise<void> {
   }
 }
 
-/** 精确查词（未命中时由后端实时 AI 解析并入库）。 */
+/** 精确查词（未命中时由后端实时解析并入库）。 */
 async function lookupRoot(word: string): Promise<void> {
   if (rootAnalyzing.value) {
     return;
@@ -222,21 +285,32 @@ onBeforeUnmount(() => {
           </UButton>
         </div>
 
-        <UCard v-if="expandOutput" :ui="{ body: 'p-4' }" class="anim-fade mt-4">
+        <!-- 生成中：结构化骨架 -->
+        <AiStreamSkeleton v-if="expandRunning" :lines="3" class="anim-fade mt-4" />
+
+        <!-- 结果：结构化卡片 -->
+        <ExpandResultCard v-else-if="expandResult" :result="expandResult" class="anim-fade mt-4" />
+
+        <!-- 兜底：解析失败时展示原文 -->
+        <UCard v-else-if="expandRaw" :ui="{ body: 'p-4' }" class="anim-fade mt-4">
+          <p class="mb-1 text-xs text-slate-400">AI 返回格式异常，以下为原始输出：</p>
           <p class="text-base leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200">
-            {{ expandOutput
-            }}<span
-              v-if="expandRunning"
-              class="ml-0.5 inline-block h-4 w-1 animate-pulse rounded-sm bg-sky-500 align-middle"
-            />
+            {{ expandRaw }}
           </p>
         </UCard>
-        <p v-else-if="!expandRunning" class="anim-in mt-4 text-sm text-slate-400">
-          输入中文，AI 会给出自然地道的英文表达与例句。
-        </p>
+
+        <UAlert
+          v-else-if="expandFailed"
+          color="error"
+          variant="subtle"
+          class="mt-4"
+          description="AI 服务暂时不可用，请稍后重试"
+        />
+
+        <p v-else class="anim-in mt-4 text-sm text-slate-400">输入中文，AI 会给出自然地道的英文表达与例句。</p>
       </template>
 
-      <!-- 词根拆解（流式） -->
+      <!-- 词根拆解（流式 → 结构化卡片 → 自动收录） -->
       <template #word-root>
         <div class="anim-in flex gap-2" style="animation-delay: 80ms">
           <UInput
@@ -261,17 +335,34 @@ onBeforeUnmount(() => {
           </UButton>
         </div>
 
-        <UCard v-if="wordOutput" :ui="{ body: 'p-4' }" class="anim-fade mt-4">
-          <p class="text-base leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200">
-            {{ wordOutput
-            }}<span
-              v-if="wordRunning"
-              class="ml-0.5 inline-block h-4 w-1 animate-pulse rounded-sm bg-sky-500 align-middle"
-            />
+        <!-- 生成中：结构化骨架 -->
+        <AiStreamSkeleton v-if="wordRunning" :lines="4" class="anim-fade mt-4" />
+
+        <!-- 结果：与词根词典同一张卡 + 收录状态 -->
+        <template v-else-if="wordResult">
+          <WordRootCard :item="wordResult" class="anim-fade mt-4" />
+          <p v-if="collectHint" class="anim-in mt-2 flex items-center gap-1.5 text-xs" :class="collectHint.cls">
+            <UIcon :name="collectHint.icon" class="h-3.5 w-3.5" :class="collectHint.spin && 'animate-spin'" />
+            {{ collectHint.text }}
           </p>
+        </template>
+
+        <!-- 兜底：解析失败时展示原文 -->
+        <UCard v-else-if="wordRaw" :ui="{ body: 'p-4' }" class="anim-fade mt-4">
+          <p class="mb-1 text-xs text-slate-400">AI 返回格式异常，以下为原始输出：</p>
+          <p class="text-base leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200">{{ wordRaw }}</p>
         </UCard>
-        <p v-else-if="!wordRunning" class="anim-in mt-4 text-sm text-slate-400">
-          输入单词，AI 会拆解词根词缀，帮你理解记忆。
+
+        <UAlert
+          v-else-if="wordFailed"
+          color="error"
+          variant="subtle"
+          class="mt-4"
+          description="AI 服务暂时不可用，请稍后重试"
+        />
+
+        <p v-else class="anim-in mt-4 text-sm text-slate-400">
+          输入单词，AI 会拆解词根词缀；结果会自动收录进词根词典。
         </p>
       </template>
 
@@ -294,50 +385,15 @@ onBeforeUnmount(() => {
 
         <UAlert v-if="rootError" color="error" variant="subtle" class="mt-4" :description="rootError" />
 
-        <!-- 词条详情 -->
-        <UCard v-if="rootResult" :ui="{ body: 'p-5' }" class="anim-fade mt-4">
-          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100">{{ rootResult.word }}</h3>
-            <span v-if="rootResult.phonetic" class="font-mono text-sm text-sky-600 dark:text-sky-400">
-              {{ rootResult.phonetic }}
-            </span>
-            <UBadge v-if="rootResult.source === 'daily'" color="neutral" variant="subtle" size="sm">每日入库</UBadge>
-          </div>
-
-          <p v-if="rootResult.meaning" class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            {{ rootResult.meaning }}
-          </p>
-
-          <!-- 构件拆解 -->
-          <div v-if="rootResult.parts.length" class="mt-4 flex flex-wrap gap-2">
-            <span
-              v-for="part in rootResult.parts"
-              :key="`${part.type}-${part.text}`"
-              class="rounded-xl px-2.5 py-1.5 text-sm"
-              :class="PART_CLASS[part.type] ?? PART_CLASS.root"
-            >
-              <span class="font-semibold">{{ part.text }}</span>
-              <span class="ml-1 opacity-80">{{ part.meaning }}</span>
-            </span>
-          </div>
-
-          <p v-if="rootResult.explanation" class="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-            {{ rootResult.explanation }}
-          </p>
-
-          <div v-if="rootResult.related.length" class="mt-3 flex flex-wrap items-center gap-1.5">
-            <span class="text-xs text-slate-400">同根词</span>
-            <UBadge v-for="w in rootResult.related" :key="w" color="neutral" variant="subtle" size="sm">
-              {{ w }}
-            </UBadge>
-          </div>
-
-          <div class="mt-4 flex gap-2">
+        <!-- 词条详情（与 AI 拆解结果共用同一张卡） -->
+        <template v-if="rootResult">
+          <WordRootCard :item="rootResult" class="anim-fade mt-4" />
+          <div class="mt-2 flex gap-2">
             <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-rotate-ccw" @click="resetRoot">
               重新搜索
             </UButton>
           </div>
-        </UCard>
+        </template>
 
         <!-- 搜索结果列表 -->
         <div v-else-if="rootList.length" class="mt-4 space-y-2">

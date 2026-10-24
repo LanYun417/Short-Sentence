@@ -180,3 +180,28 @@ export interface WordRootItem {
   source: string;
   searchCount: number;
 }
+
+/** AI 场景造句结果（结构化，与后端提示词约定一致）。 */
+export interface AiExpandResult {
+  /** 地道英文句子 */
+  sentence: string;
+  /** IPA 音标（含首尾斜杠） */
+  phonetic: string | null;
+  /** 一句中文：适用场景或语气 */
+  note: string | null;
+}
+
+/** AI 词根拆解结果（与词根词典同构，可直接回传收录）。 */
+export interface AiWordRootResult {
+  phonetic: string | null;
+  meaning: string | null;
+  parts: WordRootPart[];
+  explanation: string;
+  related: string[];
+}
+
+/** 收录词条结果（词库已有时 created=false 且不覆盖）。 */
+export interface WordRootCollectResult {
+  item: WordRootItem;
+  created: boolean;
+}
