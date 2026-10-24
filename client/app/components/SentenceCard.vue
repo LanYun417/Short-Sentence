@@ -80,10 +80,16 @@ const glareStyle = computed(() => ({
  * 镭射层：光谱带随指针在卡面上滑动。
  * 静止时常驻一层较淡的彩虹（否则「镭射」只在鼠标划过时才存在，卡片本身没有材质感），
  * 指针进入后加深并跟手。减少动态效果时锁在正中、再降一档强度。
+ *
+ * ⚠️ 系数只能取 90，不能再大：background-size 是 260%，而 background-position 的百分比
+ * 是相对「容器尺寸 − 图尺寸」计算的。一旦算出 <0% 或 >100%，图块就盖不满元素，
+ * 背景按 repeat 翻折平铺；这条渐变（115deg）的**上下边缘是实色**，于是卡面上会切出
+ * 一条水平硬边——表现就是「鼠标移到中上方时，一块矩形渐变从顶部滑进来」。
+ * 取 90 让位置恒落在 5%~95%，图块边缘永不进入可视区（CSS 侧再用 no-repeat 兜底）。
  */
 const holoStyle = computed(() => {
-  const x = reduceMotion.value ? 50 : 50 + offsetX.value * 120;
-  const y = reduceMotion.value ? 50 : 50 + offsetY.value * 120;
+  const x = reduceMotion.value ? 50 : 50 + offsetX.value * 90;
+  const y = reduceMotion.value ? 50 : 50 + offsetY.value * 90;
   return {
     backgroundPosition: `${x.toFixed(2)}% ${y.toFixed(2)}%`,
     opacity: reduceMotion.value ? 0.3 : active.value ? 0.85 : 0.45,

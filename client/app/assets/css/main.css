@@ -291,6 +291,12 @@
     rgb(180 90 255 / 55%) 62%,
     rgb(255 255 255 / 0%) 72%
   );
+
+  /* 必须 no-repeat：图块比容器大，正常情况下永远盖满；一旦 background-position
+     被算出 0~100% 之外（图块盖不满元素），repeat 会把图块翻折平铺——而这条
+     115deg 渐变的上下边缘是实色，平铺接缝会在卡面上切出一条水平硬边。
+     （2026-10-24 真实缺陷：指针移到中上方时「一块矩形渐变从顶部滑进来」。） */
+  background-repeat: no-repeat;
   background-position: 50% 50%;
   background-size: 260% 260%;
   mix-blend-mode: overlay;
