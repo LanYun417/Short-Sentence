@@ -1,0 +1,192 @@
+/// 认证状态控制器（对应 Web 端 `stores/auth.ts`）。
+///
+/// 职责边界：
+/// - 持有「当前用户 + 登录态」，登录/注册/登出改变它；
+/// - 启动时从安全存储**恢复**令牌与缓存的资料（对应 Web 端 `hydrate()`）；
+/// - 令牌失效（刷新也失败）时清空并跳登录——由 [handleUnauthorized] 承担，
+///   由 main.dart 在创建 Dio 时把该回调注册进去。
+library;
+
+import 'dart:convert';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../api/api_exception.dart';
+import '../api/dio_client.dart';
+import '../api/auth_api.dart';
+import '../api/models/user.dart';
+import 'auth_storage.dart';
+
+/// 认证状态。
+class AuthState {
+  const AuthState({
+    this.user,
+    this.initialized = false,
+    this.submitting = false,
+    this.error,
+  });
+
+  /// 当前用户（null = 未登录/未恢复）。
+  final UserProfile? user;
+
+  /// 是否已完成启动恢复（首屏Loading用）。
+  final bool initialized;
+
+  /// 是否正在提交登录/注册（按钮Loading用）。
+  final bool submitting;
+
+  /// 最近一次错误提示（登录页展示）。
+  final String? error;
+
+  bool get isLoggedIn => user != null;
+
+  AuthState copyWith({
+    UserProfile? user,
+    bool? initialized,
+    bool? submitting,
+    String? error,
+    bool clearUser = false,
+  }) {
+    return AuthState(
+      user: clearUser ? null : (user ?? this.user),
+      initialized: initialized ?? this.initialized,
+      submitting: submitting ?? this.submitting,
+      error: error,
+    );
+  }
+}
+
+/// 认证控制器。
+class AuthController extends Notifier<AuthState> {
+  @override
+  AuthState build() => const AuthState();
+
+  AuthStorage get _storage => ref.read(authStorageProvider);
+  AuthApi get _api => ref.read(authApiProvider);
+
+  /// 启动恢复：读缓存资料 → 后台用令牌刷新一次 `/me`（失败不打扰用户）。
+  Future<void> initialize() async {
+    final cached = await _storage.readUser();
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        state = state.copyWith(user: UserProfile.fromJson(_decode(cached)), initialized: true);
+      } catch (_) {
+        // 缓存损坏：当未登录处理
+        await _storage.clear();
+        state = state.copyWith(initialized: true);
+      }
+    } else {
+      state = state.copyWith(initialized: true);
+    }
+
+    // 有令牌才拉最新资料；后台做，不阻塞首屏
+    final token = await _storage.readToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+    try {
+      final profile = await _api.me();
+      await _storage.writeUser(encodeProfile(profile));
+      state = state.copyWith(user: profile);
+    } catch (_) {
+      // /me 失败：401 已由 Dio 拦截器处理（刷新或跳登录），
+      // 这里不再抛出，保持已有缓存用户可用。
+    }
+  }
+
+  /// 登录。
+  Future<bool> login(
+    String email,
+    String password, {
+    String? captchaId,
+    String? captchaCode,
+  }) async {
+    state = state.copyWith(submitting: true, error: null);
+    try {
+      final result = await _api.login(
+        email,
+        password,
+        captchaId: captchaId,
+        captchaCode: captchaCode,
+      );
+      await _persist(result);
+      state = state.copyWith(user: result.user, submitting: false, error: null);
+      return true;
+    } catch (error) {
+      state = state.copyWith(submitting: false, error: _message(error));
+      return false;
+    }
+  }
+
+  /// 注册（成功后直接登录）。
+  Future<bool> register(
+    String email,
+    String password, {
+    String? nickname,
+    String? captchaId,
+    String? captchaCode,
+  }) async {
+    state = state.copyWith(submitting: true, error: null);
+    try {
+      final result = await _api.register(
+        email,
+        password,
+        nickname: nickname,
+        captchaId: captchaId,
+        captchaCode: captchaCode,
+      );
+      await _persist(result);
+      state = state.copyWith(user: result.user, submitting: false, error: null);
+      return true;
+    } catch (error) {
+      state = state.copyWith(submitting: false, error: _message(error));
+      return false;
+    }
+  }
+
+  /// 登出（本地清理 + 尽力通知服务端）。
+  Future<void> logout() async {
+    try {
+      await _api.logout();
+    } catch (_) {
+      // 同上：本地清理优先
+    }
+    await _storage.clear();
+    state = const AuthState(initialized: true);
+  }
+
+  /// 令牌被后端判失效时由 Dio 回调触发：静默清理并回到未登录态。
+  void handleUnauthorized() {
+    // 不清 initialized：App 已在运行中，直接回登录页即可
+    state = const AuthState(initialized: true, error: '登录已过期，请重新登录');
+  }
+
+  Future<void> _persist(AuthResult result) async {
+    await _storage.writeTokens(
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    );
+    await _storage.writeUser(encodeProfile(result.user));
+  }
+
+  /// 提取用户可读的错误文案。
+  static String _message(Object error) {
+    if (error is ApiException) {
+      return error.message;
+    }
+    return '操作失败，请稍后重试';
+  }
+}
+
+/// 用户资料 ↔ JSON 字符串（缓存到安全存储用）。
+String encodeProfile(UserProfile profile) => jsonEncode(profile.toJson());
+
+Map<String, dynamic> _decode(String raw) {
+  final decoded = jsonDecode(raw);
+  return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+}
+
+/// 认证控制器 Provider。
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

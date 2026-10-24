@@ -2,9 +2,10 @@
 
 「短句」App 的移动端（Android / iOS）工程，基于 Flutter。
 
-> **当前状态：骨架入库，尚未开始业务开发。**
-> 仓库先把它纳入版本管理，保证多人协作时目录结构与依赖锁定不丢失；
-> 具体的页面与交互待确认后启动开发。
+> **当前状态：基础设施已搭好，业务开发进行中。**
+> 已完成：技术栈定选、网络层（Dio + 401 单飞刷新）、令牌安全存储、
+> 认证闭环（登录/注册 + **图形验证码**）、路由与品牌主题、静态检查与单测。
+> 见下方「目录结构」。
 
 ## 技术栈
 
@@ -12,16 +13,37 @@
 | -------- | ----------------------------------------------------------------------------- |
 | 框架     | Flutter（stable 通道，CI 锁定 3.47.6）                                        |
 | 语言     | Dart（SDK `^3.13.5`）                                                         |
-| 状态管理 | 待定（预计 Riverpod / Pinia 二选一）                                          |
-| 网络     | 待定（预计 `dio` + 与 `client/` 端同构的接口层）                              |
+| 状态管理 | **Riverpod**（`Notifier` + `Provider`，编译安全、可测）                       |
+| 网络     | **Dio**（拦截器链）+ 与 `client/` 端字段同构的模型层                          |
+| 路由     | **go_router**（声明式 + 登录守卫 `redirect`）                                 |
+| 令牌存储 | **flutter_secure_storage**（Keystore / Keychain，非 SharedPreferences）       |
+| 配图缓存 | **cached_network_image**                                                      |
 | 最低版本 | Android API 24+（`flutter.minSdkVersion`，见 `android/app/build.gradle.kts`） |
 
 ## 目录结构
 
 ```
 android/
-├─ lib/                  # Dart 业务代码（当前为模板默认页）
-│  └─ main.dart
+├─ lib/
+│  ├─ main.dart              # 入口：ProviderScope + MaterialApp.router
+│  ├─ router.dart            # go_router 路由表 + 登录守卫
+│  ├─ theme.dart             # 品牌主题（sky→indigo→violet 渐变，亮/暗）
+│  ├─ config/app_config.dart # 接口基址（默认 10.0.2.2，见下）
+│  ├─ api/
+│  │  ├─ dio_client.dart     # Dio + 自动 Bearer + 401 单飞刷新 + 重放
+│  │  ├─ api_exception.dart  # 错误归一（优先透传服务端中文 message）
+│  │  ├─ auth_api.dart       # 登录/注册/验证码/登出/我的资料
+│  │  └─ models/user.dart    # ClientUserProfile（与后端契约同构）
+│  ├─ state/
+│  │  ├─ auth_storage.dart   # 令牌安全存储（ss_ 前缀，与 Web 不共用）
+│  │  └─ auth_controller.dart# 登录态/注册/登出/启动恢复
+│  ├─ pages/
+│  │  ├─ splash_page.dart    # 启动恢复（避免先进首页再被弹回登录页）
+│  │  ├─ login_page.dart     # 登录/注册（含验证码）
+│  │  └─ home_page.dart      # 落地页 + 接口连通性自检
+│  └─ widgets/
+│     ├─ brand_header.dart   # Logo + 渐变字标
+│     └─ captcha_field.dart  # 验证码输入（图片即刷新按钮）
 ├─ test/                 # Dart 单元 / Widget 测试
 ├─ android/              # Android 原生工程（Gradle Kotlin DSL）
 │  ├─ app/
@@ -47,6 +69,22 @@ cd android
 flutter pub get
 flutter run          # 连接真机 / 模拟器
 ```
+
+### 指定后端地址
+
+默认走 **Android 模拟器**的宿主机别名 `http://10.0.2.2:3000/api`。其他环境：
+
+```bash
+# iOS 模拟器 / 桌面调试（直接用宿主机 localhost）
+flutter run --dart-define=API_BASE_URL=http://localhost:3000/api
+
+# 局域网真机：换成电脑的局域网 IP（先确认后端监听 0.0.0.0）
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
+```
+
+> ⚠️ **明文 HTTP**：开发期地址是 http，Android 9+ 默认禁止明文流量。
+> 已在 `android/app/src/main/res/xml/network_security_config.xml`
+> 对 `10.0.2.2` / `localhost` / 私网段放行（**仅此配置，release 不放行**）。
 
 静态检查与测试：
 
