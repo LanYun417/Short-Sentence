@@ -228,6 +228,13 @@ export const config = {
     operationLogRetentionDays: parseRetentionDays('LOG_OPERATION_RETENTION_DAYS', 180),
     /** 登录日志保留天数，默认 180（折中） */
     loginLogRetentionDays: parseRetentionDays('LOG_LOGIN_RETENTION_DAYS', 180),
+    /**
+     * AI 调用日志保留天数，默认 30。
+     * 它是增长最快的一张表（每次生题/生图/造句都写一行，日均数百行），但价值集中在「近期」：
+     * 30 天既够覆盖两个 14 天用量观察窗口（给每日额度定档用），也够回溯一轮生题的失败原因；
+     * 再长的历史对运营没有实际意义。
+     */
+    aiLogRetentionDays: parseRetentionDays('LOG_AI_RETENTION_DAYS', 30),
     /** 保留清理时刻（本地时间，默认 00:10，刻意避开 00:05 归档以避免同一时刻抢 IO） */
     retentionHour: toNumber(process.env.LOG_RETENTION_HOUR, 0),
     retentionMinute: toNumber(process.env.LOG_RETENTION_MINUTE, 10),

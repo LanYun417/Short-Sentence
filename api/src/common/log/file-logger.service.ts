@@ -279,10 +279,28 @@ export class FileLoggerService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    // AI 调用日志（增长最快的表：生题/生图/造句/词根每次一行）
+    const aiCutoff = new Date(Date.now() - config.log.aiLogRetentionDays * dayMs);
+    for (;;) {
+      const rows = await this.prisma.aiCallLog.findMany({
+        where: { createdAt: { lt: aiCutoff } },
+        select: { id: true },
+        take: BATCH,
+      });
+      if (rows.length === 0) {
+        break;
+      }
+      await this.prisma.aiCallLog.deleteMany({ where: { id: { in: rows.map((r) => r.id) } } });
+      if (rows.length < BATCH) {
+        break;
+      }
+    }
+
     this.info('日志保留清理完成', {
       httpDays: config.log.httpLogRetentionDays,
       operationDays: config.log.operationLogRetentionDays,
       loginDays: config.log.loginLogRetentionDays,
+      aiDays: config.log.aiLogRetentionDays,
     });
   }
 
