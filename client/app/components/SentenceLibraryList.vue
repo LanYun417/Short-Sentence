@@ -268,7 +268,7 @@ const emptyText = computed(() => {
           <span
             class="grid h-8 w-8 place-items-center rounded-xl bg-linear-to-br from-sky-500 to-indigo-600 text-white"
           >
-            <UIcon :name="isHistory ? 'i-lucide-history' : 'i-lucide-star'" class="h-4.5 w-4.5" />
+            <UIcon :name="isHistory ? 'i-lucide-calendar' : 'i-lucide-star'" class="h-4.5 w-4.5" />
           </span>
           {{ title }}
         </h1>
@@ -286,7 +286,7 @@ const emptyText = computed(() => {
             v-for="opt in TYPE_OPTIONS"
             :key="opt.value"
             type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+            class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition"
             :class="
               type === opt.value
                 ? 'bg-white text-sky-600 shadow-sm dark:bg-slate-700 dark:text-sky-300'
@@ -359,7 +359,7 @@ const emptyText = computed(() => {
       <span
         class="anim-float grid h-16 w-16 place-items-center rounded-3xl bg-linear-to-br from-sky-50 to-indigo-100 text-sky-500 dark:from-slate-800 dark:to-slate-700 dark:text-sky-400"
       >
-        <UIcon :name="isHistory ? 'i-lucide-notebook-pen' : 'i-lucide-star'" class="h-8 w-8" />
+        <UIcon :name="isHistory ? 'i-lucide-book-search' : 'i-lucide-star'" class="h-8 w-8" />
       </span>
       <p class="mt-4 font-semibold text-slate-700 dark:text-slate-200">{{ emptyText.title }}</p>
       <p class="mt-1 text-sm text-slate-400">{{ emptyText.desc }}</p>
@@ -429,7 +429,10 @@ const emptyText = computed(() => {
     <!-- 哨兵常驻挂载：observer 据此触发下一页，勿用 v-if 挂在 hasMore 上 -->
     <div ref="sentinel" class="h-px w-full" aria-hidden="true" />
 
-    <!-- 返回顶部悬浮按钮（滚动到一定位置才出现，移动端避开底部 Tab 栏） -->
+    <!-- 返回顶部悬浮按钮（滚动到一定位置才出现，移动端避开底部 Tab 栏）。
+         图标刻意用 i-lucide-arrow-up：它是 Nuxt UI 内置图标、必定在客户端静态包里；
+         动态渲染（v-if 挂 scroll 状态）的图标拿不到 serverBundle，只能用包里有的，
+         换成未扫描的新图标名会在 dev 期渲染不出来（运行时 /api/_nuxt_icon 接口不存在）。 -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
       enter-from-class="translate-y-2 opacity-0"
@@ -439,12 +442,12 @@ const emptyText = computed(() => {
       <button
         v-if="showBackToTop"
         type="button"
-        class="fixed bottom-20 right-4 z-30 grid h-10 w-10 place-items-center rounded-full bg-white text-slate-500 shadow-lg ring-1 ring-slate-200 hover:text-sky-600 md:bottom-6 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:text-sky-300"
+        class="fixed bottom-20 right-4 z-30 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-white text-slate-500 shadow-lg ring-1 ring-slate-200 hover:text-sky-600 md:bottom-6 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:text-sky-300"
         aria-label="返回顶部"
         title="返回顶部"
         @click="scrollToTop"
       >
-        <UIcon name="i-lucide-arrow-up-to-line" class="h-5 w-5" />
+        <UIcon name="i-lucide-arrow-up" class="h-5 w-5" />
       </button>
     </Transition>
   </div>

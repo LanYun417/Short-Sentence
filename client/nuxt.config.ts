@@ -61,14 +61,17 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  // 图标：服务端直接内联 SVG + 客户端静态包内置全部应用图标。
-  // 默认行为下 SSR 只输出 <span class="iconify"> 占位，且 clientBundle 默认不扫描源码，
-  // 导致应用自身的 i-lucide-* 不在客户端静态包里，只能运行时 fetch（本地端点 → 外网
-  // api.iconify.design）。外网 API 在国内不可达，fetch 慢/失败时图标就渲染不出来
+  // 图标：实测 **SSR 并不内联 SVG**——服务端只输出 <span class="iconify"> 占位，
+  // 最终图样（含首屏图标，靠客户端水合替换）**全部来自客户端静态包**。
+  // 该包由 clientBundle.scan 构建期扫描源码生成，且**运行时没有兜底端点**：
+  // `/api/_nuxt_icon/...` 被 devProxy 转给 NestJS（404），`/_nuxt_icon/...` Nitro 未注册（404），
+  // 外网 api.iconify.design 在国内不可达——因此**不在包里的图标名会彻底渲染空白**
   // （曾反复出现「修改密码按钮图标不显示」）。
-  // - serverBundle: 'local' 把本地 lucide 集合打进服务端包，SSR 渲染 <svg>；
-  // - clientBundle.scan: true 构建期扫描源码，把所有用到的图标也打进客户端静态包，
-  //   首屏即渲染、彻底摆脱对外网 API 的依赖。
+  // - serverBundle: 'local'：SSR 侧持有本地 lucide 集合（判定/能力用），但输出仍是占位；
+  // - clientBundle.scan: true：构建期扫描源码，把用到的图标打进客户端静态包。
+  // ⚠️ 坑：**新加的图标名必须重新构建 / 重启 dev server 才会进包**——dev server 运行期
+  // 改源码不会重新扫描该包。所以**运行期才渲染的图标**（如滚动后才出现的按钮）要优先选
+  // 已在包内的图标（Nuxt UI 内置那批恒在包内），否则 dev 期直接空白。
   icon: {
     serverBundle: 'local',
     clientBundle: {
