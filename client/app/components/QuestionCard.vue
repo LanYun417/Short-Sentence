@@ -337,6 +337,17 @@ async function onSubmitReport(): Promise<void> {
           <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
             {{ result.ipa }}
           </p>
+          <!-- 输入模式多答案：列出该句中其它同样算对的写法 -->
+          <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
+            <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
+            <p
+              v-for="answer in result.validAnswers"
+              :key="answer"
+              class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
+            >
+              {{ answer }}
+            </p>
+          </div>
           <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {{ result?.translationZh }}
           </p>

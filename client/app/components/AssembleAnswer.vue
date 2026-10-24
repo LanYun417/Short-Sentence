@@ -4,9 +4,13 @@
  *
  * 词块由后端在抽题时下发（`/questions/next?mode=assemble` 的 `words`），
  * 前端拿不到 `sentenceEn`——否则拼词模式就等于抄答案。
- * 拼出来的字符串与输入模式走同一条提交链路，因此答案比对口径完全一致（仍是全等）。
+ * 拼出来的字符串与输入模式走同一条提交链路，因此答案比对口径完全一致
+ * （多答案只需命中主句，见 QuestionsService.answer）。
  *
  * 词块**保留原标点**（`I'm`、`minutes?`），拼回去与原句逐字相同。
+ *
+ * 动效：词块选中后从词库「移入」答题框（进场抬起 + 兄弟元素 FLIP 补位 + 词库侧淡出收起），
+ * 全部走 CSS Transition，带 prefers-reduced-motion 降级。
  */
 
 /** 词块：`index` 是它在原始乱序里的下标，用于移回词库时插回原位。 */
@@ -75,12 +79,18 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
 <template>
   <div>
     <!-- 答题区：已选词块按顺序排列；空时给出引导文案 -->
-    <div
-      class="flex min-h-13 flex-wrap content-start gap-1.5 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-2.5 transition-colors dark:border-slate-600 dark:bg-slate-900/40"
-      :class="{ 'border-sky-300 dark:border-sky-700': selected.length > 0 }"
+    <TransitionGroup
+      name="chip"
+      tag="div"
+      class="relative flex min-h-13 flex-wrap content-start gap-1.5 rounded-2xl border border-dashed p-2.5 transition-colors"
+      :class="[
+        selected.length > 0
+          ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
+          : 'border-slate-300 bg-slate-50/70 dark:border-slate-600 dark:bg-slate-900/40',
+      ]"
       aria-label="已选词块"
     >
-      <span v-if="selected.length === 0" class="self-center text-sm text-slate-400">
+      <span v-if="selected.length === 0" key="placeholder" class="self-center text-sm text-slate-400">
         点下方词块，按顺序拼成英文句子
       </span>
       <button
@@ -93,10 +103,10 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
       >
         {{ chip.text }}
       </button>
-    </div>
+    </TransitionGroup>
 
     <!-- 词库：剩余词块 -->
-    <div class="mt-3 flex flex-wrap gap-2" aria-label="可选词块">
+    <TransitionGroup name="chip" tag="div" class="mt-3 flex flex-wrap gap-2" aria-label="可选词块">
       <button
         v-for="chip in pool"
         :key="chip.index"
@@ -107,7 +117,50 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
       >
         {{ chip.text }}
       </button>
-      <p v-if="allUsed" class="self-center text-sm text-slate-400">词块已用完，点「确定」检查</p>
-    </div>
+      <p v-if="allUsed" key="hint" class="self-center text-sm text-slate-400">词块已用完，点「确定」检查</p>
+    </TransitionGroup>
   </div>
 </template>
+
+<style scoped>
+/*
+ * 词块「移入答题框」动效：
+ * - 进场（词块被选入答题框）：从下方 10px、缩小到 0.88、透明，弹性落到位；
+ * - 离场（词块离开词库 / 移出答题框）：淡出并轻微上浮缩小，绝对定位避免挤压兄弟元素；
+ * - 移动（兄弟词块补位）：FLIP 位移，让其余词块平滑让位。
+ */
+.chip-enter-active {
+  transition:
+    opacity 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chip-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.88);
+}
+
+.chip-leave-active {
+  position: absolute;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.chip-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.9);
+}
+
+.chip-move {
+  transition: transform 0.22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-enter-active,
+  .chip-leave-active,
+  .chip-move {
+    transition: none;
+  }
+}
+</style>

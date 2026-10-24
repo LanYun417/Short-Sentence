@@ -47,6 +47,8 @@ export interface AnswerResult {
   sentenceId: number;
   isCorrect: boolean;
   sentenceEn: string;
+  /** 其他可接受的等价表达（输入模式下写出任一条即算对；不含 sentenceEn 本身） */
+  validAnswers: string[];
   translationZh: string;
   ipa: string | null;
   imageUrl: string | null;
