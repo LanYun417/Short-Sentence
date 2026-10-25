@@ -11,8 +11,6 @@
 /// 只在 90 度时换内容而不预旋转，翻过去看到的就是镜像文字。
 library;
 
-import 'dart:math' as math;
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1094,44 +1092,64 @@ class _StackedCards extends StatelessWidget {
 
   /// 翻面动画（可空：测试/其它调用点没有动画时纸片恒显示）。
   ///
-  /// 纸片在卡片正后方且**不参与旋转**：翻到一半卡片变窄，
-  /// 静止的白纸片就从两侧露出来，看起来像翻面时垫了块白底。
-  /// 所以翻面期间把纸片淡出（sin 曲线：中点 0、两端 1），落定后再浮回来。
+  /// 纸片在卡片正后方且**不参与旋转**：卡片一收窄，静止的白纸片就从两侧
+  /// 露出来，看起来像翻面时垫了块白底（用户实测截图：翻到约 1/5 处，
+  /// 卡片两侧各露出一条白边）。
+  ///
+  /// 所以「一进入翻面就迅速隐藏」：斜率 1/16，两帧内淡完。
+  /// 早期（sin 曲线那种）会留 30% 左右的不透明度，正是那条白边；
+  /// 两端（t=0 / t=1）恢复显示——此刻纸片被卡片完整盖住，
+  /// 只有卡片下沿露出的一点「叠纸」边，观感不受影响。
   final Animation<double>? flip;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final reveal = flip == null
-        ? 1.0
-        : 1 - math.sin(flip!.value * math.pi).clamp(0.0, 1.0);
-
-    Widget ghost(double opacity) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.card.withValues(alpha: opacity * reveal),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.line.withValues(alpha: 0.6 * reveal)),
-      ),
-    );
 
     return AnimatedBuilder(
       animation: flip ?? const AlwaysStoppedAnimation<double>(0),
       // child 一次性构建：纸片每帧只重算透明度，翻卡本体不重建
       child: child,
-      builder: (context, child) => Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned(
-            top: 14,
-            left: 14,
-            right: 14,
-            bottom: -8,
-            child: ghost(0.5),
+      builder: (context, child) {
+        // ⚠️ 必须在 builder 里读进度。写在 build() 里只会取到
+        // 「父级重建那一刻」的值（通常就是 t=0 → reveal=1），
+        // 而动画每帧重跑的是 builder——结果纸片永远按静止态绘制，
+        // 翻面时照旧露出白底（这个坑实测踩过一次，务必别再搬出去）。
+        final t = flip?.value ?? 0;
+        final atRest = flip == null || t <= 0 || t >= 1;
+        final reveal = atRest ? 1.0 : (1 - t * 16).clamp(0.0, 1.0);
+
+        Widget ghost(double opacity) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card.withValues(alpha: opacity * reveal),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: colors.line.withValues(alpha: 0.6 * reveal),
+            ),
           ),
-          Positioned(top: 7, left: 7, right: 7, bottom: -4, child: ghost(0.75)),
-          ?child,
-        ],
-      ),
+        );
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            Positioned(
+              top: 14,
+              left: 14,
+              right: 14,
+              bottom: -8,
+              child: ghost(0.5),
+            ),
+            Positioned(
+              top: 7,
+              left: 7,
+              right: 7,
+              bottom: -4,
+              child: ghost(0.75),
+            ),
+            ?child,
+          ],
+        );
+      },
     );
   }
 }
