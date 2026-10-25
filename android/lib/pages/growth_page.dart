@@ -66,97 +66,108 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     return Material(
       color: Colors.transparent,
       child: SafeArea(
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          PageHeader(
-            title: '成长',
-            subtitle: '每一句都算数',
-            trailing: _StreakChip(streak: growth.today?.streak ?? 0),
-          ),
-          Expanded(
-            child: growth.loading && !growth.loaded
-                ? const _GrowthSkeleton()
-                : growth.error != null && !growth.loaded
-                    ? EmptyState(
-                        title: '加载失败',
-                        message: growth.error,
-                        tone: EmptyTone.error,
-                        actionLabel: '重试',
-                        onAction: () => ref.read(growthControllerProvider.notifier).refresh(),
-                      )
-                    : RefreshIndicator(
-                        color: context.colors.brand,
-                        onRefresh: _refresh,
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 2, 16, 108),
-                          children: <Widget>[
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            PageHeader(
+              title: '成长',
+              subtitle: '每一句都算数',
+              trailing: _StreakChip(streak: growth.today?.streak ?? 0),
+            ),
+            Expanded(
+              child: growth.loading && !growth.loaded
+                  ? const _GrowthSkeleton()
+                  : growth.error != null && !growth.loaded
+                  ? EmptyState(
+                      title: '加载失败',
+                      message: growth.error,
+                      tone: EmptyTone.error,
+                      actionLabel: '重试',
+                      onAction: () =>
+                          ref.read(growthControllerProvider.notifier).refresh(),
+                    )
+                  : RefreshIndicator(
+                      color: context.colors.brand,
+                      onRefresh: _refresh,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 108),
+                        children: <Widget>[
+                          StaggeredEntrance(
+                            index: 0,
+                            child: _LevelHero(
+                              xp: growth.xp,
+                              level: growth.level,
+                              today: growth.today,
+                              unlockedAchievements:
+                                  growth.overview?.unlockedAchievements ?? 0,
+                              totalAchievements:
+                                  growth.overview?.totalAchievements ?? 0,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          if (cards.claimable &&
+                              (growth.today?.completed ?? false)) ...<Widget>[
                             StaggeredEntrance(
-                              index: 0,
-                              child: _LevelHero(
-                                xp: growth.xp,
-                                level: growth.level,
-                                today: growth.today,
-                                unlockedAchievements: growth.overview?.unlockedAchievements ?? 0,
-                                totalAchievements: growth.overview?.totalAchievements ?? 0,
+                              index: 1,
+                              child: _ClaimCardBanner(
+                                busy: cards.claiming,
+                                onClaim: () => claimTodayCard(context, ref),
                               ),
                             ),
                             const SizedBox(height: 14),
-                            if (cards.claimable && (growth.today?.completed ?? false)) ...<Widget>[
-                              StaggeredEntrance(
-                                index: 1,
-                                child: _ClaimCardBanner(
-                                  busy: cards.claiming,
-                                  onClaim: () => claimTodayCard(context, ref),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                            ],
-                            const SizedBox(height: 6),
-                            SectionHeader(
-                              title: '成就',
-                              subtitle: growth.overview == null
-                                  ? null
-                                  : '已解锁 ${growth.overview!.unlockedAchievements} / ${growth.overview!.totalAchievements}',
-                              icon: Icons.emoji_events_rounded,
-                              index: 2,
-                              actionLabel: growth.achievements.length > 6 ? '全部' : null,
-                              onAction: growth.achievements.length > 6
-                                  ? () => _showAllAchievements(growth.achievements)
-                                  : null,
-                            ),
-                            // 只展示前 6 个：10 个全铺开要占四行，
-                            // 会把场景地图与句签墙压到两屏之外，首页节奏就散了
-                            _AchievementGrid(items: growth.achievements.take(6).toList()),
-                            const SizedBox(height: 20),
-                            SectionHeader(
-                              title: '场景地图',
-                              subtitle: growth.overview == null
-                                  ? null
-                                  : '已点亮 ${growth.overview!.unlockedScenes} 个场景',
-                              icon: Icons.explore_rounded,
-                              index: 4,
-                            ),
-                            _SceneMap(items: growth.scenes),
-                            const SizedBox(height: 20),
-                            SectionHeader(
-                              title: '我的句签',
-                              subtitle: cards.mine.isEmpty ? '达标后领取，收进册子' : '共 ${cards.mine.length} 张',
-                              icon: Icons.auto_awesome_rounded,
-                              index: 6,
-                            ),
-                            _CardWall(
-                              cards: cards.mine,
-                              onTap: (card) => showSentenceCard(context, card),
-                            ),
-                            SizedBox(height: cards.mine.isEmpty ? 8 : 4),
                           ],
-                        ),
+                          const SizedBox(height: 6),
+                          SectionHeader(
+                            title: '成就',
+                            subtitle: growth.overview == null
+                                ? null
+                                : '已解锁 ${growth.overview!.unlockedAchievements} / ${growth.overview!.totalAchievements}',
+                            icon: Icons.emoji_events_rounded,
+                            index: 2,
+                            actionLabel: growth.achievements.length > 6
+                                ? '全部'
+                                : null,
+                            onAction: growth.achievements.length > 6
+                                ? () =>
+                                      _showAllAchievements(growth.achievements)
+                                : null,
+                          ),
+                          // 只展示前 6 个：10 个全铺开要占四行，
+                          // 会把场景地图与句签墙压到两屏之外，首页节奏就散了
+                          _AchievementGrid(
+                            items: growth.achievements.take(6).toList(),
+                          ),
+                          const SizedBox(height: 20),
+                          SectionHeader(
+                            title: '场景地图',
+                            subtitle: growth.overview == null
+                                ? null
+                                : '已点亮 ${growth.overview!.unlockedScenes} 个场景',
+                            icon: Icons.explore_rounded,
+                            index: 4,
+                          ),
+                          _SceneMap(items: growth.scenes),
+                          const SizedBox(height: 20),
+                          SectionHeader(
+                            title: '我的句签',
+                            subtitle: cards.mine.isEmpty
+                                ? '达标后领取，收进册子'
+                                : '共 ${cards.mine.length} 张',
+                            icon: Icons.auto_awesome_rounded,
+                            index: 6,
+                          ),
+                          _CardWall(
+                            cards: cards.mine,
+                            onTap: (card) => showSentenceCard(context, card),
+                          ),
+                          SizedBox(height: cards.mine.isEmpty ? 8 : 4),
+                        ],
                       ),
-          ),
-        ],
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,7 +199,11 @@ class _LevelHero extends StatelessWidget {
     return GradientCard(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
       gradient: const LinearGradient(
-        colors: <Color>[Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF6366F1)],
+        colors: <Color>[
+          Color(0xFF4F46E5),
+          Color(0xFF7C3AED),
+          Color(0xFF6366F1),
+        ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -198,7 +213,11 @@ class _LevelHero extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              _LevelRing(progress: progress, code: info?.code ?? 'A1', isMax: info?.isMax ?? false),
+              _LevelRing(
+                progress: progress,
+                code: info?.code ?? 'A1',
+                isMax: info?.isMax ?? false,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -244,8 +263,8 @@ class _LevelHero extends StatelessWidget {
                       info == null
                           ? ''
                           : info.isMax
-                              ? '已达最高等级'
-                              : '距离 ${_nextName(info)} 还需 ${info.toNext} XP',
+                          ? '已达最高等级'
+                          : '距离 ${_nextName(info)} 还需 ${info.toNext} XP',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.68),
                         fontSize: 11.5,
@@ -261,7 +280,9 @@ class _LevelHero extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: TweenAnimationBuilder<double>(
               tween: Tween<double>(end: progress.clamp(0.0, 1.0)),
-              duration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 900),
+              duration: Motion.reduced(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 900),
               curve: Motion.decelerate,
               builder: (context, value, _) => LinearProgressIndicator(
                 value: value,
@@ -299,11 +320,11 @@ class _LevelHero extends StatelessWidget {
   }
 
   Widget _divider() => Container(
-        width: 1,
-        height: 26,
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        color: Colors.white.withValues(alpha: 0.16),
-      );
+    width: 1,
+    height: 26,
+    margin: const EdgeInsets.symmetric(horizontal: 12),
+    color: Colors.white.withValues(alpha: 0.16),
+  );
 
   static String _nextName(LevelInfo info) {
     // 后端只给下一级的起始 XP，不给名称；用等级码推断的下一个区间即可读。
@@ -319,7 +340,11 @@ class _LevelHero extends StatelessWidget {
 }
 
 class _HeroStat extends StatelessWidget {
-  const _HeroStat({required this.icon, required this.label, required this.value});
+  const _HeroStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -362,7 +387,11 @@ class _HeroStat extends StatelessWidget {
 
 /// 等级环：进度弧 + 中心等级码。
 class _LevelRing extends StatelessWidget {
-  const _LevelRing({required this.progress, required this.code, required this.isMax});
+  const _LevelRing({
+    required this.progress,
+    required this.code,
+    required this.isMax,
+  });
 
   final double progress;
   final String code;
@@ -375,7 +404,9 @@ class _LevelRing extends StatelessWidget {
       height: 74,
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(end: progress.clamp(0.0, 1.0)),
-        duration: Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 1100),
+        duration: Motion.reduced(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 1100),
         curve: Motion.decelerate,
         builder: (context, value, _) => CustomPaint(
           painter: _RingPainter(progress: value, complete: isMax),
@@ -442,8 +473,16 @@ class _RingPainter extends CustomPainter {
         startAngle: -1.5707963,
         endAngle: 4.712389,
         colors: complete
-            ? const <Color>[Color(0xFFFDE68A), Color(0xFFFBBF24), Color(0xFFFDE68A)]
-            : const <Color>[Color(0xCCFFFFFF), Color(0xFFFFFFFF), Color(0xFFFDE68A)],
+            ? const <Color>[
+                Color(0xFFFDE68A),
+                Color(0xFFFBBF24),
+                Color(0xFFFDE68A),
+              ]
+            : const <Color>[
+                Color(0xCCFFFFFF),
+                Color(0xFFFFFFFF),
+                Color(0xFFFDE68A),
+              ],
       ).createShader(rect);
 
     canvas.drawArc(
@@ -544,7 +583,11 @@ class _ClaimCardBanner extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -553,16 +596,14 @@ class _ClaimCardBanner extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '今日句签可以领了',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style: Theme.of(context).textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '完成后领取，收进你的句签册',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.inkSoft,
-                        ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: colors.inkSoft),
                   ),
                 ],
               ),
@@ -593,10 +634,7 @@ class _AchievementGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) {
       return const AppCard(
-        child: SizedBox(
-          height: 96,
-          child: Center(child: Text('成就正在准备中')),
-        ),
+        child: SizedBox(height: 96, child: Center(child: Text('成就正在准备中'))),
       );
     }
     return GridView.builder(
@@ -651,15 +689,16 @@ class _AchievementTile extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            Text(item.name, style: Theme.of(sheetContext).textTheme.titleMedium),
+            Text(
+              item.name,
+              style: Theme.of(sheetContext).textTheme.titleMedium,
+            ),
             const SizedBox(height: 6),
             Text(
               item.description,
               textAlign: TextAlign.center,
-              style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                    color: colors.inkSoft,
-                    height: 1.6,
-                  ),
+              style: Theme.of(sheetContext).textTheme.bodySmall
+                  ?.copyWith(color: colors.inkSoft, height: 1.6),
             ),
             const SizedBox(height: 14),
             Row(
@@ -695,7 +734,9 @@ class _AchievementTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         decoration: BoxDecoration(
-          color: unlocked ? colors.card : colors.cardMuted.withValues(alpha: 0.7),
+          color: unlocked
+              ? colors.card
+              : colors.cardMuted.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: unlocked ? colors.gold.withValues(alpha: 0.35) : colors.line,
@@ -760,10 +801,7 @@ class _SceneMap extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) {
       return AppCard(
-        child: SizedBox(
-          height: 72,
-          child: Center(child: Text('暂无场景数据')),
-        ),
+        child: SizedBox(height: 72, child: Center(child: Text('暂无场景数据'))),
       );
     }
     return SizedBox(
@@ -876,39 +914,49 @@ class _CardWall extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: context.colors.gold.withValues(alpha: 0.12),
               ),
-              child: Icon(Icons.auto_awesome_rounded, size: 20, color: context.colors.gold),
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                size: 20,
+                color: context.colors.gold,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 '完成今日目标后可以领取第一张句签',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.colors.inkSoft,
-                    ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: context.colors.inkSoft),
               ),
             ),
           ],
         ),
       );
     }
-    return SizedBox(
-      height: 186,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        itemCount: cards.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
-        itemBuilder: (context, index) => StaggeredEntrance(
-          index: 7 + index,
-          offset: const Offset(18, 0),
-          child: PressScale(
-            onTap: () => onTap(cards[index]),
-            scale: 0.96,
-            child: _CardTile(card: cards[index]),
-          ),
-        ),
-      ),
+    // 两列网格，与网页端 profile 的句签墙一致（grid-cols-2 + 浅色磁贴）
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 10.0;
+        final tileWidth = (constraints.maxWidth - gap) / 2;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (var i = 0; i < cards.length; i++)
+              StaggeredEntrance(
+                index: 7 + i,
+                offset: const Offset(0, 14),
+                child: SizedBox(
+                  width: tileWidth,
+                  child: PressScale(
+                    onTap: () => onTap(cards[i]),
+                    scale: 0.97,
+                    child: _CardTile(card: cards[i]),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -920,75 +968,63 @@ class _CardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 148,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            if (card.imageUrl != null && card.imageUrl!.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: staticUrl(card.imageUrl),
-                fit: BoxFit.cover,
-                // 卡片宽 148dp，按 3 倍屏解码即可
-                memCacheWidth: 444,
-                fadeInDuration: Motion.normal,
-                placeholder: (context, _) => const ColoredBox(color: Color(0xFF1B2237)),
-                errorWidget: (context, _, _) => const ColoredBox(color: Color(0xFF1B2237)),
-              )
-            else
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: <Color>[Color(0xFF334155), Color(0xFF1E293B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+    // 色板与网页端 profile 的句签墙磁贴一致（slate-50 底 / slate-200 环）
+    const Color tileBg = Color(0xFFF8FAFC);
+    const Color tileRing = Color(0xFFE2E8F0);
+    const Color imageBg = Color(0xFFF1F5F9);
+    const Color titleColor = Color(0xFF1E293B);
+    const Color dateColor = Color(0xFF94A3B8);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tileBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tileRing),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: card.imageUrl == null || card.imageUrl!.isEmpty
+                ? const ColoredBox(color: imageBg)
+                : CachedNetworkImage(
+                    imageUrl: staticUrl(card.imageUrl),
+                    fit: BoxFit.cover,
+                    // 磁贴约半屏宽，按 3 倍屏解码即可
+                    memCacheWidth: 660,
+                    fadeInDuration: Motion.normal,
+                    placeholder: (context, _) =>
+                        const ColoredBox(color: imageBg),
+                    errorWidget: (context, _, _) =>
+                        const ColoredBox(color: imageBg),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  card.titleZh.isEmpty ? card.title : card.titleZh,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: titleColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            // 底部压暗，保证标题可读
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0x00000000), Color(0xE6000000)],
-                  stops: <double>[0.42, 1],
+                const SizedBox(height: 3),
+                Text(
+                  card.bizDate,
+                  maxLines: 1,
+                  style: const TextStyle(color: dateColor, fontSize: 10),
                 ),
-              ),
+              ],
             ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    card.titleZh.isEmpty ? card.title : card.titleZh,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    card.bizDate,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1037,7 +1073,9 @@ class _AllAchievementsSheet extends StatelessWidget {
     final colors = context.colors;
     final unlocked = items.where((item) => item.unlocked).length;
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.82),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 2, 20, 20),
         child: Column(
@@ -1049,18 +1087,28 @@ class _AllAchievementsSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text('全部成就', style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        '全部成就',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 3),
                       Text(
                         '已解锁 $unlocked / ${items.length}',
-                        style: TextStyle(fontSize: 11.5, color: colors.inkFaint),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: colors.inkFaint,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(Icons.close_rounded, size: 20, color: colors.inkSoft),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color: colors.inkSoft,
+                  ),
                 ),
               ],
             ),
@@ -1075,7 +1123,8 @@ class _AllAchievementsSheet extends StatelessWidget {
                   childAspectRatio: 0.92,
                 ),
                 itemCount: items.length,
-                itemBuilder: (context, index) => _AchievementTile(item: items[index]),
+                itemBuilder: (context, index) =>
+                    _AchievementTile(item: items[index]),
               ),
             ),
           ],

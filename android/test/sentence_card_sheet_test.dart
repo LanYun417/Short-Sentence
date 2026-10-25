@@ -14,22 +14,25 @@ import 'package:short_sentence/sheets/sentence_card_sheet.dart';
 import 'package:short_sentence/theme/motion.dart';
 
 SentenceCard _card() => SentenceCard.fromJson(const <String, dynamic>{
-      'id': 7,
-      'bizDate': '2026-10-25',
-      'title': 'First Light',
-      'titleZh': '初次见面',
-      'sentenceEn': 'Nice to meet you.',
-      'translationZh': '很高兴认识你。',
-      'imageUrl': null,
-      'obtainedAt': '2026-10-25T07:00:00.000Z',
-    });
+  'id': 7,
+  'bizDate': '2026-10-25',
+  'title': 'First Light',
+  'titleZh': '初次见面',
+  'sentenceEn': 'Nice to meet you.',
+  'translationZh': '很高兴认识你。',
+  'imageUrl': null,
+  'obtainedAt': '2026-10-25T07:00:00.000Z',
+});
 
 /// 某段文字所在卡面的不透明度。
 ///
 /// 正反两面都在树里（翻面时两面要共用同一个高度，不能只建当前面），
 /// 所以「看不看得见」等价于最近一层 `Opacity` 的值。
 double _faceOpacity(WidgetTester tester, String text) {
-  final finder = find.ancestor(of: find.text(text), matching: find.byType(Opacity));
+  final finder = find.ancestor(
+    of: find.text(text),
+    matching: find.byType(Opacity),
+  );
   expect(finder, findsWidgets, reason: '「$text」应当有 Opacity 祖先');
   return tester.widget<Opacity>(finder.first).opacity;
 }
@@ -62,7 +65,7 @@ void main() {
     await _open(tester);
 
     expect(find.text('轻触揭晓'), findsOneWidget);
-    expect(find.text('2026-10-25'), findsWidgets);
+    expect(find.text('10月25日'), findsWidgets);
     // 句子已经在树里（为了两面等高），但正面整体不可见
     expect(_faceOpacity(tester, '轻触揭晓'), 1);
     expect(_faceOpacity(tester, 'Nice to meet you.'), 0);

@@ -1,13 +1,17 @@
-/// 句签海报：全屏展示当天领到的句子卡片。
+/// 句签闪卡：全屏展示当天领到的句子卡片。
 ///
-/// 交互按「闪卡」做：打开先看到**卡背**（日期 + 封蜡 + 轻触揭晓），
-/// 点一下才翻到正面看到句子与配图，落定时扫过一道光；再点可以翻回去。
+/// **视觉与网页端（client/app/components/SentenceCard.vue）保持一致**——
+/// 这是标志性元素，跨端必须长得一样：浅色照片卡、句子压在配图上、
+/// 琥珀色细环、白色卡脚。手机端只额外做两件事：翻开前的卡背，以及用设备姿态
+/// 代替鼠标驱动 3D 视差。
 ///
-/// 为什么不直接怼出答案：句签是「今天挣到的奖励」，不是详情页。
-/// 少了「开启」这一下，它只是一张带图的句子；有了翻面，它才像一张卡。
-///
-/// 设计取向：深色衬底把配图和句子衬出来，卡片有纸张的层次（大圆角、
-/// 极淡描边、外发光），四周留出呼吸边距。
+/// 网页端结构（照抄）：
+///   配图块（rounded-3xl + 琥珀环 + 投影）
+///     ├─ 镭射层（彩虹带，随姿态滑动）
+///     ├─ 渐隐蒙版（黑 75% → 35% → 透明，占图高 2/3）
+///     ├─ 徽标行（左：白底琥珀字「今日句签 · 已获得」；右：黑底白字日期）
+///     └─ 文案（中文标题 + 英文标题 + 句子 + 译文，压在图底部）
+///   卡脚（白底、琥珀字、彩带图标）
 library;
 
 import 'dart:math' as math;
@@ -20,6 +24,15 @@ import '../api/auth_api.dart';
 import '../api/models/growth.dart';
 import '../state/tilt.dart';
 import '../theme/motion.dart';
+
+/* ------------------------------ 色板（与网页端一致） ------------------------------ */
+
+const Color _amber600 = Color(0xFFD97706);
+const Color _amber200 = Color(0xFFFDE68A);
+const Color _slate100 = Color(0xFFF1F5F9);
+const Color _slate400 = Color(0xFF94A3B8);
+const Color _slate500 = Color(0xFF64748B);
+const Color _slate800 = Color(0xFF1E293B);
 
 /// 弹出一张句签。
 Future<void> showSentenceCard(BuildContext context, SentenceCard card) {
@@ -47,6 +60,20 @@ Future<void> showSentenceCard(BuildContext context, SentenceCard card) {
   );
 }
 
+/// 网页端把 bizDate 显示成「10月25日」，这里保持一致。
+String _dateLabel(String bizDate) {
+  final parts = bizDate.split('-');
+  if (parts.length < 3) {
+    return bizDate;
+  }
+  final month = int.tryParse(parts[1]);
+  final day = int.tryParse(parts[2]);
+  if (month == null || day == null) {
+    return bizDate;
+  }
+  return '$month月$day日';
+}
+
 class _CardPoster extends StatefulWidget {
   const _CardPoster({required this.card});
 
@@ -70,10 +97,9 @@ class _CardPosterState extends State<_CardPoster>
     duration: const Duration(milliseconds: 900),
   );
 
-  /// 目标面（用于无障碍语义与按钮文案）。
+  /// 目标面（用于无障碍语义）。
   bool _revealed = false;
 
-  /// 系统是否要求减弱动效（翻面直接出结果，不转）。
   bool _reduceMotion = false;
 
   @override
@@ -196,6 +222,7 @@ class _CardPosterState extends State<_CardPoster>
                       card: widget.card,
                       onFlip: _toggle,
                       onClose: _close,
+                      sheen: _sheen,
                     ),
                   ),
                 ),
@@ -206,15 +233,6 @@ class _CardPosterState extends State<_CardPoster>
                   child: IgnorePointer(
                     ignoring: showFront,
                     child: _CardBack(card: widget.card, onFlip: _toggle),
-                  ),
-                ),
-              ),
-              // 扫光在最上层，跟着卡片一起转
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: _Sheen(animation: _sheen),
                   ),
                 ),
               ),
@@ -245,39 +263,35 @@ class _CardBack extends StatelessWidget {
         onTap: onFlip,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[Color(0xFF1A2544), Color(0xFF0B1224)],
-            ),
+            borderRadius: BorderRadius.circular(28),
+            color: Colors.white,
+            border: Border.all(color: _amber200.withValues(alpha: 0.6)),
             boxShadow: const <BoxShadow>[
               BoxShadow(
-                color: Color(0x664F46E5),
-                blurRadius: 48,
-                offset: Offset(0, 20),
+                color: Color(0x1A0F172A),
+                blurRadius: 28,
+                offset: Offset(0, 14),
               ),
             ],
           ),
           child: Stack(
             children: <Widget>[
-              // 柔光用径向渐变而不是 blur 滤镜：滤镜在翻面时每帧重绘整层
+              // 柔光用径向渐变而不是 blur 滤镜：滤镜在倾斜时每帧重绘整层
               const Positioned(top: -70, right: -60, child: _Glow(size: 240)),
               const Positioned(
                 bottom: -90,
                 left: -70,
                 child: _Glow(size: 220, gold: true),
               ),
-              // 内嵌细线框：整块深色面板没有边界感，加一道内框才像一张卡
+              // 内嵌细线框：整块白面板没有边界感，加一道内框才像一张卡
               Positioned.fill(
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.07),
+                        color: _slate800.withValues(alpha: 0.06),
                       ),
                     ),
                   ),
@@ -296,16 +310,13 @@ class _CardBack extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.26),
+                            color: _slate800.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.16),
-                            ),
                           ),
                           child: Text(
-                            card.bizDate,
+                            _dateLabel(card.bizDate),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: _slate500,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.4,
@@ -316,8 +327,7 @@ class _CardBack extends StatelessWidget {
                         Text(
                           '每日句签',
                           style: TextStyle(
-                            color: const Color(0xFFFBBF24)
-                                .withValues(alpha: 0.9),
+                            color: _amber600.withValues(alpha: 0.9),
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 2.4,
@@ -326,13 +336,13 @@ class _CardBack extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
-                    Center(child: _raised(26, const _Seal())),
+                    const Center(child: _Seal()),
                     const SizedBox(height: 26),
                     const Center(
                       child: Text(
                         '轻触揭晓',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: _slate800,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 3,
@@ -340,22 +350,22 @@ class _CardBack extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Center(
+                    const Center(
                       child: Text(
                         '今天的句子，等你翻开',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.42),
+                          color: _slate500,
                           fontSize: 11.5,
                           letterSpacing: 0.4,
                         ),
                       ),
                     ),
                     const Spacer(),
-                    Center(
+                    const Center(
                       child: Text(
                         '短句 · 每天一句，慢慢变好',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.28),
+                          color: _slate400,
                           fontSize: 10.5,
                           letterSpacing: 0.6,
                         ),
@@ -363,11 +373,6 @@ class _CardBack extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              Positioned.fill(
-                // 自成一层：姿态 50Hz 刷新只重绘这块高光，
-                // 不会把配图与文字一起重新栅格化
-                child: RepaintBoundary(child: _Glare()),
               ),
             ],
           ),
@@ -386,7 +391,7 @@ class _Glow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = gold ? const Color(0xFFF59E0B) : const Color(0xFF6366F1);
+    final color = gold ? _amber200 : const Color(0xFF93C5FD);
     return Container(
       width: size,
       height: size,
@@ -394,7 +399,7 @@ class _Glow extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: <Color>[
-            color.withValues(alpha: 0.26),
+            color.withValues(alpha: 0.45),
             color.withValues(alpha: 0),
           ],
         ),
@@ -421,37 +426,38 @@ class _Seal extends StatelessWidget {
           colors: <Color>[Color(0xFFFBBF24), Color(0xFFF97316)],
         ),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: Color(0x55F59E0B), blurRadius: 28, spreadRadius: 2),
+          BoxShadow(color: Color(0x33F59E0B), blurRadius: 28, spreadRadius: 2),
         ],
       ),
       child: Container(
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0xFF0B1224),
+          color: Colors.white,
         ),
         child: const Icon(
           Icons.auto_awesome_rounded,
           size: 34,
-          color: Color(0xFFFBBF24),
+          color: Color(0xFFF59E0B),
         ),
       ),
     );
   }
 }
 
-/* ------------------------------ 正面 ------------------------------ */
+/* ------------------------------ 正面（与网页端一致） ------------------------------ */
 
-/// 正面：配图 + 标题 + 句子 + 译文 + 页脚。
 class _CardFront extends StatelessWidget {
   const _CardFront({
     required this.card,
     required this.onFlip,
     required this.onClose,
+    required this.sheen,
   });
 
   final SentenceCard card;
   final VoidCallback onFlip;
   final VoidCallback onClose;
+  final Animation<double> sheen;
 
   @override
   Widget build(BuildContext context) {
@@ -461,230 +467,305 @@ class _CardFront extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onFlip,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-            color: const Color(0xFF0B1224),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x664F46E5),
-                blurRadius: 48,
-                offset: Offset(0, 20),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(29),
-            child: Stack(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _CardPhoto(card: card, sheen: sheen),
+            const SizedBox(height: 8),
+            const _CardFooter(),
+            const SizedBox(height: 2),
+            // 网页端没有这两个按钮（卡片是内嵌在页面里的）；
+            // 手机端是全屏弹窗，必须给出口，但做成文字链，不抢卡片本身
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    // 配图（16:9），底部渐隐到卡片底色，避免生硬切边
-                    Stack(
-                      children: <Widget>[
-                        AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: card.imageUrl == null || card.imageUrl!.isEmpty
-                              ? const DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: <Color>[
-                                        Color(0xFF1E293B),
-                                        Color(0xFF0B1224),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                )
-                              : CachedNetworkImage(
-                                  imageUrl: staticUrl(card.imageUrl),
-                                  fit: BoxFit.cover,
-                                  // 卡片最宽 420dp，按 3 倍屏解码即可，别按原图 1280px 解
-                                  memCacheWidth: 1260,
-                                  fadeInDuration: Motion.slow,
-                                  placeholder: (context, _) => const ColoredBox(
-                                    color: Color(0xFF141C30),
-                                  ),
-                                  errorWidget: (context, _, _) =>
-                                      const ColoredBox(
-                                        color: Color(0xFF141C30),
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.image_not_supported_outlined,
-                                            color: Colors.white38,
-                                          ),
-                                        ),
-                                      ),
-                                ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 72,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: <Color>[
-                                  const Color(0xFF0B1224).withValues(alpha: 0),
-                                  const Color(0xFF0B1224),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        // 日期角标
-                        Positioned(
-                          left: 16,
-                          top: 16,
-                          // 抬起一层：倾斜时它会相对配图错开，纵深就出来了
-                          child: _raised(
-                            18,
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.28),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                ),
-                              ),
-                              child: Text(
-                                card.bizDate,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              const Icon(
-                                Icons.auto_awesome_rounded,
-                                size: 13,
-                                color: Color(0xFFFBBF24),
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  card.titleZh.isEmpty
-                                      ? card.title
-                                      : card.titleZh,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFFFBBF24),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            card.sentenceEn,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 21,
-                              height: 1.42,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            card.translationZh,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.62),
-                              fontSize: 13.5,
-                              height: 1.55,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: <Widget>[
-                              Container(
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(7),
-                                  gradient: const LinearGradient(
-                                    colors: <Color>[
-                                      Color(0xFF0EA5E9),
-                                      Color(0xFF8B5CF6),
-                                    ],
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.chat_bubble_rounded,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '短句 · 每日一句',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                    fontSize: 11,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                              ),
-                              _FootAction(label: '翻面', onTap: onFlip),
-                              _FootAction(label: '收起', onTap: onClose),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                // 跟手高光压在最上层：白色很淡，压在句子上也读得清
-                Positioned.fill(
-                  // 自成一层：姿态 50Hz 刷新只重绘这块高光，
-                  // 不会把配图与文字一起重新栅格化
-                  child: RepaintBoundary(child: _Glare()),
-                ),
+                _FootAction(label: '翻面', color: _amber600, onTap: onFlip),
+                const SizedBox(width: 12),
+                _FootAction(label: '收起', color: _slate500, onTap: onClose),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// 页脚小按钮：文字按钮天然带内边距，两个并排也不挤。
+/// 配图块：配图 + 镭射 + 渐隐蒙版 + 徽标 + 文案。
+class _CardPhoto extends StatelessWidget {
+  const _CardPhoto({required this.card, required this.sheen});
+
+  final SentenceCard card;
+  final Animation<double> sheen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A0F172A),
+            blurRadius: 28,
+            offset: Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: _amber200.withValues(alpha: 0.6)),
+          color: _slate100,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(27),
+          child: Stack(
+            children: <Widget>[
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                // 镭射必须包在配图外面：混合模式混的是「同一层里的内容」，
+                // 单独盖一层只会得到一块半透明色片，不会有彩虹质感
+                child: _Holo(child: _image()),
+              ),
+              // 渐隐蒙版：让文字在任何配图上都清晰（压在镭射之上）
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[
+                          Colors.black.withValues(alpha: 0),
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.75),
+                        ],
+                        // 0 → 1/3 → 1：等价于网页端「占图高 2/3 的蒙版」
+                        stops: const <double>[0, 1 / 3, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // 徽标行
+              Positioned(
+                left: 12,
+                right: 12,
+                top: 12,
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x140F172A),
+                            blurRadius: 6,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: _amber600,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            '今日句签 · 已获得',
+                            style: TextStyle(
+                              color: _amber600,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        _dateLabel(card.bizDate),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 文案（最前）
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: <Widget>[
+                          Flexible(
+                            child: Text(
+                              card.titleZh.isEmpty ? card.title : card.titleZh,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          if (card.title.isNotEmpty) ...<Widget>[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                card.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        card.sentenceEn,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        card.translationZh,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 扫光与高光：只覆盖配图（网页端的高光层也只在配图块上）
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(27),
+                    child: _Sheen(animation: sheen),
+                  ),
+                ),
+              ),
+              Positioned.fill(child: IgnorePointer(child: _Glare())),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _image() {
+    if (card.imageUrl == null || card.imageUrl!.isEmpty) {
+      return const ColoredBox(color: _slate100);
+    }
+    return CachedNetworkImage(
+      imageUrl: staticUrl(card.imageUrl),
+      fit: BoxFit.cover,
+      // 卡片最宽 420dp，按 3 倍屏解码即可，别按原图 1280px 解
+      memCacheWidth: 1260,
+      fadeInDuration: Motion.slow,
+      placeholder: (context, _) => const ColoredBox(color: Color(0xFFE2E8F0)),
+      errorWidget: (context, _, _) => const ColoredBox(
+        color: _slate100,
+        child: Center(
+          child: Icon(Icons.image_not_supported_outlined, color: _slate400),
+        ),
+      ),
+    );
+  }
+}
+
+/// 卡脚：白底、琥珀字、彩带图标——与网页端同一句话。
+class _CardFooter extends StatelessWidget {
+  const _CardFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _amber200.withValues(alpha: 0.6)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x140F172A),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(Icons.celebration_rounded, size: 16, color: _amber600),
+          SizedBox(width: 6),
+          Text(
+            '完成今日目标，收下这张属于你的闪卡',
+            style: TextStyle(
+              color: _amber600,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 页脚小按钮：文字按钮天然带内边距。
 class _FootAction extends StatelessWidget {
-  const _FootAction({required this.label, required this.onTap});
+  const _FootAction({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   final String label;
+  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -692,13 +773,130 @@ class _FootAction extends StatelessWidget {
     return TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withValues(alpha: 0.8),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         minimumSize: const Size(0, 40),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
       child: Text(label),
+    );
+  }
+}
+
+/* ------------------------------ 镭射 ------------------------------ */
+
+/// 镭射（holo）：一道彩虹带压在配图上，`screen` 混合出彩虹质感。
+///
+/// 网页端（`client/assets/css/main.css` 的 `.ss-holo`）是
+/// `linear-gradient(115deg, …)` + `mix-blend-mode: overlay` + `background-size: 260%`。
+/// 手机端把 `overlay` 换成 `screen`：`overlay` 在亮调插画上几乎推不动
+/// （实测平均每个通道只差 1/255，等于没有），`screen` 在暗部着色明显、
+/// 亮部只是提亮，不会把画面搞脏。
+///
+/// 两个关键点：
+/// 1. **必须包在配图外面**，不能单独盖一层——混合模式混的是同一层里的内容，
+///    单独盖一层只会得到一块半透明色片，没有彩虹质感；
+/// 2. **渐变块要比配图大**（这里是 2.6 倍）：位移量按比例限制在「图块仍能盖满配图」
+///    的范围内。盖不满会让图块边缘的实色露出来，画面上会切出一道硬边
+///    （网页端 2026-10-24 的真实缺陷：指针移到中上方时，一块矩形渐变从顶部滑进来）。
+class _Holo extends StatelessWidget {
+  const _Holo({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tracker = DeviceTiltScope.of(context);
+    final reduce = Motion.reduced(context);
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: tracker,
+        // 配图只建一次：每帧变的只是 shader
+        child: child,
+        builder: (context, child) => ShaderMask(
+          blendMode: BlendMode.screen,
+          shaderCallback: (rect) => _holoShader(rect, tracker.value, reduce),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// 彩虹带的整体不透明度：静止时常驻一层（卡片有材质感），跟手时加深。
+///
+/// 上限 0.48 与网页端的最大有效值对齐（网页端色标 alpha 0.55 × opacity 0.85）。
+/// 再高，右侧那棵树的 magenta 会重到发艳。
+double _holoStrength(Offset offset) =>
+    0.28 + 0.20 * math.min(1.0, offset.distance * 2.6);
+
+Shader _holoShader(Rect rect, Offset offset, bool reduce) {
+  final strength = reduce ? 0.20 : _holoStrength(offset);
+
+  // 图块比配图大 2.6 倍，位移限制在 ±0.8 倍配图尺寸内：图块永远盖得满
+  final big = Rect.fromLTWH(
+    rect.left - rect.width * 0.8 + (reduce ? 0 : offset.dx * rect.width * 0.8),
+    rect.top - rect.height * 0.8 + (reduce ? 0 : offset.dy * rect.height * 0.8),
+    rect.width * 2.6,
+    rect.height * 2.6,
+  );
+
+  Color band(int argb) => Color(argb).withValues(alpha: strength);
+
+  // 色标与网页端一致（粉 → 黄 → 青 → 蓝 → 紫），角度近似 115°
+  return LinearGradient(
+    begin: const Alignment(-0.92, -0.40),
+    end: const Alignment(0.92, 0.40),
+    colors: <Color>[
+      band(0x00FFFFFF),
+      band(0xFFFF3CA0),
+      band(0xFFFFD60A),
+      band(0xFF3CFFBE),
+      band(0xFF3CA0FF),
+      band(0xFFB45AFF),
+      band(0x00FFFFFF),
+    ],
+    stops: const <double>[0.20, 0.30, 0.38, 0.46, 0.54, 0.62, 0.72],
+  ).createShader(big);
+}
+
+/* ------------------------------ 跟手高光 ------------------------------ */
+
+/// 跟手高光：网页端是「圆心跟随鼠标」，这里跟随姿态偏移。
+///
+/// 强度随偏移量增长，静止时为 0——常亮的话，糊在句子上的一团白斑只会让字更难读。
+class _Glare extends StatelessWidget {
+  const _Glare();
+
+  @override
+  Widget build(BuildContext context) {
+    final tracker = DeviceTiltScope.of(context);
+    return AnimatedBuilder(
+      animation: tracker,
+      builder: (context, _) {
+        final offset = tracker.value;
+        final strength = math.min(1.0, offset.distance * 2.6);
+        if (strength < 0.02) {
+          return const SizedBox.shrink();
+        }
+        return Opacity(
+          opacity: strength,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(offset.dx * 0.85, offset.dy * 0.85),
+                radius: 0.9,
+                colors: <Color>[
+                  Colors.white.withValues(alpha: 0.34),
+                  Colors.white.withValues(alpha: 0),
+                ],
+                stops: const <double>[0, 0.72],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -745,51 +943,6 @@ class _Sheen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// 沿 Z 轴抬起一层。透视由外层提供，所以静止时只是略微放大，
-/// 倾斜时才会相对卡面错开——纵深靠的是「错开」，不是「放大」。
-Widget _raised(double z, Widget child) =>
-    Transform(transform: Matrix4.translationValues(0, 0, z), child: child);
-
-/// 跟手高光：网页端是「圆心跟随鼠标」，这里跟随姿态偏移。
-///
-/// 强度随偏移量增长，静止时为 0——常亮的话，糊在句子上的白斑只会让字更难读。
-class _Glare extends StatelessWidget {
-  const _Glare();
-
-  @override
-  Widget build(BuildContext context) {
-    final tracker = DeviceTiltScope.of(context);
-    return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: tracker,
-        builder: (context, _) {
-          final offset = tracker.value;
-          final strength = math.min(1.0, offset.distance * 2.6);
-          if (strength < 0.02) {
-            return const SizedBox.shrink();
-          }
-          return Opacity(
-            opacity: strength,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(offset.dx * 0.85, offset.dy * 0.85),
-                  radius: 0.9,
-                  colors: <Color>[
-                    Colors.white.withValues(alpha: 0.16),
-                    Colors.white.withValues(alpha: 0),
-                  ],
-                  stops: const <double>[0, 0.72],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }
