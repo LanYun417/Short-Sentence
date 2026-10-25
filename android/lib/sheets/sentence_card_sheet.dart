@@ -264,7 +264,9 @@ class _CardPosterState extends State<_CardPoster>
         return Transform(
           // 显式按中心旋转：不设 alignment 时默认绕左上角转，观感是「卡片歪着」
           alignment: Alignment.center,
-          transform: Matrix4.rotationY(t * math.pi),
+          // 取负号：用户反馈初始方向「反了」。正角度是右缘远去、左缘迎面，
+          // 负角度反过来（左缘远去、右缘迎面），观感是卡片朝右边翻开。
+          transform: Matrix4.rotationY(-t * math.pi),
           // 测试按这个 key 找翻转矩阵（树里还有若干 translateZ 的 Transform）
           key: const ValueKey<String>('sentence-card-flip'),
           child: Stack(

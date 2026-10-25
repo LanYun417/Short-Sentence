@@ -48,7 +48,7 @@ android/
 │  │  └─ models/             # 与后端逐字段同构的模型
 │  ├─ state/                 # Riverpod 控制器（认证/刷题/语句库/成长/句签/打卡）
 │  ├─ pages/
-│  │  ├─ shell_page.dart     # 四 Tab 外壳（交叉淡入 + 悬浮底栏）
+│  │  ├─ shell_page.dart     # 四 Tab 外壳（交叉淡入 + 停靠式底栏）
 │  │  ├─ quiz_page.dart      # 刷题（进度 Hero / 翻卡 / 拼词 / 经验 / 达标庆祝）
 │  │  ├─ library_page.dart   # 语句库（收藏 / 复习 / 历史）
 │  │  ├─ growth_page.dart    # 成长（等级环 / 成就 / 场景 / 句签墙）

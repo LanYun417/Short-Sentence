@@ -11,6 +11,8 @@
 /// 只在 90 度时换内容而不预旋转，翻过去看到的就是镜像文字。
 library;
 
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +53,8 @@ class QuizPage extends ConsumerStatefulWidget {
   ConsumerState<QuizPage> createState() => _QuizPageState();
 }
 
-class _QuizPageState extends ConsumerState<QuizPage> {
+class _QuizPageState extends ConsumerState<QuizPage>
+    with SingleTickerProviderStateMixin {
   final _answerController = TextEditingController();
   final _answerFocus = FocusNode();
 
@@ -60,6 +63,13 @@ class _QuizPageState extends ConsumerState<QuizPage> {
   /// 拼词模式下用户常被自动滚到卡片底部，若「下一题」后不回顶，
   /// 新题会从中间开始显示（只能看到图片下半截），像是题目加载错了。
   final ScrollController _scroll = ScrollController();
+
+  /// 翻面动画控制器：由页面持有，翻卡与背后的纸片堆共用——
+  /// 翻到一半时纸片要淡出（不然卡片变窄会露出静止的白纸片，像白底）。
+  late final AnimationController _flipController = AnimationController(
+    duration: Motion.flip,
+    vsync: this,
+  );
 
   /// 拼词模式：已选中的词块（有序）。
   final List<String> _picked = <String>[];
@@ -95,6 +105,7 @@ class _QuizPageState extends ConsumerState<QuizPage> {
     _answerController.dispose();
     _answerFocus.dispose();
     _scroll.dispose();
+    _flipController.dispose();
     super.dispose();
   }
 
@@ -336,8 +347,10 @@ class _QuizPageState extends ConsumerState<QuizPage> {
         ),
         const SizedBox(height: 14),
         _StackedCards(
+          flip: _flipController,
           child: RepaintBoundary(
             child: _FlipCard(
+              controller: _flipController,
               flipped: flipped,
               frontBuilder: (_) => _FrontFace(
                 question: question,
@@ -1075,28 +1088,50 @@ class _DifficultySheet extends StatelessWidget {
 
 /// 卡片背后叠两层「纸片」，让翻转有纵深。
 class _StackedCards extends StatelessWidget {
-  const _StackedCards({required this.child});
+  const _StackedCards({required this.child, this.flip});
 
   final Widget child;
+
+  /// 翻面动画（可空：测试/其它调用点没有动画时纸片恒显示）。
+  ///
+  /// 纸片在卡片正后方且**不参与旋转**：翻到一半卡片变窄，
+  /// 静止的白纸片就从两侧露出来，看起来像翻面时垫了块白底。
+  /// 所以翻面期间把纸片淡出（sin 曲线：中点 0、两端 1），落定后再浮回来。
+  final Animation<double>? flip;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final reveal = flip == null
+        ? 1.0
+        : 1 - math.sin(flip!.value * math.pi).clamp(0.0, 1.0);
+
     Widget ghost(double opacity) => DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.card.withValues(alpha: opacity),
+        color: colors.card.withValues(alpha: opacity * reveal),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.line.withValues(alpha: 0.6)),
+        border: Border.all(color: colors.line.withValues(alpha: 0.6 * reveal)),
       ),
     );
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        Positioned(top: 14, left: 14, right: 14, bottom: -8, child: ghost(0.5)),
-        Positioned(top: 7, left: 7, right: 7, bottom: -4, child: ghost(0.75)),
-        child,
-      ],
+    return AnimatedBuilder(
+      animation: flip ?? const AlwaysStoppedAnimation<double>(0),
+      // child 一次性构建：纸片每帧只重算透明度，翻卡本体不重建
+      child: child,
+      builder: (context, child) => Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned(
+            top: 14,
+            left: 14,
+            right: 14,
+            bottom: -8,
+            child: ghost(0.5),
+          ),
+          Positioned(top: 7, left: 7, right: 7, bottom: -4, child: ghost(0.75)),
+          ?child,
+        ],
+      ),
     );
   }
 }
@@ -1105,11 +1140,14 @@ class _StackedCards extends StatelessWidget {
 
 class _FlipCard extends StatefulWidget {
   const _FlipCard({
+    required this.controller,
     required this.flipped,
     required this.frontBuilder,
     required this.backBuilder,
   });
 
+  /// 翻面动画由页面持有：背后的纸片堆要按同一进度淡出。
+  final AnimationController controller;
   final bool flipped;
   final WidgetBuilder frontBuilder;
   final WidgetBuilder backBuilder;
@@ -1118,18 +1156,24 @@ class _FlipCard extends StatefulWidget {
   State<_FlipCard> createState() => _FlipCardState();
 }
 
-class _FlipCardState extends State<_FlipCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    duration: Motion.flip,
-    vsync: this,
-  );
-
+class _FlipCardState extends State<_FlipCard> {
   @override
   void initState() {
     super.initState();
-    // 初始就对齐（避免首帧闪一下正面再翻）
-    _controller.value = widget.flipped ? 1 : 0;
+    // 初始就对齐（避免首帧闪一下正面再翻）。
+    //
+    // 注意 AnimationController.value 的赋值**同值也会 notifyListeners**，
+    // 而这里的监听者里有「正在挂载中的祖先」（纸片堆按同一动画淡出）——
+    // 挂载途中把祖先标脏会触发框架的 '!_dirty' 断言（Widget 测试必现）。
+    // 所以同值时绝不赋值；不同值（恢复到背面态）延到首帧后再对齐。
+    final target = widget.flipped ? 1.0 : 0.0;
+    if (widget.controller.value != target) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.controller.value = target;
+        }
+      });
+    }
   }
 
   @override
@@ -1138,25 +1182,19 @@ class _FlipCardState extends State<_FlipCard>
     if (oldWidget.flipped != widget.flipped) {
       // 用控制器驱动：稳态必然是 0 或 1，**不可能停在中间值**。
       if (widget.flipped) {
-        _controller.forward();
+        widget.controller.forward();
       } else {
-        _controller.reverse();
+        widget.controller.reverse();
       }
     }
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: widget.controller,
       builder: (context, child) {
-        final t = _controller.value;
+        final t = widget.controller.value;
         // 超过一半时切背面，且背面预旋转 180 度——否则翻过去是镜像文字。
         final showBack = t >= 0.5;
         return Transform(
