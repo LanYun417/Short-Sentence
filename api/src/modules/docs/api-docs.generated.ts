@@ -4858,10 +4858,18 @@ export const API_DOCS: ApiDocGroup[] = [
             "required": false,
             "description": "",
             "example": "示例值"
+          },
+          {
+            "name": "blessing",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
           }
         ],
         "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/sentence-cards/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"title\": \"示例值\",\n      \"titleZh\": \"示例值\",\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\"\n    }'",
+          "curl": "curl -X PUT \"http://localhost:3000/api/sentence-cards/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"title\": \"示例值\",\n      \"titleZh\": \"示例值\",\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\",\n      \"blessing\": \"示例值\"\n    }'",
           "pathParams": {
             "id": "1"
           },
@@ -4869,7 +4877,8 @@ export const API_DOCS: ApiDocGroup[] = [
             "title": "示例值",
             "titleZh": "示例值",
             "sentenceEn": "示例值",
-            "translationZh": "示例值"
+            "translationZh": "示例值",
+            "blessing": "示例值"
           }
         }
       },

@@ -32,6 +32,8 @@ export interface SentenceCardView {
   titleZh: string;
   sentenceEn: string;
   translationZh: string;
+  /** 寄语（这张卡独有的一句；老卡片可能为空，前端有兜底） */
+  blessing: string;
   imageUrl: string | null;
   /** 获得时间（ISO；未领取为 null） */
   obtainedAt: string | null;
@@ -112,6 +114,7 @@ export class SentenceCardService {
         titleZh: theme.titleZh || theme.title,
         sentenceEn: theme.sentenceEn,
         translationZh: theme.translationZh,
+        blessing: theme.blessing,
         scenePrompt: theme.scenePrompt,
         imageFileId: BigInt(saved.file.id),
         status: 'ready',
@@ -136,6 +139,7 @@ export class SentenceCardService {
             titleZh: '',
             sentenceEn: '',
             translationZh: '',
+            blessing: '',
             scenePrompt: '',
             status: 'failed',
           },
@@ -307,6 +311,7 @@ export class SentenceCardService {
       titleZh: string;
       sentenceEn: string;
       translationZh: string;
+      blessing: string;
     },
     obtainedAt: Date | null,
     imageUrl: string | null,
@@ -318,6 +323,7 @@ export class SentenceCardService {
       titleZh: card.titleZh,
       sentenceEn: card.sentenceEn,
       translationZh: card.translationZh,
+      blessing: card.blessing,
       imageUrl,
       obtainedAt: obtainedAt ? obtainedAt.toISOString() : null,
     };

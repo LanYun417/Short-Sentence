@@ -173,6 +173,15 @@ const dateText = computed(() => {
         <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
         完成今日目标，收下这张属于你的闪卡
       </div>
+
+      <!-- 寄语：这张卡独有的一句（随卡片一起生成；老卡片为空时不占位） -->
+      <p
+        v-if="card.blessing"
+        class="mt-2 text-center text-xs text-amber-600/90 dark:text-amber-400/80"
+        :style="{ transform: `translateZ(${Z_FOOTER}px)` }"
+      >
+        「{{ card.blessing }}」
+      </p>
     </div>
   </div>
 </template>

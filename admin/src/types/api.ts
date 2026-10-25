@@ -1239,6 +1239,8 @@ export interface SentenceCardItem {
   titleZh: string;
   sentenceEn: string;
   translationZh: string;
+  /** 寄语（卡背展示的一句） */
+  blessing: string;
   imageUrl: string | null;
   status: SentenceCardStatus;
   /** 领取人数 */
@@ -1271,6 +1273,7 @@ export interface SentenceCardPayload {
   titleZh?: string;
   sentenceEn?: string;
   translationZh?: string;
+  blessing?: string;
 }
 
 /* ------------------------------ 词根词典 ------------------------------ */

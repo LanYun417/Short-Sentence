@@ -277,6 +277,7 @@ export const DailySentenceCardScalarFieldEnum = {
   titleZh: 'titleZh',
   sentenceEn: 'sentenceEn',
   translationZh: 'translationZh',
+  blessing: 'blessing',
   scenePrompt: 'scenePrompt',
   imageFileId: 'imageFileId',
   status: 'status',
@@ -761,6 +762,7 @@ export const DailySentenceCardOrderByRelevanceFieldEnum = {
   titleZh: 'titleZh',
   sentenceEn: 'sentenceEn',
   translationZh: 'translationZh',
+  blessing: 'blessing',
   scenePrompt: 'scenePrompt',
   status: 'status'
 } as const

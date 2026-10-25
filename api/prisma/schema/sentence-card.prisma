@@ -18,6 +18,8 @@ model DailySentenceCard {
   sentenceEn String @map("sentence_en") @db.VarChar(200)
   /// 短句中文释义
   translationZh String @map("translation_zh") @db.VarChar(200)
+  /// 寄语（这张卡独有的一句，随文案一起生成；展示在卡背，替代泛用的揭晓文案）
+  blessing String @default("") @map("blessing") @db.VarChar(120)
   /// 生图提示词（运营审核）
   scenePrompt String @map("scene_prompt") @db.VarChar(500)
   /// 配图文件 id（0 = 未生成，指向 sys_file；故不建外键）

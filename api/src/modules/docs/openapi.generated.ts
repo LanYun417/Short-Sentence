@@ -13765,6 +13765,10 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "translationZh": {
             "type": "string",
             "example": "示例值"
+          },
+          "blessing": {
+            "type": "string",
+            "example": "示例值"
           }
         }
       },

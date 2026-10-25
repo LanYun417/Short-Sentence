@@ -485,7 +485,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     const systemPrompt = [
       'You are the card designer for "Short Sentence", an app where users collect one beautiful flash card per day.',
       'Hard requirements:',
-      '1. Output JSON only, shaped as {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":""}.',
+      '1. Output JSON only, shaped as {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":"","blessing":""}.',
       '   No explanations.',
       '2. title: English theme name, 2-4 words (e.g. "Morning Ritual"). titleZh: the Chinese theme name.',
       '3. sentenceEn: one short, beautiful, uplifting English sentence (at most 12 words).',
@@ -495,8 +495,11 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '5. titleZh and translationZh must not stack the same words; they should read like Chinese, not a translation.',
       '6. scenePrompt: English image prompt for a dreamy, healing scene illustration (NOT two people talking):',
       '   describe the subject, environment, light and palette; flat / storybook style, 16:9, no text in the image.',
-      '7. The theme must differ every day; avoid common holidays. Positive, warm and visual.',
-      `8. Date: ${day}.`,
+      '7. blessing: a short Chinese dedication (at most 24 characters) written for whoever collects this card today.',
+      '   Warm and specific to the theme; never a translation of sentenceEn; no exclamation marks;',
+      '   read like something a friend would write on the back of a postcard.',
+      '8. The theme must differ every day; avoid common holidays. Positive, warm and visual.',
+      `9. Date: ${day}.`,
     ].join('\n');
 
     const content = await this.chat(
@@ -541,8 +544,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       sentenceEn: str(raw.sentenceEn, 200),
       translationZh: str(raw.translationZh, 200),
       scenePrompt: str(raw.scenePrompt, 500),
+      blessing: str(raw.blessing, 120),
     };
-    // 标题与短句为卡面必需，缺任一视为不可用
+    // 标题与短句为卡面必需，缺任一视为不可用；寄语允许为空（老卡片没有，前端有兜底文案）
     if (!theme.title || !theme.sentenceEn || !theme.scenePrompt) {
       return null;
     }

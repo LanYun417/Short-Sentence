@@ -24,6 +24,11 @@ export class UpdateSentenceCardDto {
   @IsString({ message: '中文释义必须为字符串' })
   @MaxLength(200, { message: '中文释义最长 200 个字符' })
   translationZh?: string;
+
+  @IsOptional()
+  @IsString({ message: '寄语必须为字符串' })
+  @MaxLength(120, { message: '寄语最长 120 个字符' })
+  blessing?: string;
 }
 
 /** 按日期重新生成句签。 */

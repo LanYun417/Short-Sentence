@@ -95,7 +95,7 @@ async function handleDetail(row: SentenceCardItem): Promise<void> {
 const editVisible = ref(false);
 const saving = ref(false);
 const editingId = ref<number | null>(null);
-const form = ref<SentenceCardPayload>({ title: '', titleZh: '', sentenceEn: '', translationZh: '' });
+const form = ref<SentenceCardPayload>({ title: '', titleZh: '', sentenceEn: '', translationZh: '', blessing: '' });
 
 /** 打开编辑。 */
 function handleEdit(row: SentenceCardItem): void {
@@ -105,6 +105,7 @@ function handleEdit(row: SentenceCardItem): void {
     titleZh: row.titleZh,
     sentenceEn: row.sentenceEn,
     translationZh: row.translationZh,
+    blessing: row.blessing,
   };
   editVisible.value = true;
 }
@@ -125,6 +126,7 @@ async function handleSave(): Promise<void> {
       titleZh: form.value.titleZh?.trim() || undefined,
       sentenceEn: form.value.sentenceEn.trim(),
       translationZh: form.value.translationZh.trim(),
+      blessing: form.value.blessing?.trim() || undefined,
     });
     ElMessage.success('保存成功');
     editVisible.value = false;
@@ -317,6 +319,7 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
             <el-descriptions-item label="主题">{{ detail.titleZh }}（{{ detail.title }}）</el-descriptions-item>
             <el-descriptions-item label="英文短句">{{ detail.sentenceEn }}</el-descriptions-item>
             <el-descriptions-item label="中文释义">{{ detail.translationZh }}</el-descriptions-item>
+            <el-descriptions-item label="寄语">{{ detail.blessing || '—' }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="statusTag(detail.status).type" size="small">{{ statusTag(detail.status).label }}</el-tag>
             </el-descriptions-item>
@@ -368,6 +371,16 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
         </el-form-item>
         <el-form-item label="中文释义" required>
           <el-input v-model="form.translationZh" type="textarea" :rows="2" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-form-item label="寄语">
+          <el-input
+            v-model="form.blessing"
+            type="textarea"
+            :rows="2"
+            maxlength="120"
+            show-word-limit
+            placeholder="展示在卡背上的一句寄语，留空则客户端用兜底文案"
+          />
         </el-form-item>
         <el-alert
           type="info"

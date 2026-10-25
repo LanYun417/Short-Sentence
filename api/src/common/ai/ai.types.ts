@@ -75,6 +75,8 @@ export interface SentenceCardTheme {
   translationZh: string;
   /** 生图提示词（唯美场景插画，非对话） */
   scenePrompt: string;
+  /** 寄语（这张卡独有的一句，随文案一起生成；展示在卡背） */
+  blessing: string;
 }
 
 /** 生图结果（原始字节，转 webp 与入库由调用方负责）。 */

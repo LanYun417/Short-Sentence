@@ -21,6 +21,7 @@ export interface SentenceCardAdminItem {
   titleZh: string;
   sentenceEn: string;
   translationZh: string;
+  blessing: string;
   imageUrl: string | null;
   status: string;
   /** 领取人数（user_sentence_card 记录数） */
@@ -31,6 +32,8 @@ export interface SentenceCardAdminItem {
 
 /** 详情（多出提示词与最近领取明细）。 */
 export interface SentenceCardAdminDetail extends SentenceCardAdminItem {
+  /** 寄语（卡背展示的那句） */
+  blessing: string;
   /** 生图提示词（运营审核文案与画面是否匹配） */
   scenePrompt: string;
   imageFileId: number;
@@ -119,6 +122,7 @@ export class SentenceCardsService {
 
     return {
       ...this.toItem(row, urls.get(Number(row.imageFileId)) ?? null, claimCount),
+      blessing: row.blessing,
       scenePrompt: row.scenePrompt,
       imageFileId: Number(row.imageFileId),
       claims: grants.map((grant) => {
@@ -144,7 +148,7 @@ export class SentenceCardsService {
     }
 
     const data: Record<string, string> = {};
-    for (const key of ['title', 'titleZh', 'sentenceEn', 'translationZh'] as const) {
+    for (const key of ['title', 'titleZh', 'sentenceEn', 'translationZh', 'blessing'] as const) {
       const value = dto[key];
       if (value !== undefined) {
         data[key] = value.trim();
@@ -225,6 +229,7 @@ export class SentenceCardsService {
       titleZh: string;
       sentenceEn: string;
       translationZh: string;
+      blessing: string;
       status: string;
       createdAt: Date;
       updatedAt: Date;
@@ -239,6 +244,7 @@ export class SentenceCardsService {
       titleZh: row.titleZh,
       sentenceEn: row.sentenceEn,
       translationZh: row.translationZh,
+      blessing: row.blessing,
       imageUrl,
       status: row.status,
       claimCount,

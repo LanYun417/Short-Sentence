@@ -112,6 +112,8 @@ export interface SentenceCard {
   titleZh: string;
   sentenceEn: string;
   translationZh: string;
+  /** 寄语（这张卡独有的一句；老卡片可能为空，展示侧有兜底） */
+  blessing: string;
   imageUrl: string | null;
   /** 获得时间（ISO；未领取为 null） */
   obtainedAt: string | null;

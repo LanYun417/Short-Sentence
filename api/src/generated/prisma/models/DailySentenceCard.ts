@@ -43,6 +43,7 @@ export type DailySentenceCardMinAggregateOutputType = {
   titleZh: string | null
   sentenceEn: string | null
   translationZh: string | null
+  blessing: string | null
   scenePrompt: string | null
   imageFileId: bigint | null
   status: string | null
@@ -57,6 +58,7 @@ export type DailySentenceCardMaxAggregateOutputType = {
   titleZh: string | null
   sentenceEn: string | null
   translationZh: string | null
+  blessing: string | null
   scenePrompt: string | null
   imageFileId: bigint | null
   status: string | null
@@ -71,6 +73,7 @@ export type DailySentenceCardCountAggregateOutputType = {
   titleZh: number
   sentenceEn: number
   translationZh: number
+  blessing: number
   scenePrompt: number
   imageFileId: number
   status: number
@@ -97,6 +100,7 @@ export type DailySentenceCardMinAggregateInputType = {
   titleZh?: true
   sentenceEn?: true
   translationZh?: true
+  blessing?: true
   scenePrompt?: true
   imageFileId?: true
   status?: true
@@ -111,6 +115,7 @@ export type DailySentenceCardMaxAggregateInputType = {
   titleZh?: true
   sentenceEn?: true
   translationZh?: true
+  blessing?: true
   scenePrompt?: true
   imageFileId?: true
   status?: true
@@ -125,6 +130,7 @@ export type DailySentenceCardCountAggregateInputType = {
   titleZh?: true
   sentenceEn?: true
   translationZh?: true
+  blessing?: true
   scenePrompt?: true
   imageFileId?: true
   status?: true
@@ -226,6 +232,7 @@ export type DailySentenceCardGroupByOutputType = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing: string
   scenePrompt: string
   imageFileId: bigint
   status: string
@@ -263,6 +270,7 @@ export type DailySentenceCardWhereInput = {
   titleZh?: Prisma.StringFilter<"DailySentenceCard"> | string
   sentenceEn?: Prisma.StringFilter<"DailySentenceCard"> | string
   translationZh?: Prisma.StringFilter<"DailySentenceCard"> | string
+  blessing?: Prisma.StringFilter<"DailySentenceCard"> | string
   scenePrompt?: Prisma.StringFilter<"DailySentenceCard"> | string
   imageFileId?: Prisma.BigIntFilter<"DailySentenceCard"> | bigint | number
   status?: Prisma.StringFilter<"DailySentenceCard"> | string
@@ -278,6 +286,7 @@ export type DailySentenceCardOrderByWithRelationInput = {
   titleZh?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
+  blessing?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -297,6 +306,7 @@ export type DailySentenceCardWhereUniqueInput = Prisma.AtLeast<{
   titleZh?: Prisma.StringFilter<"DailySentenceCard"> | string
   sentenceEn?: Prisma.StringFilter<"DailySentenceCard"> | string
   translationZh?: Prisma.StringFilter<"DailySentenceCard"> | string
+  blessing?: Prisma.StringFilter<"DailySentenceCard"> | string
   scenePrompt?: Prisma.StringFilter<"DailySentenceCard"> | string
   imageFileId?: Prisma.BigIntFilter<"DailySentenceCard"> | bigint | number
   status?: Prisma.StringFilter<"DailySentenceCard"> | string
@@ -312,6 +322,7 @@ export type DailySentenceCardOrderByWithAggregationInput = {
   titleZh?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
+  blessing?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -334,6 +345,7 @@ export type DailySentenceCardScalarWhereWithAggregatesInput = {
   titleZh?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
   sentenceEn?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
   translationZh?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
+  blessing?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
   scenePrompt?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
   imageFileId?: Prisma.BigIntWithAggregatesFilter<"DailySentenceCard"> | bigint | number
   status?: Prisma.StringWithAggregatesFilter<"DailySentenceCard"> | string
@@ -348,6 +360,7 @@ export type DailySentenceCardCreateInput = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing?: string
   scenePrompt: string
   imageFileId?: bigint | number
   status?: string
@@ -363,6 +376,7 @@ export type DailySentenceCardUncheckedCreateInput = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing?: string
   scenePrompt: string
   imageFileId?: bigint | number
   status?: string
@@ -378,6 +392,7 @@ export type DailySentenceCardUpdateInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -393,6 +408,7 @@ export type DailySentenceCardUncheckedUpdateInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -408,6 +424,7 @@ export type DailySentenceCardCreateManyInput = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing?: string
   scenePrompt: string
   imageFileId?: bigint | number
   status?: string
@@ -422,6 +439,7 @@ export type DailySentenceCardUpdateManyMutationInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -436,6 +454,7 @@ export type DailySentenceCardUncheckedUpdateManyInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -456,6 +475,7 @@ export type DailySentenceCardCountOrderByAggregateInput = {
   titleZh?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
+  blessing?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -475,6 +495,7 @@ export type DailySentenceCardMaxOrderByAggregateInput = {
   titleZh?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
+  blessing?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -489,6 +510,7 @@ export type DailySentenceCardMinOrderByAggregateInput = {
   titleZh?: Prisma.SortOrder
   sentenceEn?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
+  blessing?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -527,6 +549,7 @@ export type DailySentenceCardCreateWithoutGrantsInput = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing?: string
   scenePrompt: string
   imageFileId?: bigint | number
   status?: string
@@ -541,6 +564,7 @@ export type DailySentenceCardUncheckedCreateWithoutGrantsInput = {
   titleZh: string
   sentenceEn: string
   translationZh: string
+  blessing?: string
   scenePrompt: string
   imageFileId?: bigint | number
   status?: string
@@ -571,6 +595,7 @@ export type DailySentenceCardUpdateWithoutGrantsInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -585,6 +610,7 @@ export type DailySentenceCardUncheckedUpdateWithoutGrantsInput = {
   titleZh?: Prisma.StringFieldUpdateOperationsInput | string
   sentenceEn?: Prisma.StringFieldUpdateOperationsInput | string
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
+  blessing?: Prisma.StringFieldUpdateOperationsInput | string
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
@@ -630,6 +656,7 @@ export type DailySentenceCardSelect<ExtArgs extends runtime.Types.Extensions.Int
   titleZh?: boolean
   sentenceEn?: boolean
   translationZh?: boolean
+  blessing?: boolean
   scenePrompt?: boolean
   imageFileId?: boolean
   status?: boolean
@@ -648,6 +675,7 @@ export type DailySentenceCardSelectScalar = {
   titleZh?: boolean
   sentenceEn?: boolean
   translationZh?: boolean
+  blessing?: boolean
   scenePrompt?: boolean
   imageFileId?: boolean
   status?: boolean
@@ -655,7 +683,7 @@ export type DailySentenceCardSelectScalar = {
   updatedAt?: boolean
 }
 
-export type DailySentenceCardOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "title" | "titleZh" | "sentenceEn" | "translationZh" | "scenePrompt" | "imageFileId" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["dailySentenceCard"]>
+export type DailySentenceCardOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "title" | "titleZh" | "sentenceEn" | "translationZh" | "blessing" | "scenePrompt" | "imageFileId" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["dailySentenceCard"]>
 export type DailySentenceCardInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   grants?: boolean | Prisma.DailySentenceCard$grantsArgs<ExtArgs>
   _count?: boolean | Prisma.DailySentenceCardCountOutputTypeDefaultArgs<ExtArgs>
@@ -691,6 +719,10 @@ export type $DailySentenceCardPayload<ExtArgs extends runtime.Types.Extensions.I
      * 短句中文释义
      */
     translationZh: string
+    /**
+     * 寄语（这张卡独有的一句，随文案一起生成；展示在卡背，替代泛用的揭晓文案）
+     */
+    blessing: string
     /**
      * 生图提示词（运营审核）
      */
@@ -1087,6 +1119,7 @@ export interface DailySentenceCardFieldRefs {
   readonly titleZh: Prisma.FieldRef<"DailySentenceCard", 'String'>
   readonly sentenceEn: Prisma.FieldRef<"DailySentenceCard", 'String'>
   readonly translationZh: Prisma.FieldRef<"DailySentenceCard", 'String'>
+  readonly blessing: Prisma.FieldRef<"DailySentenceCard", 'String'>
   readonly scenePrompt: Prisma.FieldRef<"DailySentenceCard", 'String'>
   readonly imageFileId: Prisma.FieldRef<"DailySentenceCard", 'BigInt'>
   readonly status: Prisma.FieldRef<"DailySentenceCard", 'String'>
