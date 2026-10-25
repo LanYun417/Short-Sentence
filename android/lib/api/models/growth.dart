@@ -187,6 +187,7 @@ class SentenceCard {
     required this.titleZh,
     required this.sentenceEn,
     required this.translationZh,
+    required this.blessing,
     required this.imageUrl,
     required this.obtainedAt,
   });
@@ -204,6 +205,9 @@ class SentenceCard {
 
   final String sentenceEn;
   final String translationZh;
+
+  /// 寄语（这张卡独有的一句；老卡片为空，展示侧有兜底文案）。
+  final String blessing;
   final String? imageUrl;
 
   /// 获得时间（null = 未领取）。
@@ -219,6 +223,7 @@ class SentenceCard {
       titleZh: json['titleZh'] as String? ?? '',
       sentenceEn: json['sentenceEn'] as String? ?? '',
       translationZh: json['translationZh'] as String? ?? '',
+      blessing: json['blessing'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
       obtainedAt: DateTime.tryParse(json['obtainedAt'] as String? ?? ''),
     );

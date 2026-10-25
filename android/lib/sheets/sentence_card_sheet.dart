@@ -17,6 +17,9 @@ library;
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -60,6 +63,12 @@ Future<void> showSentenceCard(BuildContext context, SentenceCard card) {
   );
 }
 
+/// 寄语兜底（老卡片没有寄语内容）。
+const String _fallbackBlessing = '愿你今天，也有一句刚好合心意的话。';
+
+String _blessingOf(SentenceCard card) =>
+    card.blessing.trim().isEmpty ? _fallbackBlessing : card.blessing.trim();
+
 /// 网页端把 bizDate 显示成「10月25日」，这里保持一致。
 String _dateLabel(String bizDate) {
   final parts = bizDate.split('-');
@@ -85,10 +94,15 @@ class _CardPoster extends StatefulWidget {
 
 class _CardPosterState extends State<_CardPoster>
     with TickerProviderStateMixin {
-  /// 翻面：0 = 卡背，1 = 正面（句子）。
+  /// 翻面：0 = 卡背，1 = 正面（句子），2 与 0 视觉等价（整圈）。
+  ///
+  /// 上界放到 2 是「单向翻转」的关键：翻回来是 `animateTo(2)`（继续转下半圈），
+  /// 要是用默认上界 1，目标值会被钳成 1，翻回去时控制器动也不动。
   late final AnimationController _flip = AnimationController(
     vsync: this,
     duration: Motion.flip,
+    lowerBound: 0,
+    upperBound: 2,
   );
 
   /// 落定后的扫光。单独一条控制器：它只跑一次，不受翻面进度影响。
@@ -100,14 +114,36 @@ class _CardPosterState extends State<_CardPoster>
   /// 目标面（用于无障碍语义）。
   bool _revealed = false;
 
+  /// 翻面「忙」锁：翻面与扫光这段时间里忽略再次点击。
+  ///
+  /// 两个理由：一是转一半时目标值就乱了，翻回来会倒着转（正是要避免的）；
+  /// 二是框架偶尔会把同一次点击的 up 重复投递，第二次落在动画落定之后，
+  /// 实测没有这把锁，点一下会翻回去（测试框架里必现，真机上也偶发）。
+  bool _busy = false;
+
+  /// 解锁用的定时器：留着引用，弹窗关掉时要取消，
+  /// 否则「Timer is still pending」会让 Widget 测试直接失败。
+  Timer? _unlock;
+
+  /// 锁定时长：翻到正面是「翻面 520 + 扫光 900」；翻回封面只转 520。
+  static const Duration _settleFront = Duration(milliseconds: 1500);
+  static const Duration _settleBack = Duration(milliseconds: 600);
+
   bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
     _flip.addStatusListener((status) {
+      if (status != AnimationStatus.completed) {
+        return;
+      }
+      // 落定后归位：2π 与 0 视觉等价，不归位的话下一次 animateTo(1) 会倒着转
+      if (_flip.value >= 2) {
+        _flip.value = _flip.value - 2;
+      }
       // 只在「翻到正面并停稳」时扫光；翻回去不扫（避免来回闪）
-      if (status == AnimationStatus.completed && !_reduceMotion) {
+      if (_revealed && !_reduceMotion) {
         _sheen.forward(from: 0);
       }
     });
@@ -121,28 +157,45 @@ class _CardPosterState extends State<_CardPoster>
 
   @override
   void dispose() {
+    _unlock?.cancel();
     _flip.dispose();
     _sheen.dispose();
     super.dispose();
   }
 
   void _toggle() {
-    HapticFeedback.selectionClick();
-    setState(() => _revealed = !_revealed);
-    if (_reduceMotion) {
-      _flip.value = _revealed ? 1 : 0;
+    if (_busy) {
       return;
     }
-    if (_revealed) {
-      _flip.forward();
-    } else {
+    HapticFeedback.selectionClick();
+    final revealing = !_revealed;
+    setState(() {
+      _revealed = revealing;
+      // 减弱动效是瞬间的，不给用户上锁；有动画才锁，锁到扫光放完
+      _busy = !_reduceMotion;
+    });
+    if (_reduceMotion) {
       _sheen.stop();
       _sheen.value = 0;
-      _flip.reverse();
+      _flip.value = revealing ? 1 : 0;
+      return;
     }
+    if (!revealing) {
+      _sheen.stop();
+      _sheen.value = 0;
+    }
+    // 始终往同一个方向转：翻回来是「继续转完下半圈」，不是倒着转回去。
+    // 控制器值只在 0（封面）/ 1（正面）两个稳态，落定后由 _onFlipEnd 归位。
+    _flip.animateTo(revealing ? 1 : 2);
+    // Timer 跟着测试的假时钟走：用例 pump 过这段时间就自动解锁，
+    // 不需要真的等待；帧时间戳在手势回调（帧外）里会直接断言「没有帧」。
+    _unlock?.cancel();
+    _unlock = Timer(revealing ? _settleFront : _settleBack, () {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    });
   }
-
-  void _close() => Navigator.of(context).pop();
 
   /// 最大倾角：与网页端一致（`MAX_TILT * 2` 且 offset 取 ±0.5 → ±8°）。
   static const double _maxTilt = 8 * math.pi / 180;
@@ -198,13 +251,22 @@ class _CardPosterState extends State<_CardPoster>
     return AnimatedBuilder(
       animation: _flip,
       builder: (context, _) {
-        // 翻面用对称曲线：起手与收尾一样缓，像真的把卡片推过去
-        final t = Curves.easeInOutCubic.transform(_flip.value);
-        final showFront = _flip.value >= 0.5;
+        // 翻面用对称曲线：起手与收尾一样缓，像真的把卡片推过去。
+        // 曲线按「半圈」分段喂：控制器值域是 0~2，而 Curve.transform 只接受 0~1，
+        // 直接把 1.38 喂进去会断言崩溃（实测翻回时必现）。
+        final v = _flip.value;
+        final t = v <= 1
+            ? Curves.easeInOutCubic.transform(v)
+            : 1 + Curves.easeInOutCubic.transform(v - 1);
+        // 单向翻转时可见面按进度判断：第一圈过半（0.5~1.5）露出正面，
+        // 第二圈过半再翻回封面。稳态只有 0（封面）与 1（正面）。
+        final showFront = v >= 0.5 && v < 1.5;
         return Transform(
           // 显式按中心旋转：不设 alignment 时默认绕左上角转，观感是「卡片歪着」
           alignment: Alignment.center,
           transform: Matrix4.rotationY(t * math.pi),
+          // 测试按这个 key 找翻转矩阵（树里还有若干 translateZ 的 Transform）
+          key: const ValueKey<String>('sentence-card-flip'),
           child: Stack(
             alignment: Alignment.center,
             children: <Widget>[
@@ -221,7 +283,6 @@ class _CardPosterState extends State<_CardPoster>
                     child: _CardFront(
                       card: widget.card,
                       onFlip: _toggle,
-                      onClose: _close,
                       sheen: _sheen,
                     ),
                   ),
@@ -257,124 +318,133 @@ class _CardBack extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '每日句签 ${card.bizDate}，轻触揭晓',
+      label: '每日句签 ${card.bizDate}，轻触翻开',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onFlip,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            color: Colors.white,
-            border: Border.all(color: _amber200.withValues(alpha: 0.6)),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x1A0F172A),
-                blurRadius: 28,
-                offset: Offset(0, 14),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: <Widget>[
-              // 柔光用径向渐变而不是 blur 滤镜：滤镜在倾斜时每帧重绘整层
-              const Positioned(top: -70, right: -60, child: _Glow(size: 240)),
-              const Positioned(
-                bottom: -90,
-                left: -70,
-                child: _Glow(size: 220, gold: true),
-              ),
-              // 内嵌细线框：整块白面板没有边界感，加一道内框才像一张卡
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _slate800.withValues(alpha: 0.06),
+        // ClipRRect 不能省：_Glow 是负偏移的径向渐变圆，
+        // 不裁的话左下/右上会各冒出一个角（用户实测截图指出的就是这个）
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              color: Colors.white,
+              border: Border.all(color: _amber200.withValues(alpha: 0.6)),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x1A0F172A),
+                  blurRadius: 28,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: <Widget>[
+                // 柔光用径向渐变而不是 blur 滤镜：滤镜在倾斜时每帧重绘整层
+                const Positioned(top: -70, right: -60, child: _Glow(size: 240)),
+                const Positioned(
+                  bottom: -90,
+                  left: -70,
+                  child: _Glow(size: 220, gold: true),
+                ),
+                // 内嵌细线框：整块白面板没有边界感，加一道内框才像一张卡
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _slate800.withValues(alpha: 0.06),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(26, 26, 26, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _slate800.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            _dateLabel(card.bizDate),
-                            style: const TextStyle(
-                              color: _slate500,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.4,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(26, 26, 26, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _slate800.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              _dateLabel(card.bizDate),
+                              style: const TextStyle(
+                                color: _slate500,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.4,
+                              ),
                             ),
                           ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '每日句签',
-                          style: TextStyle(
-                            color: _amber600.withValues(alpha: 0.9),
-                            fontSize: 10.5,
+                          const Spacer(),
+                          Text(
+                            '每日句签',
+                            style: TextStyle(
+                              color: _amber600.withValues(alpha: 0.9),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 2.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      const Center(child: _Seal()),
+                      const SizedBox(height: 26),
+                      // 寄语：这张卡独有的一句（取代泛用的揭晓文案）
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          _blessingOf(card),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: _slate800,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 2.4,
+                            height: 1.6,
+                            letterSpacing: 0.3,
                           ),
                         ),
-                      ],
-                    ),
-                    const Spacer(),
-                    const Center(child: _Seal()),
-                    const SizedBox(height: 26),
-                    const Center(
-                      child: Text(
-                        '轻触揭晓',
-                        style: TextStyle(
-                          color: _slate800,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 3,
+                      ),
+                      const SizedBox(height: 14),
+                      const Center(
+                        child: Text(
+                          '轻触翻开',
+                          style: TextStyle(
+                            color: _slate400,
+                            fontSize: 11.5,
+                            letterSpacing: 1.6,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Center(
-                      child: Text(
-                        '今天的句子，等你翻开',
-                        style: TextStyle(
-                          color: _slate500,
-                          fontSize: 11.5,
-                          letterSpacing: 0.4,
+                      const Spacer(),
+                      const Center(
+                        child: Text(
+                          '短句 · 每天一句，慢慢变好',
+                          style: TextStyle(
+                            color: _slate400,
+                            fontSize: 10.5,
+                            letterSpacing: 0.6,
+                          ),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    const Center(
-                      child: Text(
-                        '短句 · 每天一句，慢慢变好',
-                        style: TextStyle(
-                          color: _slate400,
-                          fontSize: 10.5,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -450,13 +520,11 @@ class _CardFront extends StatelessWidget {
   const _CardFront({
     required this.card,
     required this.onFlip,
-    required this.onClose,
     required this.sheen,
   });
 
   final SentenceCard card;
   final VoidCallback onFlip;
-  final VoidCallback onClose;
   final Animation<double> sheen;
 
   @override
@@ -465,6 +533,7 @@ class _CardFront extends StatelessWidget {
       button: true,
       label: '轻触翻回卡背',
       child: GestureDetector(
+        key: const ValueKey<String>('card-front-tap'),
         behavior: HitTestBehavior.opaque,
         onTap: onFlip,
         child: Column(
@@ -474,17 +543,6 @@ class _CardFront extends StatelessWidget {
             _CardPhoto(card: card, sheen: sheen),
             const SizedBox(height: 8),
             const _CardFooter(),
-            const SizedBox(height: 2),
-            // 网页端没有这两个按钮（卡片是内嵌在页面里的）；
-            // 手机端是全屏弹窗，必须给出口，但做成文字链，不抢卡片本身
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                _FootAction(label: '翻面', color: _amber600, onTap: onFlip),
-                const SizedBox(width: 12),
-                _FootAction(label: '收起', color: _slate500, onTap: onClose),
-              ],
-            ),
           ],
         ),
       ),
@@ -752,34 +810,6 @@ class _CardFooter extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 页脚小按钮：文字按钮天然带内边距。
-class _FootAction extends StatelessWidget {
-  const _FootAction({
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        foregroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        minimumSize: const Size(0, 40),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-      ),
-      child: Text(label),
     );
   }
 }

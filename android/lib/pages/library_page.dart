@@ -11,8 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/models/library_item.dart';
 import '../state/library_controller.dart';
+import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../widgets/app_card.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/page_header.dart';
 import '../widgets/segmented.dart';
@@ -30,6 +32,9 @@ class LibraryPage extends ConsumerStatefulWidget {
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   final ScrollController _scroll = ScrollController();
+
+  /// 是否显示「返回顶部」：滚过一屏才值得占地方。
+  bool _showTop = false;
 
   @override
   void initState() {
@@ -60,6 +65,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     if (_scroll.position.extentAfter < 320) {
       ref.read(libraryControllerProvider.notifier).loadMore();
     }
+    // 一屏以上才浮出来：刚进页面或快滚到底时都没必要
+    final show = _scroll.offset > 700;
+    if (show != _showTop) {
+      setState(() => _showTop = show);
+    }
+  }
+
+  /// 平滑回顶。分区的列表各自一个 controller 实例？不——三个分区共用同一个
+  /// [_scroll]，切分区时已 jumpTo(0)，这里的 animateTo 对当前可见列表生效。
+  void _backToTop() {
+    if (!_scroll.hasClients) {
+      return;
+    }
+    _scroll.animateTo(0, duration: Motion.slow, curve: Motion.decelerate);
   }
 
   Future<void> _switchTab(LibraryTab tab) async {
@@ -133,7 +152,22 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 ],
               ),
             ),
-            Expanded(child: _buildBody(state, data)),
+            Expanded(
+              child: Stack(
+                children: <Widget>[
+                  _buildBody(state, data),
+                  // 返回顶部：右下角悬浮，避开底部导航（底栏高约 78dp）
+                  Positioned(
+                    right: 16,
+                    bottom: 100,
+                    child: _BackToTopButton(
+                      visible: _showTop,
+                      onTap: _backToTop,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -376,6 +410,62 @@ class _Footer extends StatelessWidget {
                   Container(width: 18, height: 1, color: colors.line),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+/// 返回顶部悬浮按钮：出现/消失带缩放淡入，按压有回弹。
+class _BackToTopButton extends StatelessWidget {
+  const _BackToTopButton({required this.visible, required this.onTap});
+
+  final bool visible;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final reduce = Motion.reduced(context);
+    return ExcludeSemantics(
+      excluding: !visible,
+      child: AnimatedOpacity(
+        opacity: visible ? 1 : 0,
+        duration: reduce ? Duration.zero : Motion.fast,
+        curve: Motion.standard,
+        child: AnimatedScale(
+          scale: visible ? 1 : 0.8,
+          duration: reduce ? Duration.zero : Motion.fast,
+          curve: Motion.spring,
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: PressScale(
+              onTap: onTap,
+              scale: 0.9,
+              haptic: true,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: colors.line),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: colors.shadow.withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.arrow_upward_rounded,
+                  size: 20,
+                  color: colors.brand,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
