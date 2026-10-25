@@ -19,6 +19,7 @@ import 'package:short_sentence/api/models/question.dart';
 import 'package:short_sentence/pages/quiz_page.dart';
 import 'package:short_sentence/state/quiz_controller.dart';
 import 'package:short_sentence/theme/motion.dart';
+import 'package:short_sentence/widgets/shimmer.dart';
 
 Question _question() => Question.fromJson(const <String, dynamic>{
       'sentenceId': 1117,
@@ -41,6 +42,34 @@ AnswerResult _result() => AnswerResult.fromJson(const <String, dynamic>{
       'favorited': false,
       'todayDone': 4,
       'todayGoal': 20,
+    });
+
+/// 带等价表达的判分结果（用于「查看其他答案」用例）。
+AnswerResult _resultWithAlternatives() => AnswerResult.fromJson(
+      const <String, dynamic>{
+        'sentenceId': 1117,
+        'isCorrect': true,
+        'sentenceEn': 'I will call you as soon as I arrive.',
+        'validAnswers': <String>[
+          "I'll call you as soon as I arrive.",
+          "I'll ring you up the moment I get there.",
+        ],
+        'translationZh': '我一到就会给你打电话。',
+        'favorited': false,
+        'todayDone': 4,
+        'todayGoal': 20,
+      },
+    );
+
+Question _otherQuestion() => Question.fromJson(const <String, dynamic>{
+      'sentenceId': 2222,
+      'translationZh': '我马上就到。',
+      'imageUrl': null,
+      'difficulty': 1,
+      'todayDone': 3,
+      'todayGoal': 20,
+      'source': 'new',
+      'words': null,
     });
 
 /// 挂载一个预置好状态的 QuizPage，并返回可改状态的容器。
@@ -104,7 +133,101 @@ void main() {
     expect(find.text('下一题'), findsOneWidget);
     // 收藏是星形图标（对齐 Web 端 favPop 设计），不是文字按钮
     expect(find.byIcon(Icons.star_border_rounded), findsOneWidget);
-    expect(find.text('这些说法也算对'), findsNothing); // 本题无等价表达
+    expect(find.text('查看其他答案'), findsNothing); // 本题无等价表达
+  });
+
+  testWidgets('等价表达收起成「查看其他答案」按钮，点开才列出', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: _question(),
+        phase: QuizPhase.answered,
+        result: _resultWithAlternatives(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 收起态：只给入口，等价写法不直出（旧的「这些说法也算对」提示已移除）
+    expect(find.text('查看其他答案'), findsOneWidget);
+    expect(find.text('这些说法也算对'), findsNothing);
+    expect(find.text("I'll ring you up the moment I get there."), findsNothing);
+
+    final entry = find.text('查看其他答案');
+    await tester.ensureVisible(entry);
+    await tester.pumpAndSettle();
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+
+    // 展开态：等价写法列出来
+    expect(find.text("I'll ring you up the moment I get there."), findsOneWidget);
+    expect(find.text("I'll call you as soon as I arrive."), findsOneWidget);
+
+    // 再点一次收起
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.text("I'll ring you up the moment I get there."), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('切难度 / 切作答方式时保留当前卡片，不铺骨架屏', (tester) async {
+    // 旧的 bug：只要 phase==loading 就整页换成骨架屏。而「切难度 / 切作答方式」
+    // 是原地重抽（loadingNext=false），于是用户看到的是页面被重新加载了一遍。
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('确定'), findsOneWidget);
+
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+    );
+    await tester.pump();
+
+    // 卡片、模式条都还在
+    expect(find.text('我一到就会给你打电话。'), findsOneWidget);
+    expect(find.text('默写'), findsOneWidget);
+    // 主按钮改成「换题中…」（不能复用提交的转圈，否则像在判分）
+    expect(find.text('换题中…'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+    // 整页骨架屏（闪烁的来源）不应出现
+    expect(find.byType(ShimmerBox), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('作答痕迹在新题落地时才清空（重抽过程不空屏）', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'I will call you');
+    await tester.pump();
+    expect(find.text('I will call you'), findsOneWidget);
+
+    // 原地重抽中：旧卡还挂着，输入内容必须还在——当场清掉就像页面被刷新了
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+    );
+    await tester.pump();
+    expect(find.text('I will call you'), findsOneWidget);
+
+    // 新题到达：此时才清空
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _otherQuestion(),
+      phase: QuizPhase.answering,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('我马上就到。'), findsOneWidget);
+    expect(find.text('I will call you'), findsNothing);
+
+    container.dispose();
   });
 
   testWidgets('拼词模式展示候选词块', (tester) async {

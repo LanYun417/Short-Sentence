@@ -169,7 +169,8 @@ class _QuizPageState extends ConsumerState<QuizPage>
   );
 
   void _next() {
-    _resetInputs();
+    // 作答痕迹不在这里清：交给「新题落地」的监听统一处理（见 build）。
+    // 这里清的话，点下去旧卡还挂在屏幕上，输入框会先空一下再换题。
     _scrollToTop();
     ref.read(quizControllerProvider.notifier).loadNext();
   }
@@ -238,6 +239,18 @@ class _QuizPageState extends ConsumerState<QuizPage>
   Widget build(BuildContext context) {
     ref.listen<QuizState>(quizControllerProvider, _onAnswer);
 
+    // 新题真正落地时才清空上一题的作答痕迹（输入框 / 已选词块）。
+    // 刻意不在「切难度 / 切作答方式」那一刻清：那时旧卡还挂在屏幕上，
+    // 当场清空会让用户看着自己的答案无故消失——观感就是「页面被刷新了」。
+    ref.listen<int?>(
+      quizControllerProvider.select((state) => state.question?.sentenceId),
+      (previous, next) {
+        if (previous != next) {
+          _resetInputs();
+        }
+      },
+    );
+
     final state = ref.watch(quizControllerProvider);
     final cards = ref.watch(cardControllerProvider);
     // 测试里（autoLoad=false）不触发网络：否则 Widget 测试会因为真实请求挂掉
@@ -257,6 +270,14 @@ class _QuizPageState extends ConsumerState<QuizPage>
         state.phase == QuizPhase.answered ||
         (state.phase == QuizPhase.loading && state.loadingNext);
 
+    // 「在原地重抽一题」：切难度 / 切作答方式 / 换一题都属于这种——
+    // 卡片、模式条、进度条全部留在屏幕上，只把正面主按钮换成「换题中…」，
+    // 等新题到了直接换内容。绝不能再整页换成骨架屏（旧实现的闪烁即来自此）。
+    final refreshing =
+        state.phase == QuizPhase.loading &&
+        state.question != null &&
+        !state.loadingNext;
+
     final done = state.result?.todayDone ?? state.question?.todayDone ?? 0;
     final goal = state.result?.todayGoal ?? state.question?.todayGoal ?? 0;
     final goalReached = goal > 0 && done >= goal;
@@ -268,13 +289,16 @@ class _QuizPageState extends ConsumerState<QuizPage>
       child: SafeArea(
         bottom: false,
         child: switch (state.phase) {
-          // 首次抽题（还没有题）→ 骨架屏；「抽下一题」→ 保持背面走加载态
-          QuizPhase.loading when !state.loadingNext => const _SkeletonCard(),
+          // 只有「首次抽题」（还没拿到过题）才铺骨架屏。
+          // 已有题时的 loading 一律走下面的 body：保留当前卡片与控件原地重抽。
+          QuizPhase.loading when state.question == null =>
+            const _SkeletonCard(),
           _ when state.question != null => _buildBody(
             state,
             cards,
             checkin,
             flipped,
+            refreshing,
             done,
             goal,
             goalReached,
@@ -299,6 +323,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
     CardState cards,
     CheckinToday? checkin,
     bool flipped,
+    bool refreshing,
     int done,
     int goal,
     bool goalReached,
@@ -336,7 +361,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
             mode: state.mode,
             difficulty: state.difficulty,
             onMode: (mode) {
-              _resetInputs();
               _scrollToTop();
               ref.read(quizControllerProvider.notifier).setMode(mode);
             },
@@ -354,6 +378,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
                 question: question,
                 mode: state.mode,
                 busy: state.isBusy,
+                refreshing: refreshing,
                 focused: _focused,
                 answerController: _answerController,
                 focusNode: _answerFocus,
@@ -437,7 +462,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
       builder: (sheetContext) => _DifficultySheet(current: current),
     );
     if (picked != null && picked != current) {
-      _resetInputs();
       _scrollToTop();
       await ref.read(quizControllerProvider.notifier).setDifficulty(picked);
     }
@@ -1285,12 +1309,17 @@ class _FrontFace extends StatelessWidget {
     required this.onUndoPick,
     required this.onRemovePick,
     required this.onSubmit,
+    this.refreshing = false,
     this.error,
   });
 
   final Question question;
   final AnswerMode mode;
   final bool busy;
+
+  /// 正在原地重抽一题（切难度 / 切作答方式 / 换一题）。
+  /// 与 [busy] 的区别：busy 是「正在提交判分」，本项是「正在等新题」。
+  final bool refreshing;
   final bool focused;
   final TextEditingController answerController;
   final FocusNode focusNode;
@@ -1411,6 +1440,7 @@ class _FrontFace extends StatelessWidget {
               onRemovePick: onRemovePick,
               onSubmit: onSubmit,
               busy: busy,
+              refreshing: refreshing,
             )
           else
             Column(
@@ -1445,11 +1475,15 @@ class _FrontFace extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                // 切难度 / 切作答方式是「在原地重抽」，不是提交：
+                // 复用提交那套转圈会让人以为答案正在判分，所以改成换文案 + 换图标。
                 GradientButton(
-                  label: '确定',
-                  icon: Icons.check_rounded,
+                  label: refreshing ? '换题中…' : '确定',
+                  icon: refreshing
+                      ? Icons.autorenew_rounded
+                      : Icons.check_rounded,
                   height: 50,
-                  loading: busy,
+                  loading: busy && !refreshing,
                   onPressed: busy ? null : onSubmit,
                 ),
               ],
@@ -1490,6 +1524,7 @@ class _AssembleArea extends StatefulWidget {
     required this.onRemovePick,
     required this.onSubmit,
     required this.busy,
+    this.refreshing = false,
   });
 
   final List<String> words;
@@ -1499,6 +1534,9 @@ class _AssembleArea extends StatefulWidget {
   final ValueChanged<int> onRemovePick;
   final VoidCallback onSubmit;
   final bool busy;
+
+  /// 正在原地重抽一题（切难度 / 切作答方式 / 换一题）。
+  final bool refreshing;
 
   @override
   State<_AssembleArea> createState() => _AssembleAreaState();
@@ -1655,9 +1693,14 @@ class _AssembleAreaState extends State<_AssembleArea> {
         const SizedBox(height: 14),
         GradientButton(
           key: _submitKey,
-          label: complete ? '确定' : '还有 ${remaining.length} 个词没用',
+          // 重抽期间不要显示「还有 N 个词没用」：那句是给当前这题算的词块数，
+          // 新题一到词块就换了，先说个数反而误导。
+          label: widget.refreshing
+              ? '换题中…'
+              : (complete ? '确定' : '还有 ${remaining.length} 个词没用'),
+          icon: widget.refreshing ? Icons.autorenew_rounded : null,
           height: 50,
-          loading: busy,
+          loading: busy && !widget.refreshing,
           onPressed: busy || !complete ? null : onSubmit,
         ),
       ],
@@ -1873,42 +1916,13 @@ class _BackFace extends StatelessWidget {
           ),
 
           if (result.validAnswers.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             StaggeredEntrance(
               index: 2,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors.cardMuted,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      '这些说法也算对',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: colors.inkFaint,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    ...result.validAnswers.map(
-                      (answer) => Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          answer,
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.4,
-                            color: colors.inkSoft,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              // key 绑到题号：换题后收起态要跟着重置，不能沿用上一题的展开状态
+              child: _OtherAnswers(
+                key: ValueKey<int>(result.sentenceId),
+                answers: result.validAnswers,
               ),
             ),
           ],
@@ -1975,6 +1989,134 @@ class _BackFace extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 「查看其他答案」：等价表达默认收起成一个按钮，点开才展开列表。
+///
+/// 为什么收起而不是直接铺开：卡背的主角是正确答案那一句，一上来列五六行
+/// 等价写法会把它淹掉，也把卡背撑得很长——用户常以为下面还有内容没加载完。
+/// 所以只给一个明确的入口，想看再点。
+class _OtherAnswers extends StatefulWidget {
+  const _OtherAnswers({required this.answers, super.key});
+
+  final List<String> answers;
+
+  @override
+  State<_OtherAnswers> createState() => _OtherAnswersState();
+}
+
+class _OtherAnswersState extends State<_OtherAnswers> {
+  bool _open = false;
+
+  void _toggle() {
+    HapticFeedback.selectionClick();
+    setState(() => _open = !_open);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final reduced = Motion.reduced(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        PressScale(
+          onTap: _toggle,
+          scale: 0.97,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: colors.cardMuted,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.line),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.alt_route_rounded, size: 15, color: colors.brand),
+                const SizedBox(width: 6),
+                Text(
+                  '查看其他答案',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: colors.inkSoft,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.brand.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${widget.answers.length}',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: colors.brand,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // 箭头随展开翻半圈，比单纯换图标更有「打开」的手感
+                AnimatedRotation(
+                  turns: _open ? 0.5 : 0,
+                  duration: reduced ? Duration.zero : Motion.fast,
+                  curve: Motion.standard,
+                  child: Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: colors.inkFaint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // 高度变化交给 AnimatedSize：展开是「滑出来」而不是「跳出来」
+        AnimatedSize(
+          duration: reduced ? Duration.zero : Motion.normal,
+          curve: Motion.standard,
+          alignment: Alignment.topCenter,
+          child: _open
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colors.cardMuted,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        for (final answer in widget.answers)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              answer,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.45,
+                                color: colors.inkSoft,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
     );
   }
 }
