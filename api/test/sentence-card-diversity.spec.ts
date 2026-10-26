@@ -84,17 +84,47 @@ describe('句签主题多样性', () => {
     expect(prompt).toContain('MUST NOT');
     // 明确点出「同情绪换名字也算重复」——这是上一轮翻车的具体形态
     expect(prompt.toLowerCase()).toContain('synonym');
-    expect(prompt.toLowerCase()).toContain('stillness');
   });
 
-  it('包含维度轮换清单与配色轮换要求', async () => {
+  it('包含美感门槛与禁忌场景（防止生成「洗衣房/烤面包机」这类琐碎场景）', async () => {
     const prompt = await buildPromptWith(recent);
 
-    expect(prompt).toContain('DIFFERENT dimension');
-    // 至少覆盖几个具体维度，避免模型又回到「情绪」这一个维度
-    expect(prompt.toLowerCase()).toContain('object');
-    expect(prompt.toLowerCase()).toContain('sound');
-    expect(prompt.toLowerCase()).toContain('palette');
+    // 美感门槛：要能当壁纸/明信片
+    expect(prompt).toContain('BEAUTY BAR');
+    expect(prompt.toLowerCase()).toContain('wallpaper');
+    // 明确禁用家电/家务场景——这两类是被真实用户否掉的
+    expect(prompt.toLowerCase()).toContain('forbidden');
+    expect(prompt.toLowerCase()).toContain('laundromat');
+    expect(prompt.toLowerCase()).toContain('toaster');
+  });
+
+  it('包含情绪光谱（多样性在「美」的范围内做，而不是往日常沉）', async () => {
+    const prompt = await buildPromptWith(recent);
+
+    expect(prompt).toContain('EMOTIONAL REGISTER');
+    for (const register of ['serene', 'warm', 'vast', 'bright', 'playful', 'crisp']) {
+      expect(prompt.toLowerCase()).toContain(register);
+    }
+  });
+
+  it('禁止默认贴季节 + 配色锁（防止连续秋收/金色）', async () => {
+    const prompt = await buildPromptWith(recent);
+
+    // 十月不等于秋收
+    expect(prompt).toContain('Do NOT anchor on the current season');
+    // 丰收类贺卡词被禁
+    expect(prompt.toLowerCase()).toContain('harvest');
+    expect(prompt.toLowerCase()).toContain('forbidden words');
+    // 配色锁
+    expect(prompt).toContain('Palette lock');
+  });
+
+  it('要求同时避开时段/场景/情绪/配色中的至少两项', async () => {
+    const prompt = await buildPromptWith(recent);
+
+    expect(prompt).toContain('AT LEAST TWO');
+    expect(prompt.toLowerCase()).toContain('time of day');
+    expect(prompt.toLowerCase()).toContain('setting');
   });
 
   it('历史为空时不崩、不出现 undefined', async () => {

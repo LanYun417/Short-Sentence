@@ -543,32 +543,112 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       recentBlock,
       'B. Your new theme MUST NOT reuse any of them, and MUST NOT be a synonym or near-variant.',
       '   Same mood under a different name counts as a repeat.',
-      'C. On an ORDINARY day, pick a DIFFERENT dimension than the recent ones. Cycle through these across days:',
-      '   - a small physical action (packing, tying, pouring, folding, waiting for a bus)',
-      '   - an everyday object as the subject (a kettle, a bicycle, an umbrella, a mailbox)',
-      '   - a sound or a smell (rain on a tin roof, bread from a window, a distant train)',
-      '   - a relationship moment (a shared umbrella, a wave through a window, a hand-me-down)',
-      '   - a season turn or weather shift (first frost, a warm wind, the last swim)',
-      '   - a place in the city (a night bus, a corner shop, a rooftop, a laundromat)',
-      '   - a small triumph or effort (learning, mending, arriving, finishing)',
-      '   - humor or playfulness (a cat claiming a chair, a stubborn plant)',
-      'D. Vary time of day and palette: do not default to golden autumn afternoons.',
-      'E. Avoid common holidays on ordinary days (they are handled separately). Concrete beats poetic.',
+      '',
+      'C. BEAUTY BAR — this is a collectible card, not a diary entry.',
+      '   The scene must be something a person would happily set as a phone wallpaper or keep as a postcard.',
+      '   Every card needs: a clear subject, beautiful light, and a palette that feels deliberate.',
+      '   FORBIDDEN settings (they are mundane, not beautiful): appliances and home chores',
+      '   (washing machine, laundromat, toaster, microwave, dishes, vacuuming), offices,',
+      '   industrial or mechanical scenes, hospitals, traffic jams, queues, paperwork.',
+      '   "Concrete" means a tangible image, NOT a household chore.',
+      '',
+      'D. On an ORDINARY day, choose a different EMOTIONAL REGISTER from the recent cards.',
+      '   These registers are all beautiful but feel different — cycle through them:',
+      '   - serene: mist over still water, snow after it stops, an empty mountain path',
+      '   - warm: firelight, dusk in a kitchen, wool and steam, bread cooling on a sill',
+      '   - vast: a sea horizon, high grassland, a sky full of stars, a long empty road',
+      '   - bright: hard noon sun on a white wall, cut lemons, laundry snapping in wind',
+      '   - anticipating: a platform before arrival, light under a door, an unopened letter',
+      '   - intimate: two hands around one cup, a shared umbrella, a note left on a table',
+      '   - playful: a cat claiming a sunlit chair, wind lifting papers, a kite tugging',
+      '   - nostalgic: an old radio, a grandmother\u2019s courtyard, a photo tucked in a book',
+      '   - crisp: frost on a window, cold blue hour, clear water over stones',
+      '   - ardent: a summer run, a sunset burning, dancing barefoot',
+      '',
+      'E. Look at the recent cards above and note what they used. Your card must differ on AT LEAST TWO of:',
+      '   time of day (dawn / morning / noon / afternoon / dusk / night),',
+      '   setting (indoor vs outdoor, and the specific kind of place),',
+      '   emotional register (from list D),',
+      '   palette (warm gold / cool blue / green / monochrome / vivid).',
+      '   If recent cards were all night-time indoor scenes, do NOT deliver another night-time indoor scene.',
+      '',
+      'F. Avoid common holidays on ordinary days (they are handled separately). Concrete beats poetic.',
+      '   But beautiful beats merely concrete: if an idea is specific yet ugly, drop it.',
+      '',
+      'G. Do NOT anchor on the current season or month. October does not mean autumn leaves,',
+      '   harvest, pumpkins or golden fields. A card may be set in any season, any weather, any hour —',
+      '   the date is only the day it is delivered, not a constraint on the scene.',
+      '   FORBIDDEN words and their variants: harvest, golden autumn, ripe grain, abundance,',
+      '   bountiful, fruitful. They are greeting-card clichés and must never appear.',
+      '',
+      'H. Palette lock: look at the recent cards\u2019 palettes. If the last two share a palette family',
+      '   (e.g. both warm amber/gold), this card MUST use a different family: cool blue, green,',
+      '   monochrome, high-contrast night, or soft pastel. Do not let gold recur.',
     ].join('\n');
 
-    const content = await this.chat(
-      'sentence_card_gen',
-      systemPrompt,
+    // 复读兜底：prompt 要求「不得重复」是软约束，实测模型会直接复读上一次输出
+    // （曾连续两次给出完全相同的标题与句子）。这里生成后与历史硬比对，
+    // 撞了就再生成一次，最多 3 次；仍撞则接受（避免无限重试拖垮定时任务）。
+    const userContent =
       context && context.kind !== 'ordinary'
         ? `Generate the daily card for ${day}. It is ${context.nameEn} (${context.name}) — build the card around it.`
-        : `Generate the daily card theme for ${day}. It must differ from the previous days in BOTH subject and mood.`,
-      1.0,
-    );
-    const theme = this.parseSentenceCardTheme(content);
-    if (!theme) {
-      throw new AiProviderError('句签主题输出不可用', { retryable: true });
+        : `Generate the daily card theme for ${day}. It must differ from the previous days in BOTH subject and mood.`;
+
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      // 撞重后追加一句更强的提醒，而不是原样再问一遍
+      const retryHint =
+        attempt === 1
+          ? ''
+          : `\n\nIMPORTANT: your previous answer duplicated an existing card. Produce a clearly different subject, setting and palette.`;
+      const content = await this.chat('sentence_card_gen', systemPrompt, `${userContent}${retryHint}`, 1.0);
+      const theme = this.parseSentenceCardTheme(content);
+      if (!theme) {
+        throw new AiProviderError('句签主题输出不可用', { retryable: true });
+      }
+      if (!this.isDuplicateTheme(theme, recent)) {
+        return theme;
+      }
+      this.logger.warn(`[SentenceCard] 第 ${attempt}/${maxAttempts} 次生成与历史重复（${theme.titleZh}），重试`);
     }
-    return theme;
+
+    // 三次都撞：宁可抛错让定时任务记失败、运营手动重跑，
+    // 也不要把一张重复的卡发给用户。
+    throw new AiProviderError('句签主题连续重复，已放弃本次生成', { retryable: true });
+  }
+
+  /**
+   * 判断新主题是否与最近某张卡重复。
+   *
+   * **为什么需要代码兜底**：prompt 里已经写了「不得重复」，但实测模型仍会
+   * 直接复读上一次的输出（曾连续两次给出完全相同的 "Library Dust / 旧书尘埃"
+   * 与同一句英文）。指令是软约束，采样会失效；这一层是硬拦截。
+   *
+   * 判重口径（归一化后）：
+   * - title 相同，或
+   * - sentenceEn 相同，或
+   * - titleZh 相同
+   * 不做模糊相似度：过严会误杀正常变体，而完全相同的复读才是真问题。
+   */
+  private isDuplicateTheme(theme: SentenceCardTheme, recent: SentenceCardTheme[]): boolean {
+    const norm = (value: string): string =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^\p{L}\p{N}]+/gu, '');
+    const title = norm(theme.title);
+    const zh = norm(theme.titleZh);
+    const sentence = norm(theme.sentenceEn);
+    return recent.some((item) => {
+      const otherTitle = norm(item.title);
+      const otherZh = norm(item.titleZh);
+      const otherSentence = norm(item.sentenceEn);
+      return (
+        (title.length > 0 && title === otherTitle) ||
+        (zh.length > 0 && zh === otherZh) ||
+        (sentence.length > 0 && sentence === otherSentence)
+      );
+    });
   }
 
   /** 解析句签主题输出（容忍 ```json 围栏与思考文字夹带）。 */
