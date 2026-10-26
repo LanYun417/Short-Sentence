@@ -169,31 +169,29 @@ const dateText = computed(() => {
           <p class="mt-0.5 text-sm text-white/80 drop-shadow-sm">{{ card.translationZh }}</p>
         </div>
       </div>
-
-      <!-- 卡脚：不参与 3D 视差。
-           这两条是「说明性文字」，定位是平贴在卡片上的注脚，不是卡面上的图层。
-           给它们 translateZ 会让倾斜时相对配图产生位移、看起来往前飘，
-           反而像浮在卡外的贴纸。去掉 translateZ 后它们留在卡片基准平面，
-           随整卡一起倾斜，视觉上就是「印在卡上」。 -->
-      <div
-        class="mt-2 flex items-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-xs text-amber-600 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-400 dark:ring-amber-500/20"
-      >
-        <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
-        完成今日目标，收下这张属于你的闪卡
-      </div>
-
-      <!-- 寄语：这张卡独有的一句（随卡片一起生成；老卡片为空时不占位）
-           必须自带底色：它浮在弹层的半透明遮罩上，而遮罩带 backdrop-blur，
-           背后配图的亮色会透上来。亮色模式下遮罩压不住亮部，amber-600 的小字
-           会糊在浅底上（实测对比度约 3.97:1，低于 WCAG AA 的 4.5:1）。
-           这里与上方卡脚用同一套「白底 + 细环」的外壳，保证任何背景下都可读。
-           与卡脚同理：不加 translateZ，不参与 3D 视差。 -->
-      <p
-        v-if="card.blessing"
-        class="mt-2 rounded-2xl bg-white px-4 py-2.5 text-center text-xs font-medium text-amber-700 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-300 dark:ring-amber-500/20"
-      >
-        「{{ card.blessing }}」
-      </p>
     </div>
+
+    <!-- 卡脚与寄语：放在**倾斜容器之外**，所以完全不倾斜。
+         它们定位是卡片下方的说明文字，不是卡面的一部分；
+         放在倾斜容器里（哪怕不加 translateZ）也会跟着一起歪，
+         读起来别扭。移出后保持水平，只有卡片本体随指针倾斜。 -->
+    <div
+      class="mt-2 flex items-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-xs text-amber-600 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-400 dark:ring-amber-500/20"
+    >
+      <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
+      完成今日目标，收下这张属于你的闪卡
+    </div>
+
+    <!-- 寄语：这张卡独有的一句（随卡片一起生成；老卡片为空时不占位）
+         必须自带底色：它浮在弹层的半透明遮罩上，而遮罩带 backdrop-blur，
+         背后配图的亮色会透上来。亮色模式下遮罩压不住亮部，amber-600 的小字
+         会糊在浅底上（实测对比度约 3.97:1，低于 WCAG AA 的 4.5:1）。
+         这里与上方卡脚用同一套「白底 + 细环」的外壳，保证任何背景下都可读。 -->
+    <p
+      v-if="card.blessing"
+      class="mt-2 rounded-2xl bg-white px-4 py-2.5 text-center text-xs font-medium text-amber-700 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-300 dark:ring-amber-500/20"
+    >
+      「{{ card.blessing }}」
+    </p>
   </div>
 </template>
