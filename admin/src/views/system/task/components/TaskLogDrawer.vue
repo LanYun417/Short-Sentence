@@ -122,13 +122,18 @@ function handleClose(): void {
         </el-table>
       </el-scrollbar>
 
-      <Pagination
-        v-model:current-page="query.page"
-        v-model:page-size="query.pageSize"
-        :total="total"
-        @size-change="changePageSize"
-        @current-change="changePage"
-      />
+      <!-- shrink-0：Pagination 外层 el-scrollbar 带 EP 默认 height:100%，
+           若不限制会抢占整列高度、把上方表格滚动区压成 0（内容空白）。
+           包一层 shrink-0 容器后它只占自身内容高度，表格 flex-1 才能正常撑开。 -->
+      <div class="shrink-0">
+        <Pagination
+          v-model:current-page="query.page"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @size-change="changePageSize"
+          @current-change="changePage"
+        />
+      </div>
     </div>
   </el-drawer>
 </template>
