@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
+import { aiTypeFilterValues, aiTypeLabel } from './ai-type.js';
 
 /** 名称-数值对（ECharts 友好）。 */
 export interface NameValue {
@@ -259,15 +260,10 @@ export class AnalyticsService {
       _sum: { promptTokens: true, completionTokens: true },
     });
 
-    const typeLabels: Record<string, string> = {
-      sentence_gen: '生题',
-      image_gen: '生图',
-      expand: '造句',
-      word_root: '词根',
-    };
     const map = new Map<string, AiCallStat>();
     for (const row of rows) {
-      const name = typeLabels[row.type] ?? row.type;
+      // 旧命名会归到同一个展示名下（两行同 name 自然在下面累加合并）
+      const name = aiTypeLabel(row.type);
       const stat = map.get(name) ?? { name, calls: 0, failed: 0, promptTokens: 0, completionTokens: 0 };
       stat.calls += row._count._all;
       if (row.status !== 'success') {
@@ -342,7 +338,10 @@ export class AnalyticsService {
     const where: Record<string, unknown> = {};
     const type = String(query.type ?? '').trim();
     if (type) {
-      where.type = type;
+      // 改过名的类型（如 collectible_gen → sentence_card_gen）一并匹配，
+      // 否则「按句签筛选」会漏掉改名前的历史记录。
+      const values = aiTypeFilterValues(type);
+      where.type = values.length > 1 ? { in: values } : type;
     }
     const status = String(query.status ?? '').trim();
     if (status) {

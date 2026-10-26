@@ -19,7 +19,11 @@ import { ref } from 'vue';
 
 defineOptions({ name: 'AiCallLogList' });
 
-/** 调用类型文案 */
+/**
+ * 调用类型文案。
+ * `collectible_gen` 是 2026-10-23「藏品 → 句签」改名之前的历史值，
+ * 与 `sentence_card_gen` 同义；不登记就会在表格里露出英文原始值。
+ */
 const TYPE_LABEL: Record<string, string> = {
   sentence_gen: '生题',
   sentence_polish: '优化',
@@ -28,6 +32,7 @@ const TYPE_LABEL: Record<string, string> = {
   expand: '造句',
   word_root: '词根',
   sentence_card_gen: '句签',
+  collectible_gen: '句签',
 };
 
 /**
@@ -42,6 +47,7 @@ const BIZ_HINT: Record<string, string> = {
   sentence_polish: '生成批次 id',
   sentence_review: '生成批次 id',
   sentence_card_gen: '句签业务日期',
+  collectible_gen: '句签业务日期（旧命名）',
   image_gen: '无关联（恒 0）',
 };
 
