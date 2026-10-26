@@ -11,6 +11,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../config/config.js';
+import type { DayContext } from '../calendar/day-context.js';
 import { AiCallLogService } from './ai-call-log.service.js';
 import {
   AiProviderError,
@@ -476,8 +477,16 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   /**
    * 生成每日句签主题（一张精美闪卡的文案 + 生图提示词）。
    * 输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
+   *
+   * @param day 业务日期 YYYY-MM-DD
+   * @param recent 最近几张卡的主题（用于去重，避免连续同质化）
+   * @param context 当天的节日/节气语境（命中时按该风格生成，否则随机维度）
    */
-  async generateSentenceCardTheme(day: string, recent: SentenceCardTheme[] = []): Promise<SentenceCardTheme> {
+  async generateSentenceCardTheme(
+    day: string,
+    recent: SentenceCardTheme[] = [],
+    context?: DayContext,
+  ): Promise<SentenceCardTheme> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
@@ -489,6 +498,25 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       recent.length === 0
         ? '(no previous cards)'
         : recent.map((item, i) => `${i + 1}. ${item.title} / ${item.titleZh}: ${item.sentenceEn}`).join('\n');
+
+    /**
+     * 节日/节气段落。
+     *
+     * 命中节日或节气时，主题**必须**贴这个日子（这是用户要的「时间感」：
+     * 到中秋就该是中秋，而不是随机一张好看的卡）。
+     * 普通日则给随机维度，由模型自由发挥。
+     */
+    const themeBlock =
+      context && context.kind !== 'ordinary'
+        ? [
+            `TODAY IS SPECIAL — ${context.kind === 'festival' ? 'FESTIVAL' : 'SOLAR TERM'}: ${context.name} (${context.nameEn}).`,
+            `The card MUST be built around this day. Visual and emotional direction: ${context.styleHint}`,
+            'Use concrete, culturally respectful imagery of this day. Do NOT explain the festival in the text;',
+            'let the image and the sentence carry it. The Chinese title should name the day naturally',
+            `(e.g. include「${context.name}」or a poetic variant of it), not a generic mood word.`,
+            'Still keep it fresh: avoid postcard clichés and greeting-card slogans.',
+          ].join('\n')
+        : '';
 
     const systemPrompt = [
       'You are the card designer for "Short Sentence", an app where users collect one beautiful flash card per day.',
@@ -508,14 +536,14 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   Warm and specific to the theme; never a translation of sentenceEn; no exclamation marks;',
       '   read like something a friend would write on the back of a postcard.',
       `8. Date: ${day}.`,
+      themeBlock,
       '',
-      'DIVERSITY RULES (most important — violating these ruins the series):',
+      'DIVERSITY RULES (still apply on ordinary days; on special days they only constrain HOW, not WHAT):',
       'A. These themes were already used on the previous days:',
       recentBlock,
       'B. Your new theme MUST NOT reuse any of them, and MUST NOT be a synonym or near-variant.',
-      '   Same mood under a different name counts as a repeat. If recent cards were about stillness/quiet/calm,',
-      '   do NOT deliver another calm-and-quiet card, even with a different title.',
-      'C. Pick a DIFFERENT dimension than the recent ones. Cycle through these across days:',
+      '   Same mood under a different name counts as a repeat.',
+      'C. On an ORDINARY day, pick a DIFFERENT dimension than the recent ones. Cycle through these across days:',
       '   - a small physical action (packing, tying, pouring, folding, waiting for a bus)',
       '   - an everyday object as the subject (a kettle, a bicycle, an umbrella, a mailbox)',
       '   - a sound or a smell (rain on a tin roof, bread from a window, a distant train)',
@@ -525,14 +553,15 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   - a small triumph or effort (learning, mending, arriving, finishing)',
       '   - humor or playfulness (a cat claiming a chair, a stubborn plant)',
       'D. Vary time of day and palette: do not default to golden autumn afternoons.',
-      '   If recent cards were warm gold/amber, choose another palette (blue hour, rainy grey, neon night, mint morning).',
-      'E. Avoid common holidays. Keep it positive, but concrete beats poetic.',
+      'E. Avoid common holidays on ordinary days (they are handled separately). Concrete beats poetic.',
     ].join('\n');
 
     const content = await this.chat(
       'sentence_card_gen',
       systemPrompt,
-      `Generate the daily card theme for ${day}. It must differ from the previous days in BOTH subject and mood.`,
+      context && context.kind !== 'ordinary'
+        ? `Generate the daily card for ${day}. It is ${context.nameEn} (${context.name}) — build the card around it.`
+        : `Generate the daily card theme for ${day}. It must differ from the previous days in BOTH subject and mood.`,
       1.0,
     );
     const theme = this.parseSentenceCardTheme(content);

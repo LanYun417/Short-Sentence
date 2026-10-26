@@ -10,6 +10,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
+import { dayContextOf, parseDateKey } from '../../../common/calendar/day-context.js';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
 import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
@@ -103,7 +104,15 @@ export class SentenceCardService {
           blessing: true,
         },
       });
-      const theme = await withRetry(() => this.themeGen.generateSentenceCardTheme(bizDate, recentCards), {
+      // 当天语境：节日/节气命中时按对应风格生成，否则走随机维度。
+      // 优先级在 dayContextOf 里已定（节日 > 节气 > 普通日）。
+      const context = dayContextOf(parseDateKey(bizDate));
+      if (context.kind !== 'ordinary') {
+        this.logger.log(
+          `[SentenceCard] ${bizDate} 命中${context.kind === 'festival' ? '节日' : '节气'}：${context.name}`,
+        );
+      }
+      const theme = await withRetry(() => this.themeGen.generateSentenceCardTheme(bizDate, recentCards, context), {
         maxAttempts: 3,
         baseDelayMs: 3000,
         maxDelayMs: 20000,
