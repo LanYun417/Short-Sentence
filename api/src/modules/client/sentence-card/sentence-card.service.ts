@@ -88,7 +88,22 @@ export class SentenceCardService {
 
     try {
       // 1) AI 文案（主题 + 短句 + 生图提示词）
-      const theme = await withRetry(() => this.themeGen.generateSentenceCardTheme(bizDate), {
+      // 取最近 7 张已就绪卡片喂给模型做去重：不传历史，模型只能凭运气避开，
+      // 实测会连续多天收敛到同一主题（曾 4 天全是「静谧」）。
+      const recentCards = await this.prisma.dailySentenceCard.findMany({
+        where: { bizDate: { lt: bizDate }, status: 'ready' },
+        orderBy: { bizDate: 'desc' },
+        take: 7,
+        select: {
+          title: true,
+          titleZh: true,
+          sentenceEn: true,
+          translationZh: true,
+          scenePrompt: true,
+          blessing: true,
+        },
+      });
+      const theme = await withRetry(() => this.themeGen.generateSentenceCardTheme(bizDate, recentCards), {
         maxAttempts: 3,
         baseDelayMs: 3000,
         maxDelayMs: 20000,

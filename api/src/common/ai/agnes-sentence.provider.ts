@@ -477,10 +477,18 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
    * 生成每日句签主题（一张精美闪卡的文案 + 生图提示词）。
    * 输出形状 {"title","titleZh","sentenceEn","translationZh","scenePrompt"}。
    */
-  async generateSentenceCardTheme(day: string): Promise<SentenceCardTheme> {
+  async generateSentenceCardTheme(day: string, recent: SentenceCardTheme[] = []): Promise<SentenceCardTheme> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
+
+    // 最近几天的主题摘要，喂给模型做去重。
+    // 只写「每天要不同」是不够的：模型看不到历史，只能凭运气避开，
+    // 实测会连续多天收敛到同一个安全区（曾连续 4 天都是 quiet/stillness/静谧）。
+    const recentBlock =
+      recent.length === 0
+        ? '(no previous cards)'
+        : recent.map((item, i) => `${i + 1}. ${item.title} / ${item.titleZh}: ${item.sentenceEn}`).join('\n');
 
     const systemPrompt = [
       'You are the card designer for "Short Sentence", an app where users collect one beautiful flash card per day.',
@@ -488,25 +496,44 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '1. Output JSON only, shaped as {"title":"","titleZh":"","sentenceEn":"","translationZh":"","scenePrompt":"","blessing":""}.',
       '   No explanations.',
       '2. title: English theme name, 2-4 words (e.g. "Morning Ritual"). titleZh: the Chinese theme name.',
-      '3. sentenceEn: one short, beautiful, uplifting English sentence (at most 12 words).',
+      '3. sentenceEn: one short English sentence (at most 12 words) that lands a concrete image or a small specific moment.',
+      '   Prefer a tangible scene over an abstract mood. Avoid vague beauty/peace/quiet statements.',
       '4. translationZh: natural Chinese following Chinese word order. Never translate literally.',
       '   Example: "Small hands gather what the patient earth has grown." -> 「小小的手，捧起大地耐心孕育的果实」,',
       '   never 「小小的手，收获耐心大地生长出的果实」. Keep the Chinese short too; it must read smoothly aloud.',
       '5. titleZh and translationZh must not stack the same words; they should read like Chinese, not a translation.',
-      '6. scenePrompt: English image prompt for a dreamy, healing scene illustration (NOT two people talking):',
+      '6. scenePrompt: English image prompt for a storybook-style scene illustration (NOT two people talking):',
       '   describe the subject, environment, light and palette; flat / storybook style, 16:9, no text in the image.',
       '7. blessing: a short Chinese dedication (at most 24 characters) written for whoever collects this card today.',
       '   Warm and specific to the theme; never a translation of sentenceEn; no exclamation marks;',
       '   read like something a friend would write on the back of a postcard.',
-      '8. The theme must differ every day; avoid common holidays. Positive, warm and visual.',
-      `9. Date: ${day}.`,
+      `8. Date: ${day}.`,
+      '',
+      'DIVERSITY RULES (most important — violating these ruins the series):',
+      'A. These themes were already used on the previous days:',
+      recentBlock,
+      'B. Your new theme MUST NOT reuse any of them, and MUST NOT be a synonym or near-variant.',
+      '   Same mood under a different name counts as a repeat. If recent cards were about stillness/quiet/calm,',
+      '   do NOT deliver another calm-and-quiet card, even with a different title.',
+      'C. Pick a DIFFERENT dimension than the recent ones. Cycle through these across days:',
+      '   - a small physical action (packing, tying, pouring, folding, waiting for a bus)',
+      '   - an everyday object as the subject (a kettle, a bicycle, an umbrella, a mailbox)',
+      '   - a sound or a smell (rain on a tin roof, bread from a window, a distant train)',
+      '   - a relationship moment (a shared umbrella, a wave through a window, a hand-me-down)',
+      '   - a season turn or weather shift (first frost, a warm wind, the last swim)',
+      '   - a place in the city (a night bus, a corner shop, a rooftop, a laundromat)',
+      '   - a small triumph or effort (learning, mending, arriving, finishing)',
+      '   - humor or playfulness (a cat claiming a chair, a stubborn plant)',
+      'D. Vary time of day and palette: do not default to golden autumn afternoons.',
+      '   If recent cards were warm gold/amber, choose another palette (blue hour, rainy grey, neon night, mint morning).',
+      'E. Avoid common holidays. Keep it positive, but concrete beats poetic.',
     ].join('\n');
 
     const content = await this.chat(
       'sentence_card_gen',
       systemPrompt,
-      `Generate the daily card theme for ${day}.`,
-      0.9,
+      `Generate the daily card theme for ${day}. It must differ from the previous days in BOTH subject and mood.`,
+      1.0,
     );
     const theme = this.parseSentenceCardTheme(content);
     if (!theme) {
