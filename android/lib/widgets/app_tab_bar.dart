@@ -42,72 +42,81 @@ class AppTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 66,
-        decoration: BoxDecoration(
-          color: colors.card,
-          border: Border(
-            top: BorderSide(color: colors.line.withValues(alpha: 0.9)),
-          ),
+    // 白色底必须一直铺到屏幕**最底边**（含系统手势条那条）。
+    //
+    // Android 15+（API 35+）起系统强制 edge-to-edge：`systemNavigationBarColor`
+    // 被系统忽略、导航栏永久透明，只能靠自己把背景画进去。所以这里让
+    // Container 直接覆盖整条底边（安全区也在它内部），SafeArea 仅把**内容**
+    // 往上顶出手势条。否则白色只到 66px，手势条那条透出画布灰，看起来就
+    // 像「导航栏是透明的、跟底栏对不上色」。
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.card,
+        border: Border(
+          top: BorderSide(color: colors.line.withValues(alpha: 0.9)),
         ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final itemWidth = constraints.maxWidth / items.length;
-            return Stack(
-              children: <Widget>[
-                // 滑动胶囊
-                AnimatedPositioned(
-                  duration: Motion.reduced(context)
-                      ? Duration.zero
-                      : Motion.normal,
-                  curve: Motion.spring,
-                  left: index * itemWidth + 10,
-                  top: 9,
-                  width: itemWidth - 20,
-                  height: 48,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: <Color>[Color(0xFF0EA5E9), Color(0xFF6366F1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: const Color(0xFF6366F1)
-                              .withValues(alpha: 0.35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 5),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 66,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = constraints.maxWidth / items.length;
+              return Stack(
+                children: <Widget>[
+                  // 滑动胶囊
+                  AnimatedPositioned(
+                    duration: Motion.reduced(context)
+                        ? Duration.zero
+                        : Motion.normal,
+                    curve: Motion.spring,
+                    left: index * itemWidth + 10,
+                    top: 9,
+                    width: itemWidth - 20,
+                    height: 48,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: <Color>[Color(0xFF0EA5E9), Color(0xFF6366F1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: const Color(0xFF6366F1)
+                                .withValues(alpha: 0.35),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Row(
-                  children: <Widget>[
-                    for (var i = 0; i < items.length; i++)
-                      Expanded(
-                        child: PressScale(
-                          scale: 0.92,
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            if (i == index) {
-                              return;
-                            }
-                            HapticFeedback.selectionClick();
-                            onChanged(i);
-                          },
-                          child: _TabLabel(item: items[i], active: i == index),
+                  Row(
+                    children: <Widget>[
+                      for (var i = 0; i < items.length; i++)
+                        Expanded(
+                          child: PressScale(
+                            scale: 0.92,
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              if (i == index) {
+                                return;
+                              }
+                              HapticFeedback.selectionClick();
+                              onChanged(i);
+                            },
+                            child: _TabLabel(item: items[i], active: i == index),
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ],
-            );
-          },
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
