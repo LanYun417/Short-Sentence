@@ -87,7 +87,12 @@ export async function streamSse(path: string, body: unknown, handlers: SseHandle
             if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();
             } else if (line.startsWith('data:')) {
-              data += line.slice(5).trim();
+              // 不能 trim！流式 token 常以空格开头（如 " afternoon"、" Want"），
+              // trim 会把词间空格吃掉，导致整句单词粘连（英文句子、IPA 都会中招）。
+              // 按 SSE 规范只去掉冒号后的「单个」分隔空格：服务端写的是 `data: <内容>`，
+              // 这个空格是分隔符，内容自身的首空格必须保留。
+              const value = line.slice(5);
+              data += value.startsWith(' ') ? value.slice(1) : value;
             }
           }
           if (eventName === 'done') {
