@@ -57,46 +57,57 @@ class _AiPageState extends ConsumerState<AiPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Column(
-      children: [
-        PageHeader(
-          title: 'AI 拓展',
-          subtitle: '场景造句 · 词根拆解 · 词根词典',
-          trailing: const _QuotaBadge(),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: SegmentedControl<AiTab>(
-            value: _tab,
-            onChanged: (value) => setState(() => _tab = value),
-            segments: const <Segment<AiTab>>[
-              Segment<AiTab>(
-                value: AiTab.expand,
-                label: '场景造句',
-                icon: Icons.chat_bubble_outline_rounded,
+    // 顶部必须让开状态栏：PageHeader 只有 8px 的上内边距，
+    // 单独用会紧贴通知栏。其它页（语句库/成长/我的）都是
+    // SafeArea + PageHeader 的组合，这里跟上，保持头部节奏一致。
+    // bottom: false——底部由各面板自己的 108 留白避让悬浮底栏。
+    return Material(
+      color: Colors.transparent,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PageHeader(
+              title: 'AI 拓展',
+              subtitle: '场景造句 · 词根拆解 · 词根词典',
+              trailing: const _QuotaBadge(),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SegmentedControl<AiTab>(
+                value: _tab,
+                onChanged: (value) => setState(() => _tab = value),
+                segments: const <Segment<AiTab>>[
+                  Segment<AiTab>(
+                    value: AiTab.expand,
+                    label: '场景造句',
+                    icon: Icons.chat_bubble_outline_rounded,
+                  ),
+                  Segment<AiTab>(
+                    value: AiTab.wordRoot,
+                    label: '词根拆解',
+                    icon: Icons.account_tree_outlined,
+                  ),
+                  Segment<AiTab>(
+                    value: AiTab.roots,
+                    label: '词根词典',
+                    icon: Icons.menu_book_outlined,
+                  ),
+                ],
               ),
-              Segment<AiTab>(
-                value: AiTab.wordRoot,
-                label: '词根拆解',
-                icon: Icons.account_tree_outlined,
-              ),
-              Segment<AiTab>(
-                value: AiTab.roots,
-                label: '词根词典',
-                icon: Icons.menu_book_outlined,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: switch (_tab) {
+                AiTab.expand => const _ExpandPanel(),
+                AiTab.wordRoot => const _WordRootPanel(),
+                AiTab.roots => _RootsPanel(autoLoad: widget.autoLoad),
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: switch (_tab) {
-            AiTab.expand => const _ExpandPanel(),
-            AiTab.wordRoot => const _WordRootPanel(),
-            AiTab.roots => _RootsPanel(autoLoad: widget.autoLoad),
-          },
-        ),
-      ],
+      ),
     );
   }
 }
