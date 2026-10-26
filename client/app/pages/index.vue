@@ -34,12 +34,11 @@ const {
 } = useQuestionSession();
 
 /**
- * SSR 预抽题：服务端按 Cookie 令牌 + 难度/模式偏好抽好卡，首屏 HTML 直接带题面
- * （拼词模式还会带打乱的词块）。预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
+ * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
+ * （拼词词块随题恒定下发）。预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
  */
 const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
   difficulty: difficulty.value,
-  mode: mode.value,
 });
 if (ssrQuestion.value) {
   prefill(ssrQuestion.value);

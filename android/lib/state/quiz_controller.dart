@@ -136,15 +136,13 @@ class QuizController extends Notifier<QuizState> {
 
   QuestionsApi get _api => ref.read(questionsApiProvider);
 
-  /// 切换作答模式（同时重新抽题：模式决定是否下发词块）。
+  /// 切换作答模式：只改本地偏好，**不重抽题**。
+  /// 词块由服务端随题恒定下发，切换后沿用当前题即可（与 Web 端一致）。
   void setMode(AnswerMode mode) {
     if (state.mode == mode) {
       return;
     }
-    // 不清 result：加载期间保留上一题的 todayDone，避免「今日刷题」
-    // 在切模式时也短暂回落（见 [loadNext] 的说明）。
     state = state.copyWith(mode: mode, error: null);
-    loadNext();
   }
 
   /// 抽下一题。
@@ -162,7 +160,7 @@ class QuizController extends Notifier<QuizState> {
     );
     try {
       final question = await _api.next(
-        NextQuestionQuery(difficulty: difficulty ?? state.difficulty, mode: state.mode),
+        NextQuestionQuery(difficulty: difficulty ?? state.difficulty),
       );
       state = state.copyWith(
         question: question,

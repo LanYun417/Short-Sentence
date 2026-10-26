@@ -47,7 +47,8 @@ export interface NextQuestion {
   source: 'new' | 'review';
   /**
    * 拼词模式的候选词块（打乱后的英文单词，含原标点）。
-   * 仅 `mode=assemble` 时下发；输入模式恒为 null —— 否则等于把答案提前给了用户。
+   * **恒定下发**（不再依赖 mode）——这样客户端切换「输入 / 拼词」时沿用当前题即可，
+   * 无需重抽（Web / App 一致）。词块为打乱顺序，不构成答案的直接泄露。
    */
   words: string[] | null;
 }
@@ -213,9 +214,8 @@ export class QuestionsService {
    *
    * @param difficulty 目标难度（1 易 / 2 中 / 3 难），仅作用于**新题**——
    *   复习题必须按间隔重复排期走，按难度过滤会打乱复习节奏。该难度无可用新题时回落到不限难度。
-   * @param mode 作答模式；`assemble` 时下发打乱词块，其余情况不下发（输入模式拿不到答案）。
    */
-  async next(userId: number, difficulty?: number, mode?: AnswerMode): Promise<NextQuestion> {
+  async next(userId: number, difficulty?: number): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
     const wantNew = Math.random() < config.sentence.newRatio;
 
@@ -272,7 +272,7 @@ export class QuestionsService {
       todayDone: today?.doneCount ?? 0,
       todayGoal: config.sentence.dailyGoal,
       source,
-      words: mode === 'assemble' ? shuffleWords(sentence.sentenceEn) : null,
+      words: shuffleWords(sentence.sentenceEn),
     };
   }
 

@@ -104,7 +104,7 @@ export function useQuestionSession() {
     errorMessage.value = '';
     try {
       question.value = await apiFetch<NextQuestion>('/client/questions/next', {
-        query: { difficulty: difficulty.value, mode: mode.value },
+        query: { difficulty: difficulty.value },
       });
       result.value = null;
     } catch (error) {
@@ -123,16 +123,15 @@ export function useQuestionSession() {
   }
 
   /**
-   * 切换作答模式：记住选择并立刻重抽一题。
-   * 必须重抽——词块是服务端在抽题时下发的，沿用旧题会导致切到拼词模式后无词可点。
+   * 切换作答模式：只记住偏好，**不重抽题**。
+   * 词块由服务端随题**恒定下发**，因此切换后沿用当前题即可（与 App 端一致）。
    */
-  async function setMode(value: AnswerMode): Promise<void> {
+  function setMode(value: AnswerMode): void {
     if (mode.value === value) {
       return;
     }
     mode.value = value;
     persistMode(modeCookie, value);
-    await loadNext();
   }
 
   /**

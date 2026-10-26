@@ -16,18 +16,16 @@ import 'dio_client.dart';
 import 'models/question.dart';
 
 /// 抽题查询参数。
+///
+/// 词块现随题**恒定下发**，故不再携带作答模式——切换模式沿用当前题即可（与 Web 端一致）。
 class NextQuestionQuery {
-  const NextQuestionQuery({this.difficulty, this.mode = AnswerMode.input});
+  const NextQuestionQuery({this.difficulty});
 
   /// 目标难度（1/2/3；不传则不限）
   final int? difficulty;
 
-  /// 作答模式（影响是否下发词块）
-  final AnswerMode mode;
-
   Map<String, dynamic> toQuery() => <String, dynamic>{
         if (difficulty != null) 'difficulty': difficulty,
-        'mode': mode.value,
       };
 }
 

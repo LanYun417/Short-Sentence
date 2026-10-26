@@ -37,7 +37,13 @@ export class AnswerSentenceDto {
   mode?: AnswerMode;
 }
 
-/** 抽题查询入参。 */
+/**
+ * 抽题查询入参。
+ *
+ * 拼词词块（`words`）现由服务端**恒定下发**，故不再需要 `mode` 参数——
+ * 客户端切换作答模式时沿用当前题即可，无需重抽（Web / App 一致）。
+ * 旧客户端仍会带 `mode`，全局 ValidationPipe 的 whitelist 会静默剥离，不影响兼容。
+ */
 export class NextQuestionQueryDto {
   /**
    * 目标难度：1 易 / 2 中 / 3 难。
@@ -49,12 +55,4 @@ export class NextQuestionQueryDto {
   @Min(1, { message: '难度最小为 1' })
   @Max(3, { message: '难度最大为 3' })
   difficulty?: number;
-
-  /**
-   * 作答模式：只影响**是否下发打乱词块**（拼词模式需要），不影响选题逻辑。
-   * 不带该参数时按 input 处理，不返回词块——输入模式拿不到答案。
-   */
-  @IsOptional()
-  @IsIn([...ANSWER_MODES], { message: '作答模式不合法' })
-  mode?: AnswerMode;
 }

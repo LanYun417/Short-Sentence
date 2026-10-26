@@ -95,6 +95,15 @@ watch(
   },
 );
 
+// 切换作答模式：清空上一模式残留的作答（输入 / 拼词两种形态不同，避免串味）。
+// 切模式不再重抽题，故需在此显式清空，否则已拼好的句子会带进输入框。
+watch(
+  () => props.mode,
+  () => {
+    answer.value = '';
+  },
+);
+
 onMounted(() => {
   focusInput();
   window.addEventListener('keydown', onKeydown);

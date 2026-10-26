@@ -16,11 +16,11 @@ export class QuestionsController {
 
   /**
    * 下一张卡（8:2 新题/复习混抽；不含答案）。
-   * difficulty 仅作用于新题抽取；mode=assemble 时额外下发打乱词块（拼词作答用）。
+   * difficulty 仅作用于新题抽取；拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题。
    */
   @Get('next')
   next(@CurrentClientUser() user: ClientUserContext, @Query() query: NextQuestionQueryDto) {
-    return this.questions.next(user.userId, query.difficulty, query.mode);
+    return this.questions.next(user.userId, query.difficulty);
   }
 
   /** 提交答案（返回正确答案，用于翻转面）。 */
