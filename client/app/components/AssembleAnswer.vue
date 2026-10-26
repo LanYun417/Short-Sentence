@@ -28,8 +28,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'update:answer', value: string): void }>();
 
-/** 词库（尚未选中的词块，保持下发的乱序） */
-const pool = ref<WordChip[]>([]);
+/**
+ * 词库（**全部**词块，固定原位，保持下发的乱序）。
+ * 选中的词块不从词库里移除——只把对应槽位标灰、置为不可点，
+ * 避免剩余词块自动重排「递进」（与 App 端一致）。
+ */
+const bank = ref<WordChip[]>([]);
 /** 已选区（按用户排列的顺序） */
 const selected = ref<WordChip[]>([]);
 
@@ -37,7 +41,7 @@ const selected = ref<WordChip[]>([]);
 watch(
   () => props.words,
   (words) => {
-    pool.value = (words ?? []).map((text, index) => ({ index, text }));
+    bank.value = (words ?? []).map((text, index) => ({ index, text }));
     selected.value = [];
     sync();
   },
@@ -49,31 +53,52 @@ function sync(): void {
   emit('update:answer', selected.value.map((chip) => chip.text).join(' '));
 }
 
-/** 从词库选入（追加到末尾）。 */
+/**
+ * 词库中「已被选走」的槽位下标。
+ * 按「文本 → 已选次数」逐槽消耗：同一单词出现多次时依次标灰，不串位。
+ */
+const usedIndexes = computed(() => {
+  const taken = new Map<string, number>();
+  for (const chip of selected.value) {
+    taken.set(chip.text, (taken.get(chip.text) ?? 0) + 1);
+  }
+  const seen = new Map<string, number>();
+  const used = new Set<number>();
+  for (const chip of bank.value) {
+    const order = (seen.get(chip.text) ?? 0) + 1;
+    seen.set(chip.text, order);
+    if ((taken.get(chip.text) ?? 0) >= order) {
+      used.add(chip.index);
+    }
+  }
+  return used;
+});
+
+/** 该词库槽位是否已被选走（标灰、不可点）。 */
+function isUsed(chip: WordChip): boolean {
+  return usedIndexes.value.has(chip.index);
+}
+
+/** 从词库选入（追加到末尾；已选走的槽位不可再点）。 */
 function pick(chip: WordChip): void {
-  if (props.disabled) {
+  if (props.disabled || isUsed(chip)) {
     return;
   }
-  pool.value = pool.value.filter((item) => item.index !== chip.index);
   selected.value = [...selected.value, chip];
   sync();
 }
 
-/** 从已选区移回词库（按原下标插回原位，避免词库顺序越点越乱）。 */
+/** 从已选区移出（词库对应槽位自动恢复为可选）。 */
 function unpick(chip: WordChip): void {
   if (props.disabled) {
     return;
   }
   selected.value = selected.value.filter((item) => item.index !== chip.index);
-  const next = [...pool.value];
-  const at = next.findIndex((item) => item.index > chip.index);
-  next.splice(at < 0 ? next.length : at, 0, chip);
-  pool.value = next;
   sync();
 }
 
 /** 是否已把所有词块用上（用完了提示可以提交）。 */
-const allUsed = computed(() => pool.value.length === 0 && selected.value.length > 0);
+const allUsed = computed(() => bank.value.length > 0 && selected.value.length >= bank.value.length);
 </script>
 
 <template>
@@ -105,20 +130,25 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
       </button>
     </TransitionGroup>
 
-    <!-- 词库：剩余词块 -->
-    <TransitionGroup name="chip" tag="div" class="mt-3 flex flex-wrap items-center gap-2" aria-label="可选词块">
+    <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
+    <div class="mt-3 flex flex-wrap items-center gap-2" aria-label="可选词块">
       <button
-        v-for="chip in pool"
+        v-for="chip in bank"
         :key="chip.index"
         type="button"
-        :disabled="disabled"
-        class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-sky-300 active:scale-95 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+        :disabled="disabled || isUsed(chip)"
+        class="flex items-center justify-center rounded-lg px-2.5 py-1.5 text-[15px] font-medium ring-1 transition"
+        :class="
+          isUsed(chip)
+            ? 'cursor-default bg-slate-100 text-slate-300 ring-slate-200 dark:bg-slate-800/50 dark:text-slate-600 dark:ring-slate-700'
+            : 'bg-white text-slate-700 shadow-sm ring-slate-200 hover:-translate-y-0.5 hover:ring-sky-300 active:scale-95 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600'
+        "
         @click="pick(chip)"
       >
         {{ chip.text }}
       </button>
-      <p v-if="allUsed" key="hint" class="self-center text-sm text-slate-400">词块已用完，点「确定」检查</p>
-    </TransitionGroup>
+      <p v-if="allUsed" class="self-center text-sm text-slate-400">词块已用完，点「确定」检查</p>
+    </div>
   </div>
 </template>
 
@@ -126,8 +156,9 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
 /*
  * 词块「移入答题框」动效：
  * - 进场（词块被选入答题框）：从下方 10px、缩小到 0.88、透明，弹性落到位；
- * - 离场（词块离开词库 / 移出答题框）：淡出并轻微上浮缩小，绝对定位避免挤压兄弟元素；
+ * - 离场（从答题框移出）：淡出并轻微上浮缩小，绝对定位避免挤压兄弟元素；
  * - 移动（兄弟词块补位）：FLIP 位移，让其余词块平滑让位。
+ * 注：词库侧不再移除词块（已选走只标灰原位保留），故 leave/move 只作用于答题框。
  */
 .chip-enter-active {
   transition:
