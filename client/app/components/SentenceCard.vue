@@ -174,10 +174,14 @@ const dateText = computed(() => {
         完成今日目标，收下这张属于你的闪卡
       </div>
 
-      <!-- 寄语：这张卡独有的一句（随卡片一起生成；老卡片为空时不占位） -->
+      <!-- 寄语：这张卡独有的一句（随卡片一起生成；老卡片为空时不占位）
+           必须自带底色：它浮在弹层的半透明遮罩上，而遮罩带 backdrop-blur，
+           背后配图的亮色会透上来。亮色模式下遮罩压不住亮部，amber-600 的小字
+           会糊在浅底上（实测对比度约 3.97:1，低于 WCAG AA 的 4.5:1）。
+           这里与上方卡脚用同一套「白底 + 细环」的外壳，保证任何背景下都可读。 -->
       <p
         v-if="card.blessing"
-        class="mt-2 text-center text-xs text-amber-600/90 dark:text-amber-400/80"
+        class="mt-2 rounded-2xl bg-white px-4 py-2.5 text-center text-xs font-medium text-amber-700 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-300 dark:ring-amber-500/20"
         :style="{ transform: `translateZ(${Z_FOOTER}px)` }"
       >
         「{{ card.blessing }}」
