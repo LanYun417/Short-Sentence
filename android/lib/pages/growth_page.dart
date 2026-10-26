@@ -981,6 +981,10 @@ class _CardTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: tileRing),
       ),
+      // 必须裁剪：`borderRadius` 只影响背景与边框的**绘制**，不会裁子元素。
+      // 不裁剪时顶部图片是直角、正好盖住卡片圆角，看起来像「图片冲出卡片」。
+      // Web 端对应写法是 `overflow-hidden rounded-2xl`。
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
