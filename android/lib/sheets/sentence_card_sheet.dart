@@ -367,6 +367,9 @@ class _CardBack extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(26, 26, 26, 24),
                   child: Column(
+                    // 显式写 max：卡背被 Positioned.fill 拉到「由正面决定的高度」，
+                    // 内容必须在这个高度里排完（原因见下方封蜡处的注释）
+                    mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Row(
@@ -402,15 +405,33 @@ class _CardBack extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      const Center(child: _Seal()),
-                      const SizedBox(height: 26),
+                      // 弹性中段：卡片高度由正面（配图 16:9 + 卡脚）决定，
+                      // 卡背只是被拉成同一个高度。若这里照旧用 Spacer + 固定封蜡，
+                      // 卡背的固定内容会比正面高十几二十像素 → 底部溢出，
+                      // release 包里会真实画出黄黑斜纹 +「BOTTOM OVERFLOWED」
+                      // （Medium_Phone 模拟器上实测 20px，截图反馈的来源）。
+                      // 封蜡放进弹性区并用 scaleDown：空间够就原样居中，
+                      // 不够就等比缩小——而不是把寄语 / 底部文案顶出卡外。
+                      Expanded(
+                        child: Center(
+                          child: FittedBox(
+                            // scaleDown 而不是 contain：contain 会把小封蜡放大，
+                            // 弹性区一充裕封蜡就涨成气球
+                            fit: BoxFit.scaleDown,
+                            child: const _Seal(size: 84),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                       // 寄语：这张卡独有的一句（取代泛用的揭晓文案）
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           _blessingOf(card),
                           textAlign: TextAlign.center,
+                          // 最多两行：寄语是独白不是正文，宁可截断也不撑破卡片
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: _slate800,
                             fontSize: 15,
@@ -420,7 +441,7 @@ class _CardBack extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 10),
                       const Center(
                         child: Text(
                           '轻触翻开',
@@ -431,7 +452,7 @@ class _CardBack extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 12),
                       const Center(
                         child: Text(
                           '短句 · 每天一句，慢慢变好',
@@ -481,14 +502,19 @@ class _Glow extends StatelessWidget {
 }
 
 /// 封蜡：金色圆环 + 星芒。
+///
+/// [size] 可被 `FittedBox(scaleDown)` 等比缩小：卡背是「被拉成正面高度」的，
+/// 空间不足时要能缩，否则底部会被顶出卡片（见 [_CardBack] 里的弹性中段注释）。
 class _Seal extends StatelessWidget {
-  const _Seal();
+  const _Seal({this.size = 84});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 96,
-      height: 96,
+      width: size,
+      height: size,
       padding: const EdgeInsets.all(1.5),
       decoration: const BoxDecoration(
         shape: BoxShape.circle,

@@ -39,11 +39,14 @@ double _faceOpacity(WidgetTester tester, String text) {
   return tester.widget<Opacity>(finder.first).opacity;
 }
 
-Future<void> _open(WidgetTester tester, {bool reduceMotion = false}) async {
+Future<void> _open(WidgetTester tester, {bool reduceMotion = false, double textScale = 1}) async {
   await tester.pumpWidget(
     MaterialApp(
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations: reduceMotion,
+          textScaler: TextScaler.linear(textScale),
+        ),
         child: child!,
       ),
       home: Scaffold(
@@ -186,5 +189,25 @@ void main() {
       1,
     );
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('手机尺寸 + 大字号下卡背不溢出（黄黑斜纹指示条的回归）', (tester) async {
+    // 真实缺陷：卡片高度由正面（配图 16:9 + 卡脚）决定，卡背是 Positioned.fill
+    // 被拉到同一个高度，而卡背的固定内容（封蜡 + 寄语 + 底部文案）更高，
+    // 于是底部溢出十几二十像素，release 包里会真实画出黄黑斜纹 +「BOTTOM OVERFLOWED」。
+    // 用手机逻辑尺寸（360x800）与 1.3 倍字号复现：这正是 Medium_Phone 模拟器上的量。
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _open(tester, textScale: 1.3);
+
+    // RenderFlex 溢出会被框架作为异常上报：有溢出这条就过不去
+    expect(tester.takeException(), isNull);
+    // 卡背的关键信息要完整在卡内
+    expect(find.text('愿你在忙碌里，也留一片安静的落叶。'), findsOneWidget);
+    expect(find.text('轻触翻开'), findsOneWidget);
+    expect(find.text('短句 · 每天一句，慢慢变好'), findsOneWidget);
   });
 }
