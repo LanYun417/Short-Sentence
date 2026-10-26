@@ -14,11 +14,11 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import type { SentenceCardTheme } from '../../src/common/ai/ai.types.js';
+import type { SentenceCardTheme } from '../src/common/ai/ai.types.js';
 
 /** 构造一个最小 provider，只测 prompt 拼装（不真的调 AI）。 */
 async function buildPromptWith(recent: SentenceCardTheme[]): Promise<string> {
-  const mod = await import('../../src/common/ai/agnes-sentence.provider.js');
+  const mod = await import('../src/common/ai/agnes-sentence.provider.js');
   const Provider = (mod as unknown as { AgnesSentenceProvider: new (...args: never[]) => unknown })
     .AgnesSentenceProvider;
 
