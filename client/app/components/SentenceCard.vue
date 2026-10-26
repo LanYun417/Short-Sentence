@@ -14,12 +14,17 @@ const props = defineProps<{
   card: SentenceCard;
 }>();
 
-/** 最大倾斜角（度）与各图层前移距离（px）。 */
+/**
+ * 最大倾斜角（度）与各图层前移距离（px）。
+ *
+ * 只有「卡面内部的图层」才需要 translateZ：配图上的标题（Z_TEXT）、
+ * 角标（Z_BADGE）、镭射高光（Z_GLARE）。卡片下方的卡脚与寄语是注脚，
+ * 刻意留在基准平面（不参与视差），所以没有对应的 Z 常量。
+ */
 const MAX_TILT = 8;
 const Z_GLARE = 8;
 const Z_BADGE = 30;
 const Z_TEXT = 45;
-const Z_FOOTER = 20;
 
 const cardRef = useTemplateRef<HTMLElement>('card');
 /** 指针相对卡片中心的归一化偏移（-0.5 ~ 0.5） */
@@ -165,10 +170,13 @@ const dateText = computed(() => {
         </div>
       </div>
 
-      <!-- 卡脚 -->
+      <!-- 卡脚：不参与 3D 视差。
+           这两条是「说明性文字」，定位是平贴在卡片上的注脚，不是卡面上的图层。
+           给它们 translateZ 会让倾斜时相对配图产生位移、看起来往前飘，
+           反而像浮在卡外的贴纸。去掉 translateZ 后它们留在卡片基准平面，
+           随整卡一起倾斜，视觉上就是「印在卡上」。 -->
       <div
         class="mt-2 flex items-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-xs text-amber-600 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-400 dark:ring-amber-500/20"
-        :style="{ transform: `translateZ(${Z_FOOTER}px)` }"
       >
         <UIcon name="i-lucide-party-popper" class="h-4 w-4" />
         完成今日目标，收下这张属于你的闪卡
@@ -178,11 +186,11 @@ const dateText = computed(() => {
            必须自带底色：它浮在弹层的半透明遮罩上，而遮罩带 backdrop-blur，
            背后配图的亮色会透上来。亮色模式下遮罩压不住亮部，amber-600 的小字
            会糊在浅底上（实测对比度约 3.97:1，低于 WCAG AA 的 4.5:1）。
-           这里与上方卡脚用同一套「白底 + 细环」的外壳，保证任何背景下都可读。 -->
+           这里与上方卡脚用同一套「白底 + 细环」的外壳，保证任何背景下都可读。
+           与卡脚同理：不加 translateZ，不参与 3D 视差。 -->
       <p
         v-if="card.blessing"
         class="mt-2 rounded-2xl bg-white px-4 py-2.5 text-center text-xs font-medium text-amber-700 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-800 dark:text-amber-300 dark:ring-amber-500/20"
-        :style="{ transform: `translateZ(${Z_FOOTER}px)` }"
       >
         「{{ card.blessing }}」
       </p>
