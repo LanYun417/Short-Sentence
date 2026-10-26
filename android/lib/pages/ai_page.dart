@@ -47,7 +47,8 @@ class AiPage extends ConsumerStatefulWidget {
   ConsumerState<AiPage> createState() => _AiPageState();
 }
 
-class _AiPageState extends ConsumerState<AiPage> with AutomaticKeepAliveClientMixin {
+class _AiPageState extends ConsumerState<AiPage>
+    with AutomaticKeepAliveClientMixin {
   AiTab _tab = AiTab.expand;
 
   @override
@@ -162,31 +163,34 @@ class _ExpandPanelState extends ConsumerState<_ExpandPanel> {
       _result = null;
     });
     _cancelToken = CancelToken();
-    _sub = ref.read(aiApiProvider).expand(chinese, cancelToken: _cancelToken).listen(
-      (event) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _buffer = event.text;
-          if (event.error != null) {
-            _error = event.error;
-          }
-        });
-        if (event.done || event.error != null) {
-          _finish();
-        }
-      },
-      onError: (Object _) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _error = '生成失败，请重试';
-          _running = false;
-        });
-      },
-    );
+    _sub = ref
+        .read(aiApiProvider)
+        .expand(chinese, cancelToken: _cancelToken)
+        .listen(
+          (event) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _buffer = event.text;
+              if (event.error != null) {
+                _error = event.error;
+              }
+            });
+            if (event.done || event.error != null) {
+              _finish();
+            }
+          },
+          onError: (Object _) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _error = '生成失败，请重试';
+              _running = false;
+            });
+          },
+        );
   }
 
   void _finish() {
@@ -210,7 +214,7 @@ class _ExpandPanelState extends ConsumerState<_ExpandPanel> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 108),
       children: [
         AppCard(
           child: Column(
@@ -254,7 +258,9 @@ class _ExpandPanelState extends ConsumerState<_ExpandPanel> {
           if (_result != null)
             _ExpandResultCard(result: _result!)
           else
-            AppCard(child: _StreamingText(text: _buffer, running: _running)),
+            AppCard(
+              child: _StreamingText(text: _buffer, running: _running),
+            ),
         ],
       ],
     );
@@ -304,7 +310,11 @@ class _ExpandResultCard extends StatelessWidget {
               ),
               child: Text(
                 result.note,
-                style: TextStyle(fontSize: 13, height: 1.5, color: colors.inkSoft),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: colors.inkSoft,
+                ),
               ),
             ),
           ],
@@ -356,31 +366,34 @@ class _WordRootPanelState extends ConsumerState<_WordRootPanel> {
       _result = null;
     });
     _cancelToken = CancelToken();
-    _sub = ref.read(aiApiProvider).wordRoot(word, cancelToken: _cancelToken).listen(
-      (event) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _buffer = event.text;
-          if (event.error != null) {
-            _error = event.error;
-          }
-        });
-        if (event.done || event.error != null) {
-          _finish();
-        }
-      },
-      onError: (Object _) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _error = '生成失败，请重试';
-          _running = false;
-        });
-      },
-    );
+    _sub = ref
+        .read(aiApiProvider)
+        .wordRoot(word, cancelToken: _cancelToken)
+        .listen(
+          (event) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _buffer = event.text;
+              if (event.error != null) {
+                _error = event.error;
+              }
+            });
+            if (event.done || event.error != null) {
+              _finish();
+            }
+          },
+          onError: (Object _) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _error = '生成失败，请重试';
+              _running = false;
+            });
+          },
+        );
   }
 
   void _finish() {
@@ -404,7 +417,7 @@ class _WordRootPanelState extends ConsumerState<_WordRootPanel> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 108),
       children: [
         AppCard(
           child: Column(
@@ -425,9 +438,7 @@ class _WordRootPanelState extends ConsumerState<_WordRootPanel> {
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
                 onSubmitted: (_) => _start(),
-                decoration: const InputDecoration(
-                  hintText: '例如 unavoidable',
-                ),
+                decoration: const InputDecoration(hintText: '例如 unavoidable'),
               ),
               const SizedBox(height: 12),
               GradientButton(
@@ -448,7 +459,9 @@ class _WordRootPanelState extends ConsumerState<_WordRootPanel> {
           if (_result != null)
             _WordRootResultCard(word: _input.text.trim(), result: _result!)
           else
-            AppCard(child: _StreamingText(text: _buffer, running: _running)),
+            AppCard(
+              child: _StreamingText(text: _buffer, running: _running),
+            ),
         ],
       ],
     );
@@ -499,47 +512,66 @@ class _WordRootResultCard extends StatelessWidget {
           ),
           if (result.meaning.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(result.meaning, style: TextStyle(fontSize: 14, color: colors.inkSoft)),
+            Text(
+              result.meaning,
+              style: TextStyle(fontSize: 14, color: colors.inkSoft),
+            ),
           ],
           if (result.parts.isNotEmpty) ...[
             const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final part in result.parts)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: colors.cardMuted,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          part.text,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: colors.brand,
+            // 与词典条目同理：Wrap 子项无界宽，长释义会把 chip 撑出屏幕
+            LayoutBuilder(
+              builder: (context, constraints) => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final part in result.parts)
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.cardMuted,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            part.text,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: colors.brand,
+                            ),
                           ),
-                        ),
-                        Text(
-                          part.meaning,
-                          style: TextStyle(fontSize: 11, color: colors.inkFaint),
-                        ),
-                      ],
+                          Text(
+                            part.meaning,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.inkFaint,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ],
           if (result.explanation.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
               result.explanation,
-              style: TextStyle(fontSize: 13, height: 1.55, color: colors.inkSoft),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.55,
+                color: colors.inkSoft,
+              ),
             ),
           ],
           if (result.related.isNotEmpty) ...[
@@ -559,7 +591,10 @@ class _WordRootResultCard extends StatelessWidget {
               children: [
                 for (final word in result.related)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: colors.line),
                       borderRadius: BorderRadius.circular(8),
@@ -653,7 +688,10 @@ class _RootsPanelState extends ConsumerState<_RootsPanel> {
         return;
       }
       setState(() {
-        _items = <WordRootItem>[item, ..._items.where((e) => e.word != item.word)];
+        _items = <WordRootItem>[
+          item,
+          ..._items.where((e) => e.word != item.word),
+        ];
         _looking = false;
       });
       ref.invalidate(aiQuotaProvider);
@@ -710,24 +748,25 @@ class _RootsPanelState extends ConsumerState<_RootsPanel> {
         Expanded(
           child: _loading
               ? ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 108),
                   itemCount: 5,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (_, _) => const ShimmerBox(height: 76, radius: 16),
+                  itemBuilder: (_, _) =>
+                      const ShimmerBox(height: 76, radius: 16),
                 )
               : _items.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.menu_book_outlined,
-                      title: '还没收录词条',
-                      message: '在上方输入单词后点「查词」，AI 会实时拆解并收录',
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      itemCount: _items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) =>
-                          _RootTile(item: _items[index]),
-                    ),
+              ? const EmptyState(
+                  icon: Icons.menu_book_outlined,
+                  title: '还没收录词条',
+                  message: '在上方输入单词后点「查词」，AI 会实时拆解并收录',
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 108),
+                  itemCount: _items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) =>
+                      _RootTile(item: _items[index]),
+                ),
         ),
       ],
     );
@@ -745,11 +784,17 @@ class _RootTile extends StatelessWidget {
     final colors = context.colors;
     return AppCard(
       padding: EdgeInsets.zero,
+      // 展开时 ExpansionTile 会铺满卡片、四角为直角，必须裁剪才不露灰角
+      clip: true,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          // 去掉 Material 默认的展开底色（浅灰），否则展开区是一块灰色矩形，
+          // 与卡片白底不一致，圆角处还会露出直角。
+          backgroundColor: Colors.transparent,
+          collapsedBackgroundColor: Colors.transparent,
           shape: const Border(),
           collapsedShape: const Border(),
           title: Row(
@@ -790,43 +835,65 @@ class _RootTile extends StatelessWidget {
                 ),
           children: [
             if (item.parts.isNotEmpty)
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final part in item.parts)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: colors.cardMuted,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            part.text,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: colors.brand,
+              // Wrap 给子项的是**无界宽度**，长释义会把 chip 撑出屏幕
+              // （曾出现 RIGHT OVERFLOWED BY ... 黄黑条）。
+              // 用 LayoutBuilder 拿到可用宽度，给 chip 设上限 + 让释义可换行。
+              LayoutBuilder(
+                builder: (context, constraints) => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final part in item.parts)
+                      Container(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.cardMuted,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              part.text,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: colors.brand,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            part.meaning,
-                            style: TextStyle(fontSize: 11, color: colors.inkFaint),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            // Flexible：释义过长时在 chip 内换行，而不是撑爆 Row
+                            Flexible(
+                              child: Text(
+                                part.meaning,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colors.inkFaint,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             if (item.explanation.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
                 item.explanation,
-                style: TextStyle(fontSize: 13, height: 1.55, color: colors.inkSoft),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: colors.inkSoft,
+                ),
               ),
             ],
             if (item.related.isNotEmpty) ...[
@@ -837,7 +904,10 @@ class _RootTile extends StatelessWidget {
                 children: [
                   for (final word in item.related)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: colors.line),
                         borderRadius: BorderRadius.circular(8),

@@ -21,6 +21,7 @@ class AppCard extends StatelessWidget {
     this.color,
     this.bordered = true,
     this.elevated = true,
+    this.clip = false,
     super.key,
   });
 
@@ -36,6 +37,14 @@ class AppCard extends StatelessWidget {
   final bool bordered;
   final bool elevated;
 
+  /// 是否按圆角裁剪子元素。
+  ///
+  /// 默认关闭：`borderRadius` 只影响背景与边框的绘制，不裁 child；
+  /// 多数卡片的子元素本就内缩在 padding 内，不需要裁。但**有贴边子元素**时
+  /// （如 ExpansionTile 展开、铺满顶部的图片）必须开启，否则子元素的直角
+  /// 会盖住卡片圆角，出现「灰色直角」。
+  final bool clip;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -43,6 +52,7 @@ class AppCard extends StatelessWidget {
       duration: Motion.reduced(context) ? Duration.zero : Motion.normal,
       curve: Motion.standard,
       padding: padding,
+      clipBehavior: clip ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
         color: gradient == null ? (color ?? colors.card) : null,
         gradient: gradient,
@@ -171,9 +181,8 @@ class SectionHeader extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.inkFaint,
-                          ),
+                      style: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(color: colors.inkFaint),
                     ),
                   ],
                 ],
