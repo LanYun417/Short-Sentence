@@ -1,12 +1,11 @@
 <script setup lang="ts">
 /** 操作日志页。模块职责：按模块、操作人、结果与时间范围查询操作记录并导出 CSV。 */
 
-import { ElMessage } from '@/utils/element';
 import { deleteOperationLogApi, deleteOperationLogsApi, exportOperationLogsApi, getOperationLogsApi } from '@/api/log';
 import { useTable } from '@/composables/useTable';
 import { useBatchDelete } from '@/composables/useBatchDelete';
-import { formatDate, formatDateTime, formatDuration } from '@/utils/format';
-import { downloadBlob } from '@/utils/download';
+import { useCsvExport } from '@/composables/useCsvExport';
+import { formatDateTime, formatDuration } from '@/utils/format';
 import type { OperationLog } from '@/types/api';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 import Pagination from '@/components/Pagination/index.vue';
@@ -14,7 +13,6 @@ import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'LogOperation' });
 
-const exporting = ref(false);
 const dateRange = ref<string[]>([]);
 
 /* ------------------------------ 变更留痕 ------------------------------ */
@@ -104,26 +102,21 @@ const { selected, deleting, handleSelectionChange, removeOne, removeSelected } =
 });
 
 /** 导出操作日志（P2）：按当前筛选条件导出，不带分页参数 */
-async function handleExport(): Promise<void> {
-  if (exporting.value) {
-    return;
-  }
-  exporting.value = true;
-  try {
-    const blob = await exportOperationLogsApi({
+/** 导出操作日志（P2）：按当前筛选条件导出，不带分页参数 */
+const { exporting, exportCsv } = useCsvExport();
+
+function handleExport(): void {
+  void exportCsv({
+    api: exportOperationLogsApi,
+    params: {
       module: query.module || undefined,
       username: query.username || undefined,
       result: query.result,
       startTime: dateRange.value[0] || undefined,
       endTime: dateRange.value[1] || undefined,
-    });
-    downloadBlob(blob, `操作日志_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
-    ElMessage.success('导出成功');
-  } catch {
-    ElMessage.error('导出失败');
-  } finally {
-    exporting.value = false;
-  }
+    },
+    name: '操作日志',
+  });
 }
 
 /** 方法列标签配色：读操作绿、新增蓝、修改黄、删除红 */
@@ -199,7 +192,7 @@ function methodTag(method: string): EpTagType {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="module" label="模块" width="120" />
         <el-table-column prop="action" label="动作" width="110" />

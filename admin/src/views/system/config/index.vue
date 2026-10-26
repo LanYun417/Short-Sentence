@@ -79,7 +79,7 @@ function handleFormSuccess(): void {
         </el-button>
       </div>
 
-      <el-table v-loading="loading" :data="list">
+      <el-table v-loading="loading" border :data="list">
         <el-table-column prop="configName" label="参数名称" min-width="160" show-overflow-tooltip />
         <el-table-column prop="configKey" label="参数键名" min-width="220" show-overflow-tooltip />
         <el-table-column prop="configValue" label="参数值" min-width="140" show-overflow-tooltip />

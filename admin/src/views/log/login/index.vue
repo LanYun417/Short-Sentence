@@ -1,19 +1,17 @@
 <script setup lang="ts">
 /** 登录日志页。模块职责：按账号、结果与时间范围查询登录记录并导出 CSV。 */
 
-import { ElMessage } from '@/utils/element';
 import { deleteLoginLogApi, deleteLoginLogsApi, exportLoginLogsApi, getLoginLogsApi } from '@/api/log';
 import { useTable } from '@/composables/useTable';
 import { useBatchDelete } from '@/composables/useBatchDelete';
-import { formatDate, formatDateTime } from '@/utils/format';
-import { downloadBlob } from '@/utils/download';
+import { useCsvExport } from '@/composables/useCsvExport';
+import { formatDateTime } from '@/utils/format';
 import type { LoginLog } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'LogLogin' });
 
-const exporting = ref(false);
 const dateRange = ref<string[]>([]);
 
 const { loading, list, total, query, getList, search, reset, changePage, changePageSize } = useTable(
@@ -41,25 +39,19 @@ const { selected, deleting, handleSelectionChange, removeOne, removeSelected } =
 });
 
 /** 导出登录日志（P2）：按当前筛选条件导出，不带分页参数 */
-async function handleExport(): Promise<void> {
-  if (exporting.value) {
-    return;
-  }
-  exporting.value = true;
-  try {
-    const blob = await exportLoginLogsApi({
+const { exporting, exportCsv } = useCsvExport();
+
+function handleExport(): void {
+  void exportCsv({
+    api: exportLoginLogsApi,
+    params: {
       username: query.username || undefined,
       status: query.status,
       startTime: dateRange.value[0] || undefined,
       endTime: dateRange.value[1] || undefined,
-    });
-    downloadBlob(blob, `登录日志_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
-    ElMessage.success('导出成功');
-  } catch {
-    ElMessage.error('导出失败');
-  } finally {
-    exporting.value = false;
-  }
+    },
+    name: '登录日志',
+  });
 }
 </script>
 
@@ -114,7 +106,7 @@ async function handleExport(): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="ip" label="IP 地址" width="140" />

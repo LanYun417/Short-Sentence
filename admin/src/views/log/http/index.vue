@@ -17,8 +17,8 @@ import {
 import { getDeptTreeApi } from '@/api/dept';
 import { useTable } from '@/composables/useTable';
 import { useBatchDelete } from '@/composables/useBatchDelete';
-import { downloadBlob } from '@/utils/download';
-import { formatDate, formatDateTime, formatDuration } from '@/utils/format';
+import { useCsvExport } from '@/composables/useCsvExport';
+import { formatDateTime, formatDuration } from '@/utils/format';
 import type { DeptNode, HttpLog } from '@/types/api';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 import Pagination from '@/components/Pagination/index.vue';
@@ -26,7 +26,6 @@ import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'LogHttp' });
 
-const exporting = ref(false);
 const dateRange = ref<string[]>([]);
 const deptTree = ref<DeptNode[]>([]);
 /** 展开行详情（请求/响应体按需加载，列表不携带） */
@@ -71,27 +70,22 @@ function displayOrDash(value?: string | null): string {
 }
 
 /** 导出 HTTP 日志：按当前筛选条件导出，不带分页参数 */
-async function handleExport(): Promise<void> {
-  if (exporting.value) {
-    return;
-  }
-  exporting.value = true;
-  try {
-    const blob = await exportHttpLogsApi({
+/** 导出 HTTP 访问日志：按当前筛选条件导出，不带分页参数 */
+const { exporting, exportCsv } = useCsvExport();
+
+function handleExport(): void {
+  void exportCsv({
+    api: exportHttpLogsApi,
+    params: {
       method: query.method || undefined,
       statusCode: query.statusCode,
       startTime: dateRange.value[0] || undefined,
       endTime: dateRange.value[1] || undefined,
       username: query.username.trim() || undefined,
       deptId: query.deptId,
-    });
-    downloadBlob(blob, `HTTP访问日志_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
-    ElMessage.success('导出成功');
-  } catch {
-    ElMessage.error('导出失败');
-  } finally {
-    exporting.value = false;
-  }
+    },
+    name: 'HTTP访问日志',
+  });
 }
 
 /** 加载部门树（用于部门筛选） */
@@ -298,6 +292,7 @@ onMounted(() => {
       <el-table
         v-loading="loading"
         :data="list"
+        border
         @expand-change="handleExpand"
         @selection-change="handleSelectionChange"
       >

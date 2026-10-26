@@ -87,7 +87,7 @@ async function handleRun(row: TaskItem): Promise<void> {
         </el-button>
       </div>
 
-      <el-table v-loading="loading" :data="list">
+      <el-table v-loading="loading" border :data="list">
         <el-table-column label="任务名称" min-width="150">
           <template #default="{ row }">
             <div class="font-medium text-ink">{{ row.title }}</div>

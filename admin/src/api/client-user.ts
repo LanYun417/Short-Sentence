@@ -28,8 +28,13 @@ export function getClientUserAiQuotaApi(id: number): Promise<AiQuotaUsage> {
   return get<AiQuotaUsage>(`/client-users/${id}/ai-quota`);
 }
 
-/** 导出客户端用户 CSV（流式；筛选与列表共用同一套条件） */
-export function exportClientUsersApi(params: ClientUserQuery): Promise<Blob> {
+/**
+ * 导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。
+ *
+ * 参数不含分页字段：导出是「全量按筛选」，传 page/pageSize 只会让调用方困惑
+ * （日志的三个导出函数同样用 `Omit` 抠掉分页，保持一致）。
+ */
+export function exportClientUsersApi(params: Omit<ClientUserQuery, 'page' | 'pageSize'>): Promise<Blob> {
   return request<Blob>({
     url: '/client-users/export',
     method: 'GET',

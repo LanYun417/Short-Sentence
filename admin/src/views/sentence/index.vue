@@ -22,8 +22,8 @@ import {
   type SentenceCategoryOption,
 } from '@/api/sentence';
 import { useTable } from '@/composables/useTable';
-import { formatDate, formatDateTime } from '@/utils/format';
-import { downloadBlob } from '@/utils/download';
+import { useCsvExport } from '@/composables/useCsvExport';
+import { formatDateTime } from '@/utils/format';
 import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -203,27 +203,19 @@ function handleSelectionChange(rows: SentenceItem[]): void {
   selectedIds.value = rows.map((row) => row.id);
 }
 
-/** 导出题库 CSV（按当前筛选条件；后端有 5 万行上限，超了会返回可读错误）。 */
-const exporting = ref(false);
+/** 导出题库 CSV：按当前筛选条件（后端有 5 万行上限，超了请求层会提示具体原因）。 */
+const { exporting, exportCsv } = useCsvExport();
 
-async function handleExport(): Promise<void> {
-  if (exporting.value) {
-    return;
-  }
-  exporting.value = true;
-  try {
-    const blob = await exportSentencesApi({
+function handleExport(): void {
+  void exportCsv({
+    api: exportSentencesApi,
+    params: {
       keyword: query.keyword || undefined,
       status: query.status || undefined,
       difficulty: query.difficulty || undefined,
-    } as never);
-    downloadBlob(blob, `题库_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
-    ElMessage.success('导出成功');
-  } catch {
-    ElMessage.error('导出失败（可能超过单次导出行数上限，请补充筛选条件）');
-  } finally {
-    exporting.value = false;
-  }
+    },
+    name: '题库',
+  });
 }
 
 /** 批量下架。 */
@@ -439,7 +431,10 @@ onMounted(async () => {
             批量上架<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
           </el-button>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
-          <el-button :loading="exporting" @click="handleExport">导出</el-button>
+          <el-button :loading="exporting" @click="handleExport">
+            <template #icon><i class="bi bi-download" /></template>
+            导出
+          </el-button>
           <el-button @click="handleOpenGenTasks">生成批次</el-button>
           <el-button :loading="loading" @click="getList">刷新</el-button>
         </div>

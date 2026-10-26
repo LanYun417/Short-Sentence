@@ -293,7 +293,7 @@ onMounted(() => {
           >
         </div>
       </template>
-      <el-table v-loading="loading" :data="fileList">
+      <el-table v-loading="loading" border :data="fileList">
         <el-table-column label="预览" width="88" align="center">
           <template #default="{ row }">
             <el-image

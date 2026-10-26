@@ -155,7 +155,7 @@ async function handleDelete(row: DictType): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="dictName" label="字典名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="dictType" label="类型编码" min-width="180" show-overflow-tooltip />

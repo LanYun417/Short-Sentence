@@ -20,8 +20,8 @@ import {
   setClientUserStatusApi,
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
-import { formatDate, formatDateTime } from '@/utils/format';
-import { downloadBlob } from '@/utils/download';
+import { useCsvExport } from '@/composables/useCsvExport';
+import { formatDateTime } from '@/utils/format';
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
@@ -107,27 +107,19 @@ async function loadCards(id: number): Promise<void> {
   }
 }
 
-/** 导出客户端用户 CSV（按当前筛选条件）。 */
-const exporting = ref(false);
+/** 导出客户端用户 CSV：按当前筛选条件。 */
+const { exporting, exportCsv } = useCsvExport();
 
-async function handleExport(): Promise<void> {
-  if (exporting.value) {
-    return;
-  }
-  exporting.value = true;
-  try {
-    const blob = await exportClientUsersApi({
+function handleExport(): void {
+  void exportCsv({
+    api: exportClientUsersApi,
+    params: {
       keyword: typeof query.keyword === 'string' ? query.keyword.trim() || undefined : undefined,
       status: query.status ?? undefined,
       gender: query.gender || undefined,
-    } as never);
-    downloadBlob(blob, `客户端用户_${formatDate(new Date(), 'YYYYMMDD_HHmmss')}.csv`);
-    ElMessage.success('导出成功');
-  } catch {
-    ElMessage.error('导出失败（可能超过单次导出行数上限，请补充筛选条件）');
-  } finally {
-    exporting.value = false;
-  }
+    },
+    name: '客户端用户',
+  });
 }
 
 /** 加载今日 AI 额度（失败静默：这是辅助信息，不该让详情弹窗报错）。 */
@@ -303,7 +295,10 @@ onMounted(() => {
       <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span class="text-[15px] font-semibold text-ink">客户端用户（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
-          <el-button :loading="exporting" @click="handleExport">导出</el-button>
+          <el-button :loading="exporting" @click="handleExport">
+            <template #icon><i class="bi bi-download" /></template>
+            导出
+          </el-button>
           <el-button :loading="loading" @click="getList">刷新</el-button>
         </div>
       </div>

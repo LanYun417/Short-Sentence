@@ -287,7 +287,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" align="center" :selectable="selectableUser" />
         <el-table-column v-if="isVisible('avatar')" label="头像" width="80" align="center">
           <template #default="{ row }">

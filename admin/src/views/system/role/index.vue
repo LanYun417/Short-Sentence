@@ -148,7 +148,7 @@ async function handleResetMenus(row: Role): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
+      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="48" align="center" />
         <el-table-column prop="roleName" label="角色名称" min-width="140" />
         <el-table-column prop="roleCode" label="角色编码" min-width="140" />

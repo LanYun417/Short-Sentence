@@ -51,8 +51,13 @@ export function batchSentenceStatusApi(ids: number[], status: 'ready' | 'offline
   return post<{ affected: number }>('/sentences/batch-status', { ids, status });
 }
 
-/** 导出题库 CSV（流式；筛选与列表共用同一套条件） */
-export function exportSentencesApi(params: SentenceQuery): Promise<Blob> {
+/**
+ * 导出题库 CSV（流式；筛选与列表共用同一套条件）。
+ *
+ * 参数不含分页字段：导出是「全量按筛选」，传 page/pageSize 只会让调用方困惑
+ * （日志的三个导出函数同样用 `Omit` 抠掉分页，保持一致）。
+ */
+export function exportSentencesApi(params: Omit<SentenceQuery, 'page' | 'pageSize'>): Promise<Blob> {
   return request<Blob>({
     url: '/sentences/export',
     method: 'GET',

@@ -87,7 +87,7 @@ async function handleForceLogoutAll(row: OnlineSession): Promise<void> {
         </el-button>
       </div>
 
-      <el-table v-loading="loading" :data="list">
+      <el-table v-loading="loading" border :data="list">
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="nickname" label="昵称" min-width="120" />
         <el-table-column prop="ip" label="登录 IP" width="140" />

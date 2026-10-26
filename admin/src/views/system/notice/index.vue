@@ -185,7 +185,7 @@ async function handlePublish(): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list">
+      <el-table v-loading="loading" border :data="list">
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.isRead === 0" type="danger" size="small">未读</el-tag>
