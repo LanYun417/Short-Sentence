@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../widgets/app_tab_bar.dart';
+import 'ai_page.dart';
 import 'growth_page.dart';
 import 'library_page.dart';
 import 'profile_page.dart';
@@ -44,6 +45,11 @@ class _ShellPageState extends ConsumerState<ShellPage> {
       label: '语句库',
       icon: Icons.collections_bookmark_outlined,
       activeIcon: Icons.collections_bookmark_rounded,
+    ),
+    AppTabItem(
+      label: 'AI',
+      icon: Icons.auto_awesome_outlined,
+      activeIcon: Icons.auto_awesome_rounded,
     ),
     AppTabItem(
       label: '成长',
@@ -94,7 +100,8 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                         child: switch (i) {
                           0 => const QuizPage(),
                           1 => const LibraryPage(),
-                          2 => const GrowthPage(),
+                          2 => const AiPage(),
+                          3 => const GrowthPage(),
                           _ => const ProfilePage(),
                         },
                       ),
