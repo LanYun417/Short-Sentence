@@ -547,7 +547,8 @@ onMounted(() => {
       <div class="gen-preview">
         <div class="gen-preview-files">
           <div class="gen-preview-title">文件列表（{{ previewFiles.length }}）</div>
-          <div class="gen-preview-list">
+          <!-- 滚动交给 el-scrollbar，避免弹窗里出现原生滚动条 -->
+          <el-scrollbar class="gen-preview-list">
             <div
               v-for="file in previewFiles"
               :key="file.path"
@@ -559,14 +560,16 @@ onMounted(() => {
               {{ file.path }}
             </div>
             <div v-if="previewFiles.length === 0" class="gen-preview-empty">未生成任何文件</div>
-          </div>
+          </el-scrollbar>
         </div>
         <div class="gen-preview-code">
           <div class="gen-preview-title flex items-center justify-between">
             <span class="gen-preview-path">{{ activeFilePath || '未选择文件' }}</span>
             <el-button size="small" :disabled="!activeFilePath" @click="handleCopyCode">复制代码</el-button>
           </div>
-          <pre class="gen-preview-content">{{ activeFileContent }}</pre>
+          <el-scrollbar class="gen-preview-code-body">
+            <pre class="gen-preview-content">{{ activeFileContent }}</pre>
+          </el-scrollbar>
         </div>
       </div>
       <template #footer>
@@ -634,10 +637,11 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+/* 列表与代码区的滚动都交给 el-scrollbar：flex 子项需 min-height: 0 才能正常收缩 */
 .gen-preview-list {
   flex: 1;
+  min-height: 0;
   padding: 4px 0;
-  overflow: auto;
 }
 
 .gen-preview-item {
@@ -667,14 +671,19 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
 }
 
-.gen-preview-content {
+/* 代码区外层承载滚动与底色，pre 自身不再滚动 */
+.gen-preview-code-body {
   flex: 1;
+  min-height: 0;
+  background-color: var(--el-fill-color-light);
+}
+
+.gen-preview-content {
+  /* 不再自建滚动：长行溢出由外层 el-scrollbar 承接（pre 保持不换行默认值） */
   padding: 12px;
   margin: 0;
-  overflow: auto;
   font-family: Consolas, Monaco, 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.6;
-  background-color: var(--el-fill-color-light);
 }
 </style>

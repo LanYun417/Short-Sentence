@@ -304,51 +304,54 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
 
     <!-- 详情 -->
     <el-drawer v-model="detailVisible" title="句签详情" size="480px">
-      <div v-loading="detailLoading" class="space-y-4">
-        <template v-if="detail">
-          <el-image
-            v-if="detail.imageUrl"
-            :src="detail.imageUrl"
-            :preview-src-list="[detail.imageUrl]"
-            preview-teleported
-            fit="cover"
-            class="w-full rounded-lg"
-          />
-          <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="业务日期">{{ detail.bizDate }}</el-descriptions-item>
-            <el-descriptions-item label="主题">{{ detail.titleZh }}（{{ detail.title }}）</el-descriptions-item>
-            <el-descriptions-item label="英文短句">{{ detail.sentenceEn }}</el-descriptions-item>
-            <el-descriptions-item label="中文释义">{{ detail.translationZh }}</el-descriptions-item>
-            <el-descriptions-item label="寄语">{{ detail.blessing || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="状态">
-              <el-tag :type="statusTag(detail.status).type" size="small">{{ statusTag(detail.status).label }}</el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="领取人数">{{ detail.claimCount }}</el-descriptions-item>
-          </el-descriptions>
+      <!-- 滚动交给 el-scrollbar，避免抽屉里出现原生滚动条 -->
+      <el-scrollbar class="h-full">
+        <div v-loading="detailLoading" class="space-y-4">
+          <template v-if="detail">
+            <el-image
+              v-if="detail.imageUrl"
+              :src="detail.imageUrl"
+              :preview-src-list="[detail.imageUrl]"
+              preview-teleported
+              fit="cover"
+              class="w-full rounded-lg"
+            />
+            <el-descriptions :column="1" border size="small">
+              <el-descriptions-item label="业务日期">{{ detail.bizDate }}</el-descriptions-item>
+              <el-descriptions-item label="主题">{{ detail.titleZh }}（{{ detail.title }}）</el-descriptions-item>
+              <el-descriptions-item label="英文短句">{{ detail.sentenceEn }}</el-descriptions-item>
+              <el-descriptions-item label="中文释义">{{ detail.translationZh }}</el-descriptions-item>
+              <el-descriptions-item label="寄语">{{ detail.blessing || '—' }}</el-descriptions-item>
+              <el-descriptions-item label="状态">
+                <el-tag :type="statusTag(detail.status).type" size="small">{{ statusTag(detail.status).label }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="领取人数">{{ detail.claimCount }}</el-descriptions-item>
+            </el-descriptions>
 
-          <div>
-            <p class="mb-1 text-sm font-medium">生图提示词</p>
-            <p
-              class="rounded border border-solid border-[var(--el-border-color-lighter)] p-2 text-xs leading-relaxed text-muted"
-            >
-              {{ detail.scenePrompt || '—' }}
-            </p>
-          </div>
+            <div>
+              <p class="mb-1 text-sm font-medium">生图提示词</p>
+              <p
+                class="rounded border border-solid border-[var(--el-border-color-lighter)] p-2 text-xs leading-relaxed text-muted"
+              >
+                {{ detail.scenePrompt || '—' }}
+              </p>
+            </div>
 
-          <div>
-            <p class="mb-1 text-sm font-medium">最近领取</p>
-            <el-table v-if="detail.claims.length" :data="detail.claims" size="small" border>
-              <el-table-column label="用户" min-width="140">
-                <template #default="{ row }">{{ row.nickname || row.email || `#${row.userId}` }}</template>
-              </el-table-column>
-              <el-table-column label="领取时间" min-width="150">
-                <template #default="{ row }">{{ formatDateTime(row.obtainedAt) }}</template>
-              </el-table-column>
-            </el-table>
-            <p v-else class="text-xs text-muted">还没有用户领取</p>
-          </div>
-        </template>
-      </div>
+            <div>
+              <p class="mb-1 text-sm font-medium">最近领取</p>
+              <el-table v-if="detail.claims.length" :data="detail.claims" size="small" border>
+                <el-table-column label="用户" min-width="140">
+                  <template #default="{ row }">{{ row.nickname || row.email || `#${row.userId}` }}</template>
+                </el-table-column>
+                <el-table-column label="领取时间" min-width="150">
+                  <template #default="{ row }">{{ formatDateTime(row.obtainedAt) }}</template>
+                </el-table-column>
+              </el-table>
+              <p v-else class="text-xs text-muted">还没有用户领取</p>
+            </div>
+          </template>
+        </div>
+      </el-scrollbar>
     </el-drawer>
 
     <!-- 编辑文案 -->

@@ -302,21 +302,28 @@ onMounted(() => {
             <div v-loading="detailLoading[row.id]" class="py-2 px-4">
               <div>
                 <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">请求参数（Query + Body，敏感字段已脱敏）</p>
-                <pre
-                  class="max-h-60 m-0 overflow-auto whitespace-pre-wrap break-all rounded bg-fill-light px-3 py-2.5 font-mono text-xs leading-[1.6]"
-                  >{{ formatParams(detailMap[row.id]) }}</pre>
+                <!-- 长 JSON 内部滚动：用 el-scrollbar，避免展开行里出现原生滚动条 -->
+                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                    formatParams(detailMap[row.id])
+                  }}</pre>
+                </el-scrollbar>
               </div>
               <div>
                 <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">User-Agent</p>
-                <pre
-                  class="max-h-60 m-0 overflow-auto whitespace-pre-wrap break-all rounded bg-fill-light px-3 py-2.5 font-mono text-xs leading-[1.6]"
-                  >{{ row.userAgent || '无 User-Agent' }}</pre>
+                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                    row.userAgent || '无 User-Agent'
+                  }}</pre>
+                </el-scrollbar>
               </div>
               <div v-if="detailMap[row.id]?.resBody">
                 <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">响应内容</p>
-                <pre
-                  class="max-h-60 m-0 overflow-auto whitespace-pre-wrap break-all rounded bg-fill-light px-3 py-2.5 font-mono text-xs leading-[1.6]"
-                  >{{ detailMap[row.id]?.resBody }}</pre>
+                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                    detailMap[row.id]?.resBody
+                  }}</pre>
+                </el-scrollbar>
               </div>
             </div>
           </template>

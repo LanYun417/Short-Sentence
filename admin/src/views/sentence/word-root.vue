@@ -272,45 +272,48 @@ function partsOf(item: WordRootItem | null): WordRootPart[] {
 
     <!-- 详情 -->
     <el-drawer v-model="detailVisible" title="词条详情" size="440px">
-      <div v-if="detail" class="space-y-4">
-        <div>
-          <p class="text-xl font-semibold">{{ detail.word }}</p>
-          <p class="text-sm text-muted">{{ detail.phonetic || '—' }}</p>
-          <p class="mt-1">{{ detail.meaning || '—' }}</p>
-        </div>
-
-        <div>
-          <p class="mb-2 text-sm font-medium">词素构成</p>
-          <div class="flex flex-wrap items-center gap-2">
-            <template v-for="(part, index) in partsOf(detail)" :key="index">
-              <div class="rounded border border-solid border-[var(--el-border-color)] px-3 py-1.5 text-center">
-                <div class="font-mono text-sm">{{ part.text }}</div>
-                <div class="text-xs text-muted">{{ partType(part.type).label }}</div>
-              </div>
-              <span v-if="index < partsOf(detail).length - 1" class="text-muted">+</span>
-            </template>
-            <span v-if="!partsOf(detail).length" class="text-muted">—</span>
+      <!-- 滚动交给 el-scrollbar，避免抽屉里出现原生滚动条 -->
+      <el-scrollbar class="h-full">
+        <div v-if="detail" class="space-y-4">
+          <div>
+            <p class="text-xl font-semibold">{{ detail.word }}</p>
+            <p class="text-sm text-muted">{{ detail.phonetic || '—' }}</p>
+            <p class="mt-1">{{ detail.meaning || '—' }}</p>
           </div>
-        </div>
 
-        <div>
-          <p class="mb-1 text-sm font-medium">构成说明</p>
-          <p class="text-sm leading-relaxed">{{ detail.explanation || '—' }}</p>
-        </div>
+          <div>
+            <p class="mb-2 text-sm font-medium">词素构成</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <template v-for="(part, index) in partsOf(detail)" :key="index">
+                <div class="rounded border border-solid border-[var(--el-border-color)] px-3 py-1.5 text-center">
+                  <div class="font-mono text-sm">{{ part.text }}</div>
+                  <div class="text-xs text-muted">{{ partType(part.type).label }}</div>
+                </div>
+                <span v-if="index < partsOf(detail).length - 1" class="text-muted">+</span>
+              </template>
+              <span v-if="!partsOf(detail).length" class="text-muted">—</span>
+            </div>
+          </div>
 
-        <div>
-          <p class="mb-1 text-sm font-medium">同根词</p>
-          <el-tag v-for="word in detail.related" :key="word" size="small" class="mr-1">{{ word }}</el-tag>
-          <span v-if="!detail.related.length" class="text-muted">—</span>
-        </div>
+          <div>
+            <p class="mb-1 text-sm font-medium">构成说明</p>
+            <p class="text-sm leading-relaxed">{{ detail.explanation || '—' }}</p>
+          </div>
 
-        <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="来源">{{ sourceLabel(detail.source) }}</el-descriptions-item>
-          <el-descriptions-item label="查询次数">{{ detail.searchCount }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ formatDateTime(detail.createdAt) }}</el-descriptions-item>
-          <el-descriptions-item label="更新时间">{{ formatDateTime(detail.updatedAt) }}</el-descriptions-item>
-        </el-descriptions>
-      </div>
+          <div>
+            <p class="mb-1 text-sm font-medium">同根词</p>
+            <el-tag v-for="word in detail.related" :key="word" size="small" class="mr-1">{{ word }}</el-tag>
+            <span v-if="!detail.related.length" class="text-muted">—</span>
+          </div>
+
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="来源">{{ sourceLabel(detail.source) }}</el-descriptions-item>
+            <el-descriptions-item label="查询次数">{{ detail.searchCount }}</el-descriptions-item>
+            <el-descriptions-item label="创建时间">{{ formatDateTime(detail.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="更新时间">{{ formatDateTime(detail.updatedAt) }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </el-scrollbar>
     </el-drawer>
 
     <!-- 编辑 -->

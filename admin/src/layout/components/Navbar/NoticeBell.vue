@@ -90,7 +90,8 @@ function handleViewAll(): void {
           </div>
         </div>
 
-        <div v-loading="loading" class="max-h-96 overflow-y-auto">
+        <!-- 通知多了内部滚动：用 el-scrollbar，避免弹层里出现原生滚动条 -->
+        <el-scrollbar v-loading="loading" max-height="24rem">
           <p v-if="!loading && recent.length === 0" class="py-6 text-center text-sm text-faint">
             {{ t('notice.empty') }}
           </p>
@@ -113,7 +114,7 @@ function handleViewAll(): void {
             <p class="mt-1 text-xs text-muted line-clamp-2 pl-3.5">{{ item.content }}</p>
             <p class="mt-1 text-xs text-faint pl-3.5">{{ formatDateTime(item.createdAt) }}</p>
           </div>
-        </div>
+        </el-scrollbar>
       </el-popover>
     </span>
   </el-tooltip>

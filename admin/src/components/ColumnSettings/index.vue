@@ -56,7 +56,8 @@ function isChecked(option: TableColumnOption): boolean {
       <span class="text-sm font-medium text-ink">显示列</span>
       <el-button type="primary" link size="small" @click="emit('reset')">重置</el-button>
     </div>
-    <div class="max-h-64 overflow-y-auto">
+    <!-- 列多时内部滚动：用 el-scrollbar，避免弹层里出现原生滚动条 -->
+    <el-scrollbar max-height="16rem">
       <el-checkbox
         v-for="option in columns"
         :key="option.key"
@@ -68,6 +69,6 @@ function isChecked(option: TableColumnOption): boolean {
       >
         {{ option.label }}
       </el-checkbox>
-    </div>
+    </el-scrollbar>
   </el-popover>
 </template>

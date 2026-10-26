@@ -9,6 +9,7 @@
 - Prettier 铁律：`semi: true`、`singleQuote: true`、`printWidth: 120`；
 - 样式优先级：**Tailwind 工具类首选**，SCSS 仅兜底且必须 SFC scoped；Tailwind v4 刻意不引入 preflight；
 - 响应式优先：固定尺寸弹层（抽屉/弹窗）必须走 `useResponsiveSize` / `BasicDialog`；
+- **滚动一律用 `el-scrollbar`，禁止原生滚动条**：不要给容器写 `overflow-y-auto` / `overflow-auto`（会露出浏览器原生滚动条，与全局内容区/侧边栏/抽屉的细滚动条风格不一致）。列表、弹层、抽屉、代码块、长 JSON 统一包 `<el-scrollbar max-height="…">`；flex 布局里给 `el-scrollbar` 加 `min-h-0 flex-1` 才能在容器内正确收缩；
 - 按钮权限用 `v-permission` 指令；权限码遵循 `:list / :query / :add / :edit / :remove`；
 - 新增运行时依赖默认禁止，确需新增走 `guard:deps -- --update` 并在评审说明。
 

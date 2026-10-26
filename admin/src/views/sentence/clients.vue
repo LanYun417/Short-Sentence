@@ -398,7 +398,8 @@ onMounted(() => {
 
     <!-- 详情 -->
     <BasicDialog v-model="detailVisible" title="用户详情" width="860px" :show-footer="false">
-      <div v-loading="detailLoading" class="max-h-[62vh] overflow-y-auto pr-1">
+      <!-- 滚动交给 el-scrollbar（与全局内容区/抽屉一致），避免弹窗里出现原生滚动条 -->
+      <el-scrollbar v-loading="detailLoading" max-height="62vh" class="pr-1">
         <template v-if="detail">
           <div class="mb-4 flex items-center gap-3">
             <el-avatar :size="48" :src="detail.avatarUrl || undefined">
@@ -560,7 +561,7 @@ onMounted(() => {
             <p v-else class="py-6 text-center text-sm text-faint">还没有句签，完成每日目标即可获得当日 AI 闪卡</p>
           </div>
         </template>
-      </div>
+      </el-scrollbar>
     </BasicDialog>
 
     <!-- 重置密码 -->
