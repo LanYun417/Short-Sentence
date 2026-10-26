@@ -299,13 +299,13 @@ void main() {
         findsOneWidget,
       );
     }
-    // 'call' 这一格变成已用（带 ✓），整段仅此一个已用标记
+    // 'call' 这一格变成已用（纯置灰、不再打钩），整段没有打钩图标
     expect(
       find.descendant(
         of: find.byType(Wrap),
         matching: find.byIcon(Icons.check_rounded),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     // 已选区出现 'call'，尚未集齐 → 按钮提示剩余，而非自动确定
     expect(

@@ -1725,7 +1725,7 @@ class _AssembleAreaState extends State<_AssembleArea> {
           ],
         ),
         const SizedBox(height: 4),
-        // 候选：**原样固定位置**。已选的槽位原地变灰 + ✓ 并保留占位，
+        // 候选：**原样固定位置**。已选的槽位原地变灰并保留占位，
         // 不重排、不塌陷；用户手动拼、手动点「确定」，不再自动递进。
         Wrap(
           spacing: 7,
@@ -1773,7 +1773,7 @@ class _WordChip extends StatelessWidget {
   final String text;
   final bool picked;
 
-  /// 候选区里的「已取走」占位态：原地变灰 + ✓，保留空间、不可点。
+  /// 候选区里的「已取走」占位态：原地变灰，保留空间、不可点。
   /// 用于拼词固定位置——选过的词不消失、不重排，只在此格标记已用。
   final bool used;
 
@@ -1828,10 +1828,6 @@ class _WordChip extends StatelessWidget {
               height: 1.2,
             ),
           ),
-          if (used) ...<Widget>[
-            const SizedBox(width: 5),
-            Icon(Icons.check_rounded, size: 14, color: colors.inkFaint),
-          ],
         ],
       ),
     );
