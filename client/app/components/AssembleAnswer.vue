@@ -82,7 +82,7 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
     <TransitionGroup
       name="chip"
       tag="div"
-      class="relative flex min-h-13 flex-wrap content-start gap-1.5 rounded-2xl border border-dashed p-2.5 transition-colors"
+      class="relative flex min-h-13 flex-wrap content-center items-center gap-1.5 rounded-2xl border border-dashed p-2.5 transition-colors"
       :class="[
         selected.length > 0
           ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
@@ -98,7 +98,7 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
         :key="chip.index"
         type="button"
         :disabled="disabled"
-        class="rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:ring-rose-300 active:scale-95 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
+        class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:ring-rose-300 active:scale-95 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
         @click="unpick(chip)"
       >
         {{ chip.text }}
@@ -106,13 +106,13 @@ const allUsed = computed(() => pool.value.length === 0 && selected.value.length 
     </TransitionGroup>
 
     <!-- 词库：剩余词块 -->
-    <TransitionGroup name="chip" tag="div" class="mt-3 flex flex-wrap gap-2" aria-label="可选词块">
+    <TransitionGroup name="chip" tag="div" class="mt-3 flex flex-wrap items-center gap-2" aria-label="可选词块">
       <button
         v-for="chip in pool"
         :key="chip.index"
         type="button"
         :disabled="disabled"
-        class="rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-sky-300 active:scale-95 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+        class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-sky-300 active:scale-95 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
         @click="pick(chip)"
       >
         {{ chip.text }}
