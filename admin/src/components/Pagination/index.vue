@@ -63,8 +63,9 @@ function handleCurrentChange(current: number): void {
 
 <template>
   <!-- 外层 el-scrollbar：移动端分页器超宽时，在自身区域内横向滚动，避免被裁剪或撑破页面布局
-       （桌面端分页器能放下时不会出现滚动条） -->
-  <el-scrollbar>
+       （桌面端分页器能放下时不会出现滚动条）。
+       class 用于覆盖 EP 给 el-scrollbar 的默认 height:100%（见下方 scoped 说明）。 -->
+  <el-scrollbar class="pagination-scrollbar">
     <div class="pagination-container inline-flex w-max min-w-full items-center justify-end whitespace-nowrap mt-4">
       <el-pagination
         :current-page="currentPage"
@@ -80,3 +81,18 @@ function handleCurrentChange(current: number): void {
     </div>
   </el-scrollbar>
 </template>
+
+<style scoped>
+/*
+ * EP 的 `.el-scrollbar` 自带 `height: 100%`。当分页器的父容器**高度确定**时
+ * （抽屉 body 是 flex:1、定高 flex 项、`h-full` 容器等），它会被撑满整高，
+ * 把上方的表格/表单顶出可视区 —— 容器随即冒出**浏览器原生滚动条**，
+ * 而页面看起来内容并不多（实测：字典项抽屉只有两条数据仍有滚动条）。
+ *
+ * 分页条只需要自身内容高度：横向滚动靠 __wrap 的 overflow 即可，
+ * 不依赖 100% 高度。这里覆盖回 auto，从根上消除这个陷阱。
+ */
+.pagination-scrollbar {
+  height: auto;
+}
+</style>

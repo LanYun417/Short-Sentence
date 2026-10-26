@@ -9,7 +9,7 @@
 - Prettier 铁律：`semi: true`、`singleQuote: true`、`printWidth: 120`；
 - 样式优先级：**Tailwind 工具类首选**，SCSS 仅兜底且必须 SFC scoped；Tailwind v4 刻意不引入 preflight；
 - 响应式优先：固定尺寸弹层（抽屉/弹窗）必须走 `useResponsiveSize` / `BasicDialog`；
-- **滚动一律用 `el-scrollbar`，禁止原生滚动条**：不要给容器写 `overflow-y-auto` / `overflow-auto`（会露出浏览器原生滚动条，与全局内容区/侧边栏/抽屉的细滚动条风格不一致）。列表、弹层、抽屉、代码块、长 JSON 统一包 `<el-scrollbar max-height="…">`；flex 布局里给 `el-scrollbar` 加 `min-h-0 flex-1` 才能在容器内正确收缩；
+- **滚动一律用 `el-scrollbar`，禁止原生滚动条**（细则见 §7）：不要给容器写 `overflow-y-auto` / `overflow-auto`，纵向滚动统一包 `<el-scrollbar max-height="…">`；门禁 `npm run guard:scrollbar` 会拦住这类写法；
 - 按钮权限用 `v-permission` 指令；权限码遵循 `:list / :query / :add / :edit / :remove`；
 - 新增运行时依赖默认禁止，确需新增走 `guard:deps -- --update` 并在评审说明。
 
@@ -62,4 +62,22 @@ npm run test         # vitest
 npm run build        # 生产构建（预压缩 .gz/.br）
 ```
 
-根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale`（见 git 规范第 7 节）。
+根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale` / `guard:scrollbar`（见 git 规范第 7 节）。
+
+## 7. 滚动条约定（el-scrollbar）
+
+**所有纵向滚动都走 `<el-scrollbar>`**，不要手写 `overflow-y-auto` / `overflow-auto`：后者会画出浏览器原生滚动条，与全局内容区、侧边栏、抽屉统一的细滚动条并存时非常割裂，而且只有内容够长才看得见（本地容易漏）。门禁 `npm run guard:scrollbar` 扫 `admin/src` 拦截这类写法（放行 `overflow-x-*` 与 `overflow-hidden`：前者只横向、后者是裁剪）。
+
+四种典型位置：
+
+| 位置                    | 写法                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 页面内容区 / 侧边栏     | 已有封装（`layout/index.vue`、`Sidebar`），直接用                                                                                    |
+| 抽屉（`el-drawer`）     | 默认 body 超出即原生滚动 → 包 `<el-scrollbar class="h-full">`，或 flex 列 + `el-scrollbar.min-h-0.flex-1`（上下固定区加 `shrink-0`） |
+| 弹窗（`BasicDialog`）   | 正文已由 `BasicDialog` 的 `el-scrollbar` 限高，调用方**不要再套一层**                                                                |
+| 弹层 / 代码块 / 长 JSON | `<el-scrollbar max-height="15rem">` 之类限高即可                                                                                     |
+
+**两个必须知道的坑**：
+
+1. **`el-scrollbar` 自带 `height: 100%`**（EP 默认样式）。放进**高度确定**的容器（抽屉 body、定高 flex 项、`h-full` 容器）时会被撑满整高，把上方内容顶出可视区 —— 容器随即冒出**原生滚动条**，而页面看起来内容并不多。所以：要么给容器限高（`max-height`）、要么用 flex + `min-h-0 flex-1`；确实只需要内容高度时显式覆盖 `height: auto`。
+2. **`Pagination` 外层就是用 `el-scrollbar` 包横向滚动的**（窄屏分页器超宽）。它已把根节点高度覆盖成 `auto`（`.pagination-scrollbar`），但把 `Pagination` 放进定高容器时仍建议外层加 `shrink-0`，别让它抢高度。

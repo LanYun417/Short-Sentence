@@ -5,7 +5,7 @@
 # 只需自行提供 MySQL 8 与 Redis 7 作为构建机上的服务。
 #
 # 五道门禁分别对应各类「本地容易漏、线上会炸」的问题：
-#   guards → 规范漂移（格式 / 依赖基线 / 被 gitignore 吞掉的源码文件）
+#   guards → 规范漂移（格式 / 依赖基线 / 被 gitignore 吞掉的源码文件 / 原生滚动条）
 #   api    → 后端编译、契约、真实数据库读写（含迁移可执行性）
 #   web    → 前端类型与产物可构建
 #   client → 用户端产物可构建
@@ -44,7 +44,7 @@ env:
 
 jobs:
   guards:
-    name: 工程门禁（格式 / 依赖基线 / 导入追踪）
+    name: 工程门禁（格式 / 依赖基线 / 导入追踪 / 原生滚动条）
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +66,8 @@ jobs:
         run: npm run guard:imports
       - name: 语言包 key 一致性
         run: npm run guard:locale
+      - name: 原生滚动条（滚动手写 overflow 会露出浏览器原生滚动条）
+        run: npm run guard:scrollbar
 
   api:
     name: 后端（编译 / 单测 / 迁移 / 契约 e2e）

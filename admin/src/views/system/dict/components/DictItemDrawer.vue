@@ -179,60 +179,81 @@ watch(
 
 <template>
   <el-drawer :model-value="modelValue" :title="`字典项 · ${dictName}`" :size="drawerSize" @close="handleClose">
-    <div class="mb-3 flex flex-wrap items-center gap-2">
-      <el-input
-        v-model="query.dictLabel"
-        placeholder="请输入字典标签"
-        clearable
-        style="width: 200px"
-        @keyup.enter="search"
-      />
-      <el-button type="primary" @click="search">查询</el-button>
-      <el-button @click="reset">重置</el-button>
-      <el-button v-permission="'system:dict:add'" type="primary" class="ml-auto" @click="handleAddItem">
-        <template #icon><i class="bi bi-plus" /></template>
-        新增字典项
-      </el-button>
+    <!--
+      flex 定高布局：筛选条固定在上、分页固定在下，表格区滚动交给 el-scrollbar。
+      抽屉 body 自身是「内容超出即滚动」的定高容器，一旦溢出就会出现**原生**滚动条，
+      所以这里绝不能让内容溢出 body（min-h-0 让滚动区可收缩，shrink-0 锁住上下两块）。
+    -->
+    <div class="flex h-full flex-col">
+      <div class="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+        <el-input
+          v-model="query.dictLabel"
+          placeholder="请输入字典标签"
+          clearable
+          style="width: 200px"
+          @keyup.enter="search"
+        />
+        <el-button type="primary" @click="search">查询</el-button>
+        <el-button @click="reset">重置</el-button>
+        <el-button v-permission="'system:dict:add'" type="primary" class="ml-auto" @click="handleAddItem">
+          <template #icon><i class="bi bi-plus" /></template>
+          新增字典项
+        </el-button>
+      </div>
+
+      <el-scrollbar v-loading="loading" class="min-h-0 flex-1">
+        <el-table border :data="list" max-height="400">
+          <el-table-column prop="dictLabel" label="字典标签" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="dictValue" label="字典值" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="sort" label="排序" width="80" align="center" />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="row.status === 1"
+                :disabled="!hasPermission('system:dict:edit')"
+                @change="handleToggleStatus(row as DictItem)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
+          <el-table-column label="创建时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right">
+            <template #default="{ row }">
+              <div class="table-action">
+                <el-button
+                  v-permission="'system:dict:edit'"
+                  type="primary"
+                  link
+                  @click="handleEditItem(row as DictItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  v-permission="'system:dict:remove'"
+                  type="danger"
+                  link
+                  @click="handleDelete(row as DictItem)"
+                >
+                  删除
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-scrollbar>
+
+      <div class="shrink-0">
+        <Pagination
+          v-model:current-page="query.page"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          @size-change="changePageSize"
+          @current-change="changePage"
+        />
+      </div>
     </div>
-
-    <el-table v-loading="loading" border :data="list" max-height="400">
-      <el-table-column prop="dictLabel" label="字典标签" min-width="140" show-overflow-tooltip />
-      <el-table-column prop="dictValue" label="字典值" min-width="120" show-overflow-tooltip />
-      <el-table-column prop="sort" label="排序" width="80" align="center" />
-      <el-table-column label="状态" width="90" align="center">
-        <template #default="{ row }">
-          <el-switch
-            :model-value="row.status === 1"
-            :disabled="!hasPermission('system:dict:edit')"
-            @change="handleToggleStatus(row as DictItem)"
-          />
-        </template>
-      </el-table-column>
-      <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-      <el-table-column label="创建时间" width="170">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="140" fixed="right">
-        <template #default="{ row }">
-          <div class="table-action">
-            <el-button v-permission="'system:dict:edit'" type="primary" link @click="handleEditItem(row as DictItem)">
-              编辑
-            </el-button>
-            <el-button v-permission="'system:dict:remove'" type="danger" link @click="handleDelete(row as DictItem)">
-              删除
-            </el-button>
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <Pagination
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      @size-change="changePageSize"
-      @current-change="changePage"
-    />
 
     <BasicDialog
       v-model="itemFormVisible"

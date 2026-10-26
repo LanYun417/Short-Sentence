@@ -585,6 +585,11 @@ onMounted(() => {
 .gen-preview {
   display: flex;
   height: 60vh;
+
+  /* 视口很矮时兜底：弹窗总高（顶部 6vh + 标题/页脚 + 本块 + 50px 下边距）
+     不得超过视口，否则 EP 会让 .el-overlay-dialog 整体滚动（原生滚动条）。
+     内部两栏的滚动已由 el-scrollbar 承担，这里只需限高。 */
+  max-height: calc(100vh - 240px);
   border: 1px solid var(--el-border-color-light);
   border-radius: 4px;
 }

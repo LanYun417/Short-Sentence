@@ -73,7 +73,16 @@ function handleConfirm(): void {
       <slot name="header" />
     </template>
 
-    <slot />
+    <!--
+      正文用 el-scrollbar 限高：弹窗内容比视口高时，EP 是让 `.el-overlay-dialog`
+      整体滚动（原生滚动条压在窗口右缘、盖住应用），观感与全局细滚动条割裂。
+      这里把正文放进 el-scrollbar，超出部分在弹窗内滚动，遮罩层永不出现滚动条。
+      限高取值：可用高度 = 100vh − 顶部 15vh 外边距 − 底部 50px 外边距，
+      再扣掉弹窗自身 padding 与标题/页脚的 ~186px，留一点余量。
+    -->
+    <el-scrollbar max-height="calc(85vh - 186px)">
+      <slot />
+    </el-scrollbar>
 
     <template v-if="$slots.footer" #footer>
       <slot name="footer" />
