@@ -72,6 +72,11 @@ export interface AnswerResult {
   goalBonus: number;
   /** 本次新解锁的成就（客户端可直接弹提示） */
   newAchievements: Array<{ code: string; name: string }>;
+  /**
+   * 是否为「复习期未到」的重复作答（防重放命中）。
+   * 此时只返回判分结果，不落记录、不发经验、不计打卡（详见 `answer()`）。
+   */
+  repeated?: boolean;
 }
 
 /** 收藏夹条目。 */
@@ -306,8 +311,37 @@ export class QuestionsService {
     const last = await this.prisma.sentenceRecord.findFirst({
       where: { userId: BigInt(userId), sentenceId: sentence.id },
       orderBy: { createdAt: 'desc' },
-      select: { reviewLevel: true },
+      select: { reviewLevel: true, nextReviewAt: true },
     });
+
+    // 防重放（服务端权威）：上一轮**答对**且复习期还没到，说明这句压根不该被作答。
+    // 正常用户抽不到它——`next()` 只下发新题或**已到期**的复习题；能打到这里只可能是
+    // 脚本拿着已知答案反复提交同一句。这种请求照常判分（让用户看得到对错），
+    // 但**不落记录、不发经验、不计打卡**：否则重放可以同时刷经验、刷今日完成数，
+    // 还会把复习等级一路顶到最高（等于把用户自己的复习节奏搞坏）。
+    // 注意「答错」的 nextReviewAt 恒为 now（当天立即复现，见下），所以错题回路不受影响。
+    const due = !last || !last.nextReviewAt || last.nextReviewAt.getTime() <= Date.now();
+    if (!due) {
+      const repeatedFavorite = await this.isFavorited(userId, sentence.id);
+      const repeatedToday = await this.checkinService.getToday(userId);
+      return {
+        sentenceId: Number(sentence.id),
+        isCorrect,
+        sentenceEn: sentence.sentenceEn,
+        validAnswers,
+        translationZh: sentence.translationZh,
+        ipa: sentence.ipa,
+        imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
+        favorited: repeatedFavorite,
+        todayDone: repeatedToday?.doneCount ?? 0,
+        todayGoal: config.sentence.dailyGoal,
+        xpEarned: 0,
+        goalBonus: 0,
+        newAchievements: [],
+        repeated: true,
+      };
+    }
+
     const level = isCorrect ? Math.min((last?.reviewLevel ?? 0) + 1, REVIEW_INTERVAL_DAYS.length - 1) : 0;
     // 答错：**立即到期**——当天就在错题库与练习流中复现（此前答错也走 +1 天，
     // 导致用户刚答错时错题库恒为空，看起来像数据坏了）。

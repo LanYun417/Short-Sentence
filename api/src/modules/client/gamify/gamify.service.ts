@@ -8,7 +8,11 @@
  * 3. **只加不减**：无扣减 / 衰减 / 断签清空。
  */
 import { Injectable } from '@nestjs/common';
+import { config } from '../../../common/config/config.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+
+/** 东八区偏移（Asia/Shanghai 无夏令时，固定 +8 即可；与 AiQuotaService 同口径）。 */
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 /** XP 发放规则（服务端权威，客户端不参与）。 */
 export const XP_RULES = {
@@ -134,14 +138,19 @@ export class GamifyService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * 发放 XP（幂等：event_key 唯一，重复请求直接跳过）。
+   * 发放 XP（幂等：event_key 唯一，重复请求直接跳过；另受每日上限约束）。
    * @param eventType 事件类型（见 XP_RULES 的 key 或 achievement）
    * @param eventKey 幂等键（如 `answer:{recordId}`）
    * @param amount 本次经验值（恒为正）
-   * @returns 是否实际发放（false = 已发过）
+   * @returns 是否实际发放（false = 已发过 / 已达每日上限）
    */
   async awardXp(userId: number, eventType: string, eventKey: string, amount: number): Promise<boolean> {
     if (amount <= 0) {
+      return false;
+    }
+    // 每日上限：经验幂等键里带的是「作答记录 id」，而记录每次都新生成，
+    // 所以单靠幂等挡不住「反复提交同一题」这类刷量——总量封顶才是有效闸门。
+    if (await this.exceedsDailyCap(userId, amount)) {
       return false;
     }
     try {
@@ -159,6 +168,30 @@ export class GamifyService {
       data: { xp: { increment: amount } },
     });
     return true;
+  }
+
+  /**
+   * 今日已发经验 + 本次是否越过上限。
+   *
+   * 自然日按 **Asia/Shanghai** 算（与 AiQuotaService 同口径，固定 +8，无夏令时）：
+   * 不按请求头里的时区，否则改设备时区就能把「今天」挪来挪去、把上限重置掉。
+   * @param userId 客户端用户 id
+   * @param amount 本次待发经验
+   */
+  private async exceedsDailyCap(userId: number, amount: number): Promise<boolean> {
+    const cap = config.gamify.dailyXpCap;
+    if (cap <= 0) {
+      return false;
+    }
+    const shanghaiNow = new Date(Date.now() + SHANGHAI_OFFSET_MS);
+    const dayStart = new Date(
+      Date.UTC(shanghaiNow.getUTCFullYear(), shanghaiNow.getUTCMonth(), shanghaiNow.getUTCDate()) - SHANGHAI_OFFSET_MS,
+    );
+    const today = await this.prisma.clientXpLog.aggregate({
+      where: { userId: BigInt(userId), createdAt: { gte: dayStart } },
+      _sum: { amount: true },
+    });
+    return (today._sum.amount ?? 0) + amount > cap;
   }
 
   /** XP → CEFR 等级信息。 */

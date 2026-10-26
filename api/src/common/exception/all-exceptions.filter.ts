@@ -3,6 +3,7 @@
  * 模块职责：把各类异常统一转换为 `{ code, message, data: null }` 响应体。
  */
 import { type ArgumentsHost, type ExceptionFilter, Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { MulterError } from 'multer';
 import { AppException } from './app.exception.js';
 import { ERROR_CODE, ERROR_MESSAGE } from '../config/constants.js';
@@ -120,15 +121,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
-    // 4) 未捕获异常：记录 error 日志并返回统一 500
-    const message = exception instanceof Error ? exception.message : ERROR_MESSAGE.INTERNAL;
+    // 4) 未捕获异常：记录完整日志（含 stack），但对客户端只回**统一文案**。
+    //
+    // ⚠️ 绝不把 `exception.message` 原样回给客户端：未捕获异常里最常见的是
+    // Prisma / Node / fs 的原始报错，它们会带上 SQL 片段、表名列名、绝对路径、
+    // 甚至连接串片段——等于把内部结构免费送给攻击者（信息泄露）。
+    // 排查靠日志：每条响应带 X-Trace-Id，日志里用同一个 id 串联，运维可据此定位。
+    const traceId = randomUUID();
+    const detail = exception instanceof Error ? exception.message : String(exception);
     this.logger.error(
-      `[UnhandledError] ${req?.method ?? ''} ${req?.originalUrl ?? req?.url ?? ''} — ${message}`,
+      `[UnhandledError][${traceId}] ${req?.method ?? ''} ${req?.originalUrl ?? req?.url ?? ''} — ${detail}`,
       exception instanceof Error ? exception.stack : undefined,
     );
+    if (typeof res.setHeader === 'function') {
+      res.setHeader('X-Trace-Id', traceId);
+    }
     res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       code: ERROR_CODE.INTERNAL,
-      message,
+      message: `${ERROR_MESSAGE.INTERNAL}（追踪号 ${traceId}）`,
       data: null,
     });
   }

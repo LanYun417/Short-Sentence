@@ -18,6 +18,18 @@ const BODY_LIMIT = 2048;
 /** 敏感字段正则（比操作日志的精确匹配更宽，覆盖 token/secret 等）。 */
 const SENSITIVE_PATTERN = /password|pwd|pass|token|secret|authorization|credential/i;
 
+/**
+ * URL 上的敏感查询参数（`?token=` 用于 `<img>` 这类无法自定义请求头的静态资源鉴权）。
+ * 访问日志会把整个 URL 落库/落盘，不去掉等于把令牌明文写进日志，
+ * 因此这里按参数名替换成 `******`——与 body 的脱敏口径保持一致。
+ */
+const URL_SENSITIVE_PARAMS = /([?&](?:token|access_token|refresh_token|authorization)=)[^&#]*/gi;
+
+/** 对 URL 里的敏感查询参数脱敏。 */
+export function maskUrl(raw: string): string {
+  return raw.replace(URL_SENSITIVE_PARAMS, '$1******');
+}
+
 /** 递归脱敏（正则匹配键名，命中则替换为 `******`）。 */
 function mask(value: unknown, depth = 0): unknown {
   if (depth > 5) {
@@ -122,7 +134,8 @@ export class HttpAccessLoggerMiddleware implements NestMiddleware {
       const userAgent = String(req.headers['user-agent'] ?? '');
       const ip = getClientIp(req);
       const authReq = req as AuthenticatedRequest;
-      const url = originalUrl.slice(0, 1024);
+      // 先脱敏再截断：`?token=` 这类鉴权参数绝不能明文进日志
+      const url = maskUrl(originalUrl).slice(0, 1024);
 
       const record = {
         time: new Date(),

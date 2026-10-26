@@ -19,6 +19,10 @@
  *
  * 不下发 `Cross-Origin-Resource-Policy`：它会影响 `/static` 资源的跨站引用，
  * 而静态资源是否可访问已由静态鉴权 + 防盗链决定，不在这里叠加一层易误伤的策略。
+ *
+ * 另外给 `/api` 下的响应统一下发 `Cache-Control: no-store`：接口响应都是**按人**的数据
+ * （个人信息、答题结果、登录令牌），一旦被中间代理或浏览器磁盘缓存留存，就等于把
+ * 别人的数据放在共享缓存里。静态资源（`/static`）与 SPA 产物不在此列，缓存策略不变。
  */
 import type { NextFunction, Request, Response } from 'express';
 import { config } from '../config/config.js';
@@ -29,17 +33,24 @@ const PERMISSIONS_POLICY = 'geolocation=(), microphone=(), camera=(), payment=()
 /** HSTS 有效期：180 天（与常见反代模板一致，不写 preload 以免误入预加载列表）。 */
 const HSTS_VALUE = 'max-age=15552000; includeSubDomains';
 
+/** 接口响应禁用缓存（含历史实现里的 Pragma，兼容 HTTP/1.0 代理）。 */
+const NO_STORE = 'no-store, no-cache, must-revalidate';
+
 /**
  * 生成安全响应头中间件（挂在全局，覆盖 `/api` 与静态资源 / SPA 回退）。
  * @returns Express 中间件
  */
 export function securityHeaders(): (req: Request, res: Response, next: NextFunction) => void {
-  return (_req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
     res.setHeader('Permissions-Policy', PERMISSIONS_POLICY);
+    if ((req.path ?? '').startsWith('/api')) {
+      res.setHeader('Cache-Control', NO_STORE);
+      res.setHeader('Pragma', 'no-cache');
+    }
     if (config.security.hsts) {
       res.setHeader('Strict-Transport-Security', HSTS_VALUE);
     }

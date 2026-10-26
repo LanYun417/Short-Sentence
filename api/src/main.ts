@@ -18,6 +18,10 @@ async function bootstrap(): Promise<void> {
   // 与 e2e 测试共用同一份装配（前缀 / CORS / body 上限 / 校验管道 / 静态资源）
   configureApp(app, { serveStatic: true });
 
+  // 优雅关闭：收到 SIGTERM/SIGINT 时先走 onModuleDestroy（断开 Prisma / Redis 连接、
+  // 冲刷日志队列），再退出。不开启时容器滚动重启会硬断，正在写库的请求可能留下半截数据。
+  app.enableShutdownHooks();
+
   await app.listen(config.port);
 
   const logger = new Logger('Bootstrap');

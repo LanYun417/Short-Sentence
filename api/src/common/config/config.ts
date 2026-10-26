@@ -266,13 +266,23 @@ export const config = {
     /** 账号锁定时长（分钟，默认 15） */
     accountLockMinutes: Math.max(1, toNumber(process.env.LOGIN_ACCOUNT_LOCK_MINUTES, 15)),
   },
-  /** 接口限流（按 IP 固定窗口；Redis 不可用时自动降级放行，不阻断业务） */
+  /** 接口限流（按 IP + 按登录用户双维度固定窗口；Redis 不可用时自动降级放行） */
   rateLimit: {
     enabled: toBoolean(process.env.RATE_LIMIT_ENABLED, true),
     /** 窗口长度（ms），默认 1 分钟 */
     windowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 60_000),
     /** 单窗口内单 IP 的默认上限（登录/验证码/文档等敏感接口另有收紧值，见中间件） */
     max: toNumber(process.env.RATE_LIMIT_MAX, 300),
+    /**
+     * 单窗口内**单个登录用户**的默认上限。
+     *
+     * 为什么在按 IP 之外再加一维：IP 维度有两个天然缺口——
+     * 1) 攻击者手上有一批代理 IP 时，单账号可以无限刷（IP 每次都换，计数打不上去）；
+     * 2) 反过来，公司/学校出口 IP 下的多个正常用户共享同一份额度，容易被互相拖累。
+     * 加上用户维度后「一号一额度」，跨 IP 刷量同样被封；取值比 IP 更小，
+     * 因为单个正常用户的每分钟请求量远低于一个出口 IP 下的所有人之和。
+     */
+    userMax: toNumber(process.env.RATE_LIMIT_USER_MAX, 150),
   },
   /**
    * 口令策略（新增用户 / 重置密码 / 自助改密共用，见 common/auth/password-policy.ts）。
@@ -322,6 +332,21 @@ export const config = {
      * 先按 50 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
      */
     dailyQuota: Math.max(1, toNumber(process.env.AI_DAILY_QUOTA, 50)),
+  },
+  /**
+   * 成长体系（XP / 等级 / 成就）防刷配置。
+   */
+  gamify: {
+    /**
+     * 每日经验上限（按自然日、Asia/Shanghai 计；0 表示不限制）。
+     *
+     * 为什么需要硬上限：经验的幂等键是「作答记录 id」，而作答记录每次都新生成，
+     * 所以脚本反复提交同一题（尤其是「答错→当天到期→可再次作答」这条回路）
+     * 仍能持续产经验。给每日总量封顶后，刷量与正常使用在总量上被区分开：
+     * 正常用户一天 20 句（含拼词折扣、收藏、达标奖励、成就）大约 200~300 点，
+     * 取 600 留足余量，同时把刷量收益压到「一天 600」这个可忽略的量级。
+     */
+    dailyXpCap: Math.max(0, toNumber(process.env.GAMIFY_DAILY_XP_CAP, 600)),
   },
   /** 「短句」业务配置 */
   sentence: {
