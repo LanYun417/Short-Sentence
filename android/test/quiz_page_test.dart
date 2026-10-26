@@ -251,6 +251,55 @@ void main() {
     expect(find.text('撤销'), findsOneWidget);
   });
 
+  testWidgets('拼词已选区单行不折行，装不下就横向滚动', (tester) async {
+    // 用手机尺寸：宽屏（测试默认 800）下 5 个词本来就摆得下，测不出折行
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const words = <String>['alpha', 'bravo', 'charlie', 'delta', 'echo'];
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(const <String, dynamic>{
+          'sentenceId': 77,
+          'translationZh': '测试',
+          'source': 'new',
+          'words': words,
+        }),
+        phase: QuizPhase.answering,
+        mode: AnswerMode.assemble,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final word in words) {
+      final chip = find.text(word);
+      await tester.ensureVisible(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+    }
+
+    // 已选的 5 个词块 dy 全相同 = 一行，没有折行
+    final rows = <double>{
+      for (final word in words) tester.getCenter(find.text(word)).dy,
+    };
+    expect(rows, hasLength(1));
+
+    // 一行装不下 → 已选区是横向可滚动的，且**自动跟到最右**（新词块要看得见）
+    final horizontal = tester
+        .widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView))
+        .where((view) => view.scrollDirection == Axis.horizontal);
+    expect(horizontal, isNotEmpty);
+    final position = horizontal.first.controller!.position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    expect(position.pixels, position.maxScrollExtent);
+
+    container.dispose();
+  });
+
   testWidgets('翻转角度与 flipped 一致（不会出现转一半还显示正面）', (tester) async {
     final container = await _pump(
       tester,

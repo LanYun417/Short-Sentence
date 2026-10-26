@@ -1546,14 +1546,57 @@ class _AssembleAreaState extends State<_AssembleArea> {
   /// 「确定」按钮的位置：拼完最后一个词要把它滚进视野。
   final GlobalKey _submitKey = GlobalKey();
 
+  /// 已选词块的横向滚动控制器（单行不折行，所以要主动跟到最后）。
+  final ScrollController _pickedScroll = ScrollController();
+
+  /// 上一次构建时的已选词数。
+  ///
+  /// ⚠️ 不能拿 `oldWidget.picked.length` 跟 `widget.picked.length` 比：
+  /// `picked` 是页面持有的**同一个 List 实例**（`_pickWord` 直接 `add`），
+  /// 两个 widget 引用的是同一个对象，长度永远相等 —— 这么比过，
+  /// 结果是「拼完自动滚到确定按钮」那段逻辑一直没生效（死代码）。
+  /// 只能在本 State 里自己记一份。
+  int _pickedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pickedCount = widget.picked.length;
+  }
+
+  @override
+  void dispose() {
+    _pickedScroll.dispose();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(covariant _AssembleArea oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 词块刚好用完时，按钮在折叠线以下（图片 + 词块占满了屏），
-    // 用户拼完却看不到可以提交，会以为还缺点什么。这里主动滚一下。
+
+    final grew = widget.picked.length > _pickedCount;
     final justCompleted =
         widget.picked.length == widget.words.length &&
-        oldWidget.picked.length != widget.words.length;
+        _pickedCount != widget.words.length;
+    _pickedCount = widget.picked.length;
+
+    // 新拼上的词块落在最右边，横滑容器得跟过去——否则用户点了词却「看不见
+    // 它出现」，会以为没点上而重复点。
+    if (grew) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_pickedScroll.hasClients) {
+          return;
+        }
+        _pickedScroll.animateTo(
+          _pickedScroll.position.maxScrollExtent,
+          duration: Motion.normal,
+          curve: Motion.standard,
+        );
+      });
+    }
+
+    // 词块刚好用完时，按钮在折叠线以下（图片 + 词块占满了屏），
+    // 用户拼完却看不到可以提交，会以为还缺点什么。这里主动滚一下。
     if (justCompleted && widget.words.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final target = _submitKey.currentContext;
@@ -1612,10 +1655,14 @@ class _AssembleAreaState extends State<_AssembleArea> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        // 已选
+        // 已选：**单行横向滚动，不折行**。
+        //
+        // 折行有几个坏处：卡片被撑高、句子被切成好几段，拼到一半根本读不出
+        // 语序（用户实测反馈）；词一多还会顶掉下面的候选区。
+        // 一行到底、超出就左右滑，拼句的过程才像在写一行字。
+        // 高度交给内容自适应（不写死），系统字体放大时不会把词块压overflow。
         AnimatedContainer(
           duration: Motion.normal,
-          constraints: const BoxConstraints(minHeight: 62, maxHeight: 150),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: colors.cardMuted.withValues(alpha: 0.6),
@@ -1627,10 +1674,11 @@ class _AssembleAreaState extends State<_AssembleArea> {
               width: 1.2,
             ),
           ),
-          child: SingleChildScrollView(
-            child: picked.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+          child: picked.isEmpty
+              ? SizedBox(
+                  // 与一行词块等高，拼上第一个词时卡片不会「跳一下」
+                  height: 38,
+                  child: Center(
                     child: Text(
                       '点下面的词块，按顺序拼成句子',
                       textAlign: TextAlign.center,
@@ -1638,23 +1686,33 @@ class _AssembleAreaState extends State<_AssembleArea> {
                         color: colors.inkFaint,
                       ),
                     ),
-                  )
-                : Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
+                  ),
+                )
+              : SingleChildScrollView(
+                  controller: _pickedScroll,
+                  scrollDirection: Axis.horizontal,
+                  // 左右滑到头就停（不要 Web 那种回弹，拼句时容易误以为还能滑）
+                  physics: const ClampingScrollPhysics(),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       for (var i = 0; i < picked.length; i++)
-                        _WordChip(
-                          key: ValueKey<String>(_keyOfPicked(i)),
-                          text: picked[i],
-                          picked: true,
-                          // 点哪一个就退哪一个：拼错位置时不必从末尾一路撤
-                          onTap: busy ? null : () => onRemovePick(i),
-                          appear: true,
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: i == picked.length - 1 ? 0 : 7,
+                          ),
+                          child: _WordChip(
+                            key: ValueKey<String>(_keyOfPicked(i)),
+                            text: picked[i],
+                            picked: true,
+                            // 点哪一个就退哪一个：拼错位置时不必从末尾一路撤
+                            onTap: busy ? null : () => onRemovePick(i),
+                            appear: true,
+                          ),
                         ),
                     ],
                   ),
-          ),
+                ),
         ),
         Row(
           children: <Widget>[

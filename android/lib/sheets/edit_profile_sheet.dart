@@ -38,9 +38,16 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       TextEditingController(text: _user?.signature ?? '');
 
   late String _gender = _user?.gender ?? 'secret';
-  late int? _year;
-  late int? _month;
-  late int? _day;
+
+  /// 生日的年 / 月 / 日。
+  ///
+  /// ⚠️ 这里**不能**写成 `late int?`：`late` 的读前必赋值与「可空」无关，
+  /// 用户没填生日时 [initState] 里那个 if 不成立，字段就永远没被赋值，
+  /// 一读就抛 `LateInitializationError` —— 真机上整页被 release 的灰色
+  /// ErrorWidget 顶掉，表现就是「打开编辑资料是一片空白」。
+  int? _year;
+  int? _month;
+  int? _day;
 
   bool _saving = false;
   String? _error;
