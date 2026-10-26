@@ -146,9 +146,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
     _answerFocus.unfocus();
     try {
       await ref.read(quizControllerProvider.notifier).submit(answer);
-      if (mode == AnswerMode.assemble) {
-        ref.read(quizControllerProvider.notifier).resetMode();
-      }
     } finally {
       _submitting = false;
     }

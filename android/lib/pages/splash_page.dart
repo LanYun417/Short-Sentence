@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -61,8 +62,10 @@ class _SplashPageState extends ConsumerState<SplashPage>
     final colors = context.colors;
     final reduce = Motion.reduced(context);
 
-    return Scaffold(
-      body: DecoratedBox(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlay(context, navBarColor: colors.canvas),
+      child: Scaffold(
+        body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -162,6 +165,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
           ],
         ),
       ),
+    ),
     );
   }
 }

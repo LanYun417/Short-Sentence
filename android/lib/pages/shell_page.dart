@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/motion.dart';
@@ -72,8 +73,11 @@ class _ShellPageState extends ConsumerState<ShellPage> {
     // 既挡住内容又抢走点击（实测在刷题页输入时必现）。
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final reduce = Motion.reduced(context);
-    return Scaffold(
-      extendBody: true,
+    // 底栏手势条与底栏同色（白色），不再透出画布灰。
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlay(context),
+      child: Scaffold(
+        extendBody: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: <Widget>[
@@ -122,6 +126,7 @@ class _ShellPageState extends ConsumerState<ShellPage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// 语义色板。
 @immutable
@@ -159,4 +160,29 @@ class AppColors extends ThemeExtension<AppColors> {
 /// 取语义色板的语法糖：`context.colors.card`。
 extension AppColorsX on BuildContext {
   AppColors get colors => Theme.of(this).extension<AppColors>() ?? AppColors.light;
+}
+
+/// 系统 UI 风格（状态栏 + 底部导航条）。
+///
+/// 解决「底部安卓导航条透明、没跟底栏同色」：把
+/// [SystemUiOverlayStyle.systemNavigationBarColor] 设成与底栏 [`AppColors.card`]
+/// 一致，手势条区域便不再是透出的画布灰，和「通栏贴底」的底栏连成一片。
+///
+/// [navBarColor] 默认取 [AppColors.card]（主壳用白色底栏）；登录 / 启动页没有
+/// 底栏、背景是画布，传 [AppColors.canvas] 让手势条与页面同色，避免反过来在
+/// 那两屏出现「白条」。
+SystemUiOverlayStyle systemUiOverlay(
+  BuildContext context, {
+  Color? navBarColor,
+}) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final colors = context.colors;
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    systemNavigationBarColor: navBarColor ?? colors.card,
+    systemNavigationBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+    // 关掉系统对底栏的对比强制，否则 Android 会在我们设定的纯色上叠一层灰蒙。
+    systemNavigationBarContrastEnforced: false,
+  );
 }

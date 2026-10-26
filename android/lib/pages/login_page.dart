@@ -13,6 +13,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -147,8 +148,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final theme = Theme.of(context);
     final isRegister = _isRegister;
 
-    return Scaffold(
-      body: DecoratedBox(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlay(context, navBarColor: colors.canvas),
+      child: Scaffold(
+        body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -369,6 +372,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ],
         ),
       ),
+    ),
     );
   }
 }

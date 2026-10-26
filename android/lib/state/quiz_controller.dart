@@ -238,17 +238,6 @@ class QuizController extends Notifier<QuizState> {
     }
   }
 
-  /// 拼词模式作答后把模式切回默写（下次抽新题按默写走）。
-  ///
-  /// 之所以不在提交后自动切：拼词只是这一题的选择，
-  /// 常驻应该是默写（更难、XP 更高），与 Web 端行为一致。
-  void resetMode() {
-    if (state.mode == AnswerMode.input) {
-      return;
-    }
-    state = state.copyWith(mode: AnswerMode.input);
-  }
-
   static String _message(Object error) {
     if (error is ApiException) {
       return error.message;
