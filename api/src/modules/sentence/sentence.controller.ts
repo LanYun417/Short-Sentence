@@ -19,6 +19,7 @@ import {
   TriggerGenDto,
   SENTENCE_STATUS,
   BatchSentenceStatusDto,
+  RegenerateImageDto,
 } from './sentence.dto.js';
 
 /** 生成批次列表项。 */
@@ -218,6 +219,21 @@ export class SentenceController {
           ? `已${dto.status === SENTENCE_STATUS.OFFLINE ? '下架' : '上架'} ${affected} 条`
           : '没有符合条件的题目（上架仅对已生成配图的题生效）',
     };
+  }
+
+  /**
+   * 单题重新生图（异步，立即返回）。
+   *
+   * 权限沿用 `sentence:gen`：会消耗 AI 生图配额，与「生成题库」同属生成类操作，
+   * 为一个按钮新增权限码还得重跑 seed，不划算。
+   * 生图要 10~40 秒，超过管理端 15 秒请求超时，所以这里只负责受理。
+   */
+  @Post(':id/regenerate-image')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '重新生图')
+  async regenerateImage(@Param() params: IdParamDto, @Body() dto: RegenerateImageDto): Promise<ResponseEnvelope<null>> {
+    await this.sentenceGen.regenerateImage(params.id, dto.scenePrompt);
+    return { __raw: true, data: null, message: '已开始重新生图，约 10~40 秒后可刷新查看' };
   }
 
   /** 手工创建题目。 */

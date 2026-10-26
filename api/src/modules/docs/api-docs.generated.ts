@@ -5484,6 +5484,43 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/sentences/:id/regenerate-image",
+        "summary": "单题重新生图（异步，立即返回）。 权限沿用 `sentence:gen`：会消耗 AI 生图配额，与「生成题库」同属生成类操作， 为一个按钮新增权限码还得重跑 seed，不划算。 生图要 10~40 秒，超过管理端 15 秒请求超时，所以这里只负责受理",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 重新生图",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "scenePrompt",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/1/regenerate-image\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"scenePrompt\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "scenePrompt": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/sentences/batch-status",
         "summary": "批量上下架（运营清理题库用；上架只对已有配图的题生效）",
         "permission": [

@@ -99,6 +99,19 @@ export class TriggerGenDto {
   difficulty?: number;
 }
 
+/**
+ * 单题重新生图入参。
+ *
+ * scenePrompt 可选：传了就先用新提示词覆盖该题的场景提示词再生图
+ * （运营在后台改了构图、想立刻看效果，不必再走一次「编辑保存」）。
+ */
+export class RegenerateImageDto {
+  @IsOptional()
+  @IsString({ message: '场景提示词必须为字符串' })
+  @MaxLength(500, { message: '场景提示词最长 500 个字符' })
+  scenePrompt?: string;
+}
+
 /** 场景分类保存入参。 */
 export class SaveCategoryDto {
   /** 分类名称（中文，唯一） */

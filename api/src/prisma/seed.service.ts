@@ -1474,7 +1474,18 @@ export async function runSeed(prisma: PrismaService): Promise<void> {
 
 /* --------------------------------- 短句分类种子 -------------------------------- */
 
-/** 默认场景分类（幂等；名称为唯一业务键）。 */
+/**
+ * 默认场景分类（幂等；名称为唯一业务键）。
+ *
+ * 分类名会直接拼进生题提示词（见 SentenceGenService.currentTheme），
+ * 所以**每加一个分类就等于给模型多开一片题材**——早期只有 6 个，
+ * 生成出来的句子翻来覆去都是「咖啡店/办公室/机场」那几类场景。
+ * 现扩到 14 个，覆盖日常高频交际场景。
+ *
+ * 图标写 **lucide 名**（客户端拼 `i-lucide-*`，App 端查 lib/theme/icon_map.dart），
+ * 新增前务必确认名字在 lucide 里真实存在，否则 Web 端会画不出图标。
+ * 注意：本函数按 name 幂等，**只补新分类、不更新已有行**——改老分类的图标要在后台改。
+ */
 const SENTENCE_CATEGORY_SEEDS: Array<{ name: string; nameEn: string; icon: string; sort: number }> = [
   { name: '日常生活', nameEn: 'Daily Life', icon: 'house', sort: 1 },
   { name: '职场办公', nameEn: 'Workplace', icon: 'briefcase', sort: 2 },
@@ -1482,6 +1493,14 @@ const SENTENCE_CATEGORY_SEEDS: Array<{ name: string; nameEn: string; icon: strin
   { name: '餐饮美食', nameEn: 'Dining', icon: 'cup-hot', sort: 4 },
   { name: '社交闲聊', nameEn: 'Social', icon: 'people', sort: 5 },
   { name: '学习成长', nameEn: 'Learning', icon: 'book', sort: 6 },
+  { name: '购物消费', nameEn: 'Shopping', icon: 'shopping-bag', sort: 7 },
+  { name: '健康医疗', nameEn: 'Health', icon: 'stethoscope', sort: 8 },
+  { name: '运动健身', nameEn: 'Sports & Fitness', icon: 'dumbbell', sort: 9 },
+  { name: '情感沟通', nameEn: 'Emotions', icon: 'heart', sort: 10 },
+  { name: '科技数码', nameEn: 'Technology', icon: 'laptop', sort: 11 },
+  { name: '居家生活', nameEn: 'Home & Living', icon: 'sofa', sort: 12 },
+  { name: '娱乐休闲', nameEn: 'Entertainment', icon: 'clapperboard', sort: 13 },
+  { name: '天气与季节', nameEn: 'Weather & Seasons', icon: 'cloud-sun', sort: 14 },
 ];
 
 /** 写入场景分类（幂等：按 name 去重）。 */
@@ -1507,8 +1526,14 @@ async function seedSentenceCategories(prisma: PrismaService): Promise<void> {
 
 /* --------------------------------- 成就种子 -------------------------------- */
 
-/** 微游戏化成就定义（code 为稳定业务键；判定逻辑在 GamifyService 的 CONDITIONS 里按 code 关联）。 */
-const ACHIEVEMENT_SEEDS: Array<{
+/**
+ * 微游戏化成就定义（code 为稳定业务键；判定逻辑在 GamifyService 的
+ * `ACHIEVEMENT_CONDITIONS` 里按 code 关联）。
+ *
+ * 导出是为了让 `test/achievement-catalog.spec.ts` 能校验「定义 ↔ 判定」一一对应：
+ * 只加定义不加判定不会报错，那枚勋章会永远解不开（静默失效）。
+ */
+export const ACHIEVEMENT_SEEDS: Array<{
   code: string;
   name: string;
   description: string;
@@ -1539,7 +1564,9 @@ const ACHIEVEMENT_SEEDS: Array<{
     code: 'streak_7',
     name: '七日不辍',
     description: '连续打卡 7 天',
-    icon: 'fire',
+    // 原来是 'fire'——lucide 里没有这个名字（只有 flame / flame-kindling），
+    // 客户端拼 `i-lucide-fire` 拿不到图标，勋章墙上这一枚是空白（2026-10-26 修）。
+    icon: 'flame-kindling',
     category: 'persist',
     rewardXp: 50,
     sort: 3,
@@ -1606,6 +1633,79 @@ const ACHIEVEMENT_SEEDS: Array<{
     category: 'persist',
     rewardXp: 50,
     sort: 10,
+  },
+  /* ---------------- 第二批（2026-10-26 扩充）：答题量 / 打卡 / 收藏 / 场景 / 等级 ---------------- */
+  {
+    code: 'answer_100',
+    name: '百题之约',
+    description: '累计作答 100 题',
+    icon: 'notebook-pen',
+    category: 'behavior',
+    rewardXp: 40,
+    sort: 11,
+  },
+  {
+    code: 'answer_500',
+    name: '五百题斩',
+    description: '累计作答 500 题',
+    icon: 'swords',
+    category: 'behavior',
+    rewardXp: 120,
+    sort: 12,
+  },
+  {
+    code: 'correct_500',
+    name: '炉火纯青',
+    description: '累计答对 500 题',
+    icon: 'medal',
+    category: 'behavior',
+    rewardXp: 200,
+    sort: 13,
+  },
+  {
+    code: 'favorite_50',
+    name: '藏句成癖',
+    description: '收藏 50 句',
+    icon: 'gem',
+    category: 'behavior',
+    rewardXp: 60,
+    sort: 14,
+  },
+  {
+    code: 'explorer_half',
+    name: '半图已阅',
+    description: '解锁一半场景',
+    icon: 'compass',
+    category: 'behavior',
+    rewardXp: 60,
+    sort: 15,
+  },
+  {
+    code: 'streak_14',
+    name: '两周不辍',
+    description: '连续打卡 14 天',
+    icon: 'calendar-check',
+    category: 'persist',
+    rewardXp: 80,
+    sort: 16,
+  },
+  {
+    code: 'streak_100',
+    name: '百日之约',
+    description: '连续打卡 100 天',
+    icon: 'crown',
+    category: 'persist',
+    rewardXp: 500,
+    sort: 17,
+  },
+  {
+    code: 'level_b2',
+    name: '高阶启程',
+    description: '达到 B2 等级',
+    icon: 'rocket',
+    category: 'persist',
+    rewardXp: 80,
+    sort: 18,
   },
 ];
 

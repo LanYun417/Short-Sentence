@@ -48,6 +48,18 @@ const MAX_FAILED_CHUNKS = 5;
 const IMAGE_STYLE_SUFFIX =
   'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
 
+/**
+ * 生图重试策略（批次生图与手工重新生图共用）。
+ *
+ * 生图上游（Agnes）限流恢复较慢：实测并发 6 会持续 429，退避必须比生题宽得多
+ * （10s → 20s → 40s，累计约 70s），否则重试只是把 429 再打一遍。
+ */
+const IMAGE_RETRY = {
+  maxAttempts: Math.max(config.ai.maxAttempts, 4),
+  baseDelayMs: 10_000,
+  maxDelayMs: 120_000,
+};
+
 @Injectable()
 export class SentenceGenService {
   private readonly logger = new Logger(SentenceGenService.name);
@@ -59,6 +71,15 @@ export class SentenceGenService {
    * 批次表没有这个字段，用进程内变量传递——`running` 已保证同时只有一批在跑。
    */
   private focusDifficulty: number | null = null;
+  /**
+   * 生图并发闸门：**进程内唯一**，批次生成与手工「重新生图」共用。
+   *
+   * 早先每个批次各自 new 一个信号量，批次与手工重生成叠加时实际并发会翻倍，
+   * 而 Agnes 免费额度对并发非常敏感（并发 6 就持续 429），必须全局收口。
+   */
+  private imageSemaphore: Semaphore | null = null;
+  /** 正在手工重新生图的题目（防止同一题被连点，白烧上游配额）。 */
+  private readonly regenerating = new Set<string>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -66,6 +87,12 @@ export class SentenceGenService {
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
   ) {}
+
+  /** 取生图闸门（懒加载：首次用到时才按配置建）。 */
+  private imageGate(): Semaphore {
+    this.imageSemaphore ??= new Semaphore(config.ai.imageConcurrency);
+    return this.imageSemaphore;
+  }
 
   /**
    * 定时触发入口（由 TaskModule 的 `sentence-gen` 任务调用）。
@@ -264,16 +291,9 @@ export class SentenceGenService {
     // 生图队列与生题**并行**推进：每批题目入库后立即排产配图，
     // 首批题在一两分钟内即可 ready，用户不必等 300 条题全部生成完
     // （否则首屏可用时间被拉长到十几分钟，期间前端一直显示「暂无可用题目」）。
-    const imageSemaphore = new Semaphore(config.ai.imageConcurrency);
+    const imageSemaphore = this.imageGate();
     const imageJobs: Promise<boolean>[] = [];
     const queuedIds = new Set<string>();
-    const imageRetry = {
-      // 生图上游（Agnes）限流恢复较慢：实测并发 6 会持续 429，退避必须比生题宽得多
-      // （10s → 20s → 40s，累计约 70s），否则重试只是把 429 再打一遍。
-      maxAttempts: Math.max(config.ai.maxAttempts, 4),
-      baseDelayMs: 10_000,
-      maxDelayMs: 120_000,
-    };
 
     /** 把本批次尚未排队的待配图题目推入生图队列（非阻塞）。 */
     const enqueuePendingImages = async (): Promise<void> => {
@@ -287,7 +307,7 @@ export class SentenceGenService {
           continue;
         }
         queuedIds.add(key);
-        imageJobs.push(imageSemaphore.run(() => this.generateImage(sentence, imageRetry, taskId)));
+        imageJobs.push(imageSemaphore.run(() => this.generateImage(sentence, IMAGE_RETRY, taskId)));
       }
     };
 
@@ -520,11 +540,18 @@ export class SentenceGenService {
       .catch(() => undefined);
   }
 
-  /** 生成单题配图：生图 → 转 webp → 入库 → 置 ready（失败只记日志，不影响其它题）。 */
+  /**
+   * 生成单题配图：生图 → 转 webp → 入库 → 置状态（失败只记日志，不影响其它题）。
+   *
+   * @param taskId 所属批次；**手工重新生图传 null**（没有批次，就不该写批次心跳）
+   * @param successStatus 成功后置成的状态。批次生图恒 ready；手工重生成必须沿用该题
+   *   原本的状态——否则把一条「已下架」的题重新生图后会莫名其妙自动上架。
+   */
   private async generateImage(
     sentence: { id: bigint; scenePrompt: string },
     retry: { maxAttempts: number; baseDelayMs: number; maxDelayMs: number },
-    taskId: bigint,
+    taskId: bigint | null,
+    successStatus: string = 'ready',
   ): Promise<boolean> {
     try {
       const image = await withRetry(
@@ -542,14 +569,84 @@ export class SentenceGenService {
       const saved = await this.fileService.save(`${Number(sentence.id)}.webp`, 'image/webp', webp, null);
       await this.prisma.sentence.update({
         where: { id: sentence.id },
-        data: { imageFileId: BigInt(saved.file.id), status: 'ready' },
+        data: { imageFileId: BigInt(saved.file.id), status: successStatus },
       });
-      await this.heartbeat(taskId);
+      if (taskId !== null) {
+        await this.heartbeat(taskId);
+      }
       return true;
     } catch (error) {
       this.logger.error(`[SentenceGen] 生图失败（sentence ${sentence.id}）: ${this.errText(error)}`);
       return false;
     }
+  }
+
+  /**
+   * 单题重新生图（后台「题库管理」用：改了场景提示词、或对配图不满意时重出）。
+   *
+   * 为什么**异步**：Agnes 出图要 10~40 秒，而管理端 axios 超时只有 15 秒，
+   * 同步返回必然超时（前端只会看到一个失败提示，图其实还在生成）。
+   * 所以这里把状态置为 `pending_image` 后立即返回，由后台任务推进到终态；
+   * 状态落在库里，运营刷新页面也能看到「待生成」，不依赖前端本地状态。
+   *
+   * 失败**回滚**：把状态还原为原值、保留旧图（`imageFileId` 不动），
+   * 这样一次失败不会把题目从题库里搞丢。
+   *
+   * @param id 题目 id
+   * @param scenePrompt 可选的新场景提示词（传了就覆盖后再生图）
+   */
+  async regenerateImage(id: number, scenePrompt?: string): Promise<void> {
+    if (!this.imageGen.enabled) {
+      throw AppException.serviceUnavailable('生图能力未配置（AI_AGNES_API_KEY 缺失）');
+    }
+    const key = String(id);
+    if (this.regenerating.has(key)) {
+      throw AppException.conflict('该题正在重新生图，请稍候再试');
+    }
+    const sentence = await this.prisma.sentence.findUnique({
+      where: { id: BigInt(id) },
+      select: { id: true, scenePrompt: true, status: true },
+    });
+    if (!sentence) {
+      throw AppException.notFound('题目不存在');
+    }
+
+    const nextPrompt = scenePrompt?.trim();
+    if (nextPrompt) {
+      await this.prisma.sentence.update({
+        where: { id: sentence.id },
+        data: { scenePrompt: nextPrompt.slice(0, 500) },
+      });
+    }
+    const prevStatus = sentence.status;
+    // 下架题重新生图后仍应保持下架；其余（ready / 尚无图的 pending_image）出图即就绪
+    const successStatus = prevStatus === 'offline' ? 'offline' : 'ready';
+
+    await this.prisma.sentence.update({ where: { id: sentence.id }, data: { status: 'pending_image' } });
+    this.regenerating.add(key);
+
+    // 不 await：先把请求放回去，任务在后台跑（失败回滚状态）
+    void this.imageGate()
+      .run(() =>
+        this.generateImage(
+          { id: sentence.id, scenePrompt: nextPrompt ?? sentence.scenePrompt },
+          IMAGE_RETRY,
+          null,
+          successStatus,
+        ),
+      )
+      .then((ok) => (ok ? undefined : this.restoreStatus(sentence.id, prevStatus)))
+      .catch(async (error: unknown) => {
+        // generateImage 内部已兜住异常；这里只防信号量/意外错误把题目卡在 pending_image
+        this.logger.error(`[SentenceGen] 重新生图异常（sentence ${sentence.id}）: ${this.errText(error)}`);
+        await this.restoreStatus(sentence.id, prevStatus);
+      })
+      .finally(() => this.regenerating.delete(key));
+  }
+
+  /** 重新生图失败：把状态还原（旧图仍在，不影响题目继续下发）。 */
+  private async restoreStatus(id: bigint, status: string): Promise<void> {
+    await this.prisma.sentence.update({ where: { id }, data: { status } }).catch(() => undefined);
   }
 
   /** 生题入库（按 sentenceEn 唯一约束去重；返回净增条数）。 */

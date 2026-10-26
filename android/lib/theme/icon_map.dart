@@ -3,6 +3,10 @@
 /// 后端存的是 lucide 图标名（成就 `icon`、场景 `icon`），与 Web 端的
 /// `i-lucide-*` 同源。Flutter 端不引图标包，这里做一张显式映射表：
 /// **未命中的名字回落到通用图标**，不至于因为加了新成就就显示空白。
+///
+/// ⚠️ 新增图标要三处同步：本表、`client/app/components/GrowthPanel.vue` 的
+/// ICON_MAP、后端种子（`prisma/seed.service.ts`）。名字必须是 lucide 里真实
+/// 存在的，否则 Web 端画不出图标（App 端只是回落成通用图标，看不出问题）。
 library;
 
 import 'package:flutter/material.dart';
@@ -10,17 +14,35 @@ import 'package:flutter/material.dart';
 /// 图标映射。
 IconData appIcon(String? name) {
   return switch (name) {
+    // ---------- 场景（句子分类） ----------
     'house' => Icons.home_rounded,
     'briefcase' => Icons.work_rounded,
-    'airplane' => Icons.flight_takeoff_rounded,
-    'cup-hot' => Icons.local_cafe_rounded,
-    'people' => Icons.groups_rounded,
+    'airplane' || 'plane' => Icons.flight_takeoff_rounded,
+    'cup-hot' || 'coffee' => Icons.local_cafe_rounded,
+    'people' || 'users' => Icons.groups_rounded,
     'book' => Icons.menu_book_rounded,
+    'shopping-bag' => Icons.shopping_bag_rounded,
+    'stethoscope' => Icons.monitor_heart_rounded,
+    'dumbbell' => Icons.fitness_center_rounded,
+    'heart' => Icons.favorite_rounded,
+    'laptop' => Icons.laptop_mac_rounded,
+    'sofa' => Icons.chair_rounded,
+    'clapperboard' => Icons.movie_rounded,
+    'cloud-sun' => Icons.wb_sunny_rounded,
+    // ---------- 成就 ----------
     'footprints' => Icons.directions_walk_rounded,
-    'flame' || 'fire' => Icons.local_fire_department_rounded,
+    'flame' || 'fire' || 'flame-kindling' => Icons.local_fire_department_rounded,
     'trophy' => Icons.emoji_events_rounded,
     'target' => Icons.gps_fixed_rounded,
     'award' => Icons.workspace_premium_rounded,
+    'medal' => Icons.military_tech_rounded,
+    'crown' => Icons.stars_rounded,
+    'gem' => Icons.diamond_rounded,
+    'compass' => Icons.explore_rounded,
+    'rocket' => Icons.rocket_launch_rounded,
+    'swords' => Icons.sports_martial_arts_rounded,
+    'notebook-pen' => Icons.edit_note_rounded,
+    'calendar-check' => Icons.event_available_rounded,
     'bookmark' => Icons.bookmark_rounded,
     'map' => Icons.map_rounded,
     'globe' => Icons.public_rounded,

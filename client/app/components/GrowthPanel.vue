@@ -11,14 +11,28 @@ const { data: overview } = await useSsrApi<GamifyOverview>('ss:gamify', '/client
  * 成就图标映射：DB 存的是 lucide 名（不含前缀）。
  * 这里用**静态字面量**拼完整 `i-lucide-*`，确保 @nuxt/icon 构建期扫描进静态包
  * （动态 `i-lucide-${name}` 不会被扫描，会退化为运行时拉取）。
+ *
+ * ⚠️ 新增图标要三处同步：本表、`android/lib/theme/icon_map.dart`、后端种子
+ * （`prisma/seed.service.ts`）。名字必须是 lucide 里**真实存在**的，
+ * 否则 Web 端这枚勋章会画成空白（`fire` 就踩过这个坑）。
  */
 const ICON_MAP: Record<string, string> = {
   footprints: 'i-lucide-footprints',
   flame: 'i-lucide-flame',
-  fire: 'i-lucide-fire',
+  // 旧的 'fire' 在 lucide 里并不存在（只有 flame / flame-kindling），保留映射只为止旧数据不空白
+  fire: 'i-lucide-flame',
+  'flame-kindling': 'i-lucide-flame-kindling',
   trophy: 'i-lucide-trophy',
   target: 'i-lucide-target',
   award: 'i-lucide-award',
+  medal: 'i-lucide-medal',
+  crown: 'i-lucide-crown',
+  gem: 'i-lucide-gem',
+  compass: 'i-lucide-compass',
+  rocket: 'i-lucide-rocket',
+  swords: 'i-lucide-swords',
+  'notebook-pen': 'i-lucide-notebook-pen',
+  'calendar-check': 'i-lucide-calendar-check',
   bookmark: 'i-lucide-bookmark',
   map: 'i-lucide-map',
   globe: 'i-lucide-globe',

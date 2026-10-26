@@ -41,6 +41,17 @@ export function updateSentenceApi(id: number, payload: SentenceSavePayload): Pro
   return put<null>(`/sentences/${id}`, payload);
 }
 
+/**
+ * 单题重新生图（**异步**：后端只负责受理，约 10~40 秒后出图）。
+ *
+ * 不能做成同步接口：生图耗时远超管理端 15 秒请求超时，同步返回必然报超时，
+ * 而图其实还在生成，运营会以为失败并反复重试（白烧配额）。
+ * 进度靠轮询题目详情（`getSentenceDetailApi`）看 status / imageUrl 变化。
+ */
+export function regenerateSentenceImageApi(id: number, scenePrompt?: string): Promise<null> {
+  return post<null>(`/sentences/${id}/regenerate-image`, scenePrompt ? { scenePrompt } : {});
+}
+
 /** 下架题目（软删除） */
 export function deleteSentenceApi(id: number): Promise<null> {
   return del<null>(`/sentences/${id}`);

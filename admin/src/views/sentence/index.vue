@@ -14,8 +14,10 @@ import {
   exportSentencesApi,
   getCategoryOptionsApi,
   getGenTaskListApi,
+  getSentenceDetailApi,
   getSentenceListApi,
   pauseGenTaskApi,
+  regenerateSentenceImageApi,
   resumeGenTaskApi,
   triggerGenApi,
   updateSentenceApi,
@@ -192,6 +194,110 @@ async function handleOffline(row: SentenceItem): Promise<void> {
   ElMessage.success('已下架');
   await getList();
 }
+
+/* ------------------------------ 单题重新生图 ------------------------------ */
+
+const regenVisible = ref(false);
+const regenSubmitting = ref(false);
+const regenTarget = ref<SentenceItem | null>(null);
+const regenPrompt = ref('');
+/** 正在出图的题目 id：按钮转圈 + 禁点，避免连点（后端也会拦，这是第一道）。 */
+const regeneratingIds = ref<Set<number>>(new Set());
+/** 轮询定时器（按题目 id；离开页面统一清掉，别在后台一直打接口）。 */
+const regenTimers = new Map<number, ReturnType<typeof setInterval>>();
+
+/** 打「生图中」标记。 */
+function setRegenerating(id: number, on: boolean): void {
+  const next = new Set(regeneratingIds.value);
+  if (on) {
+    next.add(id);
+  } else {
+    next.delete(id);
+  }
+  regeneratingIds.value = next;
+}
+
+/** 打开弹窗（提示词预填当前值，可直接改后重生成）。 */
+function handleOpenRegen(row: SentenceItem): void {
+  regenTarget.value = row;
+  regenPrompt.value = row.scenePrompt ?? '';
+  regenVisible.value = true;
+}
+
+/**
+ * 轮询单题直到出图。
+ *
+ * 判定「成功」看 **imageUrl 是否变化**，不看 status：下架题重新生图后
+ * 状态会还原成 offline，若按「status === ready」判断会把成功误报成失败。
+ */
+function pollRegen(id: number, prevUrl: string | null): void {
+  if (regenTimers.has(id)) {
+    return;
+  }
+  let tries = 0;
+  const stop = (): void => {
+    const timer = regenTimers.get(id);
+    if (timer) {
+      clearInterval(timer);
+      regenTimers.delete(id);
+    }
+    setRegenerating(id, false);
+  };
+  const timer = setInterval(() => {
+    tries += 1;
+    void getSentenceDetailApi(id)
+      .then((detail) => {
+        const row = list.value.find((item) => item.id === id);
+        if (row) {
+          row.status = detail.status;
+          row.imageUrl = detail.imageUrl;
+        }
+        if (detail.status !== 'pending_image') {
+          stop();
+          ElMessage.success(detail.imageUrl !== prevUrl ? '配图已更新' : '重新生图未成功，可再试一次');
+        } else if (tries >= 12) {
+          // 12 × 5s = 60s 仍未出图：停止轮询，避免一直打后端（状态仍可在刷新后看到）
+          stop();
+          ElMessage.warning('生图仍在进行，稍后刷新列表查看结果');
+        }
+      })
+      .catch(() => {
+        // 单次轮询失败不打断，下一轮继续
+        if (tries >= 12) {
+          stop();
+        }
+      });
+  }, 5000);
+  regenTimers.set(id, timer);
+}
+
+/** 提交：受理后立刻刷新（状态变「待生成」），再开始轮询。 */
+async function submitRegen(): Promise<void> {
+  const row = regenTarget.value;
+  if (!row) {
+    return;
+  }
+  const prevUrl = row.imageUrl;
+  regenSubmitting.value = true;
+  try {
+    await regenerateSentenceImageApi(row.id, regenPrompt.value.trim() || undefined);
+    regenVisible.value = false;
+    setRegenerating(row.id, true);
+    ElMessage.success('已开始重新生图，约 10~40 秒完成');
+    await getList();
+    pollRegen(row.id, prevUrl);
+  } finally {
+    regenSubmitting.value = false;
+  }
+}
+
+/** 离开页面：清掉所有轮询。 */
+onBeforeUnmount(() => {
+  for (const timer of regenTimers.values()) {
+    clearInterval(timer);
+  }
+  regenTimers.clear();
+});
 
 /* ------------------------------ 批量上下架 ------------------------------ */
 
@@ -481,10 +587,19 @@ onMounted(async () => {
         <el-table-column label="创建时间" width="170">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
               >编辑</el-button
+            >
+            <el-button
+              v-permission="'sentence:gen'"
+              link
+              type="warning"
+              :loading="regeneratingIds.has((row as SentenceItem).id)"
+              :disabled="regeneratingIds.has((row as SentenceItem).id)"
+              @click="handleOpenRegen(row as SentenceItem)"
+              >重新生图</el-button
             >
             <el-button v-permission="'sentence:remove'" link type="danger" @click="handleOffline(row as SentenceItem)"
               >下架</el-button
@@ -551,6 +666,36 @@ onMounted(async () => {
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="dialogSaving" @click="handleSave">保存</el-button>
       </template>
+    </BasicDialog>
+
+    <!-- 重新生图（可改场景提示词；异步，出图后自动更新本页那一行） -->
+    <BasicDialog
+      v-model="regenVisible"
+      :title="regenTarget ? `重新生图 · #${regenTarget.id}` : '重新生图'"
+      width="560px"
+      :confirm-loading="regenSubmitting"
+      confirm-text="开始生成"
+      @confirm="submitRegen"
+    >
+      <p v-if="regenTarget" class="mb-3 rounded bg-fill-light px-3 py-2 text-sm leading-relaxed text-ink">
+        {{ regenTarget.sentenceEn }}
+        <span class="mt-1 block text-xs text-muted">{{ regenTarget.translationZh }}</span>
+      </p>
+      <el-form label-width="90px">
+        <el-form-item label="场景提示词">
+          <el-input
+            v-model="regenPrompt"
+            type="textarea"
+            :rows="4"
+            maxlength="500"
+            show-word-limit
+            placeholder="描述画面：谁、在哪、在做什么；留空按句子自动构图"
+          />
+        </el-form-item>
+      </el-form>
+      <el-alert type="info" :closable="false" show-icon>
+        <template #title> 生成约 10~40 秒，期间该题状态变为「待生成」；失败会自动还原原状态，旧图不受影响。 </template>
+      </el-alert>
     </BasicDialog>
 
     <!-- 生成批次监控 -->

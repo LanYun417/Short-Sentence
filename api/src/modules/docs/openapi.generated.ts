@@ -9750,6 +9750,72 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/{id}/regenerate-image": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "单题重新生图（异步，立即返回）。 权限沿用 `sentence:gen`：会消耗 AI 生图配额，与「生成题库」同属生成类操作， 为一个按钮新增权限码还得重跑 seed，不划算。 生图要 10~40 秒，超过管理端 15 秒请求超时，所以这里只负责受理",
+        "operationId": "post__api_sentences__id_regenerate_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RegenerateImageDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/batch-status": {
       "post": {
         "tags": [
@@ -13809,6 +13875,15 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "sentenceEn",
           "translationZh"
         ]
+      },
+      "RegenerateImageDto": {
+        "type": "object",
+        "properties": {
+          "scenePrompt": {
+            "type": "string",
+            "example": "示例值"
+          }
+        }
       },
       "BatchSentenceStatusDto": {
         "type": "object",

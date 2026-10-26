@@ -111,21 +111,40 @@ interface AchievementContext {
   xp: number;
 }
 
+/** 按等级 code 取 XP 阈值（与 LEVELS 同源，改等级表时成就判定不会悄悄跟丢）。 */
+function levelMin(code: string): number {
+  // 取不到就给 Infinity：宁可这枚勋章永不误发，也不要因为改了等级表就白送
+  return LEVELS.find((item) => item.code === code)?.min ?? Number.POSITIVE_INFINITY;
+}
+
 /**
  * 成就判定规则（按 code 硬编码：成就定义是随发布演进的种子数据，
  * 判定逻辑属于业务代码，二者通过 code 关联）。
+ *
+ * 新增成就时**两处都要改**：`prisma/seed.service.ts` 的 ACHIEVEMENT_SEEDS 加定义，
+ * 这里加判定。少一处不会报错——种子加了但没有判定，该勋章永远不解锁（静默失效）。
+ * 图标名同理要同步客户端（Web 的 ICON_MAP / App 的 icon_map.dart）。
  */
-const CONDITIONS: Record<string, (ctx: AchievementContext) => boolean> = {
+export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) => boolean> = {
   first_step: (ctx) => ctx.answerCount >= 1,
   streak_3: (ctx) => ctx.streak >= 3,
   streak_7: (ctx) => ctx.streak >= 7,
+  streak_14: (ctx) => ctx.streak >= 14,
   streak_30: (ctx) => ctx.streak >= 30,
+  streak_100: (ctx) => ctx.streak >= 100,
   correct_50: (ctx) => ctx.correctCount >= 50,
   correct_200: (ctx) => ctx.correctCount >= 200,
+  correct_500: (ctx) => ctx.correctCount >= 500,
+  answer_100: (ctx) => ctx.answerCount >= 100,
+  answer_500: (ctx) => ctx.answerCount >= 500,
   favorite_20: (ctx) => ctx.favoriteCount >= 20,
+  favorite_50: (ctx) => ctx.favoriteCount >= 50,
   explorer_3: (ctx) => ctx.unlockedCategories >= 3,
+  // 「一半场景」用乘法比较，避免引入浮点（分类数会随运营加场景变化）
+  explorer_half: (ctx) => ctx.totalCategories > 0 && ctx.unlockedCategories * 2 >= ctx.totalCategories,
   explorer_all: (ctx) => ctx.totalCategories > 0 && ctx.unlockedCategories >= ctx.totalCategories,
-  level_b1: (ctx) => ctx.xp >= 600,
+  level_b1: (ctx) => ctx.xp >= levelMin('B1'),
+  level_b2: (ctx) => ctx.xp >= levelMin('B2'),
 };
 
 /** 唯一键冲突（Prisma P2002）判定。 */
@@ -238,7 +257,7 @@ export class GamifyService {
       if (unlockedSet.has(achievement.code)) {
         continue;
       }
-      const condition = CONDITIONS[achievement.code];
+      const condition = ACHIEVEMENT_CONDITIONS[achievement.code];
       if (!condition || !condition(ctx)) {
         continue;
       }
