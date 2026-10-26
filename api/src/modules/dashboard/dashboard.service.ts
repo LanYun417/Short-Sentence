@@ -91,7 +91,19 @@ export class DashboardService {
       _count: { id: true },
     })) as unknown as Array<{ action: string; _count: { id: number } }>;
 
-    return rows.map((row) => ({ name: row.action, value: Number(row._count.id) }));
+    // 操作类型可能很多，仅展示数量最多的前 5 类，其余聚合成「其他」，
+    // 既满足「只显示 TOP5」的诉求，又让饼图中心「操作总数」保持为真实总量。
+    const TOP = 5;
+    const sorted = rows
+      .map((row) => ({ name: row.action, value: Number(row._count.id) }))
+      .sort((a, b) => b.value - a.value);
+
+    if (sorted.length <= TOP) {
+      return sorted;
+    }
+    const top = sorted.slice(0, TOP);
+    const rest = sorted.slice(TOP).reduce((sum, item) => sum + item.value, 0);
+    return [...top, { name: '其他', value: rest }];
   }
 
   /** 各角色用户数。 */
