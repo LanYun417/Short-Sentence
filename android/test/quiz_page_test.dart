@@ -251,6 +251,76 @@ void main() {
     expect(find.text('撤销'), findsOneWidget);
   });
 
+  testWidgets('拼词候选固定位置：选过后原地变已用占位，不重排', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(const <String, dynamic>{
+          'sentenceId': 2,
+          'translationZh': '测试',
+          'source': 'new',
+          'words': <String>['call', 'you', 'I'],
+        }),
+        phase: QuizPhase.answering,
+        mode: AnswerMode.assemble,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 初始：候选区(Wrap)里 3 个词全部就位，没有「已用」标记
+    for (final w in ['call', 'you', 'I']) {
+      expect(
+        find.descendant(of: find.byType(Wrap), matching: find.text(w)),
+        findsOneWidget,
+      );
+    }
+    expect(
+      find.descendant(
+        of: find.byType(Wrap),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsNothing,
+    );
+
+    // 点掉 'call'（候选区在卡片偏下，先滚入视野再点）
+    final call = find.descendant(
+      of: find.byType(Wrap),
+      matching: find.text('call'),
+    );
+    await tester.ensureVisible(call);
+    await tester.pumpAndSettle();
+    await tester.tap(call, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // 候选区仍是 3 个词：'call' 没消失，'you'/'I' 也没前移填补
+    for (final w in ['call', 'you', 'I']) {
+      expect(
+        find.descendant(of: find.byType(Wrap), matching: find.text(w)),
+        findsOneWidget,
+      );
+    }
+    // 'call' 这一格变成已用（带 ✓），整段仅此一个已用标记
+    expect(
+      find.descendant(
+        of: find.byType(Wrap),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
+    // 已选区出现 'call'，尚未集齐 → 按钮提示剩余，而非自动确定
+    expect(
+      find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.text('call'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('还有 2 个词没用'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+
+    container.dispose();
+  });
+
   testWidgets('拼词已选区单行不折行，装不下就横向滚动', (tester) async {
     // 用手机尺寸：宽屏（测试默认 800）下 5 个词本来就摆得下，测不出折行
     tester.view.physicalSize = const Size(1080, 2400);
@@ -275,16 +345,31 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final word in words) {
-      final chip = find.text(word);
-      await tester.ensureVisible(chip);
+      // 点候选区（Wrap 内）的词块；选过的会原地变「已用」并保留占位，
+      // 不重排，所以始终能从候选区点到这个词的槽位。
+      final bankChip = find.descendant(
+        of: find.byType(Wrap),
+        matching: find.text(word),
+      );
+      await tester.ensureVisible(bankChip);
       await tester.pumpAndSettle();
-      await tester.tap(chip);
+      await tester.tap(bankChip);
       await tester.pumpAndSettle();
     }
 
-    // 已选的 5 个词块 dy 全相同 = 一行，没有折行
+    // 已选的 5 个词块 dy 全相同 = 一行，没有折行。
+    // 用「已选区（横向 SingleChildScrollView）内」限定，避免同时匹配到
+    // 候选区里那个已变灰的占位词块。
     final rows = <double>{
-      for (final word in words) tester.getCenter(find.text(word)).dy,
+      for (final word in words)
+        tester
+            .getCenter(
+              find.descendant(
+                of: find.byType(SingleChildScrollView),
+                matching: find.text(word),
+              ),
+            )
+            .dy,
     };
     expect(rows, hasLength(1));
 

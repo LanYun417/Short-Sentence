@@ -141,16 +141,21 @@ class QuizController extends Notifier<QuizState> {
     if (state.mode == mode) {
       return;
     }
-    state = state.copyWith(mode: mode, clearResult: true, error: null);
+    // 不清 result：加载期间保留上一题的 todayDone，避免「今日刷题」
+    // 在切模式时也短暂回落（见 [loadNext] 的说明）。
+    state = state.copyWith(mode: mode, error: null);
     loadNext();
   }
 
   /// 抽下一题。
   Future<void> loadNext({int? difficulty}) async {
+    // 注：这里**不**清 result。加载期间要保留上一题的 result（连同它的
+    // todayDone），否则页面会回落到 question.todayDone（抽题时的旧计数，
+    // 还没算上刚答的这题），表现为「今日刷题」先 -1 再 +1 的闪烁。
+    // 新题真正到达（或失败回idle）时才会清掉 result。
     state = state.copyWith(
       phase: QuizPhase.loading,
       clearError: true,
-      clearResult: true,
       error: null,
       // 已答过题才需要保持背面；首次抽题走骨架屏
       loadingNext: state.phase == QuizPhase.answered,
@@ -185,7 +190,8 @@ class QuizController extends Notifier<QuizState> {
     if (state.difficulty == next) {
       return;
     }
-    state = state.copyWith(difficulty: next, clearResult: true, error: null);
+    // 同样不清 result（见 [loadNext]：保留 todayDone，避免计数回落）。
+    state = state.copyWith(difficulty: next, error: null);
     await loadNext();
   }
 

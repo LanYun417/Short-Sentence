@@ -1572,9 +1572,6 @@ class _AssembleAreaState extends State<_AssembleArea> {
     super.didUpdateWidget(oldWidget);
 
     final grew = widget.picked.length > _pickedCount;
-    final justCompleted =
-        widget.picked.length == widget.words.length &&
-        _pickedCount != widget.words.length;
     _pickedCount = widget.picked.length;
 
     // 新拼上的词块落在最右边，横滑容器得跟过去——否则用户点了词却「看不见
@@ -1592,22 +1589,8 @@ class _AssembleAreaState extends State<_AssembleArea> {
       });
     }
 
-    // 词块刚好用完时，按钮在折叠线以下（图片 + 词块占满了屏），
-    // 用户拼完却看不到可以提交，会以为还缺点什么。这里主动滚一下。
-    if (justCompleted && widget.words.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final target = _submitKey.currentContext;
-        if (target != null) {
-          Scrollable.ensureVisible(
-            target,
-            duration: Motion.normal,
-            curve: Motion.standard,
-            // 0.6 而不是贴近底部：底栏是悬浮的，贴底会被它盖住
-            alignment: 0.6,
-          );
-        }
-      });
-    }
+    // 不再「拼完自动滚到确定按钮」：用户希望手动确认，不要被自动递进。
+    // 候选区改为固定位置，已选词在原位变灰占位，也不存在塌陷错位需要跟随。
   }
 
   /// 已选词块的稳定 key：按「同词第几次出现」编号。
@@ -1639,15 +1622,26 @@ class _AssembleAreaState extends State<_AssembleArea> {
     final onRemovePick = widget.onRemovePick;
     final onSubmit = widget.onSubmit;
 
-    // 候选里扣掉已选中的（同词多处时按出现次数扣）
-    final remaining = List<String>.from(words);
+    // 每个候选词在「已选区」里被取走了几次（同词多处时按出现次数扣）。
+    final taken = <String, int>{};
     for (final word in picked) {
-      final index = remaining.indexOf(word);
-      if (index >= 0) {
-        remaining.removeAt(index);
-      }
+      taken[word] = (taken[word] ?? 0) + 1;
     }
-    final complete = remaining.isEmpty && picked.isNotEmpty;
+
+    // 候选区**固定位置**：所有词按原下标原样渲染，已选的槽位原地变成
+    // 「已用」态并保留占位（不会让后面的词前移填补）。重复词（如两个 the）
+    // 也按各自在题目里的出现次序独立判定，互不串位。
+    final consumed = <bool>[];
+    final seenOrder = <String, int>{};
+    for (var i = 0; i < words.length; i++) {
+      final word = words[i];
+      final order = (seenOrder[word] ?? 0) + 1; // 该词在本体里第几次出现
+      seenOrder[word] = order;
+      consumed.add((taken[word] ?? 0) >= order);
+    }
+
+    final remainingCount = words.length - picked.length;
+    final complete = picked.isNotEmpty && remainingCount == 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1731,17 +1725,19 @@ class _AssembleAreaState extends State<_AssembleArea> {
           ],
         ),
         const SizedBox(height: 4),
-        // 候选
+        // 候选：**原样固定位置**。已选的槽位原地变灰 + ✓ 并保留占位，
+        // 不重排、不塌陷；用户手动拼、手动点「确定」，不再自动递进。
         Wrap(
           spacing: 7,
           runSpacing: 7,
           children: <Widget>[
-            for (var i = 0; i < remaining.length; i++)
+            for (var i = 0; i < words.length; i++)
               _WordChip(
-                key: ValueKey<String>('bank-$i-${remaining[i]}'),
-                text: remaining[i],
+                key: ValueKey<String>('bank-$i-${words[i]}'),
+                text: words[i],
                 picked: false,
-                onTap: busy ? null : () => onPick(remaining[i]),
+                used: consumed[i],
+                onTap: busy || consumed[i] ? null : () => onPick(words[i]),
               ),
           ],
         ),
@@ -1752,7 +1748,7 @@ class _AssembleAreaState extends State<_AssembleArea> {
           // 新题一到词块就换了，先说个数反而误导。
           label: widget.refreshing
               ? '换题中…'
-              : (complete ? '确定' : '还有 ${remaining.length} 个词没用'),
+              : (complete ? '确定' : '还有 $remainingCount 个词没用'),
           icon: widget.refreshing ? Icons.autorenew_rounded : null,
           height: 50,
           loading: busy && !widget.refreshing,
@@ -1763,18 +1759,24 @@ class _AssembleAreaState extends State<_AssembleArea> {
   }
 }
 
-/// 词块：候选与已选两种形态。
+/// 词块：候选、已选、已用（候选区里被取走的占位）三种形态。
 class _WordChip extends StatelessWidget {
   const _WordChip({
     required this.text,
     required this.picked,
     required this.onTap,
+    this.used = false,
     this.appear = false,
     super.key,
   });
 
   final String text;
   final bool picked;
+
+  /// 候选区里的「已取走」占位态：原地变灰 + ✓，保留空间、不可点。
+  /// 用于拼词固定位置——选过的词不消失、不重排，只在此格标记已用。
+  final bool used;
+
   final VoidCallback? onTap;
 
   /// 新加入已选区时做一次弹入。
@@ -1786,13 +1788,21 @@ class _WordChip extends StatelessWidget {
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       decoration: BoxDecoration(
-        color: picked ? colors.brand.withValues(alpha: 0.1) : colors.card,
+        color: used
+            ? colors.cardMuted.withValues(alpha: 0.5)
+            : picked
+                ? colors.brand.withValues(alpha: 0.1)
+                : colors.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: picked ? colors.brand.withValues(alpha: 0.45) : colors.line,
+          color: used
+              ? colors.line.withValues(alpha: 0.45)
+              : picked
+                  ? colors.brand.withValues(alpha: 0.45)
+                  : colors.line,
           width: 1.2,
         ),
-        boxShadow: picked
+        boxShadow: (picked || used)
             ? null
             : <BoxShadow>[
                 BoxShadow(
@@ -1802,16 +1812,34 @@ class _WordChip extends StatelessWidget {
                 ),
               ],
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: picked ? FontWeight.w600 : FontWeight.w500,
-          color: picked ? colors.brand : colors.ink,
-          height: 1.2,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: picked ? FontWeight.w600 : FontWeight.w500,
+              color: used
+                  ? colors.inkFaint
+                  : picked
+                      ? colors.brand
+                      : colors.ink,
+              height: 1.2,
+            ),
+          ),
+          if (used) ...<Widget>[
+            const SizedBox(width: 5),
+            Icon(Icons.check_rounded, size: 14, color: colors.inkFaint),
+          ],
+        ],
       ),
     );
+
+    // 已用态：不可点，原位保留占位（不包 PressScale、不弹入）。
+    if (used) {
+      return chip;
+    }
 
     final interactive = PressScale(onTap: onTap, scale: 0.92, child: chip);
     if (!appear) {
