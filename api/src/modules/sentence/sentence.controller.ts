@@ -19,6 +19,7 @@ import {
   TriggerGenDto,
   SENTENCE_STATUS,
   BatchSentenceStatusDto,
+  BatchRegenerateImageDto,
   RegenerateImageDto,
 } from './sentence.dto.js';
 
@@ -218,6 +219,30 @@ export class SentenceController {
         affected > 0
           ? `已${dto.status === SENTENCE_STATUS.OFFLINE ? '下架' : '上架'} ${affected} 条`
           : '没有符合条件的题目（上架仅对已生成配图的题生效）',
+    };
+  }
+
+  /**
+   * 批量重新生图（异步，立即返回；单题接口的批量版，换配图风格时用）。
+   *
+   * 与批量上下架不同，这里**不要求全部成功**：单题不存在、正在生成中、已有生图
+   * 任务在跑的会被跳过并在响应里回给前端，其余题照常受理。
+   */
+  @Post('batch-regenerate-image')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '批量重新生图')
+  async batchRegenerateImage(
+    @Body() dto: BatchRegenerateImageDto,
+  ): Promise<ResponseEnvelope<{ accepted: number[]; skipped: number[] }>> {
+    const result = await this.sentenceGen.regenerateImages(dto.ids);
+    const { accepted, skipped } = result;
+    return {
+      __raw: true,
+      data: { accepted, skipped },
+      message:
+        accepted.length > 0
+          ? `已受理 ${accepted.length} 张配图重生成${skipped.length > 0 ? `，跳过 ${skipped.length} 张（不存在或正在生成）` : ''}`
+          : '没有可重新生成的题目（不存在或正在生成）',
     };
   }
 

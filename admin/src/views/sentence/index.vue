@@ -9,6 +9,7 @@ import {
   cancelGenTaskApi,
   createSentenceApi,
   batchSentenceStatusApi,
+  batchRegenerateSentenceImageApi,
   deleteGenTaskApi,
   deleteSentenceApi,
   exportSentencesApi,
@@ -364,6 +365,45 @@ async function handleBatchOnline(): Promise<void> {
   await getList();
 }
 
+/**
+ * 批量重新生图（换配图风格时用；逐条点太慢）。
+ *
+ * 与单题版共用同一套轮询（pollRegen 按题目 id 各起一个定时器），
+ * 受理后先刷新列表（状态变「待生成」），出图的题会在行内自动更新。
+ * 单次上限 50：每张图都消耗 Agnes 配额（免费额度 40 RPM / 并发 2），
+ * 一次 50 张要约 75 秒以上，超出部分运营分两批点即可。
+ */
+async function handleBatchRegen(): Promise<void> {
+  if (selectedIds.value.length === 0) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `将对选中的 ${selectedIds.value.length} 条题目重新生成配图（沿用各自的场景提示词），每张约 10~40 秒、消耗 AI 生图配额。已下架的题出图后仍是下架。确认继续？`,
+      '批量重新生图',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  const prevUrls = new Map(list.value.map((row) => [row.id, row.imageUrl]));
+  const result = await batchRegenerateSentenceImageApi(selectedIds.value);
+  if (result.accepted.length === 0) {
+    ElMessage.warning('没有可重新生成的题目（不存在、正在生成或已在出图）');
+    return;
+  }
+  for (const id of result.accepted) {
+    setRegenerating(id, true);
+    pollRegen(id, prevUrls.get(id) ?? null);
+  }
+  ElMessage.success(
+    result.skipped.length > 0
+      ? `已受理 ${result.accepted.length} 张，跳过 ${result.skipped.length} 张（正在生成或不存在）`
+      : `已受理 ${result.accepted.length} 张，约 10~40 秒后自动更新`,
+  );
+  await getList();
+}
+
 /* ------------------------------ 生成批次 ------------------------------ */
 
 const genDialogVisible = ref(false);
@@ -536,6 +576,21 @@ onMounted(async () => {
           <el-button v-permission="'sentence:edit'" :disabled="selectedIds.length === 0" @click="handleBatchOnline">
             批量上架<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
           </el-button>
+          <el-tooltip
+            :disabled="selectedIds.length <= 50"
+            content="单次最多 50 条：每张配图都消耗 AI 生图配额，请分批操作"
+          >
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                plain
+                :disabled="selectedIds.length === 0 || selectedIds.length > 50"
+                @click="handleBatchRegen"
+              >
+                批量重新生图<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
+              </el-button>
+            </span>
+          </el-tooltip>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
           <el-button :loading="exporting" @click="handleExport">
             <template #icon><i class="bi bi-download" /></template>

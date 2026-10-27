@@ -112,6 +112,23 @@ export class RegenerateImageDto {
   scenePrompt?: string;
 }
 
+/**
+ * 批量重新生图入参。
+ *
+ * 上限 50（不是批量上下架的 200）：每张图都要消耗 Agnes 配额，
+ * 而免费额度限流严格（40 RPM / 并发 2），一次 200 张要跑 5 分钟以上，
+ * 中途失败重试也难。换风格这种场景分两批点完全可接受。
+ */
+export class BatchRegenerateImageDto {
+  @Type(() => Number)
+  @ArrayNotEmpty({ message: '题目 id 列表不能为空' })
+  @ArrayMaxSize(50, { message: '单次最多重新生成 50 条' })
+  @IsArray({ message: '题目 id 列表必须为数组' })
+  @IsInt({ each: true, message: '每个题目 id 都必须为整数' })
+  @Min(1, { each: true, message: '题目 id 必须为正整数' })
+  ids!: number[];
+}
+
 /** 场景分类保存入参。 */
 export class SaveCategoryDto {
   /** 分类名称（中文，唯一） */

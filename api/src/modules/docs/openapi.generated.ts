@@ -10135,6 +10135,61 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/batch-regenerate-image": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "批量重新生图（异步，立即返回；单题接口的批量版，换配图风格时用）。 与批量上下架不同，这里**不要求全部成功**：单题不存在、正在生成中、已有生图 任务在跑的会被跳过并在响应里回给前端，其余题照常受理",
+        "operationId": "post__api_sentences_batch_regenerate_image",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRegenerateImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BatchRegenerateImageDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/batch-status": {
       "post": {
         "tags": [
@@ -14489,6 +14544,21 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           }
         }
       },
+      "BatchRegenerateImageDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "example": []
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
       "BatchSentenceStatusDto": {
         "type": "object",
         "properties": {
@@ -14524,7 +14594,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           },
           "icon": {
             "type": "string",
-            "description": "图标（bootstrap-icons 类名）",
+            "description": "图标：**lucide 图标名**（不带前缀）。 Web 端拼 `i-lucide-*`、App 端查 `android/lib/theme/icon_map.dart`， 所以名字必须是 lucide 里真实存在的，否则 Web 端会画不出图标。",
             "example": "示例值"
           },
           "sort": {

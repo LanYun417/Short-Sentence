@@ -649,6 +649,72 @@ export class SentenceGenService {
     await this.prisma.sentence.update({ where: { id }, data: { status } }).catch(() => undefined);
   }
 
+  /**
+   * 批量重新生图（换风格 / 统一刷新配图用；逐条点「重新生图」太慢）。
+   *
+   * 与单题版的差异只在**批量受理**，其余性质完全一致：
+   * - 每张图仍走进程内唯一的生图信号量，不会叠加打爆 Agnes 限流；
+   * - 异步受理（生图 10~40s > 管理端 15s 超时），状态置 pending_image 后立即返回；
+   * - 失败回滚原状态、保留旧图；下架题出图后仍是下架。
+   *
+   * **跳过而非报错**的三类：id 不存在、该题正在重新生图、状态已是 pending_image
+   * （已有生图任务在跑）。整批里个别题跳过不该让其余题也点不动，所以逐条判定后
+   * 把跳过的 id 原样回给前端提示，由运营决定是否重试。
+   *
+   * @returns accepted 受理的 id；skipped 跳过的 id
+   */
+  async regenerateImages(ids: number[]): Promise<{ accepted: number[]; skipped: number[] }> {
+    if (!this.imageGen.enabled) {
+      throw AppException.serviceUnavailable('生图能力未配置（AI_AGNES_API_KEY 缺失）');
+    }
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) {
+      throw AppException.badRequest('题目 id 列表不能为空');
+    }
+
+    const sentences = await this.prisma.sentence.findMany({
+      where: { id: { in: uniqueIds.map((id) => BigInt(id)) } },
+      select: { id: true, scenePrompt: true, status: true },
+    });
+
+    const jobs: Array<{ id: bigint; scenePrompt: string; prevStatus: string }> = [];
+    const skipped: number[] = [];
+    for (const id of uniqueIds) {
+      const sentence = sentences.find((item) => item.id === BigInt(id));
+      if (!sentence || this.regenerating.has(String(id)) || sentence.status === 'pending_image') {
+        skipped.push(id);
+        continue;
+      }
+      jobs.push({ id: sentence.id, scenePrompt: sentence.scenePrompt, prevStatus: sentence.status });
+      this.regenerating.add(String(id));
+    }
+
+    if (jobs.length === 0) {
+      return { accepted: [], skipped };
+    }
+
+    // 一次性置「待生成」，运营刷新页面就能看到（不依赖前端本地状态）
+    await this.prisma.sentence.updateMany({
+      where: { id: { in: jobs.map((job) => job.id) } },
+      data: { status: 'pending_image' },
+    });
+
+    for (const job of jobs) {
+      const key = String(job.id);
+      const successStatus = job.prevStatus === 'offline' ? 'offline' : 'ready';
+      void this.imageGate()
+        .run(() => this.generateImage(job, IMAGE_RETRY, null, successStatus))
+        .then((ok) => (ok ? undefined : this.restoreStatus(job.id, job.prevStatus)))
+        .catch(async (error: unknown) => {
+          this.logger.error(`[SentenceGen] 批量重新生图异常（sentence ${job.id}）: ${this.errText(error)}`);
+          await this.restoreStatus(job.id, job.prevStatus);
+        })
+        .finally(() => this.regenerating.delete(key));
+    }
+
+    return { accepted: jobs.map((job) => Number(job.id)), skipped };
+  }
+
   /** 生题入库（按 sentenceEn 唯一约束去重；返回净增条数）。 */
   private async persistDrafts(drafts: SentenceDraft[], taskId: bigint): Promise<number> {
     if (drafts.length === 0) {

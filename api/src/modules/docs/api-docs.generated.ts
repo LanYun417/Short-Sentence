@@ -5673,6 +5673,32 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/sentences/batch-regenerate-image",
+        "summary": "批量重新生图（异步，立即返回；单题接口的批量版，换配图风格时用）。 与批量上下架不同，这里**不要求全部成功**：单题不存在、正在生成中、已有生图 任务在跑的会被跳过并在响应里回给前端，其余题照常受理",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 批量重新生图",
+        "params": [
+          {
+            "name": "ids",
+            "in": "body",
+            "type": "number[]",
+            "required": true,
+            "description": "",
+            "example": []
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/batch-regenerate-image\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"ids\": []\n    }'",
+          "requestBody": {
+            "ids": []
+          }
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/sentences/batch-status",
         "summary": "批量上下架（运营清理题库用；上架只对已有配图的题生效）",
         "permission": [
@@ -5737,7 +5763,7 @@ export const API_DOCS: ApiDocGroup[] = [
             "in": "body",
             "type": "string",
             "required": false,
-            "description": "图标（bootstrap-icons 类名）",
+            "description": "图标：**lucide 图标名**（不带前缀）。 Web 端拼 `i-lucide-*`、App 端查 `android/lib/theme/icon_map.dart`， 所以名字必须是 lucide 里真实存在的，否则 Web 端会画不出图标。",
             "example": "示例值"
           },
           {
@@ -6057,7 +6083,7 @@ export const API_DOCS: ApiDocGroup[] = [
             "in": "body",
             "type": "string",
             "required": false,
-            "description": "图标（bootstrap-icons 类名）",
+            "description": "图标：**lucide 图标名**（不带前缀）。 Web 端拼 `i-lucide-*`、App 端查 `android/lib/theme/icon_map.dart`， 所以名字必须是 lucide 里真实存在的，否则 Web 端会画不出图标。",
             "example": "示例值"
           },
           {
