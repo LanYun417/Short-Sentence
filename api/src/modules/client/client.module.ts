@@ -21,6 +21,8 @@ import { ReportService } from './report/report.service.js';
 import { ClientAiController } from './ai/client-ai.controller.js';
 import { ClientAiService } from './ai/client-ai.service.js';
 import { CategoriesController } from './categories/categories.controller.js';
+import { ClientNoticeController } from './notice/client-notice.controller.js';
+import { ClientNoticeService } from './notice/client-notice.service.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -36,7 +38,16 @@ import { CategoriesController } from './categories/categories.controller.js';
     ReportController,
     ClientAiController,
     CategoriesController,
+    // 客户端公告读取（广播表 client_notice；后台发布在 NoticeModule）
+    ClientNoticeController,
   ],
-  providers: [ClientAuthUserService, QuestionsService, CheckinService, ReportService, ClientAiService],
+  providers: [
+    ClientAuthUserService,
+    QuestionsService,
+    CheckinService,
+    ReportService,
+    ClientAiService,
+    ClientNoticeService,
+  ],
 })
 export class ClientModule {}

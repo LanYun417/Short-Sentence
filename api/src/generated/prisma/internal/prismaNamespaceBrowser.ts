@@ -51,6 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  ClientNotice: 'ClientNotice',
+  ClientNoticeRead: 'ClientNoticeRead',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -99,6 +101,33 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const ClientNoticeScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  content: 'content',
+  noticeType: 'noticeType',
+  link: 'link',
+  status: 'status',
+  pinned: 'pinned',
+  publishedAt: 'publishedAt',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ClientNoticeScalarFieldEnum = (typeof ClientNoticeScalarFieldEnum)[keyof typeof ClientNoticeScalarFieldEnum]
+
+
+export const ClientNoticeReadScalarFieldEnum = {
+  id: 'id',
+  noticeId: 'noticeId',
+  userId: 'userId',
+  readAt: 'readAt'
+} as const
+
+export type ClientNoticeReadScalarFieldEnum = (typeof ClientNoticeReadScalarFieldEnum)[keyof typeof ClientNoticeReadScalarFieldEnum]
 
 
 export const DictTypeScalarFieldEnum = {
@@ -617,6 +646,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const ClientNoticeOrderByRelevanceFieldEnum = {
+  title: 'title',
+  content: 'content',
+  link: 'link'
+} as const
+
+export type ClientNoticeOrderByRelevanceFieldEnum = (typeof ClientNoticeOrderByRelevanceFieldEnum)[keyof typeof ClientNoticeOrderByRelevanceFieldEnum]
 
 
 export const DictTypeOrderByRelevanceFieldEnum = {

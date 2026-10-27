@@ -31,8 +31,8 @@ export * from "./enums.js"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more DictTypes
- * const dictTypes = await prisma.dictType.findMany()
+ * // Fetch zero or more ClientNotices
+ * const clientNotices = await prisma.clientNotice.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -41,6 +41,16 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
+/**
+ * Model ClientNotice
+ * 客户端公告/通知（广播：一条内容对所有用户可见，已读状态另表按人记录）
+ */
+export type ClientNotice = Prisma.ClientNoticeModel
+/**
+ * Model ClientNoticeRead
+ * 客户端通知已读记录（一名用户对一条通知最多一行）
+ */
+export type ClientNoticeRead = Prisma.ClientNoticeReadModel
 /**
  * Model DictType
  * 字典类型表

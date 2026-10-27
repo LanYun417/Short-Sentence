@@ -1315,3 +1315,43 @@ export interface WordRootPayload {
   /** 结构化解析（JSON 文本） */
   analysisJson?: string;
 }
+
+/* ------------------------------ 客户端公告 ------------------------------ */
+
+/** 公告状态：0 草稿 / 1 已发布 / 2 已撤回 */
+export type ClientNoticeStatus = 0 | 1 | 2;
+
+/** 公告列表项（后台视角，含状态与已读人数） */
+export interface ClientNoticeItem {
+  id: number;
+  title: string;
+  content: string;
+  /** 1 系统通知 / 2 公告 / 3 活动 */
+  noticeType: number;
+  link: string | null;
+  status: ClientNoticeStatus;
+  pinned: number;
+  /** 已读人数 */
+  readCount: number;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 公告查询参数 */
+export interface ClientNoticeQuery extends PageQuery {
+  status?: ClientNoticeStatus;
+  noticeType?: number;
+  title?: string;
+}
+
+/** 新增/编辑公告入参 */
+export interface ClientNoticePayload {
+  title: string;
+  content: string;
+  noticeType: number;
+  link?: string;
+  pinned?: number;
+  /** 保存后是否立即发布（false = 存草稿）；仅新增时有意义 */
+  publish?: boolean;
+}

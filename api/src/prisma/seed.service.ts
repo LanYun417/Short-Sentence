@@ -864,6 +864,42 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 客户端公告：发到用户端（Web / App）的全员通知，与后台站内信（通知中心）是两回事
+        key: 'client:notice',
+        menuName: '客户端通知',
+        menuType: MenuType.MENU,
+        path: '/sentence/client-notice',
+        component: 'sentence/client-notice',
+        icon: 'megaphone',
+        permission: 'client:notice:list',
+        sort: 9,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'client:notice:add',
+            menuName: '发布公告',
+            menuType: MenuType.BUTTON,
+            permission: 'client:notice:add',
+            sort: 1,
+          },
+          {
+            key: 'client:notice:edit',
+            menuName: '编辑/撤回',
+            menuType: MenuType.BUTTON,
+            permission: 'client:notice:edit',
+            sort: 2,
+          },
+          {
+            key: 'client:notice:remove',
+            menuName: '删除公告',
+            menuType: MenuType.BUTTON,
+            permission: 'client:notice:remove',
+            sort: 3,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

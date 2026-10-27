@@ -18,6 +18,16 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
+ * Model ClientNotice
+ * 客户端公告/通知（广播：一条内容对所有用户可见，已读状态另表按人记录）
+ */
+export type ClientNotice = Prisma.ClientNoticeModel
+/**
+ * Model ClientNoticeRead
+ * 客户端通知已读记录（一名用户对一条通知最多一行）
+ */
+export type ClientNoticeRead = Prisma.ClientNoticeReadModel
+/**
  * Model DictType
  * 字典类型表
  */

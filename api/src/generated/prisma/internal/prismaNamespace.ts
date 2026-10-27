@@ -397,6 +397,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  ClientNotice: 'ClientNotice',
+  ClientNoticeRead: 'ClientNoticeRead',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -444,10 +446,142 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    ClientNotice: {
+      payload: Prisma.$ClientNoticePayload<ExtArgs>
+      fields: Prisma.ClientNoticeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClientNoticeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClientNoticeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        findFirst: {
+          args: Prisma.ClientNoticeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClientNoticeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        findMany: {
+          args: Prisma.ClientNoticeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>[]
+        }
+        create: {
+          args: Prisma.ClientNoticeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        createMany: {
+          args: Prisma.ClientNoticeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ClientNoticeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        update: {
+          args: Prisma.ClientNoticeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        deleteMany: {
+          args: Prisma.ClientNoticeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClientNoticeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ClientNoticeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticePayload>
+        }
+        aggregate: {
+          args: Prisma.ClientNoticeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClientNotice>
+        }
+        groupBy: {
+          args: Prisma.ClientNoticeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientNoticeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClientNoticeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientNoticeCountAggregateOutputType> | number
+        }
+      }
+    }
+    ClientNoticeRead: {
+      payload: Prisma.$ClientNoticeReadPayload<ExtArgs>
+      fields: Prisma.ClientNoticeReadFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClientNoticeReadFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClientNoticeReadFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        findFirst: {
+          args: Prisma.ClientNoticeReadFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClientNoticeReadFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        findMany: {
+          args: Prisma.ClientNoticeReadFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>[]
+        }
+        create: {
+          args: Prisma.ClientNoticeReadCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        createMany: {
+          args: Prisma.ClientNoticeReadCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ClientNoticeReadDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        update: {
+          args: Prisma.ClientNoticeReadUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClientNoticeReadDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClientNoticeReadUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ClientNoticeReadUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientNoticeReadPayload>
+        }
+        aggregate: {
+          args: Prisma.ClientNoticeReadAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClientNoticeRead>
+        }
+        groupBy: {
+          args: Prisma.ClientNoticeReadGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientNoticeReadGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClientNoticeReadCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientNoticeReadCountAggregateOutputType> | number
+        }
+      }
+    }
     DictType: {
       payload: Prisma.$DictTypePayload<ExtArgs>
       fields: Prisma.DictTypeFieldRefs
@@ -2599,6 +2733,33 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const ClientNoticeScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  content: 'content',
+  noticeType: 'noticeType',
+  link: 'link',
+  status: 'status',
+  pinned: 'pinned',
+  publishedAt: 'publishedAt',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ClientNoticeScalarFieldEnum = (typeof ClientNoticeScalarFieldEnum)[keyof typeof ClientNoticeScalarFieldEnum]
+
+
+export const ClientNoticeReadScalarFieldEnum = {
+  id: 'id',
+  noticeId: 'noticeId',
+  userId: 'userId',
+  readAt: 'readAt'
+} as const
+
+export type ClientNoticeReadScalarFieldEnum = (typeof ClientNoticeReadScalarFieldEnum)[keyof typeof ClientNoticeReadScalarFieldEnum]
+
+
 export const DictTypeScalarFieldEnum = {
   id: 'id',
   dictName: 'dictName',
@@ -3117,6 +3278,15 @@ export const NullsOrder = {
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
+export const ClientNoticeOrderByRelevanceFieldEnum = {
+  title: 'title',
+  content: 'content',
+  link: 'link'
+} as const
+
+export type ClientNoticeOrderByRelevanceFieldEnum = (typeof ClientNoticeOrderByRelevanceFieldEnum)[keyof typeof ClientNoticeOrderByRelevanceFieldEnum]
+
+
 export const DictTypeOrderByRelevanceFieldEnum = {
   dictName: 'dictName',
   dictType: 'dictType',
@@ -3618,6 +3788,8 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  clientNotice?: Prisma.ClientNoticeOmit
+  clientNoticeRead?: Prisma.ClientNoticeReadOmit
   dictType?: Prisma.DictTypeOmit
   dictItem?: Prisma.DictItemOmit
   sysConfig?: Prisma.SysConfigOmit

@@ -239,3 +239,22 @@ export interface AiQuotaUsage {
   /** 额度重置时间（次日 0 点，ISO） */
   resetAt: string;
 }
+
+/* ------------------------------ 客户端公告 ------------------------------ */
+
+/** 公告条目（用户端视角，isRead 由当前用户决定）。 */
+export interface ClientNoticeItem {
+  id: number;
+  title: string;
+  content: string;
+  /** 1 系统通知 / 2 公告 / 3 活动 */
+  noticeType: number;
+  /** 点击跳转的客户端路由（空 = 不跳转） */
+  link: string | null;
+  /** 0 未读 / 1 已读 */
+  isRead: number;
+  /** 置顶：1 置顶 / 0 普通 */
+  pinned: number;
+  publishedAt: string | null;
+  createdAt: string;
+}

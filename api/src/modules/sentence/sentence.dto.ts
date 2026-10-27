@@ -126,7 +126,11 @@ export class SaveCategoryDto {
   @MaxLength(50, { message: '英文名最长 50 个字符' })
   nameEn?: string;
 
-  /** 图标（bootstrap-icons 类名） */
+  /**
+   * 图标：**lucide 图标名**（不带前缀）。
+   * Web 端拼 `i-lucide-*`、App 端查 `android/lib/theme/icon_map.dart`，
+   * 所以名字必须是 lucide 里真实存在的，否则 Web 端会画不出图标。
+   */
   @IsOptional()
   @IsString()
   @MaxLength(100, { message: '图标名最长 100 个字符' })

@@ -8,6 +8,8 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/ClientNotice.js'
+export type * from './models/ClientNoticeRead.js'
 export type * from './models/DictType.js'
 export type * from './models/DictItem.js'
 export type * from './models/SysConfig.js'

@@ -4911,6 +4911,158 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "客户端通知",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client-notices",
+        "summary": "公告列表（含草稿/已撤回，带已读人数）",
+        "permission": [
+          "client:notice:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "noticeType",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-notices?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client-notices",
+        "summary": "发布公告",
+        "permission": [
+          "client:notice:add"
+        ],
+        "isPublic": false,
+        "action": "客户端通知 · 发布公告",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client-notices\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client-notices/:id",
+        "summary": "编辑公告",
+        "permission": [
+          "client:notice:edit"
+        ],
+        "isPublic": false,
+        "action": "客户端通知 · 编辑公告",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client-notices/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client-notices/:id/status",
+        "summary": "发布 / 撤回",
+        "permission": [
+          "client:notice:edit"
+        ],
+        "isPublic": false,
+        "action": "客户端通知 · 发布/撤回公告",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client-notices/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/client-notices/:id",
+        "summary": "删除公告",
+        "permission": [
+          "client:notice:remove"
+        ],
+        "isPublic": false,
+        "action": "客户端通知 · 删除公告",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/client-notices/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "客户端用户",
     "endpoints": [
       {
@@ -6608,6 +6760,126 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/password\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "ClientNotice",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/notices",
+        "summary": "我的通知列表（已发布；置顶优先，其次按发布时间倒序）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "noticeType",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "isRead",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/notices?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/notices/unread-count",
+        "summary": "未读数（客户端红点）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/notices/unread-count?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/notices/:id/read",
+        "summary": "标记单条已读（幂等，重复点不报错）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/1/read\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/notices/read-all",
+        "summary": "全部标记已读",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/read-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

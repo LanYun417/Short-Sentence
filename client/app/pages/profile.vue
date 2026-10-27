@@ -99,6 +99,12 @@ function fillForm(): void {
 const { data: ssrUser } = await useSsrApi<ClientUserProfile>('ss:me', '/client/auth/me');
 const { data: ssrToday } = await useSsrApi<TodayCheckin>('ss:today', '/client/checkin/today');
 const { data: ssrSentenceCards } = await useSsrApi<SentenceCard[]>('ss:sentenceCards', '/client/sentence-card/mine');
+// 消息中心未读数（红点）：服务端口径，SSR 预取让首屏就带红点，不用等水合
+const { data: ssrNoticeUnread } = await useSsrApi<{ count: number }>(
+  'ss:notices-unread',
+  '/client/notices/unread-count',
+);
+const noticeUnread = ref(ssrNoticeUnread.value?.count ?? 0);
 
 /** 我的句签（SSR 预取首屏；客户端进入时异步到位后再更新）。 */
 const sentenceCards = ref<SentenceCard[]>(ssrSentenceCards.value ?? []);
@@ -238,6 +244,13 @@ onMounted(() => {
       today.value = data;
     });
   }
+  // 未读数每次进入都重取：SSR 快照可能已过期（多了公告 / 在别处读过），
+  // 红点只在「刚发的公告」才亮起来才有意义
+  void apiFetch<{ count: number }>('/client/notices/unread-count')
+    .then((data) => {
+      noticeUnread.value = data.count ?? 0;
+    })
+    .catch(() => undefined);
 });
 
 /** 打开文件选择。 */
@@ -450,6 +463,23 @@ async function onChangePassword(): Promise<void> {
         </div>
       </div>
     </section>
+
+    <!-- 消息中心入口：未读红点来自服务端口径（SSR 预取，首屏即带） -->
+    <NuxtLink
+      to="/notices"
+      class="anim-in mt-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 100ms"
+    >
+      <UIcon name="i-lucide-bell" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">消息中心</span>
+      <span
+        v-if="noticeUnread > 0"
+        class="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold leading-5 text-white"
+      >
+        {{ noticeUnread > 99 ? '99+' : noticeUnread }}
+      </span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
 
     <!-- ============ 表单 Tabs ============ -->
     <section class="anim-in mt-5" style="animation-delay: 120ms">

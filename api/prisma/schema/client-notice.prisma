@@ -1,0 +1,61 @@
+// use prisma-next
+
+// 「短句」客户端通知域：运营公告（广播式）+ 按人的已读记录。
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+//
+// 为什么**不复用后台的 sys_notice**：
+// - `sys_notice` 是「按人一行」的收件箱（给指定的人发一条提醒），适合小范围定向；
+// - 客户端公告是**一对多广播**（一条内容全员可见），按人一行会随用户数线性膨胀；
+// - 两者受众来自不同用户表（sys_user / client_user），共用一张表会让 userId 语义含糊。
+
+/// 客户端公告/通知（广播：一条内容对所有用户可见，已读状态另表按人记录）
+model ClientNotice {
+  /// 主键
+  id          BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 标题
+  title       String    @db.VarChar(200)
+  /// 正文（纯文本，渲染时按纯文本处理，不接受 HTML）
+  content     String    @db.Text
+  /// 类型：1 系统通知 / 2 公告 / 3 活动
+  noticeType  Int       @default(2) @map("notice_type") @db.TinyInt
+  /// 点击跳转的客户端路由（空 = 不跳转）
+  link        String?   @db.VarChar(255)
+  /// 状态：0 草稿 / 1 已发布 / 2 已撤回
+  status      Int       @default(0) @db.TinyInt
+  /// 置顶：1 置顶 / 0 普通（置顶优先，同档内按发布时间倒序）
+  pinned      Int       @default(0) @db.TinyInt
+  /// 发布时间（发布时写入；撤回后再发布会刷新）
+  publishedAt DateTime? @map("published_at")
+  /// 创建人（后台用户 id；系统自动产生时为空）
+  createdBy   BigInt?   @map("created_by") @db.BigInt
+  /// 创建时间
+  createdAt   DateTime  @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  reads ClientNoticeRead[]
+
+  /// 客户端列表只查「已发布」并按置顶 + 发布时间排序，故按这三列建索引
+  @@index([status, pinned, publishedAt])
+  @@map("client_notice")
+}
+
+/// 客户端通知已读记录（一名用户对一条通知最多一行）
+model ClientNoticeRead {
+  /// 主键
+  id       BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 通知 id
+  noticeId BigInt   @map("notice_id") @db.BigInt
+  /// 客户端用户 id
+  userId   BigInt   @map("user_id") @db.BigInt
+  /// 阅读时间
+  readAt   DateTime @default(now()) @map("read_at")
+
+  notice ClientNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  /// 同一人同一条只记一次（标记已读天然幂等）
+  @@unique([noticeId, userId])
+  /// 「我读过的」按时间倒序查
+  @@index([userId, readAt])
+  @@map("client_notice_read")
+}

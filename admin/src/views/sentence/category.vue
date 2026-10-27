@@ -164,7 +164,7 @@ onMounted(() => {
           <el-input v-model="form.nameEn" maxlength="50" placeholder="客户端卡片副标题，可留空" />
         </el-form-item>
         <el-form-item label="图标">
-          <el-input v-model="form.icon" maxlength="100" placeholder="bootstrap-icons 类名，如 cup-hot" />
+          <el-input v-model="form.icon" maxlength="100" placeholder="lucide 图标名，如 shopping-bag / heart" />
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" :max="999" />
