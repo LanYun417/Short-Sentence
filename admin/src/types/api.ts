@@ -1167,6 +1167,44 @@ export interface CheckinStat {
   totalCheckins: number;
 }
 
+/** 漏斗阶段 */
+export interface FunnelStage {
+  name: string;
+  users: number;
+  /** 相对上一阶段的转化率（百分比，一位小数）；首阶段恒 100 */
+  rate: number;
+}
+
+/** 留存漏斗（窗口内注册用户的嵌套转化） */
+export interface FunnelResult {
+  registered: number;
+  stages: FunnelStage[];
+}
+
+/** 队列留存行 */
+export interface RetentionRow {
+  /** 队列日期（注册日 YYYY-MM-DD） */
+  date: string;
+  cohort: number;
+  d0: number | null;
+  d1: number | null;
+  d3: number | null;
+  d7: number | null;
+}
+
+/** 队列留存结果 */
+export interface RetentionResult {
+  rows: RetentionRow[];
+  avg: { d0: number | null; d1: number | null; d3: number | null; d7: number | null };
+}
+
+/** 活跃趋势（新增 / 日活） */
+export interface ActiveTrend {
+  dates: string[];
+  newUsers: number[];
+  activeUsers: number[];
+}
+
 /** 场景分类条目 */
 export interface SentenceCategoryItem {
   id: number;

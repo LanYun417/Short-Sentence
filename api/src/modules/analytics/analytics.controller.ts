@@ -7,6 +7,7 @@ import { RequirePermissions } from '../../common/auth/permission.guard.js';
 import type { PageResult } from '../../common/types.js';
 import {
   AnalyticsService,
+  type ActiveTrend,
   type AiCallLogItem,
   type AiCallLogSummary,
   type AiCallStat,
@@ -14,7 +15,9 @@ import {
   type AnswerTrend,
   type CategoryStat,
   type CheckinStat,
+  type FunnelResult,
   type NameValue,
+  type RetentionResult,
 } from './analytics.service.js';
 
 @Controller('analytics')
@@ -78,5 +81,26 @@ export class AnalyticsController {
   @RequirePermissions('analytics:view')
   checkin(): Promise<CheckinStat> {
     return this.analytics.checkinStats();
+  }
+
+  /** 留存漏斗（窗口内注册用户：注册 → 激活 → 打卡 → 领句签）。 */
+  @Get('funnel')
+  @RequirePermissions('analytics:view')
+  funnel(@Query('days') days?: string): Promise<FunnelResult> {
+    return this.analytics.funnel(Number(days ?? 30));
+  }
+
+  /** 队列留存（按注册日的 D0/D1/D3/D7）。 */
+  @Get('retention')
+  @RequirePermissions('analytics:view')
+  retention(@Query('days') days?: string): Promise<RetentionResult> {
+    return this.analytics.retention(Number(days ?? 14));
+  }
+
+  /** 新增 / 日活趋势。 */
+  @Get('active-trend')
+  @RequirePermissions('analytics:view')
+  activeTrend(@Query('days') days?: string): Promise<ActiveTrend> {
+    return this.analytics.activeTrend(Number(days ?? 14));
   }
 }

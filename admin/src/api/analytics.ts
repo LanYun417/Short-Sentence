@@ -3,6 +3,7 @@
  */
 import { get } from './request';
 import type {
+  ActiveTrend,
   AiCallLogItem,
   AiCallLogQuery,
   AiCallLogSummary,
@@ -11,8 +12,10 @@ import type {
   AnswerTrend,
   CategoryStat,
   CheckinStat,
+  FunnelResult,
   NameValue,
   PageResult,
+  RetentionResult,
 } from '@/types/api';
 
 /** 总览指标 */
@@ -53,4 +56,19 @@ export function getAiLogSummaryApi(params: AiCallLogQuery): Promise<AiCallLogSum
 /** 打卡统计 */
 export function getCheckinStatApi(): Promise<CheckinStat> {
   return get<CheckinStat>('/analytics/checkin');
+}
+
+/** 留存漏斗（窗口内注册用户：注册 → 激活 → 打卡 → 领句签） */
+export function getFunnelApi(days = 30): Promise<FunnelResult> {
+  return get<FunnelResult>('/analytics/funnel', { days });
+}
+
+/** 队列留存（按注册日的 D0/D1/D3/D7） */
+export function getRetentionApi(days = 14): Promise<RetentionResult> {
+  return get<RetentionResult>('/analytics/retention', { days });
+}
+
+/** 新增 / 日活趋势 */
+export function getActiveTrendApi(days = 14): Promise<ActiveTrend> {
+  return get<ActiveTrend>('/analytics/active-trend', { days });
 }

@@ -14,6 +14,32 @@ import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
 import { aiTypeFilterValues, aiTypeLabel } from './ai-type.js';
 
+/** 天数归一（非法值回退，并夹到合理上限，避免全表扫描拖垮接口）。 */
+function clampDays(days: number, fallback: number, max: number): number {
+  return Number.isFinite(days) && days > 0 ? Math.min(Math.floor(days), max) : fallback;
+}
+
+/** 百分比保留一位小数。 */
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/** BigInt 主键集合 → 字符串集合（跨表求交集的统一口径）。 */
+function toIdSet(rows: { userId: bigint }[]): Set<string> {
+  return new Set(rows.map((row) => String(row.userId)));
+}
+
+/** 集合交集。 */
+function intersect(a: Set<string>, b: Set<string>): Set<string> {
+  const out = new Set<string>();
+  for (const value of a) {
+    if (b.has(value)) {
+      out.add(value);
+    }
+  }
+  return out;
+}
+
 /** 名称-数值对（ECharts 友好）。 */
 export interface NameValue {
   name: string;
@@ -121,6 +147,52 @@ export interface CheckinStat {
   maxStreak: number;
   /** 累计打卡人次 */
   totalCheckins: number;
+}
+
+/** 漏斗阶段。 */
+export interface FunnelStage {
+  name: string;
+  users: number;
+  /** 相对上一阶段的转化率（百分比，一位小数）；首阶段恒 100 */
+  rate: number;
+}
+
+/** 留存漏斗（窗口内注册用户的嵌套转化）。 */
+export interface FunnelResult {
+  /** 窗口内注册用户数 */
+  registered: number;
+  stages: FunnelStage[];
+}
+
+/** 队列留存行。 */
+export interface RetentionRow {
+  /** 队列日期（YYYY-MM-DD，即注册日） */
+  date: string;
+  /** 队列人数 */
+  cohort: number;
+  /** 当日留存率（百分比，一位小数；队列人数为 0 或该天尚未到期则为 null） */
+  d0: number | null;
+  /** 次日留存率 */
+  d1: number | null;
+  /** 3 日留存率 */
+  d3: number | null;
+  /** 7 日留存率 */
+  d7: number | null;
+}
+
+/** 队列留存结果。 */
+export interface RetentionResult {
+  /** 按日期升序（最早 → 最新） */
+  rows: RetentionRow[];
+  /** 各周期平均值（只统计已到期且队列非空的日期；无数据为 null） */
+  avg: { d0: number | null; d1: number | null; d3: number | null; d7: number | null };
+}
+
+/** 活跃趋势（新增 / 日活）。 */
+export interface ActiveTrend {
+  dates: string[];
+  newUsers: number[];
+  activeUsers: number[];
 }
 
 @Injectable()
@@ -392,5 +464,170 @@ export class AnalyticsService {
       maxStreak: streaks.length > 0 ? Math.max(...streaks) : 0,
       totalCheckins,
     };
+  }
+
+  /**
+   * 留存漏斗：窗口内**注册**的用户逐级转化
+   * （注册 → 激活「答过题」→ 完成打卡 → 领取句签），每一级都要求满足上一级（嵌套漏斗）。
+   *
+   * 为什么用 id 集合交集而不是 SQL join：client_user 与答题/打卡/句签**刻意不建 Prisma 关系**
+   * （见 schema「答题记录/收藏/打卡不声明 Prisma 关系，一律按 userId 显式查询」），
+   * 所以取 id 后在内存做集合运算最直观、也避免为统计改表。
+   */
+  async funnel(days = 30): Promise<FunnelResult> {
+    const safeDays = clampDays(days, 30, 90);
+    const since = dayjs()
+      .subtract(safeDays - 1, 'day')
+      .startOf('day')
+      .toDate();
+    const end = dayjs().endOf('day').toDate();
+
+    const cohortRows = await this.prisma.clientUser.findMany({
+      where: { createdAt: { gte: since, lte: end } },
+      select: { id: true },
+    });
+    const registered = new Set(cohortRows.map((row) => String(row.id)));
+    const ids = cohortRows.map((row) => row.id);
+
+    const [answered, checkedIn, carded] =
+      ids.length === 0
+        ? [new Set<string>(), new Set<string>(), new Set<string>()]
+        : await Promise.all([
+            this.prisma.sentenceRecord
+              .findMany({ where: { userId: { in: ids } }, distinct: ['userId'], select: { userId: true } })
+              .then(toIdSet),
+            this.prisma.userCheckin
+              .findMany({ where: { userId: { in: ids } }, distinct: ['userId'], select: { userId: true } })
+              .then(toIdSet),
+            this.prisma.userSentenceCard
+              .findMany({ where: { userId: { in: ids } }, distinct: ['userId'], select: { userId: true } })
+              .then(toIdSet),
+          ]);
+
+    const activated = intersect(registered, answered);
+    const checked = intersect(activated, checkedIn);
+    const collected = intersect(checked, carded);
+
+    const chain = [
+      { name: '注册', users: registered.size },
+      { name: '激活（答过题）', users: activated.size },
+      { name: '完成打卡', users: checked.size },
+      { name: '领取句签', users: collected.size },
+    ];
+    const stages: FunnelStage[] = chain.map((stage, index) => {
+      const prev = index === 0 ? stage.users : chain[index - 1].users;
+      return {
+        name: stage.name,
+        users: stage.users,
+        rate: index === 0 ? 100 : prev > 0 ? round1((stage.users / prev) * 100) : 0,
+      };
+    });
+    return { registered: registered.size, stages };
+  }
+
+  /**
+   * 队列留存：按注册日分队列，统计各队列在 D0/D1/D3/D7 的活跃（有答题）比例。
+   *
+   * 只算「已到期」的周期（例如今天注册的队列没有 D1，则该格为 null，避免用 0 误导）。
+   * 实现上把窗口内所有答题记录一次性查出、在内存按「日 → 用户集合」建索引，
+   * 避免「队列数 × 周期数」次查询。
+   */
+  async retention(days = 14): Promise<RetentionResult> {
+    const safeDays = clampDays(days, 14, 30);
+    const offsets = [0, 1, 3, 7] as const;
+    const today = dayjs().startOf('day');
+    const since = today.subtract(safeDays - 1, 'day').toDate();
+
+    const cohortRows = await this.prisma.clientUser.findMany({
+      where: { createdAt: { gte: since, lte: dayjs().endOf('day').toDate() } },
+      select: { id: true, createdAt: true },
+    });
+    const cohorts = new Map<string, Set<string>>();
+    const allIds: bigint[] = [];
+    for (const row of cohortRows) {
+      const key = dayjs(row.createdAt).format('YYYY-MM-DD');
+      const set = cohorts.get(key) ?? new Set<string>();
+      set.add(String(row.id));
+      cohorts.set(key, set);
+      allIds.push(row.id);
+    }
+
+    const activeByDay = new Map<string, Set<string>>();
+    if (allIds.length > 0) {
+      const records = await this.prisma.sentenceRecord.findMany({
+        where: { userId: { in: allIds } },
+        select: { userId: true, createdAt: true },
+      });
+      for (const record of records) {
+        const key = dayjs(record.createdAt).format('YYYY-MM-DD');
+        const set = activeByDay.get(key) ?? new Set<string>();
+        set.add(String(record.userId));
+        activeByDay.set(key, set);
+      }
+    }
+
+    const sums: Record<number, { total: number; count: number }> = {
+      0: { total: 0, count: 0 },
+      1: { total: 0, count: 0 },
+      3: { total: 0, count: 0 },
+      7: { total: 0, count: 0 },
+    };
+    const rows: RetentionRow[] = [];
+    for (let i = safeDays - 1; i >= 0; i -= 1) {
+      const cohortDay = today.subtract(i, 'day');
+      const cohort = cohorts.get(cohortDay.format('YYYY-MM-DD')) ?? new Set<string>();
+      const row: RetentionRow = {
+        date: cohortDay.format('YYYY-MM-DD'),
+        cohort: cohort.size,
+        d0: null,
+        d1: null,
+        d3: null,
+        d7: null,
+      };
+      for (const offset of offsets) {
+        const target = cohortDay.add(offset, 'day');
+        if (target.isAfter(today)) {
+          continue;
+        }
+        const active = activeByDay.get(target.format('YYYY-MM-DD')) ?? new Set<string>();
+        const rate = cohort.size > 0 ? round1((intersect(cohort, active).size / cohort.size) * 100) : null;
+        if (offset === 0) row.d0 = rate;
+        else if (offset === 1) row.d1 = rate;
+        else if (offset === 3) row.d3 = rate;
+        else row.d7 = rate;
+        if (rate !== null) {
+          sums[offset].total += rate;
+          sums[offset].count += 1;
+        }
+      }
+      rows.push(row);
+    }
+    const avgOf = (offset: number): number | null =>
+      sums[offset].count > 0 ? round1(sums[offset].total / sums[offset].count) : null;
+    return { rows, avg: { d0: avgOf(0), d1: avgOf(1), d3: avgOf(3), d7: avgOf(7) } };
+  }
+
+  /** 近 N 日新增用户 / 日活（DAU，按有答题计）趋势。 */
+  async activeTrend(days = 14): Promise<ActiveTrend> {
+    const safeDays = clampDays(days, 14, 30);
+    const dates: string[] = [];
+    const newUsers: number[] = [];
+    const activeUsers: number[] = [];
+    for (let i = safeDays - 1; i >= 0; i -= 1) {
+      const start = dayjs().subtract(i, 'day').startOf('day').toDate();
+      const end = dayjs().subtract(i, 'day').endOf('day').toDate();
+      const [created, activeRows] = await Promise.all([
+        this.prisma.clientUser.count({ where: { createdAt: { gte: start, lte: end } } }),
+        this.prisma.sentenceRecord.findMany({
+          where: { createdAt: { gte: start, lte: end } },
+          distinct: ['userId'],
+          select: { userId: true },
+        }),
+      ]);
+      dates.push(dayjs().subtract(i, 'day').format('MM-DD'));
+      newUsers.push(created);
+      activeUsers.push(activeRows.length);
+    }
+    return { dates, newUsers, activeUsers };
   }
 }

@@ -4,18 +4,33 @@
  * 模块职责：总览指标 / 答题趋势 / 难度分布 / 分类运营 / 打卡 / AI 调用。
  */
 import {
+  getActiveTrendApi,
   getAnalyticsOverviewApi,
   getAnswerTrendApi,
   getAiCallStatsApi,
   getCategoryStatsApi,
   getCheckinStatApi,
   getDifficultyApi,
+  getFunnelApi,
+  getRetentionApi,
 } from '@/api/analytics';
-import type { AiCallStat, AnalyticsOverview, AnswerTrend, CategoryStat, CheckinStat, NameValue } from '@/types/api';
+import type {
+  ActiveTrend,
+  AiCallStat,
+  AnalyticsOverview,
+  AnswerTrend,
+  CategoryStat,
+  CheckinStat,
+  FunnelResult,
+  NameValue,
+  RetentionResult,
+} from '@/types/api';
 import PieChart from '@/views/home/components/PieChart.vue';
 import BarChart from '@/views/home/components/BarChart.vue';
 import StatCard from '@/views/home/components/StatCard.vue';
 import AnswerTrendChart from './components/AnswerTrendChart.vue';
+import ActiveTrendChart from './components/ActiveTrendChart.vue';
+import FunnelChart from './components/FunnelChart.vue';
 import { computed, ref } from 'vue';
 
 defineOptions({ name: 'SentenceAnalytics' });
@@ -28,9 +43,22 @@ const difficulty = ref<NameValue[]>([]);
 const categories = ref<CategoryStat[]>([]);
 const aiStats = ref<AiCallStat[]>([]);
 const checkin = ref<CheckinStat | null>(null);
+const activeTrend = ref<ActiveTrend>({ dates: [], newUsers: [], activeUsers: [] });
+const funnel = ref<FunnelResult>({ registered: 0, stages: [] });
+const retention = ref<RetentionResult>({ rows: [], avg: { d0: null, d1: null, d3: null, d7: null } });
 
 /** 趋势天数 */
 const trendDays = ref(7);
+/** 留存分析窗口（漏斗与队列留存共用） */
+const cohortDays = ref(30);
+
+/** 队列留存表格：最新队列在前。 */
+const retentionRows = computed(() => [...retention.value.rows].reverse());
+
+/** 留存率显示：null（未到期/空队列）→ —，否则 N%。 */
+function formatRate(value: number | null): string {
+  return value === null ? '—' : `${value}%`;
+}
 
 /** 分类图数据（题目数） */
 const categoryChart = computed(() => ({
@@ -96,13 +124,16 @@ const CARDS = computed(() => {
 async function loadAll(): Promise<void> {
   loading.value = true;
   try {
-    const [o, t, d, c, a, ck] = await Promise.all([
+    const [o, t, d, c, a, ck, at, f, r] = await Promise.all([
       getAnalyticsOverviewApi(),
       getAnswerTrendApi(trendDays.value),
       getDifficultyApi(),
       getCategoryStatsApi(),
       getAiCallStatsApi(7),
       getCheckinStatApi(),
+      getActiveTrendApi(14),
+      getFunnelApi(cohortDays.value),
+      getRetentionApi(cohortDays.value),
     ]);
     overview.value = o;
     trend.value = t;
@@ -110,6 +141,9 @@ async function loadAll(): Promise<void> {
     categories.value = c;
     aiStats.value = a;
     checkin.value = ck;
+    activeTrend.value = at;
+    funnel.value = f;
+    retention.value = r;
   } finally {
     loading.value = false;
   }
@@ -119,6 +153,14 @@ async function loadAll(): Promise<void> {
 async function changeTrendDays(days: number): Promise<void> {
   trendDays.value = days;
   trend.value = await getAnswerTrendApi(days);
+}
+
+/** 切换留存分析窗口（漏斗 + 队列留存一起刷新）。 */
+async function changeCohortDays(days: number): Promise<void> {
+  cohortDays.value = days;
+  const [f, r] = await Promise.all([getFunnelApi(days), getRetentionApi(days)]);
+  funnel.value = f;
+  retention.value = r;
 }
 
 onMounted(() => {
@@ -154,6 +196,61 @@ onMounted(() => {
       </template>
       <AnswerTrendChart :data="trend" />
     </el-card>
+
+    <!-- 活跃趋势（新增 / 日活） -->
+    <el-card shadow="never" class="mt-4">
+      <template #header>活跃趋势（近 14 日）</template>
+      <ActiveTrendChart :data="activeTrend" />
+    </el-card>
+
+    <!-- 留存：漏斗 + 队列留存 -->
+    <el-row :gutter="16" class="mt-4">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <span>留存漏斗</span>
+              <el-radio-group
+                :model-value="cohortDays"
+                size="small"
+                @update:model-value="(v) => changeCohortDays(Number(v))"
+              >
+                <el-radio-button :value="14">近 14 日</el-radio-button>
+                <el-radio-button :value="30">近 30 日</el-radio-button>
+                <el-radio-button :value="60">近 60 日</el-radio-button>
+              </el-radio-group>
+            </div>
+          </template>
+          <FunnelChart :stages="funnel.stages" />
+          <p class="mt-2 text-xs text-muted">窗口内注册 {{ funnel.registered }} 人；逐级要求满足上一级（嵌套漏斗）。</p>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>队列留存（按注册日，%）</template>
+          <el-table :data="retentionRows" border size="small" max-height="320">
+            <el-table-column prop="date" label="注册日" width="106" />
+            <el-table-column prop="cohort" label="队列" width="66" />
+            <el-table-column label="D0" width="66">
+              <template #default="{ row }">{{ formatRate(row.d0) }}</template>
+            </el-table-column>
+            <el-table-column label="D1" width="66">
+              <template #default="{ row }">{{ formatRate(row.d1) }}</template>
+            </el-table-column>
+            <el-table-column label="D3" width="66">
+              <template #default="{ row }">{{ formatRate(row.d3) }}</template>
+            </el-table-column>
+            <el-table-column label="D7" min-width="66">
+              <template #default="{ row }">{{ formatRate(row.d7) }}</template>
+            </el-table-column>
+          </el-table>
+          <p class="mt-2 text-xs text-muted">
+            平均：D0 {{ formatRate(retention.avg.d0) }} · D1 {{ formatRate(retention.avg.d1) }} · D3
+            {{ formatRate(retention.avg.d3) }} · D7 {{ formatRate(retention.avg.d7) }}（仅统计已到期队列）
+          </p>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 难度 + 分类 -->
     <el-row :gutter="16" class="mt-4">
