@@ -22,6 +22,7 @@ import '../widgets/page_header.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/staggered.dart';
 import '../sheets/edit_profile_sheet.dart';
+import '../sheets/feedback_sheet.dart';
 import '../sheets/notice_sheet.dart';
 import '../sheets/password_sheet.dart';
 
@@ -187,6 +188,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     // 未读数由服务端给（autoDispose provider：每次进来重取，红点不过期）
                     badgeCount: unreadNotices,
                     onTap: () => showNoticeSheet(context),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label: '意见反馈',
+                    hint: '想法、问题、建议',
+                    onTap: () => showFeedbackSheet(context),
                   ),
                   const _MenuDivider(),
                   _MenuRow(
