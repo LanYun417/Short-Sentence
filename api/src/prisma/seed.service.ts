@@ -900,6 +900,28 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 客户端反馈：用户对**产品本身**的意见（与「题目举报」是两回事，后者在题库管理里）
+        key: 'client:feedback',
+        menuName: '客户端反馈',
+        menuType: MenuType.MENU,
+        path: '/sentence/feedback',
+        component: 'sentence/feedback',
+        icon: 'chat-dots',
+        permission: 'client:feedback:list',
+        sort: 10,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'client:feedback:handle',
+            menuName: '处理反馈',
+            menuType: MenuType.BUTTON,
+            permission: 'client:feedback:handle',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

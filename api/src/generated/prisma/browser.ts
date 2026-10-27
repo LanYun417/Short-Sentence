@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
+ * Model ClientFeedback
+ * 客户端用户反馈（对产品本身的意见）
+ */
+export type ClientFeedback = Prisma.ClientFeedbackModel
+/**
  * Model ClientNotice
  * 客户端公告/通知（广播：一条内容对所有用户可见，已读状态另表按人记录）
  */

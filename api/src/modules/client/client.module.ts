@@ -18,6 +18,8 @@ import { CheckinController } from './checkin/checkin.controller.js';
 import { CheckinService } from './checkin/checkin.service.js';
 import { ReportController } from './report/report.controller.js';
 import { ReportService } from './report/report.service.js';
+import { FeedbackController } from './feedback/feedback.controller.js';
+import { FeedbackService } from './feedback/feedback.service.js';
 import { ClientAiController } from './ai/client-ai.controller.js';
 import { ClientAiService } from './ai/client-ai.service.js';
 import { CategoriesController } from './categories/categories.controller.js';
@@ -36,6 +38,8 @@ import { ClientNoticeService } from './notice/client-notice.service.js';
     LibraryController,
     CheckinController,
     ReportController,
+    // 产品反馈（对产品本身的意见；后台处理在 FeedbackModule）
+    FeedbackController,
     ClientAiController,
     CategoriesController,
     // 客户端公告读取（广播表 client_notice；后台发布在 NoticeModule）
@@ -46,6 +50,7 @@ import { ClientNoticeService } from './notice/client-notice.service.js';
     QuestionsService,
     CheckinService,
     ReportService,
+    FeedbackService,
     ClientAiService,
     ClientNoticeService,
   ],

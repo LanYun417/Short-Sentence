@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
   DictType: 'DictType',
@@ -101,6 +102,25 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const ClientFeedbackScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  content: 'content',
+  contact: 'contact',
+  platform: 'platform',
+  appVersion: 'appVersion',
+  status: 'status',
+  reply: 'reply',
+  handleNote: 'handleNote',
+  handledAt: 'handledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ClientFeedbackScalarFieldEnum = (typeof ClientFeedbackScalarFieldEnum)[keyof typeof ClientFeedbackScalarFieldEnum]
 
 
 export const ClientNoticeScalarFieldEnum = {
@@ -646,6 +666,20 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const ClientFeedbackOrderByRelevanceFieldEnum = {
+  type: 'type',
+  content: 'content',
+  contact: 'contact',
+  platform: 'platform',
+  appVersion: 'appVersion',
+  status: 'status',
+  reply: 'reply',
+  handleNote: 'handleNote'
+} as const
+
+export type ClientFeedbackOrderByRelevanceFieldEnum = (typeof ClientFeedbackOrderByRelevanceFieldEnum)[keyof typeof ClientFeedbackOrderByRelevanceFieldEnum]
 
 
 export const ClientNoticeOrderByRelevanceFieldEnum = {

@@ -30,6 +30,7 @@ import { DocsModule } from './modules/docs/docs.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MonitorModule } from './modules/monitor/monitor.module.js';
 import { NoticeModule } from './modules/notice/notice.module.js';
+import { FeedbackModule } from './modules/feedback/feedback.module.js';
 import { TaskModule } from './modules/task/task.module.js';
 import { ClientModule } from './modules/client/client.module.js';
 import { SentenceModule } from './modules/sentence/sentence.module.js';
@@ -49,6 +50,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     HealthModule,
     MonitorModule,
     NoticeModule,
+    // 客户端产品反馈（运营侧查看/处理 /api/client-feedbacks；提交侧在 ClientModule）
+    FeedbackModule,
     AuthModule,
     MenuModule,
     UsersModule,

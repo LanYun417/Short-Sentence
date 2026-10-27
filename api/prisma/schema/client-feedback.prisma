@@ -1,0 +1,44 @@
+// use prisma-next
+
+// 「短句」客户端反馈域：用户对**产品本身**的意见（功能建议 / 使用异常 / 内容问题 / 体验建议）。
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+//
+// 为什么**不复用 sentence_report**：那张表是「针对某一道题」的举报（有 sentence_id 外键、
+// 类型是题目/翻译/图片，处理动作是核查那道题）；产品反馈没有题目、要收集联系方式与
+// 端信息、处理结果是「回不回复用户」。硬塞进一张表会让 sentence_id 在大半行里是空的、
+// 且「处理」的含义分裂（一面对题，一面对人）。
+
+/// 客户端用户反馈（对产品本身的意见）
+model ClientFeedback {
+  /// 主键
+  id         BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 提交人（client_user id；不建关系，按 userId 批量查昵称）
+  userId     BigInt    @map("user_id") @db.BigInt
+  /// 类型：feature 功能建议 / bug 使用异常 / content 内容问题 / ux 体验建议 / other 其他
+  type       String    @db.VarChar(20)
+  /// 反馈正文
+  content    String    @db.VarChar(1000)
+  /// 联系方式（可选；邮箱/微信等，便于回访）
+  contact    String?   @db.VarChar(100)
+  /// 来源端：web / android（用于区分问题发生在哪一端）
+  platform   String    @default("web") @db.VarChar(20)
+  /// 客户端版本（可选；App 才上报，便于定位「哪个版本出的问题」）
+  appVersion String?   @map("app_version") @db.VarChar(30)
+  /// 处理状态：pending 待处理 / resolved 已处理 / dismissed 已驳回
+  status     String    @default("pending") @db.VarChar(20)
+  /// 对用户的回复（**下发用户端**，让用户看到意见被回应）
+  reply      String?   @db.VarChar(500)
+  /// 内部处理备注（**不下发用户端**，只给运营看）
+  handleNote String?   @map("handle_note") @db.VarChar(500)
+  /// 处理时间
+  handledAt  DateTime? @map("handled_at")
+  /// 创建时间
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  /// 后台列表按状态筛选 + 时间倒序；客户端「我的反馈」按人查
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("client_feedback")
+}

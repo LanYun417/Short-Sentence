@@ -4911,6 +4911,129 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "客户端反馈",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client-feedbacks",
+        "summary": "反馈列表（筛选：status / type / platform / keyword）",
+        "permission": [
+          "client:feedback:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-feedbacks?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client-feedbacks/:id",
+        "summary": "处理反馈（标记已处理/已驳回 + 回复 + 内部备注）",
+        "permission": [
+          "client:feedback:handle"
+        ],
+        "isPublic": false,
+        "action": "客户端反馈 · 处理反馈",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "处理结果：resolved 已处理 / dismissed 已驳回",
+            "example": "示例值"
+          },
+          {
+            "name": "reply",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "给用户的回复（可选）。 **会下发用户端**——用户在「我的反馈」能看到，是「意见被听见」的闭环； 与内部备注 `handleNote` 分开，后者只给运营看。",
+            "example": "示例值"
+          },
+          {
+            "name": "handleNote",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "内部处理备注（可选；**不下发**用户端）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client-feedbacks/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\",\n      \"reply\": \"示例值\",\n      \"handleNote\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值",
+            "reply": "示例值",
+            "handleNote": "示例值"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "客户端通知",
     "endpoints": [
       {
@@ -6906,6 +7029,55 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/notices/read-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "Feedback",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/feedback/mine",
+        "summary": "我的反馈（含处理状态与运营回复）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/feedback/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/feedback",
+        "summary": "提交产品反馈",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/feedback\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

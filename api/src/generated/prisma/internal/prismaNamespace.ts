@@ -397,6 +397,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
   DictType: 'DictType',
@@ -446,10 +447,76 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    ClientFeedback: {
+      payload: Prisma.$ClientFeedbackPayload<ExtArgs>
+      fields: Prisma.ClientFeedbackFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClientFeedbackFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClientFeedbackFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        findFirst: {
+          args: Prisma.ClientFeedbackFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClientFeedbackFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        findMany: {
+          args: Prisma.ClientFeedbackFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>[]
+        }
+        create: {
+          args: Prisma.ClientFeedbackCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        createMany: {
+          args: Prisma.ClientFeedbackCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ClientFeedbackDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        update: {
+          args: Prisma.ClientFeedbackUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClientFeedbackDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClientFeedbackUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ClientFeedbackUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientFeedbackPayload>
+        }
+        aggregate: {
+          args: Prisma.ClientFeedbackAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClientFeedback>
+        }
+        groupBy: {
+          args: Prisma.ClientFeedbackGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientFeedbackGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClientFeedbackCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientFeedbackCountAggregateOutputType> | number
+        }
+      }
+    }
     ClientNotice: {
       payload: Prisma.$ClientNoticePayload<ExtArgs>
       fields: Prisma.ClientNoticeFieldRefs
@@ -2733,6 +2800,25 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const ClientFeedbackScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  content: 'content',
+  contact: 'contact',
+  platform: 'platform',
+  appVersion: 'appVersion',
+  status: 'status',
+  reply: 'reply',
+  handleNote: 'handleNote',
+  handledAt: 'handledAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ClientFeedbackScalarFieldEnum = (typeof ClientFeedbackScalarFieldEnum)[keyof typeof ClientFeedbackScalarFieldEnum]
+
+
 export const ClientNoticeScalarFieldEnum = {
   id: 'id',
   title: 'title',
@@ -3278,6 +3364,20 @@ export const NullsOrder = {
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
+export const ClientFeedbackOrderByRelevanceFieldEnum = {
+  type: 'type',
+  content: 'content',
+  contact: 'contact',
+  platform: 'platform',
+  appVersion: 'appVersion',
+  status: 'status',
+  reply: 'reply',
+  handleNote: 'handleNote'
+} as const
+
+export type ClientFeedbackOrderByRelevanceFieldEnum = (typeof ClientFeedbackOrderByRelevanceFieldEnum)[keyof typeof ClientFeedbackOrderByRelevanceFieldEnum]
+
+
 export const ClientNoticeOrderByRelevanceFieldEnum = {
   title: 'title',
   content: 'content',
@@ -3604,16 +3704,16 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'DateTime'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
     
 
 
 /**
- * Reference to a field of type 'DateTime'
+ * Reference to a field of type 'Int'
  */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 
@@ -3788,6 +3888,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  clientFeedback?: Prisma.ClientFeedbackOmit
   clientNotice?: Prisma.ClientNoticeOmit
   clientNoticeRead?: Prisma.ClientNoticeReadOmit
   dictType?: Prisma.DictTypeOmit
