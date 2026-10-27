@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
+import '../api/notice_api.dart';
 import '../state/auth_controller.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
@@ -21,6 +22,7 @@ import '../widgets/page_header.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/staggered.dart';
 import '../sheets/edit_profile_sheet.dart';
+import '../sheets/notice_sheet.dart';
 import '../sheets/password_sheet.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -141,6 +143,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).user;
     final growth = ref.watch(growthControllerProvider);
+    // 未读公告数（消息中心红点）：加载中/失败时按 0 处理，不显示红点也不报错
+    final unreadNotices = ref.watch(noticeUnreadProvider).valueOrNull ?? 0;
 
     return SafeArea(
       bottom: false,
@@ -176,6 +180,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
                 children: <Widget>[
+                  _MenuRow(
+                    icon: Icons.campaign_outlined,
+                    label: '消息中心',
+                    hint: '运营公告与活动通知',
+                    // 未读数由服务端给（autoDispose provider：每次进来重取，红点不过期）
+                    badgeCount: unreadNotices,
+                    onTap: () => showNoticeSheet(context),
+                  ),
+                  const _MenuDivider(),
                   _MenuRow(
                     icon: Icons.person_outline_rounded,
                     label: '编辑资料',
@@ -514,12 +527,16 @@ class _MenuRow extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final String hint;
   final VoidCallback onTap;
+
+  /// 右侧未读红点数值（0 = 不显示）。
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -557,6 +574,26 @@ class _MenuRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (badgeCount > 0)
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                constraints: const BoxConstraints(minWidth: 20),
+                decoration: BoxDecoration(
+                  color: colors.danger,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    height: 1.3,
+                  ),
+                ),
+              ),
             Icon(Icons.chevron_right_rounded, size: 20, color: colors.inkFaint),
           ],
         ),
