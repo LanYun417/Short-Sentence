@@ -18,6 +18,8 @@
     "guard:imports": "node scripts/check-tracked-imports.mjs",
     "guard:locale": "node scripts/check-locale-keys.mjs",
     "guard:scrollbar": "node scripts/check-native-scrollbar.mjs",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:drill": "node scripts/db-restore.mjs",
     "commit": "cz",
     "dev:api": "npm --prefix api run start:dev",
     "dev:web": "npm --prefix admin run dev",
