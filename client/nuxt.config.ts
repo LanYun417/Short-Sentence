@@ -20,7 +20,7 @@ const API_TARGET = process.env.NUXT_API_TARGET || 'http://localhost:3000';
 const SITE_NAME = '短句';
 
 /** 站点描述（meta description 与分享卡片共用）。 */
-const SITE_DESCRIPTION = '每天 20 句，看图学地道英语。场景闪卡 + 间隔重复 + AI 拓展，用完即走。';
+const SITE_DESCRIPTION = '每天 20 句，看图学英语。场景闪卡 + 间隔重复 + AI 拓展，用完即走。';
 
 /**
  * 站点绝对地址（canonical / sitemap 用）。
