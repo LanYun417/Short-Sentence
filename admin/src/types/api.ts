@@ -1355,3 +1355,46 @@ export interface ClientNoticePayload {
   /** 保存后是否立即发布（false = 存草稿）；仅新增时有意义 */
   publish?: boolean;
 }
+
+/* ------------------------------ 客户端产品反馈 ------------------------------ */
+
+/** 反馈处理状态：pending 待处理 / resolved 已处理 / dismissed 已驳回 */
+export type ClientFeedbackStatus = 'pending' | 'resolved' | 'dismissed';
+
+/** 反馈列表项（后台视角：含联系方式、端信息与内部备注） */
+export interface ClientFeedbackItem {
+  id: number;
+  /** feature 功能建议 / bug 使用异常 / content 内容问题 / ux 体验建议 / other 其他 */
+  type: string;
+  content: string;
+  contact: string | null;
+  /** 来源端：web / android */
+  platform: string;
+  appVersion: string | null;
+  status: ClientFeedbackStatus;
+  /** 给用户的回复（会下发用户端） */
+  reply: string | null;
+  /** 内部备注（仅后台可见，不下发用户端） */
+  handleNote: string | null;
+  handledAt: string | null;
+  createdAt: string;
+  /** 提交人（client_user） */
+  reporter: { id: number; nickname: string } | null;
+}
+
+/** 反馈查询参数 */
+export interface ClientFeedbackQuery extends PageQuery {
+  status?: ClientFeedbackStatus;
+  type?: string;
+  platform?: string;
+  keyword?: string;
+}
+
+/** 处理反馈入参 */
+export interface HandleFeedbackPayload {
+  status: Exclude<ClientFeedbackStatus, 'pending'>;
+  /** 给用户的回复（下发用户端） */
+  reply?: string;
+  /** 内部备注（不下发用户端） */
+  handleNote?: string;
+}
