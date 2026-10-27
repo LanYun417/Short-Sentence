@@ -28,6 +28,7 @@ export type AggregateSentenceGenTask = {
 
 export type SentenceGenTaskAvgAggregateOutputType = {
   id: number | null
+  categoryId: number | null
   targetCount: number | null
   textDone: number | null
   imageDone: number | null
@@ -36,6 +37,7 @@ export type SentenceGenTaskAvgAggregateOutputType = {
 
 export type SentenceGenTaskSumAggregateOutputType = {
   id: bigint | null
+  categoryId: bigint | null
   targetCount: number | null
   textDone: number | null
   imageDone: number | null
@@ -45,6 +47,7 @@ export type SentenceGenTaskSumAggregateOutputType = {
 export type SentenceGenTaskMinAggregateOutputType = {
   id: bigint | null
   bizDate: string | null
+  categoryId: bigint | null
   targetCount: number | null
   textDone: number | null
   imageDone: number | null
@@ -63,6 +66,7 @@ export type SentenceGenTaskMinAggregateOutputType = {
 export type SentenceGenTaskMaxAggregateOutputType = {
   id: bigint | null
   bizDate: string | null
+  categoryId: bigint | null
   targetCount: number | null
   textDone: number | null
   imageDone: number | null
@@ -81,6 +85,7 @@ export type SentenceGenTaskMaxAggregateOutputType = {
 export type SentenceGenTaskCountAggregateOutputType = {
   id: number
   bizDate: number
+  categoryId: number
   targetCount: number
   textDone: number
   imageDone: number
@@ -100,6 +105,7 @@ export type SentenceGenTaskCountAggregateOutputType = {
 
 export type SentenceGenTaskAvgAggregateInputType = {
   id?: true
+  categoryId?: true
   targetCount?: true
   textDone?: true
   imageDone?: true
@@ -108,6 +114,7 @@ export type SentenceGenTaskAvgAggregateInputType = {
 
 export type SentenceGenTaskSumAggregateInputType = {
   id?: true
+  categoryId?: true
   targetCount?: true
   textDone?: true
   imageDone?: true
@@ -117,6 +124,7 @@ export type SentenceGenTaskSumAggregateInputType = {
 export type SentenceGenTaskMinAggregateInputType = {
   id?: true
   bizDate?: true
+  categoryId?: true
   targetCount?: true
   textDone?: true
   imageDone?: true
@@ -135,6 +143,7 @@ export type SentenceGenTaskMinAggregateInputType = {
 export type SentenceGenTaskMaxAggregateInputType = {
   id?: true
   bizDate?: true
+  categoryId?: true
   targetCount?: true
   textDone?: true
   imageDone?: true
@@ -153,6 +162,7 @@ export type SentenceGenTaskMaxAggregateInputType = {
 export type SentenceGenTaskCountAggregateInputType = {
   id?: true
   bizDate?: true
+  categoryId?: true
   targetCount?: true
   textDone?: true
   imageDone?: true
@@ -258,6 +268,7 @@ export type SentenceGenTaskGroupByArgs<ExtArgs extends runtime.Types.Extensions.
 export type SentenceGenTaskGroupByOutputType = {
   id: bigint
   bizDate: string
+  categoryId: bigint
   targetCount: number
   textDone: number
   imageDone: number
@@ -299,6 +310,7 @@ export type SentenceGenTaskWhereInput = {
   NOT?: Prisma.SentenceGenTaskWhereInput | Prisma.SentenceGenTaskWhereInput[]
   id?: Prisma.BigIntFilter<"SentenceGenTask"> | bigint | number
   bizDate?: Prisma.StringFilter<"SentenceGenTask"> | string
+  categoryId?: Prisma.BigIntFilter<"SentenceGenTask"> | bigint | number
   targetCount?: Prisma.IntFilter<"SentenceGenTask"> | number
   textDone?: Prisma.IntFilter<"SentenceGenTask"> | number
   imageDone?: Prisma.IntFilter<"SentenceGenTask"> | number
@@ -317,6 +329,7 @@ export type SentenceGenTaskWhereInput = {
 export type SentenceGenTaskOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   bizDate?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -335,10 +348,12 @@ export type SentenceGenTaskOrderByWithRelationInput = {
 
 export type SentenceGenTaskWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
-  bizDate?: string
+  bizDate_categoryId?: Prisma.SentenceGenTaskBizDateCategoryIdCompoundUniqueInput
   AND?: Prisma.SentenceGenTaskWhereInput | Prisma.SentenceGenTaskWhereInput[]
   OR?: Prisma.SentenceGenTaskWhereInput[]
   NOT?: Prisma.SentenceGenTaskWhereInput | Prisma.SentenceGenTaskWhereInput[]
+  bizDate?: Prisma.StringFilter<"SentenceGenTask"> | string
+  categoryId?: Prisma.BigIntFilter<"SentenceGenTask"> | bigint | number
   targetCount?: Prisma.IntFilter<"SentenceGenTask"> | number
   textDone?: Prisma.IntFilter<"SentenceGenTask"> | number
   imageDone?: Prisma.IntFilter<"SentenceGenTask"> | number
@@ -352,11 +367,12 @@ export type SentenceGenTaskWhereUniqueInput = Prisma.AtLeast<{
   finishedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"SentenceGenTask"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SentenceGenTask"> | Date | string
-}, "id" | "bizDate">
+}, "id" | "bizDate_categoryId">
 
 export type SentenceGenTaskOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   bizDate?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -383,6 +399,7 @@ export type SentenceGenTaskScalarWhereWithAggregatesInput = {
   NOT?: Prisma.SentenceGenTaskScalarWhereWithAggregatesInput | Prisma.SentenceGenTaskScalarWhereWithAggregatesInput[]
   id?: Prisma.BigIntWithAggregatesFilter<"SentenceGenTask"> | bigint | number
   bizDate?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
+  categoryId?: Prisma.BigIntWithAggregatesFilter<"SentenceGenTask"> | bigint | number
   targetCount?: Prisma.IntWithAggregatesFilter<"SentenceGenTask"> | number
   textDone?: Prisma.IntWithAggregatesFilter<"SentenceGenTask"> | number
   imageDone?: Prisma.IntWithAggregatesFilter<"SentenceGenTask"> | number
@@ -401,6 +418,7 @@ export type SentenceGenTaskScalarWhereWithAggregatesInput = {
 export type SentenceGenTaskCreateInput = {
   id?: bigint | number
   bizDate: string
+  categoryId?: bigint | number
   targetCount?: number
   textDone?: number
   imageDone?: number
@@ -419,6 +437,7 @@ export type SentenceGenTaskCreateInput = {
 export type SentenceGenTaskUncheckedCreateInput = {
   id?: bigint | number
   bizDate: string
+  categoryId?: bigint | number
   targetCount?: number
   textDone?: number
   imageDone?: number
@@ -437,6 +456,7 @@ export type SentenceGenTaskUncheckedCreateInput = {
 export type SentenceGenTaskUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   bizDate?: Prisma.StringFieldUpdateOperationsInput | string
+  categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   targetCount?: Prisma.IntFieldUpdateOperationsInput | number
   textDone?: Prisma.IntFieldUpdateOperationsInput | number
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
@@ -455,6 +475,7 @@ export type SentenceGenTaskUpdateInput = {
 export type SentenceGenTaskUncheckedUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   bizDate?: Prisma.StringFieldUpdateOperationsInput | string
+  categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   targetCount?: Prisma.IntFieldUpdateOperationsInput | number
   textDone?: Prisma.IntFieldUpdateOperationsInput | number
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
@@ -473,6 +494,7 @@ export type SentenceGenTaskUncheckedUpdateInput = {
 export type SentenceGenTaskCreateManyInput = {
   id?: bigint | number
   bizDate: string
+  categoryId?: bigint | number
   targetCount?: number
   textDone?: number
   imageDone?: number
@@ -491,6 +513,7 @@ export type SentenceGenTaskCreateManyInput = {
 export type SentenceGenTaskUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   bizDate?: Prisma.StringFieldUpdateOperationsInput | string
+  categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   targetCount?: Prisma.IntFieldUpdateOperationsInput | number
   textDone?: Prisma.IntFieldUpdateOperationsInput | number
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
@@ -509,6 +532,7 @@ export type SentenceGenTaskUpdateManyMutationInput = {
 export type SentenceGenTaskUncheckedUpdateManyInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   bizDate?: Prisma.StringFieldUpdateOperationsInput | string
+  categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   targetCount?: Prisma.IntFieldUpdateOperationsInput | number
   textDone?: Prisma.IntFieldUpdateOperationsInput | number
   imageDone?: Prisma.IntFieldUpdateOperationsInput | number
@@ -530,9 +554,15 @@ export type SentenceGenTaskOrderByRelevanceInput = {
   search: string
 }
 
+export type SentenceGenTaskBizDateCategoryIdCompoundUniqueInput = {
+  bizDate: string
+  categoryId: bigint | number
+}
+
 export type SentenceGenTaskCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bizDate?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -550,6 +580,7 @@ export type SentenceGenTaskCountOrderByAggregateInput = {
 
 export type SentenceGenTaskAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -559,6 +590,7 @@ export type SentenceGenTaskAvgOrderByAggregateInput = {
 export type SentenceGenTaskMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bizDate?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -577,6 +609,7 @@ export type SentenceGenTaskMaxOrderByAggregateInput = {
 export type SentenceGenTaskMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bizDate?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -594,6 +627,7 @@ export type SentenceGenTaskMinOrderByAggregateInput = {
 
 export type SentenceGenTaskSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  categoryId?: Prisma.SortOrder
   targetCount?: Prisma.SortOrder
   textDone?: Prisma.SortOrder
   imageDone?: Prisma.SortOrder
@@ -605,6 +639,7 @@ export type SentenceGenTaskSumOrderByAggregateInput = {
 export type SentenceGenTaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   bizDate?: boolean
+  categoryId?: boolean
   targetCount?: boolean
   textDone?: boolean
   imageDone?: boolean
@@ -625,6 +660,7 @@ export type SentenceGenTaskSelect<ExtArgs extends runtime.Types.Extensions.Inter
 export type SentenceGenTaskSelectScalar = {
   id?: boolean
   bizDate?: boolean
+  categoryId?: boolean
   targetCount?: boolean
   textDone?: boolean
   imageDone?: boolean
@@ -640,7 +676,7 @@ export type SentenceGenTaskSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "stage" | "lastHeartbeatAt" | "triggerType" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
+export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "categoryId" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "stage" | "lastHeartbeatAt" | "triggerType" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
 
 export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SentenceGenTask"
@@ -651,9 +687,16 @@ export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.Int
      */
     id: bigint
     /**
-     * 业务日期（YYYY-MM-DD 字符串，唯一：一天一批，重复触发即幂等跳过）
+     * 业务日期（YYYY-MM-DD 字符串）。
+     * 配合 categoryId 组成复合唯一：一天内可同时存在「一个定时全量批次（categoryId=0）」
+     * 与「多个按分类定向补题批次（categoryId=对应分类 id）」，互不冲突——这正是「填场景」要的能力。
      */
     bizDate: string
+    /**
+     * 定向补题的分类 id：0 = 定时全量批次（哨兵），其余为对应分类的定向补题批次。
+     * 仅用于批次维度区分与监控展示，题目最终归属由生题流水线的 targetCategory 决定。
+     */
+    categoryId: bigint
     /**
      * 目标生成数量
      */
@@ -1077,6 +1120,7 @@ export interface Prisma__SentenceGenTaskClient<T, Null = never, ExtArgs extends 
 export interface SentenceGenTaskFieldRefs {
   readonly id: Prisma.FieldRef<"SentenceGenTask", 'BigInt'>
   readonly bizDate: Prisma.FieldRef<"SentenceGenTask", 'String'>
+  readonly categoryId: Prisma.FieldRef<"SentenceGenTask", 'BigInt'>
   readonly targetCount: Prisma.FieldRef<"SentenceGenTask", 'Int'>
   readonly textDone: Prisma.FieldRef<"SentenceGenTask", 'Int'>
   readonly imageDone: Prisma.FieldRef<"SentenceGenTask", 'Int'>

@@ -936,6 +936,8 @@ export interface GenTaskItem {
   stage: string;
   /** 最近心跳时间：据此区分「还在跑」与「卡住了」 */
   lastHeartbeatAt: string | null;
+  /** 定向补题的分类 id（0 = 定时全量批次，按自然分布跨所有启用分类） */
+  categoryId: number;
   triggerType: string;
   errorMessage: string | null;
   startedAt: string | null;

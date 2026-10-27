@@ -36,6 +36,8 @@ export interface GenTaskItem {
   stage: string;
   /** 最近心跳时间：前端据此区分「还在跑」与「卡住了」 */
   lastHeartbeatAt: Date | null;
+  /** 定向补题的分类 id（0 = 定时全量批次，按自然分布跨所有启用分类） */
+  categoryId: number;
   triggerType: string;
   errorMessage: string | null;
   startedAt: Date | null;
@@ -119,6 +121,7 @@ export class SentenceController {
       status: row.status,
       stage: row.stage,
       lastHeartbeatAt: row.lastHeartbeatAt,
+      categoryId: Number(row.categoryId),
       triggerType: row.triggerType,
       errorMessage: row.errorMessage,
       startedAt: row.startedAt,
@@ -177,17 +180,24 @@ export class SentenceController {
 
   /**
    * 手动触发批量生成（异步执行，进度看批次列表）。
-   * 传 difficulty 则本批全部出该难度（定向补某一档），否则按自然分布。
+   * 传 difficulty 则本批全部出该难度（定向补某一档）；传 categoryName 则本批全部归属该场景
+   * （定向填某一场景）。两者都省略则按自然分布跨所有启用分类。
    */
   @Post('gen/batch')
   @RequirePermissions('sentence:gen')
   @OperationLog('题库管理', '触发生成')
   async triggerGen(@Body() dto: TriggerGenDto): Promise<ResponseEnvelope<{ taskId: number }>> {
-    const result = await this.sentenceGen.triggerManual(dto.count, dto.difficulty);
+    const result = await this.sentenceGen.triggerManual(dto.count, dto.difficulty, dto.categoryName);
+    let message = '生成任务已启动';
+    if (dto.categoryName) {
+      message = `生成任务已启动（定向填「${dto.categoryName}」场景）`;
+    } else if (dto.difficulty) {
+      message = `生成任务已启动（本批仅难度 ${dto.difficulty}）`;
+    }
     return {
       __raw: true,
       data: result,
-      message: dto.difficulty ? `生成任务已启动（本批仅难度 ${dto.difficulty}）` : '生成任务已启动',
+      message,
     };
   }
 

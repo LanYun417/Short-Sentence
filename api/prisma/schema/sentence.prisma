@@ -113,8 +113,13 @@ model Sentence {
 model SentenceGenTask {
   /// 主键
   id              BigInt    @id @default(autoincrement()) @db.BigInt
-  /// 业务日期（YYYY-MM-DD 字符串，唯一：一天一批，重复触发即幂等跳过）
-  bizDate         String    @unique @map("biz_date") @db.VarChar(10)
+  /// 业务日期（YYYY-MM-DD 字符串）。
+  /// 配合 categoryId 组成复合唯一：一天内可同时存在「一个定时全量批次（categoryId=0）」
+  /// 与「多个按分类定向补题批次（categoryId=对应分类 id）」，互不冲突——这正是「填场景」要的能力。
+  bizDate         String    @map("biz_date") @db.VarChar(10)
+  /// 定向补题的分类 id：0 = 定时全量批次（哨兵），其余为对应分类的定向补题批次。
+  /// 仅用于批次维度区分与监控展示，题目最终归属由生题流水线的 targetCategory 决定。
+  categoryId      BigInt    @default(0) @map("category_id") @db.BigInt
   /// 目标生成数量
   targetCount     Int       @default(0) @map("target_count")
   /// 文本已生成数量
@@ -142,6 +147,9 @@ model SentenceGenTask {
   /// 更新时间
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  /// 一天内同一分类最多一个批次（categoryId=0 表示定时全量批次，同样唯一）
+  @@unique([bizDate, categoryId])
+  @@index([categoryId])
   @@map("sentence_gen_task")
 }
 

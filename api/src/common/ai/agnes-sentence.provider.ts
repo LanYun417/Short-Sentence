@@ -212,10 +212,19 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     count: number,
     focusDifficulty?: number,
     bizId?: number,
+    targetCategory?: string,
   ): Promise<SentenceDraft[]> {
     if (!this.enabled) {
       throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
+
+    // 定向补某一场景：把该场景名同时作为主题，并强制所有条目的 categoryName 必须等于它。
+    // 否则模型只是「主题里包含该场景」，仍会把大部分题出到它熟悉的旧场景（实测新分类长期 0 题）。
+    const themeLine = targetCategory
+      ? `7. Generate ${count} items this batch. Theme: ${targetCategory}. ` +
+        `EVERY item's categoryName MUST be exactly "${targetCategory}" — this is a targeted refill of ` +
+        `that specific scene, so do NOT assign any other category name to any item.`
+      : `7. Generate ${count} items this batch. Theme: ${theme}.`;
 
     const systemPrompt = [
       'You are an English curriculum expert building a sentence bank for an English-learning app.',
@@ -250,7 +259,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   "casual", and avoid rare words and slang.',
       '6. scenePrompt: a flat cartoon illustration of TWO PEOPLE talking in that specific scene',
       '   (who they are, what they are doing, the environment, the lighting). 16:9 composition, no text in the image.',
-      `7. Generate ${count} items this batch. Theme: ${theme}.`,
+      themeLine,
     ].join('\n');
 
     // 解析放进 chat 的 validate 钩子：解析不出条目必须在「记 success」之前抛，

@@ -78,6 +78,13 @@ export class SentenceGenService {
    * 而 Agnes 免费额度对并发非常敏感（并发 6 就持续 429），必须全局收口。
    */
   private imageSemaphore: Semaphore | null = null;
+  /**
+   * 定向补某一场景时，本批强制归属的分类（id/name；null = 按自然分布跨所有启用分类）。
+   * 只由手动触发指定，用于把某个 0 题的新场景填起来。批次表没有这个字段，
+   * 用进程内变量传递——`running` 已保证同时只有一批在跑，与 focusDifficulty 同构。
+   */
+  private targetCategoryId: number | null = null;
+  private targetCategoryName: string | null = null;
   /** 正在手工重新生图的题目（防止同一题被连点，白烧上游配额）。 */
   private readonly regenerating = new Set<string>();
 
@@ -104,9 +111,9 @@ export class SentenceGenService {
       return;
     }
     const bizDate = this.today();
-    // bizDate 唯一：今天已有批次就复用它，**绝不能新建**（否则唯一键冲突）
+    // 定时全量批次用 categoryId=0 的哨兵行；今天已有就复用它（复合唯一 bizDate+categoryId 保证）。
     const existing = await this.prisma.sentenceGenTask.findUnique({
-      where: { bizDate },
+      where: { bizDate_categoryId: { bizDate, categoryId: 0 } },
       select: { id: true, status: true },
     });
     if (existing) {
@@ -123,31 +130,58 @@ export class SentenceGenService {
       return;
     }
     const task = await this.prisma.sentenceGenTask.create({
-      data: { bizDate, targetCount: config.sentence.dailyTarget, triggerType: 'cron', status: 'pending' },
+      data: {
+        bizDate,
+        categoryId: 0,
+        targetCount: config.sentence.dailyTarget,
+        triggerType: 'cron',
+        status: 'pending',
+      },
       select: { id: true },
     });
     void this.execute(task.id);
   }
 
   /**
-   * 手动触发（管理端调试 / 补跑 / 补某一档题目用）。
+   * 手动触发（管理端调试 / 补跑 / 补某一档题目 / 定向填某一场景用）。
    * @param count 本批目标题数
    * @param difficulty 强制本批全部为该难度（1/2/3；省略则按 40/40/20 自然分布）
+   * @param targetCategory 定向补的场景分类名（中文，须为启用分类）；省略则按自然分布跨所有启用分类
    */
-  async triggerManual(count?: number, difficulty?: number): Promise<{ taskId: number }> {
+  async triggerManual(count?: number, difficulty?: number, targetCategory?: string): Promise<{ taskId: number }> {
     if (this.running) {
       throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
     }
+    // 定向补场景：解析分类名 → id/name（先放局部变量，**等一切校验通过后再写进程变量**，
+    // 否则被「今日已完成」等守卫拒绝时会把残留值泄漏给下一次定时批次）。
+    let targetId: number | null = null;
+    let targetName: string | null = null;
+    if (targetCategory && targetCategory.trim().length > 0) {
+      const category = await this.prisma.sentenceCategory.findFirst({
+        where: { name: targetCategory.trim(), status: 1 },
+        select: { id: true, name: true },
+      });
+      if (!category) {
+        throw AppException.badRequest(`分类「${targetCategory.trim()}」不存在或未启用`);
+      }
+      targetId = Number(category.id);
+      targetName = category.name;
+    }
     const bizDate = this.today();
+    // 复合唯一 (bizDate, categoryId)：categoryId=0 是定时全量批次的哨兵，定向补题用真实分类 id。
+    // 两者同一天互不冲突——所以「填场景」可以一天内连续补多个分类，而不像以前那样一天只能有一批。
+    const categoryId = targetId ?? 0;
     const existing = await this.prisma.sentenceGenTask.findUnique({
-      where: { bizDate },
+      where: { bizDate_categoryId: { bizDate, categoryId } },
       select: { id: true, status: true },
     });
     if (existing?.status === 'success') {
-      throw AppException.conflict('今日批次已成功完成，请勿重复触发');
+      throw AppException.conflict(
+        targetName ? `「${targetName}」场景今日批次已成功完成，请勿重复触发` : '今日批次已成功完成，请勿重复触发',
+      );
     }
     if (existing?.status === 'cancelled') {
-      // bizDate 唯一，取消的批次不删掉就再也建不了今天的批次——给出可执行的提示
+      // 复合唯一，取消的批次不删掉就再也建不了今天该分类的批次——给出可执行的提示
       throw AppException.conflict('今日批次已取消，请先在「生成批次」里删除它再重新生成');
     }
     const target = Math.max(1, count ?? config.sentence.dailyTarget);
@@ -158,10 +192,11 @@ export class SentenceGenService {
           select: { id: true },
         })
       : await this.prisma.sentenceGenTask.create({
-          data: { bizDate, targetCount: target, triggerType: 'manual', status: 'pending' },
+          data: { bizDate, categoryId, targetCount: target, triggerType: 'manual', status: 'pending' },
           select: { id: true },
         });
     this.focusDifficulty = difficulty ?? null;
+    // 目标分类已落在批次行（categoryId）上，execute 会从行里读，不用在这里写进程变量
     void this.execute(task.id);
     return { taskId: Number(task.id) };
   }
@@ -276,12 +311,34 @@ export class SentenceGenService {
     this.running = true;
     const resumed = await this.prisma.sentenceGenTask.findUnique({
       where: { id: taskId },
-      select: { targetCount: true, textDone: true, imageDone: true, failCount: true, startedAt: true },
+      select: {
+        targetCount: true,
+        textDone: true,
+        imageDone: true,
+        failCount: true,
+        startedAt: true,
+        categoryId: true,
+      },
     });
     if (!resumed) {
       // 批次已被删除：直接退出，别再往不存在的行上写
       this.running = false;
       return;
+    }
+    // 定向补场景的目标分类**从批次行读**（categoryId > 0 即定向批次），不依赖进程内变量：
+    // 这样「暂停后继续」「进程重启后断点续跑」都能接着补同一场景，而不会退回自然分布。
+    // 分类被删/被停用时退回自然分布（否则会把题塞进一个已下线的分类）。
+    this.targetCategoryId = null;
+    this.targetCategoryName = null;
+    if (resumed.categoryId > 0n) {
+      const category = await this.prisma.sentenceCategory.findUnique({
+        where: { id: resumed.categoryId },
+        select: { id: true, name: true, status: true },
+      });
+      if (category && category.status === 1) {
+        this.targetCategoryId = Number(category.id);
+        this.targetCategoryName = category.name;
+      }
     }
     const startedAt = resumed.startedAt ?? new Date();
     let textDone = resumed.textDone;
@@ -363,7 +420,14 @@ export class SentenceGenService {
         try {
           drafts = await textSemaphore.run(() =>
             withRetry(
-              () => this.sentenceGen.generateBatch(theme, need, this.focusDifficulty ?? undefined, Number(taskId)),
+              () =>
+                this.sentenceGen.generateBatch(
+                  this.targetCategoryName ?? theme,
+                  need,
+                  this.focusDifficulty ?? undefined,
+                  Number(taskId),
+                  this.targetCategoryName ?? undefined,
+                ),
               retry,
             ),
           );
@@ -498,8 +562,10 @@ export class SentenceGenService {
         .catch(() => undefined);
     } finally {
       this.running = false;
-      // 难度焦点只对当前批次有效，不能泄漏到下一次（含定时任务）
+      // 难度焦点 / 定向分类只对当前批次有效，不能泄漏到下一次（含定时任务）
       this.focusDifficulty = null;
+      this.targetCategoryId = null;
+      this.targetCategoryName = null;
     }
   }
 
@@ -735,7 +801,12 @@ export class SentenceGenService {
       // 结果「中文释义」字段里会显示一句英文（2026-10-24 发现的数据质量漏洞）。
       .filter((draft) => draft.sentenceEn.trim().length > 0 && draft.translationZh.trim().length > 0)
       .map((draft) => {
-        const categoryId = byName.get(draft.categoryName) ?? fallbackCategoryId;
+        // 定向补场景：无视模型自报的 categoryName，强制归属目标分类
+        // （模型偶尔仍会把题串到它熟悉的旧分类，必须用服务端分类覆盖才填得准）。
+        const categoryId =
+          this.targetCategoryId != null
+            ? BigInt(this.targetCategoryId)
+            : (byName.get(draft.categoryName) ?? fallbackCategoryId);
         const scenePrompt =
           draft.scenePrompt.trim().length > 0 ? draft.scenePrompt : this.defaultScenePrompt(draft.sentenceEn);
         return {

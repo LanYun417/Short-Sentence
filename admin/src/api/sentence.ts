@@ -87,9 +87,18 @@ export function exportSentencesApi(params: Omit<SentenceQuery, 'page' | 'pageSiz
   });
 }
 
-/** 手动触发批量生成（异步；进度看批次列表） */
-export function triggerGenApi(count?: number): Promise<{ taskId: number }> {
-  return post<{ taskId: number }>('/sentences/gen/batch', count ? { count } : undefined);
+/**
+ * 手动触发批量生成（异步；进度看批次列表）。
+ *
+ * categoryName 传了就「定向填某个场景」：本批所有题强制归属该分类
+ * （服务端会覆盖模型自报的分类名，否则模型会把题都出到熟悉的旧场景）。
+ */
+export function triggerGenApi(params?: {
+  count?: number;
+  difficulty?: number;
+  categoryName?: string;
+}): Promise<{ taskId: number }> {
+  return post<{ taskId: number }>('/sentences/gen/batch', params);
 }
 
 /** 生成批次列表（运营监控） */

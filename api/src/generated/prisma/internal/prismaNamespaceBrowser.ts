@@ -404,6 +404,7 @@ export type SentenceScalarFieldEnum = (typeof SentenceScalarFieldEnum)[keyof typ
 export const SentenceGenTaskScalarFieldEnum = {
   id: 'id',
   bizDate: 'bizDate',
+  categoryId: 'categoryId',
   targetCount: 'targetCount',
   textDone: 'textDone',
   imageDone: 'imageDone',

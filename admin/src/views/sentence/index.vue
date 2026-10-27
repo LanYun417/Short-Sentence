@@ -413,20 +413,47 @@ const genTotal = ref(0);
 const genPage = ref(1);
 const genPageSize = ref(10);
 
-/** 手动触发批量生成。 */
-async function handleTriggerGen(): Promise<void> {
-  try {
-    await ElMessageBox.confirm(
-      `将按每日目标量异步生成题目与配图（每日本批次仅可执行一次），进度可在「生成批次」查看。确认触发？`,
-      '触发生成',
-      { type: 'warning' },
-    );
-  } catch {
+/** 「触发生成」表单：数量 / 可选难度 / 可选定向场景。 */
+const genFormVisible = ref(false);
+const genSubmitting = ref(false);
+const genForm = ref<{ count: number; difficulty?: number; categoryName?: string }>({
+  count: 30,
+  difficulty: undefined,
+  categoryName: undefined,
+});
+
+/** 打开「触发生成」表单（默认全部分类、30 条）。 */
+function handleTriggerGen(): void {
+  genForm.value = { count: 30, difficulty: undefined, categoryName: undefined };
+  genFormVisible.value = true;
+}
+
+/**
+ * 提交触发生成。
+ * 选了定向场景时本批所有题会强制归属该场景（服务端覆盖模型自报分类），
+ * 用于填补 0 题的新场景；留空则按自然分布跨所有启用分类。
+ */
+async function submitGenForm(): Promise<void> {
+  if (genSubmitting.value) {
     return;
   }
-  const result = await triggerGenApi();
-  ElMessage.success(`生成任务已启动（批次 #${result.taskId}）`);
-  await loadGenTasks();
+  genSubmitting.value = true;
+  try {
+    const result = await triggerGenApi({
+      count: genForm.value.count,
+      difficulty: genForm.value.difficulty,
+      categoryName: genForm.value.categoryName || undefined,
+    });
+    ElMessage.success(
+      genForm.value.categoryName
+        ? `已启动定向补题「${genForm.value.categoryName}」（批次 #${result.taskId}）`
+        : `生成任务已启动（批次 #${result.taskId}）`,
+    );
+    genFormVisible.value = false;
+    await loadGenTasks();
+  } finally {
+    genSubmitting.value = false;
+  }
 }
 
 /** 加载批次列表。silent = 轮询刷新时不显示 loading（避免表格每 3s 闪一次）。 */
@@ -443,6 +470,14 @@ async function loadGenTasks(silent = false): Promise<void> {
       genLoading.value = false;
     }
   }
+}
+
+/** 批次 → 定向场景名（categoryId=0 表示定时/全量批次，按自然分布跨所有分类）。 */
+function genTaskCategoryName(row: GenTaskItem): string {
+  if (!row.categoryId) {
+    return '全部分类';
+  }
+  return categories.value.find((item) => item.id === row.categoryId)?.name ?? `分类 ${row.categoryId}`;
 }
 
 /** 批次弹窗轮询定时器。 */
@@ -753,6 +788,38 @@ onMounted(async () => {
       </el-alert>
     </BasicDialog>
 
+    <!-- 触发生成：数量 / 可选难度 / 可选定向场景 -->
+    <BasicDialog v-model="genFormVisible" title="触发生成" width="500px">
+      <el-form label-width="90px">
+        <el-form-item label="目标数量">
+          <el-input-number v-model="genForm.count" :min="1" :max="300" :step="10" />
+          <span class="ml-2 text-xs text-muted">每题都要出图，越多越久；每日全量由 00:30 定时任务生成</span>
+        </el-form-item>
+        <el-form-item label="难度">
+          <el-select v-model="genForm.difficulty" placeholder="不限（40/40/20 自然分布）" clearable style="width: 100%">
+            <el-option label="基础" :value="1" />
+            <el-option label="进阶" :value="2" />
+            <el-option label="挑战" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="定向场景">
+          <el-select v-model="genForm.categoryName" placeholder="全部分类（自然分布）" clearable style="width: 100%">
+            <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.name" />
+          </el-select>
+        </el-form-item>
+        <el-alert type="info" :closable="false" show-icon>
+          <template #title>
+            选具体场景则本批所有题强制归属该场景（用于填补 0 题的新场景，一天可为多个场景分别补题）；
+            留空则按自然分布跨所有启用分类。生题 + 配图异步执行，进度看「生成批次」。
+          </template>
+        </el-alert>
+      </el-form>
+      <template #footer>
+        <el-button @click="genFormVisible = false">取消</el-button>
+        <el-button type="primary" :loading="genSubmitting" @click="submitGenForm">开始生成</el-button>
+      </template>
+    </BasicDialog>
+
     <!-- 生成批次监控 -->
     <BasicDialog v-model="genDialogVisible" title="生成批次" width="920px" :show-footer="false">
       <el-table v-loading="genLoading" :data="genList" border max-height="420">
@@ -790,6 +857,9 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column label="触发" width="80">
           <template #default="{ row }">{{ row.triggerType === 'cron' ? '定时' : '手动' }}</template>
+        </el-table-column>
+        <el-table-column label="定向场景" width="110" show-overflow-tooltip>
+          <template #default="{ row }">{{ genTaskCategoryName(row as GenTaskItem) }}</template>
         </el-table-column>
         <el-table-column prop="errorMessage" label="错误摘要" min-width="140" show-overflow-tooltip />
         <el-table-column label="完成时间" width="170">

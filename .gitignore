@@ -75,3 +75,5 @@ api/.card-backup-*.json
 backups/
 *.sql.gz
 *.sql
+# 例外：Prisma 迁移 SQL 是源码（上面 *.sql 只针对本地数据备份/临时导出）
+!api/prisma/migrations/**/*.sql

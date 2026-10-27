@@ -97,6 +97,15 @@ export class TriggerGenDto {
   @Min(1, { message: '难度最小为 1' })
   @Max(3, { message: '难度最大为 3' })
   difficulty?: number;
+
+  /**
+   * 定向补的场景分类名（中文，须为启用分类；省略则按自然分布跨所有启用分类）。
+   * 用于把某个 0 题的新场景填起来：本批所有题强制归属该分类，模型自报的分类名会被服务端覆盖。
+   */
+  @IsOptional()
+  @IsString({ message: '场景分类名必须为字符串' })
+  @MaxLength(50, { message: '场景分类名最长 50 个字符' })
+  categoryName?: string;
 }
 
 /**
