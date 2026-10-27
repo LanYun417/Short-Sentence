@@ -481,6 +481,17 @@ async function onChangePassword(): Promise<void> {
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
+    <!-- 意见反馈入口：提交建议与问题，并在同一页看到运营回复 -->
+    <NuxtLink
+      to="/feedback"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 110ms"
+    >
+      <UIcon name="i-lucide-message-square-text" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">意见反馈</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
     <!-- ============ 表单 Tabs ============ -->
     <section class="anim-in mt-5" style="animation-delay: 120ms">
       <UTabs :items="TABS" variant="pill" :content="true">

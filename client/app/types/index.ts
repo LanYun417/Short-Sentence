@@ -258,3 +258,19 @@ export interface ClientNoticeItem {
   publishedAt: string | null;
   createdAt: string;
 }
+
+/* ------------------------------ 我的反馈 ------------------------------ */
+
+/** 反馈条目（用户端视角：含处理状态与运营回复）。 */
+export interface MyFeedbackItem {
+  id: number;
+  /** feature 功能建议 / bug 使用异常 / content 内容问题 / ux 体验建议 / other 其他 */
+  type: string;
+  content: string;
+  /** pending 待处理 / resolved 已处理 / dismissed 已驳回 */
+  status: 'pending' | 'resolved' | 'dismissed';
+  /** 运营回复（空 = 尚未回复） */
+  reply: string | null;
+  handledAt: string | null;
+  createdAt: string;
+}
