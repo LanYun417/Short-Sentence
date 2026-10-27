@@ -63,7 +63,12 @@ afterEach(async () => {
   // 写流的 open 是异步的：测试的 await 恢复与 afterEach 同处一轮微任务，
   // rmSync 若抢先执行，会在用例已通过后刷一条误导性的 ENOENT。让出一个事件循环轮次。
   await new Promise((resolve) => setImmediate(resolve));
-  rmSync(rootDir, { recursive: true, force: true });
+  // 但「让出一轮」并不足够：createWriteStream 的 open 排在 IO 线程池里，负载高时
+  // （全量并发跑单测，26 个文件抢线程池）可能晚于 rmSync 才落地——文件被创建在
+  // 正在删除的目录里，rmSync 直接抛 ENOTEMPTY 让**已通过的用例变成失败**（实测约 1/5 概率）。
+  // 归档后服务只会再写一条「日志归档完成」就静止，所以按 Node 官方建议给 rmSync
+  // 重试退避即可（maxRetries 对 ENOTEMPTY/EBUSY/EPERM 生效），不掩盖真实错误。
+  rmSync(rootDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 25 });
   const mutable = config.log as unknown as LogConfig;
   mutable.dir = original.dir;
   mutable.archiveDir = original.archiveDir;
