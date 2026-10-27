@@ -71,33 +71,33 @@ model SentenceCategory {
 /// 句子题库（图片由定时任务预生成，status=ready 才下发用户端）
 model Sentence {
   /// 主键
-  id            BigInt   @id @default(autoincrement()) @db.BigInt
+  id               BigInt   @id @default(autoincrement()) @db.BigInt
   /// 所属分类
-  categoryId    BigInt   @map("category_id") @db.BigInt
+  categoryId       BigInt   @map("category_id") @db.BigInt
   /// 难度：1 易 / 2 中 / 3 难
-  difficulty    Int      @default(1) @db.TinyInt
+  difficulty       Int      @default(1) @db.TinyInt
   /// 英文句子（唯一；批量生成的天然去重键）
-  sentenceEn    String   @unique @db.VarChar(300)
+  sentenceEn       String   @unique @db.VarChar(300)
   /// 其他可接受的英文表达（JSON 数组，最多 5 条；输入模式下用户写出任一条即算对）
-  alternateAnswers String? @map("alternate_answers") @db.VarChar(1000)
+  alternateAnswers String?  @map("alternate_answers") @db.VarChar(1000)
   /// 中文释义（用户端题干）
-  translationZh String   @map("translation_zh") @db.VarChar(300)
+  translationZh    String   @map("translation_zh") @db.VarChar(300)
   /// IPA 音标（英美合并，如 /ˈkɒfi ˈplez/）
-  ipa           String?  @db.VarChar(200)
+  ipa              String?  @db.VarChar(200)
   /// 生图提示词（描述「两人对话场景」构图，供运营审核）
-  scenePrompt   String   @map("scene_prompt") @db.VarChar(500)
+  scenePrompt      String   @map("scene_prompt") @db.VarChar(500)
   /// 配图文件 id（0 = 未生成，指向 sys_file；故不建外键）
-  imageFileId   BigInt   @default(0) @map("image_file_id") @db.BigInt
+  imageFileId      BigInt   @default(0) @map("image_file_id") @db.BigInt
   /// 来源：ai 生成 / manual 运营手工
-  source        String   @default("ai") @db.VarChar(20)
+  source           String   @default("ai") @db.VarChar(20)
   /// 状态：pending_image 待生成 / ready 就绪 / offline 下架
-  status        String   @default("pending_image") @db.VarChar(20)
+  status           String   @default("pending_image") @db.VarChar(20)
   /// 所属生成批次 id（0 = 手工创建）
-  genTaskId     BigInt   @default(0) @map("gen_task_id") @db.BigInt
+  genTaskId        BigInt   @default(0) @map("gen_task_id") @db.BigInt
   /// 创建时间
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt        DateTime @default(now()) @map("created_at")
   /// 更新时间
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   category  SentenceCategory   @relation(fields: [categoryId], references: [id])
   records   SentenceRecord[]
@@ -112,35 +112,35 @@ model Sentence {
 /// 每日生成批次（一条 = 一天的批量任务）
 model SentenceGenTask {
   /// 主键
-  id           BigInt    @id @default(autoincrement()) @db.BigInt
+  id              BigInt    @id @default(autoincrement()) @db.BigInt
   /// 业务日期（YYYY-MM-DD 字符串，唯一：一天一批，重复触发即幂等跳过）
-  bizDate      String    @unique @map("biz_date") @db.VarChar(10)
+  bizDate         String    @unique @map("biz_date") @db.VarChar(10)
   /// 目标生成数量
-  targetCount  Int       @default(0) @map("target_count")
+  targetCount     Int       @default(0) @map("target_count")
   /// 文本已生成数量
-  textDone     Int       @default(0) @map("text_done")
+  textDone        Int       @default(0) @map("text_done")
   /// 图片已生成数量
-  imageDone    Int       @default(0) @map("image_done")
+  imageDone       Int       @default(0) @map("image_done")
   /// 失败数量（文本+图片合计）
-  failCount    Int       @default(0) @map("fail_count")
+  failCount       Int       @default(0) @map("fail_count")
   /// 状态：pending 待处理 / running 进行中 / success 成功 / failed 失败
-  status       String    @default("pending") @db.VarChar(20)
+  status          String    @default("pending") @db.VarChar(20)
   /// 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / imaging 生图 / done 收尾
-  stage        String    @default("") @db.VarChar(20)
+  stage           String    @default("") @db.VarChar(20)
   /// 最近心跳（每完成一批题/一张图更新）：前端据此区分「还在跑」与「卡住了」
   lastHeartbeatAt DateTime? @map("last_heartbeat_at")
   /// 触发方式：cron 定时 / manual 手动
-  triggerType  String    @default("cron") @map("trigger_type") @db.VarChar(20)
+  triggerType     String    @default("cron") @map("trigger_type") @db.VarChar(20)
   /// 失败原因摘要（截断到 500 字符）
-  errorMessage String?   @map("error_message") @db.VarChar(500)
+  errorMessage    String?   @map("error_message") @db.VarChar(500)
   /// 开始时间
-  startedAt    DateTime? @map("started_at")
+  startedAt       DateTime? @map("started_at")
   /// 结束时间
-  finishedAt   DateTime? @map("finished_at")
+  finishedAt      DateTime? @map("finished_at")
   /// 创建时间
-  createdAt    DateTime  @default(now()) @map("created_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
   /// 更新时间
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("sentence_gen_task")
 }
@@ -196,25 +196,25 @@ model SentenceFavorite {
 /// 题目举报/反馈（用户端「举报」按钮提交，供运营核查处理）
 model SentenceReport {
   /// 主键
-  id BigInt @id @default(autoincrement()) @db.BigInt
+  id          BigInt    @id @default(autoincrement()) @db.BigInt
   /// 举报人用户 id（client_user）
-  userId BigInt @map("user_id") @db.BigInt
+  userId      BigInt    @map("user_id") @db.BigInt
   /// 被举报句子 id
-  sentenceId BigInt @map("sentence_id") @db.BigInt
+  sentenceId  BigInt    @map("sentence_id") @db.BigInt
   /// 举报类型：wrong 题目/翻译有误 / inappropriate 内容不适当 / image 图片不雅 / other 其他
-  reason String @db.VarChar(20)
+  reason      String    @db.VarChar(20)
   /// 补充描述（可选）
-  description String? @db.VarChar(500)
+  description String?   @db.VarChar(500)
   /// 处理状态：pending 待处理 / resolved 已处理 / dismissed 已驳回
-  status String @default("pending") @db.VarChar(20)
+  status      String    @default("pending") @db.VarChar(20)
   /// 处理备注（运营填写）
-  handleNote String? @map("handle_note") @db.VarChar(500)
+  handleNote  String?   @map("handle_note") @db.VarChar(500)
   /// 处理时间
-  handledAt DateTime? @map("handled_at")
+  handledAt   DateTime? @map("handled_at")
   /// 创建时间
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
   /// 更新时间
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   sentence Sentence @relation(fields: [sentenceId], references: [id])
 

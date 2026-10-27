@@ -7,29 +7,29 @@
 /// 每日句签（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
 model DailySentenceCard {
   /// 主键
-  id BigInt @id @default(autoincrement()) @db.BigInt
+  id            BigInt   @id @default(autoincrement()) @db.BigInt
   /// 业务日期（YYYY-MM-DD，唯一：一天一张，重复触发幂等跳过）
-  bizDate String @unique @map("biz_date") @db.VarChar(10)
+  bizDate       String   @unique @map("biz_date") @db.VarChar(10)
   /// 主题标题（英文，如 Morning Ritual）
-  title String @db.VarChar(80)
+  title         String   @db.VarChar(80)
   /// 主题标题（中文）
-  titleZh String @map("title_zh") @db.VarChar(80)
+  titleZh       String   @map("title_zh") @db.VarChar(80)
   /// 卡面短句（英文）
-  sentenceEn String @map("sentence_en") @db.VarChar(200)
+  sentenceEn    String   @map("sentence_en") @db.VarChar(200)
   /// 短句中文释义
-  translationZh String @map("translation_zh") @db.VarChar(200)
+  translationZh String   @map("translation_zh") @db.VarChar(200)
   /// 寄语（这张卡独有的一句，随文案一起生成；展示在卡背，替代泛用的揭晓文案）
-  blessing String @default("") @map("blessing") @db.VarChar(120)
+  blessing      String   @default("") @map("blessing") @db.VarChar(120)
   /// 生图提示词（运营审核）
-  scenePrompt String @map("scene_prompt") @db.VarChar(500)
+  scenePrompt   String   @map("scene_prompt") @db.VarChar(500)
   /// 配图文件 id（0 = 未生成，指向 sys_file；故不建外键）
-  imageFileId BigInt @default(0) @map("image_file_id") @db.BigInt
+  imageFileId   BigInt   @default(0) @map("image_file_id") @db.BigInt
   /// 状态：pending 待生成 / ready 就绪 / failed 失败
-  status String @default("pending") @db.VarChar(20)
+  status        String   @default("pending") @db.VarChar(20)
   /// 创建时间
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt     DateTime @default(now()) @map("created_at")
   /// 更新时间
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   grants UserSentenceCard[]
 
@@ -40,13 +40,13 @@ model DailySentenceCard {
 /// 用户句签（userId + sentenceCardId 唯一，重复领取被唯一键拦截）
 model UserSentenceCard {
   /// 主键
-  id BigInt @id @default(autoincrement()) @db.BigInt
+  id             BigInt   @id @default(autoincrement()) @db.BigInt
   /// 用户 id
-  userId BigInt @map("user_id") @db.BigInt
+  userId         BigInt   @map("user_id") @db.BigInt
   /// 句签 id
-  sentenceCardId BigInt @map("sentence_card_id") @db.BigInt
+  sentenceCardId BigInt   @map("sentence_card_id") @db.BigInt
   /// 获得时间
-  obtainedAt DateTime @default(now()) @map("obtained_at")
+  obtainedAt     DateTime @default(now()) @map("obtained_at")
 
   sentenceCard DailySentenceCard @relation(fields: [sentenceCardId], references: [id])
 

@@ -11,15 +11,15 @@
 /// 经验值账本（一行 = 一次成功发放；event_key 唯一即幂等保证）
 model ClientXpLog {
   /// 主键
-  id BigInt @id @default(autoincrement()) @db.BigInt
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
   /// 幂等键（answer:{eventId} / favorite:{userId}:{sentenceId} / daily_goal:{userId}:{date} / achievement:{userId}:{code} / backfill:{userId}）
-  eventKey String @unique @map("event_key") @db.VarChar(160)
+  eventKey  String   @unique @map("event_key") @db.VarChar(160)
   /// 用户 id
-  userId BigInt @map("user_id") @db.BigInt
+  userId    BigInt   @map("user_id") @db.BigInt
   /// 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill
-  eventType String @map("event_type") @db.VarChar(32)
+  eventType String   @map("event_type") @db.VarChar(32)
   /// 本次发放经验值（恒为正：本体系只奖励、不扣减）
-  amount Int @db.Int
+  amount    Int      @db.Int
   /// 发放时间
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -30,32 +30,33 @@ model ClientXpLog {
 /// 成就定义（由种子写入；code 为稳定业务键，勿随意改动）
 model Achievement {
   /// 成就编码（如 streak_7 / collector_50 / night_owl）
-  code String @id @db.VarChar(64)
+  code        String @id @db.VarChar(64)
   /// 成就名称
-  name String @db.VarChar(50)
+  name        String @db.VarChar(50)
   /// 达成条件描述（展示给用户）
   description String @db.VarChar(200)
   /// 图标（lucide 图标名，前端直接拼 i-lucide-*）
-  icon String @db.VarChar(100)
+  icon        String @db.VarChar(100)
   /// 分组：persist 坚持 / behavior 行为 / luck 运气
-  category String @db.VarChar(20)
+  category    String @db.VarChar(20)
   /// 解锁奖励经验值
-  rewardXp Int @default(0) @map("reward_xp") @db.Int
+  rewardXp    Int    @default(0) @map("reward_xp") @db.Int
   /// 排序（升序）
-  sort Int @default(0)
+  sort        Int    @default(0)
+
   @@map("achievement")
 }
 
 /// 用户已解锁成就（userId + code 唯一，重复解锁被唯一键拦截）
 model UserAchievement {
   /// 主键
-  id BigInt @id @default(autoincrement()) @db.BigInt
+  id              BigInt   @id @default(autoincrement()) @db.BigInt
   /// 用户 id
-  userId BigInt @map("user_id") @db.BigInt
+  userId          BigInt   @map("user_id") @db.BigInt
   /// 成就编码（不建外键：成就定义是随发布演进的种子数据，历史解锁记录须保留）
-  achievementCode String @map("achievement_code") @db.VarChar(64)
+  achievementCode String   @map("achievement_code") @db.VarChar(64)
   /// 解锁时间
-  unlockedAt DateTime @default(now()) @map("unlocked_at")
+  unlockedAt      DateTime @default(now()) @map("unlocked_at")
 
   @@unique([userId, achievementCode])
   @@index([userId])

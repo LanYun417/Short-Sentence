@@ -121,25 +121,25 @@ model HttpLog {
  */
 model Notice {
   /// 主键
-  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  id         BigInt    @id @default(autoincrement()) @db.BigInt
   /// 接收人 id
-  userId     BigInt   @map("user_id") @db.BigInt
+  userId     BigInt    @map("user_id") @db.BigInt
   /// 标题
-  title      String   @db.VarChar(200)
+  title      String    @db.VarChar(200)
   /// 正文（纯文本，渲染时按纯文本处理，不接受 HTML）
-  content    String   @db.Text
+  content    String    @db.Text
   /// 类型：1 系统通知 / 2 公告 / 3 安全提醒
-  noticeType Int      @default(1) @map("notice_type") @db.TinyInt
+  noticeType Int       @default(1) @map("notice_type") @db.TinyInt
   /// 点击跳转的前端路由（空 = 不跳转）
-  link       String?  @db.VarChar(255)
+  link       String?   @db.VarChar(255)
   /// 0 未读 / 1 已读
-  isRead     Int      @default(0) @map("is_read") @db.TinyInt
+  isRead     Int       @default(0) @map("is_read") @db.TinyInt
   /// 阅读时间
   readAt     DateTime? @map("read_at")
   /// 创建人 id（系统自动通知可为空）
-  createdBy  BigInt?  @map("created_by") @db.BigInt
+  createdBy  BigInt?   @map("created_by") @db.BigInt
   /// 创建时间
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   /// 个人收件箱列表：按人 + 未读优先 + 时间倒序
   @@index([userId, isRead, createdAt])
