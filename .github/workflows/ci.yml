@@ -8,7 +8,7 @@
 #   guards → 规范漂移（格式 / 依赖基线 / 被 gitignore 吞掉的源码文件 / 原生滚动条）
 #   api    → 后端编译、契约、真实数据库读写（含迁移可执行性）
 #   web    → 前端类型与产物可构建
-#   client → 用户端产物可构建
+#   client → 用户端类型、单测与产物
 #   android→ Flutter 静态检查与单测（app 尚未开发，先守住骨架可编译）
 
 name: CI
@@ -147,7 +147,7 @@ jobs:
         run: npm run build
 
   client:
-    name: Nuxt 客户端（类型 / 构建）
+    name: Nuxt 客户端（类型 / 单测 / 构建）
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +159,15 @@ jobs:
       - name: 安装客户端依赖（postinstall 自动执行 nuxt prepare）
         working-directory: client
         run: npm ci --no-audit --no-fund
-      - name: 构建产物（Nuxt 构建内含类型检查）
+      # `nuxt build` **不做**类型检查（此前这里写着「构建内含类型检查」，是错的）：
+      # 补上 type-check 后立刻抓出 8 处真实类型错误（含 UCard ui.ring 静默失效）。
+      - name: 类型检查
+        working-directory: client
+        run: npm run type-check
+      - name: 单测（纯逻辑：答案归一化 / AI 输出解析）
+        working-directory: client
+        run: npm run test
+      - name: 构建产物
         working-directory: client
         run: npm run build
 

@@ -470,7 +470,8 @@ async function onChangePassword(): Promise<void> {
                 <BirthdayPicker v-model="birthday" />
               </UFormField>
               <UFormField label="个性签名" help="一句激励自己的话，会展示在身份卡上">
-                <UTextarea v-model="signature" rows="1" maxlength="200" autoresize class="w-full" />
+                <!-- rows 用 :rows 绑定：静态属性会以字符串 "1" 传入，与 number 类型不符 -->
+                <UTextarea v-model="signature" :rows="1" maxlength="200" autoresize class="w-full" />
               </UFormField>
             </div>
 

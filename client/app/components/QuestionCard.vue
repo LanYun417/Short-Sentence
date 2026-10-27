@@ -33,7 +33,8 @@ const emit = defineEmits<{
 }>();
 
 /** 配图地址。 */
-const imageSrc = computed(() => props.question.imageUrl);
+// 归一到 undefined（而不是 null）：`<img :src>` 只接受 string | undefined
+const imageSrc = computed(() => props.question.imageUrl ?? undefined);
 
 /** 用户输入 */
 const answer = ref('');
@@ -78,7 +79,14 @@ const difficultyText = computed(() => ['', '基础', '进阶', '挑战'][props.q
 
 /** 收藏按钮的「弹一下」反馈（点击后瞬时放大） */
 const favPop = ref(false);
-let favTimer: ReturnType<typeof setTimeout> | 0 = 0;
+/**
+ * 收藏按钮的复位定时器。
+ *
+ * 显式用 `number`（浏览器定时器）而不是 `ReturnType<typeof setTimeout>`：
+ * 工程里同时存在 Node 类型，后者会被解析成 `NodeJS.Timeout`，与 `window.setTimeout`
+ * 的返回值不兼容（同一类坑：混用 window / global 定时器类型）。
+ */
+let favTimer: number | undefined;
 
 /** 聚焦输入框。 */
 function focusInput(): void {

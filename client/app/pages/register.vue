@@ -60,8 +60,10 @@ async function onSubmit(): Promise<void> {
     <UCard
       :ui="{
         body: 'p-6',
-        ring: 'ring-1 ring-slate-200/80 dark:ring-slate-700/80',
-        shadow: 'shadow-xl shadow-slate-900/5',
+        // 边框与投影必须写在 root 上：@nuxt/ui 的 UCard ui 只有
+        // root/header/title/description/body/footer 这几个 slot，
+        // 写 `ring` / `shadow` 是**静默无效**的（加 type-check 后才发现这件事）
+        root: 'ring-1 ring-slate-200/80 shadow-xl shadow-slate-900/5 dark:ring-slate-700/80',
       }"
     >
       <form class="space-y-4" @submit.prevent="onSubmit">

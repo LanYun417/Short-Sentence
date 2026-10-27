@@ -13,7 +13,7 @@
  */
 import type { SentenceCategory, SentenceLibraryItem } from '~/types';
 import { apiFetch } from '~/composables/useApi';
-import { DIFFICULTIES } from '~/composables/useQuestionSession';
+import { DIFFICULTIES, type DifficultyLevel } from '~/composables/useQuestionSession';
 
 /** 缩略图地址。 */
 function itemSrc(url?: string | null): string {
@@ -47,8 +47,10 @@ const TYPE_OPTIONS = [
 const type = ref<'all' | 'wrong' | 'right'>('all');
 // 难度档位**直接复用刷题页的定义**（基础 / 进阶 / 挑战）——两处口径必须一致，
 // 否则用户在这里筛「中」、刷题页选「进阶」，同一个值出现两套叫法会歧义。
-const difficulty = ref<number | null>(null);
-const categoryId = ref<number | null>(null);
+// 用 undefined 而不是 null 表示「未筛选」：@nuxt/ui 的 USelect 模型值是 `T | undefined`，
+// 传 null 会类型不通过（此前只靠 v-model 静默通过，加 type-check 后才暴露）。
+const difficulty = ref<DifficultyLevel | undefined>(undefined);
+const categoryId = ref<number | undefined>(undefined);
 const from = ref('');
 const to = ref('');
 const categories = ref<SentenceCategory[]>([]);
@@ -56,14 +58,14 @@ const categories = ref<SentenceCategory[]>([]);
 const categoryOptions = computed(() => categories.value.map((c) => ({ label: c.name, value: c.id })));
 /** 是否有非默认筛选（据此展示「清除筛选」）。 */
 const hasActiveFilter = computed(() => {
-  const base = difficulty.value !== null || categoryId.value !== null || !!from.value || !!to.value;
+  const base = difficulty.value !== undefined || categoryId.value !== undefined || !!from.value || !!to.value;
   return isHistory.value ? type.value !== 'all' || base : base;
 });
 
 function clearFilters(): void {
   type.value = 'all';
-  difficulty.value = null;
-  categoryId.value = null;
+  difficulty.value = undefined;
+  categoryId.value = undefined;
   from.value = '';
   to.value = '';
 }
@@ -314,7 +316,7 @@ const emptyText = computed(() => {
       <div class="flex flex-wrap items-center gap-2">
         <USelect
           v-model="difficulty"
-          :items="DIFFICULTIES"
+          :items="[...DIFFICULTIES]"
           value-key="value"
           label-key="label"
           placeholder="全部难度"

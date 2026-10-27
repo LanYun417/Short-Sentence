@@ -5,6 +5,10 @@
 <p align="center"><em>开箱即用的通用后台管理基座</em></p>
 
 > 一套开箱即用的通用后台管理基座：JWT 双 Token 鉴权、RBAC + 数据权限、系统管理（用户 / 角色 / 菜单 / 部门 / 字典 / 参数）、三类日志、文件管理、通知中心、在线用户与系统监控（CPU / 内存 / 磁盘 / 网络吞吐）、代码生成器、ECharts 仪表盘与中英双语。前后端 TypeScript 全覆盖，遵循严格分层与统一工程规范。
+>
+> 本仓库同时是**「短句」**（视觉场景英语闪卡）的完整落地：同一个后端（`api/`）之上，
+> 运营后台（`admin/`）、用户端 Web（`client/`，Nuxt 4）与 Android App（`android/`，Flutter）
+> **三端同源同契约**。产品能力见[「短句」业务功能](#短句业务功能)。
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-42b883" alt="Vue" height="20">
@@ -25,6 +29,7 @@
 - [关于本项目](#关于本项目)
 - [界面预览](#界面预览)
 - [功能特性](#功能特性)
+- [「短句」业务功能](#短句业务功能)
 - [技术栈](#技术栈)
 - [目录结构](#目录结构)
 - [快速开始](#快速开始)
@@ -93,19 +98,41 @@ LYAdmin 面向企业内部运营 / 管理场景，提供一套可直接二次开
 | 多语言     | vue-i18n 中 / 英 双语，导航栏切换；语言包 key 由 `npm run guard:locale` 门禁对齐（缺 key / 占位符不一致直接拦截）                                                                                                                |
 | 布局与体验 | 侧边栏折叠、面包屑、标签页（tagsView）、keep-alive、暗黑模式、移动端响应式、403 / 404 / 500 错误页                                                                                                                               |
 
+## 「短句」业务功能
+
+在基座之上实现的产品侧能力（后端 `api/src/modules/client/*` + 「短句」运营页面 + 两个用户端）：
+
+| 模块       | 能力                                                                                                                                                             |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 刷题       | 视觉场景闪卡：看中文 → 默写英文 → 3D 翻转看答案 → 回车下一题。两种作答模式（默写 / 拼词打乱词块），切换模式沿用当前题；不做滑动                                  |
+| 判分与复习 | **服务端权威**判分（大小写与首尾标点归一化、支持等价表达）；8:2 新题/复习混抽 + 防重窗口；答错当天复现、答对按复习等级递进；**防重放**（重复提交只判分不发经验） |
+| 场景闪卡   | 14 类生活场景；每日 00:30 定时生成（生题 → 优化 → 审核 → 生图四段式，生题与生图并行），配图统一**扁平卡通插画**风格，转 webp ≤1280 入库；题目就绪才下发          |
+| 成长体系   | XP + CEFR 六级（A1~C2）；18 枚成就（坚持 / 行为两类）；场景探索地图（按已练句子解锁）；每日经验上限防刷                                                          |
+| 每日句签   | 完成每日目标领取当日 AI 句签闪卡，可回看、可设为主页背景                                                                                                         |
+| AI 拓展    | 流式「场景造句」（SSE，不用 EventSource）与「词根拆解」；按账号每日额度；输出退化时回退原文并重试                                                                |
+| 打卡       | 连续打卡与打卡海报（前端 html2canvas 生成，图片同源）                                                                                                            |
+| 反馈闭环   | 单题举报（题目/翻译/图片/其他）→ 后台处理留痕                                                                                                                    |
+| 用户端 Web | Nuxt 4 SSR + `@nuxt/ui`；令牌 Cookie + localStorage 双写（SSR 守卫可读）；SEO（sitemap / robots / og）；亮暗主题；私有页禁止抓取                                 |
+| 用户端 App | Flutter：与 Web **同源同契约**、交互按移动端重做（底部四 Tab + 七个底部弹窗）；**零新增运行时依赖**（彩带/极光/等级环等动效全自绘）                              |
+| 运营后台   | 题库管理（含**单题重新生图**）、场景分类、句签与词根、客户端用户与成长详情、举报处理、AI 调用日志与汇总、数据分析                                                |
+
+> 三端共同遵守同一条红线：**经验与判分只由后端按真实事件发放，客户端只上报「发生了什么」**，
+> 幂等键 + 每日上限双闸门，杜绝刷量。
+
 ## 技术栈
 
-| 层             | 技术                                                                                                                                                                   |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 前端框架       | Vue 3.5 + Vue Router 5 + Pinia 4（`pinia-plugin-persistedstate`）                                                                                                      |
-| 前端 UI / 生态 | Element Plus 2.14 + Tailwind CSS 4.3 + `bootstrap-icons` + ECharts 6 + axios + dayjs + vue-i18n 11 + `@vueuse/core` + `lodash-es` + nprogress                          |
-| 前端工程       | Vite 8 + TypeScript 5.9 + vue-tsc；`unplugin-auto-import` + `unplugin-vue-components` 按需引入；`vite-plugin-compression2` 构建期 gzip / brotli 压缩                   |
-| 后端框架       | NestJS 12 + TypeScript（纯 ESM，Express 5 适配层）                                                                                                                     |
-| 后端数据层     | Prisma 7 + `@prisma/adapter-mariadb`（driver adapter 提供运行期连接；CLI 连接串见 `prisma.config.ts`）                                                                 |
-| 后端能力       | jose（JWT）+ @node-rs/bcrypt（口令）+ class-validator / class-transformer（校验）+ multer（上传）+ sharp（图片处理）+ redis（官方 node-redis：验证码 / 黑名单 / 限流） |
-| 数据库 / 缓存  | MySQL 8.x（库 `ly_admin`，utf8mb4）；Redis（可选，留空 `REDIS_HOST` 即降级：验证码跨实例共享、黑名单、限流失效）                                                       |
-| 工程规范       | ESLint 10 + oxlint 1.88（后端）+ Prettier 3.9 + Stylelint 17 + husky 9 + lint-staged 17 + commitlint 21 + cz-git                                                       |
-| 移动端         | Flutter 3.47（stable，Dart 3.13）+ `flutter analyze` / `flutter test` 门禁；**当前仅骨架入库，业务尚未启动**                                                           |
+| 层             | 技术                                                                                                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 前端框架       | Vue 3.5 + Vue Router 5 + Pinia 4（`pinia-plugin-persistedstate`）                                                                                                          |
+| 前端 UI / 生态 | Element Plus 2.14 + Tailwind CSS 4.3 + `bootstrap-icons` + ECharts 6 + axios + dayjs + vue-i18n 11 + `@vueuse/core` + `lodash-es` + nprogress                              |
+| 前端工程       | Vite 8 + TypeScript 5.9 + vue-tsc；`unplugin-auto-import` + `unplugin-vue-components` 按需引入；`vite-plugin-compression2` 构建期 gzip / brotli 压缩                       |
+| 后端框架       | NestJS 12 + TypeScript（纯 ESM，Express 5 适配层）                                                                                                                         |
+| 后端数据层     | Prisma 7 + `@prisma/adapter-mariadb`（driver adapter 提供运行期连接；CLI 连接串见 `prisma.config.ts`）                                                                     |
+| 后端能力       | jose（JWT）+ @node-rs/bcrypt（口令）+ class-validator / class-transformer（校验）+ multer（上传）+ sharp（图片处理）+ redis（官方 node-redis：验证码 / 黑名单 / 限流）     |
+| 数据库 / 缓存  | MySQL 8.x（库 `ly_admin`，utf8mb4）；Redis（可选，留空 `REDIS_HOST` 即降级：验证码跨实例共享、黑名单、限流失效）                                                           |
+| 工程规范       | ESLint 10 + oxlint 1.88（后端）+ Prettier 3.9 + Stylelint 17 + husky 9 + lint-staged 17 + commitlint 21 + cz-git                                                           |
+| 用户端（Web）  | Nuxt 4（SSR）+ `@nuxt/ui` 4 + Tailwind 4 + Pinia 4 + `@vueuse/nuxt`；`@nuxt/icon` 构建期把用到的 lucide 图标打进静态包；`@nuxtjs/seo` 负责 sitemap / robots / og           |
+| 移动端         | Flutter 3.47（stable，Dart 3.13）+ Riverpod + Dio + go_router；`flutter analyze` / `flutter test` 门禁。**主要功能已完成、可日常使用**（刷题 / 语句库 / 成长 / AI / 句签） |
 
 > 代码规范由 ESLint / oxlint / Prettier / Stylelint 统一约束，提交信息由 commitlint 校验，均由 husky 钩子在提交前自动拦截。
 
@@ -115,13 +142,13 @@ LYAdmin 面向企业内部运营 / 管理场景，提供一套可直接二次开
 short-sentence/
 ├─ api/                      # 后端工程（NestJS 12 + Prisma 7，含 admin 中后台 + client 用户端两套接口域）
 ├─ admin/                    # 中后台前端（Vue3 + Vite + Element Plus，即 ly-admin-web）
-├─ client/                   # 「短句」用户端（Nuxt 4 + Reka UI + Tailwind，规范见 docs/client-nuxt-规范.md）
-├─ android/                  # Flutter App（骨架已入库，业务开发暂缓；详见 android/README.md）
+├─ client/                   # 「短句」用户端 Web（Nuxt 4 + @nuxt/ui + Tailwind，规范见 docs/client-nuxt-规范.md）
+├─ android/                  # 「短句」App（Flutter，主要功能已完成；详见 android/README.md）
 ├─ deploy/                   # Docker 部署（compose / Dockerfile / nginx 示例）
 ├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
 ├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
 ├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
-├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（相对导入可解析）/ check-locale-keys（语言包 key 一致）
+├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（相对导入可解析）/ check-locale-keys（语言包 key 一致）/ check-native-scrollbar（禁用原生滚动条）
 ├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
 ├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client）
 ├─ .prettierrc.json           # Prettier 规则
@@ -213,10 +240,13 @@ CREATE DATABASE IF NOT EXISTS `ly_admin`
 根依赖（工程规范工具 + husky 钩子）**务必先装**：
 
 ```bash
-npm install                        # 根目录
-cd api && npm install     # 后端（NestJS 12 + Prisma 7）
-cd ../admin && npm install  # 前端（Vue 3 + Vite）
+npm install                   # 根目录（工程规范工具 + husky 钩子）
+cd api   && npm install       # 后端（NestJS 12 + Prisma 7）
+cd ../admin  && npm install   # 运营后台（Vue 3 + Vite）
+cd ../client && npm install   # 用户端 Web（Nuxt 4，postinstall 会跑 nuxt prepare）
 ```
+
+> 只做后端 + 运营后台时，`client/` 可以先不装；移动端另需本机 Flutter SDK（`cd android && flutter pub get`）。
 
 ### 3. 配置环境变量
 
@@ -303,7 +333,10 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 
 首次启动会自动写入上述超管账号、默认角色与完整菜单树。
 
-> **安全提示**：默认凭据仅用于本地初始登录。部署后请立即修改密码，并避免在公网环境使用默认口令。
+> **安全提示（部署前必读）**：`123456` 是种子内置的默认弱口令。**生产部署必须显式设置
+> `SEED_ADMIN_PASSWORD`** —— 留空时即便 `NODE_ENV=production` 也只会打一条 warn，
+> 超管仍是这个默认口令（它甚至不满足口令策略，只因种子直写哈希才绕过校验）。
+> 仓库是公开的，等于把口令写在明面上；首次登录后请立即改密。
 
 ## 可用脚本
 
@@ -326,18 +359,39 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `npm run guard:deps:update` | 依赖基线有变更时，先生成新基线再提交                             |
 | `npm run guard:imports`     | 校验已入库文件的相对导入可解析（干净克隆可构建）                 |
 | `npm run guard:locale`      | 校验 zh-CN / en-US 语言包 key 与占位符一致                       |
+| `npm run guard:scrollbar`   | 校验 `admin/src` 未手写原生滚动条（滚动统一走 `el-scrollbar`）   |
 | `npm run commit`            | cz-git 交互式生成规范提交                                        |
 | `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                      |
 
 ### 前端 `admin/`
 
-| 命令                 | 说明                             |
-| -------------------- | -------------------------------- |
-| `npm run dev`        | Vite 开发服务（:5173）           |
-| `npm run build`      | 类型检查 + 生产构建              |
-| `npm run build:only` | 跳过类型检查，直接构建           |
-| `npm run preview`    | 本地预览构建产物                 |
-| `npm run type-check` | 仅类型检查（`vue-tsc --noEmit`） |
+| 命令                 | 说明                                |
+| -------------------- | ----------------------------------- |
+| `npm run dev`        | Vite 开发服务（:5173）              |
+| `npm run build`      | 类型检查 + 生产构建                 |
+| `npm run build:only` | 跳过类型检查，直接构建              |
+| `npm run preview`    | 本地预览构建产物                    |
+| `npm run type-check` | 仅类型检查（`vue-tsc --noEmit`）    |
+| `npm run test`       | vitest 单测（store / 权限等纯逻辑） |
+
+### 用户端 `client/`
+
+| 命令                 | 说明                                                        |
+| -------------------- | ----------------------------------------------------------- |
+| `npm run dev`        | Nuxt 开发服务（:3001，`strictPort`）                        |
+| `npm run build`      | 生产构建（SSR 产物在 `.output/`）                           |
+| `npm run preview`    | 本地预览构建产物                                            |
+| `npm run type-check` | 类型检查（`nuxt typecheck`；**`nuxt build` 不做类型检查**） |
+| `npm run test`       | vitest 单测（答案归一化 / AI 输出解析等纯逻辑）             |
+
+### 移动端 `android/`
+
+| 命令                | 说明                                          |
+| ------------------- | --------------------------------------------- |
+| `flutter run`       | 连真机/模拟器运行（验证性能请加 `--release`） |
+| `flutter analyze`   | 静态检查（CI 门禁）                           |
+| `flutter test`      | Widget / 单元测试（CI 门禁）                  |
+| `flutter build apk` | 打包 Android 安装包                           |
 
 ### 后端 `api/`
 
@@ -456,6 +510,33 @@ NODE_ENV=production node dist/main.js
 > 生产环境建议将 `NODE_ENV=production`，并通过进程管理器（systemd / pm2 / 容器）托管；`UPLOAD_DIR`、`LOG_DIR`、`cache` 目录需保证可写与持久化。
 > 首次部署记得执行 `npm run prisma:push` 与 `npm run prisma:comments`（Prisma 7 不在启动时建表）。
 
+### 方式三：「短句」用户端（Nuxt SSR）
+
+用户端是**服务端渲染**应用，需要 Node 常驻进程（不是静态文件）：
+
+```bash
+cd client
+npm ci
+npm run build                                  # 产物在 client/.output/
+NUXT_API_INTERNAL_URL=http://127.0.0.1:3000/api \
+NUXT_PUBLIC_SITE_URL=https://your-domain.com \
+node .output/server/index.mjs                   # 默认 :3000，可用 PORT 覆盖
+```
+
+> - `NUXT_API_INTERNAL_URL`：SSR 在服务端发请求，**相对路径 `/api` 走不通**，必须直连后端；
+> - `NUXT_PUBLIC_SITE_URL`：canonical / sitemap / og 的绝对地址来源，不配则运行时按请求头推断；
+> - 前端 nginx / 网关需把 `/api`、`/static` 转发到后端（`/static` 不可省，配图与海报都依赖它）。
+
+### Android App
+
+```bash
+cd android
+flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-release.apk
+```
+
+> 接口基址在 `android/lib/config/app_config.dart`（默认 `10.0.2.2` = 模拟器访问宿主机）。
+> 打包正式包前记得按实际后端域名修改；**正式包必须自带 `INTERNET` 权限**（Flutter 模板只给 debug/profile）。
+
 ## 接口约定
 
 - **统一响应体**：成功 `{ "code": 200, "message": "success", "data": <T> }`；失败 `{ "code": <业务码>, "message": "<描述>", "data": null }`。
@@ -484,8 +565,11 @@ NODE_ENV=production node dist/main.js
    npm run stylelint         # Stylelint
    npm run guard:deps        # 依赖基线
    npm run guard:locale      # 语言包 key / 占位符一致
+   npm run guard:scrollbar   # 没有手写原生滚动条
    (cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
-   (cd admin && npm run type-check)
+   (cd admin && npm run type-check && npm run test)
+   (cd client && npm run type-check && npm run test)   # 注意：nuxt build 不做类型检查
+   (cd android && flutter analyze && flutter test)
    ```
 
 5. **PR**：说明背景与改动点，关联相关 Issue，并确保上述检查通过。

@@ -20,6 +20,13 @@ export const DIFFICULTIES = [
 ] as const;
 
 /**
+ * 难度取值（1 | 2 | 3）。
+ * 从 DIFFICULTIES 派生而不是各处手写，避免「加了档位但某个筛选器还是老联合类型」。
+ * USelect 的 v-model 会按 items 的字面量收窄，用 number 会被判宽。
+ */
+export type DifficultyLevel = (typeof DIFFICULTIES)[number]['value'];
+
+/**
  * 作答模式（与后端 AnswerSentenceDto.mode 对齐）。
  * - input    ：自己敲出整句，经验全额
  * - assemble ：点选打乱词块拼句，上手更轻，经验按约六成发放
