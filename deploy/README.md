@@ -53,6 +53,18 @@ curl --noproxy '*' http://localhost:3000/api/health/ready
 `prisma migrate deploy` **并补齐表/字段注释**后成功退出 → `api` 启动
 （启动时自动跑幂等种子，建出超管与菜单）。
 
+> **迁移历史已于 2026-10-27 重建为单份基线**（`20261027000000_init`）：此前 schema 与迁移目录
+> 长期不同步，历史无法在全新库上重放。若你的库是**早期用 `prisma db push` 建的**
+> （`_prisma_migrations` 表不存在或为空），直接 `migrate deploy` 会因表已存在而失败，
+> 先做一次性对齐再继续：
+>
+> ```bash
+> docker compose -f deploy/docker-compose.yml run --rm migrate \
+>   npx prisma migrate resolve --applied 20261027000000_init
+> ```
+>
+> 之后 `migrate status` 应显示 up to date。**全新库无需这一步**。
+
 > 为什么迁移后还要补注释：Prisma 生成的 `migration.sql` **不含 `COMMENT` 语句**
 > （列注释是本项目用 `scripts/prisma-comments.ts` 单独维护的，见 `prisma/schema/*.prisma` 里的
 > `///` 注释）。若只跑 `migrate deploy`，线上库一条注释都没有，

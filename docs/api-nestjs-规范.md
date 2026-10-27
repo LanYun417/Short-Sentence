@@ -40,7 +40,11 @@ src/
 - 列名统一 `@map` snake_case；主键 BigInt 对外转 Number；关联用**显式中间表**，禁隐式 m2m；
 - 哨兵值：`parent_id`/`dept_id` 的 0 表示「无」，不建外键；
 - `///` 是表/字段注释的唯一来源：改完执行 `npm run prisma:comments` 落库（`db push` 不带注释），CI 用 `prisma:comments:check` 查漂移；
-- 表结构变更流程：改 schema → `npm run prisma:push` → `prisma:comments` → `prisma:generate` → 迁移 SQL 入库（`migrate:dev` 产物必须提交）；
+- 表结构变更流程：改 schema → `npm run prisma:push` → `prisma:comments` → `prisma:generate` → **同步一份迁移 SQL 并提交**（`migrate:dev` 产物，或用 `prisma migrate diff` 生成）；
+- ⚠️ **只 push 不补迁移 = 部署链断**：docker 与 CI 走的是 `prisma migrate deploy`，缺迁移的表在**全新库上不会被建出来**，后端启动即崩。2026-10-27 修过一次：当时 schema 有 32 张表、迁移只覆盖 19 张，且 `sentence_report` 的外键指向没人创建过的 `sentence`（历史根本无法重放；开发库里 `_prisma_migrations` 一行都没有，说明一直只 push），遂压成一份完整基线 `20261027000000_init`；
+- **改完表结构的自查（务必跑）**：全新库 `migrate deploy` 后执行
+  `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema --exit-code`，
+  必须输出 `No difference detected.`（退出码 0）；有差异就是漏了迁移；
 - CLI 连接串只来自 `prisma.config.ts`（Prisma 7 禁止 schema 内写 url）；运行期连接由 driver adapter 注入。
 
 ## 5. AI 能力接入规范（DeepSeek / Agnes）
