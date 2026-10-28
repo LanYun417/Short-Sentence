@@ -93,12 +93,29 @@ const stats = ref<AiCallStat[]>([]);
 /** 近 7 日全部类型的调用合计。 */
 const statsTotal = computed(() => stats.value.reduce((sum, item) => sum + item.calls, 0));
 
+/** 近 7 日失败合计。 */
+const statsFailed = computed(() => stats.value.reduce((sum, item) => sum + item.failed, 0));
+
+/** 近 7 日 token 合计（入 + 出）。 */
+const statsTokens = computed(() =>
+  stats.value.reduce((sum, item) => sum + item.promptTokens + item.completionTokens, 0),
+);
+
+/** 今日调用（与筛选无关，补一个当天视角；days=1 时后端从今日 0 点起算）。 */
+const todayStats = ref<AiCallStat[]>([]);
+const todayCalls = computed(() => todayStats.value.reduce((sum, item) => sum + item.calls, 0));
+const todayFailed = computed(() => todayStats.value.reduce((sum, item) => sum + item.failed, 0));
+
 async function loadSummary(): Promise<void> {
   summary.value = await getAiLogSummaryApi(listParams({ page: 1, pageSize: 1 }) as never).catch(() => null);
 }
 
 async function loadStats(): Promise<void> {
   stats.value = await getAiCallStatsApi(7).catch(() => []);
+}
+
+async function loadToday(): Promise<void> {
+  todayStats.value = await getAiCallStatsApi(1).catch(() => []);
 }
 
 /** 搜索：同步筛选条件 → 刷新列表 + 汇总。 */
@@ -122,7 +139,7 @@ function tokenText(value: number): string {
 }
 
 onMounted(async () => {
-  await Promise.all([getList(), loadStats(), loadSummary()]);
+  await Promise.all([getList(), loadStats(), loadToday(), loadSummary()]);
 });
 </script>
 
@@ -152,24 +169,31 @@ onMounted(async () => {
         :color="STAT_COLORS[2]"
       />
       <StatCard
-        title="近 7 日调用"
-        :value="statsTotal"
-        sub="全部类型合计"
-        icon="graph-up-arrow"
+        title="今日调用"
+        :value="todayCalls"
+        :sub="`失败 ${todayFailed}`"
+        icon="lightning-charge"
         :color="STAT_COLORS[3]"
       />
     </div>
 
-    <!-- 近 7 日按类型拆分 -->
+    <!-- 近 7 日按类型拆分：合计卡打头，与 7 个类型凑满两行（4 列不空格） -->
     <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <StatCard
+        title="近 7 日合计"
+        :value="statsTotal"
+        :sub="`失败 ${statsFailed} · token ${tokenText(statsTokens)}`"
+        icon="graph-up-arrow"
+        :color="STAT_COLORS[0]"
+      />
       <StatCard
         v-for="(item, index) in stats"
         :key="item.name"
         :title="`${TYPE_LABEL[item.name] ?? item.name}（近 7 日）`"
         :value="item.calls"
-        :sub="`失败 ${item.failed} · token ${item.promptTokens + item.completionTokens}`"
+        :sub="`失败 ${item.failed} · token ${tokenText(item.promptTokens + item.completionTokens)}`"
         icon="cpu"
-        :color="STAT_COLORS[index % STAT_COLORS.length]"
+        :color="STAT_COLORS[(index + 1) % STAT_COLORS.length]"
       />
     </div>
     <el-card v-if="stats.length === 0" shadow="never" class="mb-4">
