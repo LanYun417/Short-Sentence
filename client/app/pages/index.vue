@@ -255,8 +255,8 @@ function onFavorite(): void {
         '--hero-shadow': heroStage.shadow,
       }"
     >
-      <!-- 星光流体渐变背景（多团阶段色光斑游动交融 + 星点闪烁）；覆盖原线性渐变底色 -->
-      <HeroAurora />
+      <!-- 液态流体背景（WebGL 域扭曲，颜色随阶段升温）+ 星光 -->
+      <HeroAurora :from="heroStage.from" :via="heroStage.via" :to="heroStage.to" />
 
       <div class="relative flex items-end justify-between">
         <div>
