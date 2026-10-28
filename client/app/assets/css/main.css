@@ -303,6 +303,39 @@
   animation: ss-hero-d 24s ease-in-out infinite;
 }
 
+/* 星光流动：星点沿一条极缓的弧线漂向右上方，末端淡出后回到起点，循环无缝；
+   每颗星的漂移距离 / 速度 / 相位由内联 --fx/--fy/--fdur/--fdelay 决定，
+   整体像被流体带着走（外圈管位移与淡出，内圈 .ss-star 管呼吸闪烁）。 */
+@keyframes ss-star-flow {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  55% {
+    transform: translate(calc(var(--fx, 48px) * 0.72), calc(var(--fy, -18px) * 0.28));
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--fx, 48px), var(--fy, -18px));
+  }
+}
+
+.ss-star-flow {
+  animation: ss-star-flow var(--fdur, 11s) linear infinite;
+  animation-delay: var(--fdelay, 0s);
+  will-change: transform, opacity;
+}
+
 .ss-star {
   opacity: 0.6;
   animation: ss-twinkle var(--twk-dur, 4s) ease-in-out infinite;
@@ -554,6 +587,7 @@
   .anim-drift,
   .anim-gradient,
   .ss-hero-blob,
+  .ss-star-flow,
   .ss-star,
   .anim-stagger,
   .page-enter-active,
