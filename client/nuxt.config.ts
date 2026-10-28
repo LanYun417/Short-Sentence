@@ -36,10 +36,12 @@ export default defineNuxtConfig({
   // localStorage 仍保留，供客户端 API 请求注入 Authorization 头。
   ssr: true,
 
-  // 开发服务：固定端口 + strictPort（见下方 vite.server），端口被占直接报错而非静默漂移，
+  // 开发服务：绑定 0.0.0.0（不是 localhost），让同一局域网的手机/平板能直接访问
+  // `http://<本机内网 IP>:3001` 做真机联调。
+  // 固定端口 + strictPort（见下方 vite.server），端口被占直接报错而非静默漂移，
   // 否则 CORS / 防盗链白名单（按端口配置）会在换端口后失效。
   devServer: {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: DEV_PORT,
   },
 
