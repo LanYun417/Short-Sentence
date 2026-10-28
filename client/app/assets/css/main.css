@@ -173,6 +173,76 @@
   animation: ss-gradient-pan 9s ease-in-out infinite;
 }
 
+/* ===== 今日进度 Hero：「星光流体渐变」=====
+   流体部分 = 几团取用阶段色（--hero-from/via/to）的径向光斑，缓缓游动、互相交融，
+   叠在底色线性渐变之上，形成 mesh 流动感；星光部分 = 细小白色星点呼吸闪烁。
+   光斑用径向渐变而非 filter:blur 的实图：后者在滚动时会反复重绘整层掉帧，
+   径向渐变由 GPU 直接插值，成本低（与安卓 AuroraBackground 同思路）。 */
+@keyframes ss-blob-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(26px, -22px) scale(1.15);
+  }
+}
+
+@keyframes ss-blob-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.08);
+  }
+
+  50% {
+    transform: translate(-30px, 18px) scale(0.92);
+  }
+}
+
+@keyframes ss-blob-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.95);
+  }
+
+  50% {
+    transform: translate(18px, 26px) scale(1.12);
+  }
+}
+
+/* 星光：星点呼吸闪烁 */
+@keyframes ss-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.6);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-blob-a {
+  animation: ss-blob-a 17s ease-in-out infinite;
+}
+
+.anim-blob-b {
+  animation: ss-blob-b 21s ease-in-out infinite;
+}
+
+.anim-blob-c {
+  animation: ss-blob-c 19s ease-in-out infinite;
+}
+
+.ss-star {
+  opacity: 0.6;
+  animation: ss-twinkle var(--twk-dur, 4s) ease-in-out infinite;
+  animation-delay: var(--twk-delay, 0s);
+}
+
 /* ===== 今日进度 Hero：随刷题量「升温」的卡片 =====
    进度从 0 到目标，卡片配色由冷（青蓝）逐级升到金橙（达标）。
    三个色标注册成 <color> 类型：只有注册过的自定义属性浏览器才会插值，
@@ -417,6 +487,10 @@
   .anim-float,
   .anim-drift,
   .anim-gradient,
+  .anim-blob-a,
+  .anim-blob-b,
+  .anim-blob-c,
+  .ss-star,
   .anim-stagger,
   .page-enter-active,
   .page-leave-active {

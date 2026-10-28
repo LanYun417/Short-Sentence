@@ -29,6 +29,7 @@ import '../sheets/report_sheet.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/aurora.dart';
+import '../widgets/starlight.dart';
 import '../widgets/celebration.dart';
 import '../widgets/count_up.dart';
 import '../widgets/empty_state.dart';
@@ -627,6 +628,8 @@ class _ProgressHero extends StatelessWidget {
                   intensity: 0.2,
                 ),
               ),
+              // 星光：在极光之上散布闪烁星点 → 「星光流体渐变」
+              const Positioned.fill(child: StarlightOverlay()),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                 child: Column(

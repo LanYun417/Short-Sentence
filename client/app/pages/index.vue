@@ -97,12 +97,6 @@ const heroStage = computed<{ key: HeroStageKey } & (typeof HERO_STAGES)[HeroStag
   return { key: 'warmup', ...HERO_STAGES.warmup };
 });
 
-/** 光斑强度随进度增强：刚起步时若有若无，冲刺时最亮。 */
-const heroGlowOpacity = computed(() => {
-  const map: Record<HeroStageKey, number> = { idle: 0.35, warmup: 0.6, push: 0.8, sprint: 1, done: 1 };
-  return map[heroStage.value.key];
-});
-
 /**
  * 进度文案：还没开始时不说「还差 20 句」（像催作业），达标后交给右上的「已达标」徽标。
  */
@@ -261,15 +255,8 @@ function onFavorite(): void {
         '--hero-shadow': heroStage.shadow,
       }"
     >
-      <!-- 装饰光斑（缓慢漂移；亮度随进度增强，冲刺阶段最明显） -->
-      <div
-        class="anim-drift pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl transition-opacity duration-700"
-        :style="{ opacity: heroGlowOpacity }"
-      />
-      <div
-        class="anim-drift pointer-events-none absolute -bottom-12 -left-6 h-28 w-28 rounded-full bg-sky-300/25 blur-2xl transition-opacity duration-700"
-        :style="{ animationDelay: '-6s', opacity: heroGlowOpacity }"
-      />
+      <!-- 星光流体渐变背景（多团阶段色光斑游动交融 + 星点闪烁）；覆盖原线性渐变底色 -->
+      <HeroAurora />
 
       <div class="relative flex items-end justify-between">
         <div>
