@@ -5,6 +5,10 @@ import { pickVoice, useTts } from '~/composables/useTts';
 const voice = (lang: string): SpeechSynthesisVoice =>
   ({ lang, name: `test-${lang}`, default: false, localService: true, voiceURI: '' }) as SpeechSynthesisVoice;
 
+/** 云端嗓音（Chrome 的 Google 系列）：localService=false，受限网络下会静默失败。 */
+const remoteVoice = (lang: string): SpeechSynthesisVoice =>
+  ({ lang, name: `remote-${lang}`, default: false, localService: false, voiceURI: '' }) as SpeechSynthesisVoice;
+
 describe('pickVoice', () => {
   const voices = [voice('en-US'), voice('zh-CN'), voice('en-GB')];
 
@@ -23,6 +27,14 @@ describe('pickVoice', () => {
 
   it('大小写不敏感', () => {
     expect(pickVoice(voices, 'EN-us')?.lang).toBe('en-US');
+  });
+
+  it('本地嗓音优先于同语言云端嗓音', () => {
+    expect(pickVoice([remoteVoice('en-US'), voice('en-US')], 'en-US')?.name).toBe('test-en-US');
+  });
+
+  it('本地同语种优先于云端精确匹配（避开受限网络下的静默失败）', () => {
+    expect(pickVoice([remoteVoice('en-US'), voice('en-GB')], 'en-US')?.lang).toBe('en-GB');
   });
 });
 

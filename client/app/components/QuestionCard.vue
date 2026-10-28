@@ -348,37 +348,40 @@ async function onSubmitReport(): Promise<void> {
             />
           </div>
 
-          <div class="flex items-start justify-between gap-2">
-            <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
-              {{ result?.sentenceEn }}
+          <!-- 答案内容：在结果条与底栏之间垂直居中，避免卡背下方留一大块空白 -->
+          <div class="flex flex-1 flex-col justify-center">
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
+                {{ result?.sentenceEn }}
+              </p>
+              <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
+              <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
+            </div>
+            <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
+              {{ result.ipa }}
             </p>
-            <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
-            <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
-          </div>
-          <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
-            {{ result.ipa }}
-          </p>
-          <!-- 输入模式多答案：列出该句中其它同样算对的写法 -->
-          <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
-            <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
-            <p
-              v-for="alternative in result.validAnswers"
-              :key="alternative"
-              class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
-            >
-              {{ alternative }}
+            <!-- 输入模式多答案：列出该句中其它同样算对的写法 -->
+            <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
+              <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
+              <p
+                v-for="alternative in result.validAnswers"
+                :key="alternative"
+                class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
+              >
+                {{ alternative }}
+              </p>
+            </div>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              {{ result?.translationZh }}
             </p>
-          </div>
-          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            {{ result?.translationZh }}
-          </p>
 
-          <div v-if="!result?.isCorrect" class="mt-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-700/50">
-            <p class="text-slate-400">你的答案</p>
-            <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
+            <div v-if="!result?.isCorrect" class="mt-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-700/50">
+              <p class="text-slate-400">你的答案</p>
+              <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
+            </div>
           </div>
 
-          <div class="mt-auto flex items-center justify-between pt-4 text-xs text-slate-400">
+          <div class="flex items-center justify-between pt-4 text-xs text-slate-400">
             <span class="flex items-center gap-1.5">
               <UIcon name="i-lucide-corner-down-left" class="h-3.5 w-3.5" />
               回车继续

@@ -22,7 +22,7 @@ const props = withDefaults(
   { lang: 'en-US', rate: 1 },
 );
 
-const { isSupported, isSpeaking, speak, stop } = useTts();
+const { isSupported, isSpeaking, isFallback, speak, stop } = useTts();
 
 /** 仅在客户端挂载后渲染：服务端渲染为 false，首帧（水合）也为 false，挂载后才判断。 */
 const mounted = ref(false);
@@ -47,6 +47,7 @@ function toggle(): void {
     :variant="isSpeaking ? 'solid' : 'soft'"
     size="sm"
     :aria-label="isSpeaking ? '停止朗读' : '朗读'"
+    :title="isFallback ? '当前使用系统语音朗读（安装英文语音包效果更好）' : isSpeaking ? '停止朗读' : '朗读'"
     @click="toggle"
   >
     {{ isSpeaking ? '停止' : '朗读' }}
