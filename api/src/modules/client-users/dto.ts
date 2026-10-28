@@ -2,7 +2,14 @@
  * 客户端用户管理 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsString, Min, Max } from 'class-validator';
+import { IsIn, IsInt, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  PASSWORD_COMPLEXITY_MESSAGE,
+  PASSWORD_COMPLEXITY_REGEX,
+  PASSWORD_LENGTH_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '../../common/auth/password-policy.js';
 
 /** 设置状态。 */
 export class ClientUserStatusDto {
@@ -13,11 +20,20 @@ export class ClientUserStatusDto {
   status!: number;
 }
 
-/** 重置密码。 */
+/**
+ * 重置密码。
+ *
+ * ⚠️ 长度必须用 `@MinLength` / `@MaxLength`（字符串装饰器）。
+ * 曾误写成 `@Min(6)` / `@Max(32)`（数值装饰器），class-validator 会拿字符串做
+ * `>= 6` 比较，`'Abc123987' >= 6` 转 NaN 判假，于是「过短」和「过长」两条
+ * 错误同时报出，任何密码都重置不了（2026-10-28 线上反馈）。
+ * 这里复用口令策略常量，与「新增用户 / 自助改密」保持同一口径。
+ */
 export class ClientUserResetPasswordDto {
-  /** 新密码（6~32 位，需含字母与数字） */
-  @IsString({ message: '密码必须为字符串' })
-  @Min(6, { message: '密码长度不能少于 6 位' })
-  @Max(32, { message: '密码长度不能超过 32 位' })
+  /** 新密码（受 password-policy 约束） */
+  @IsString({ message: PASSWORD_LENGTH_MESSAGE })
+  @MinLength(PASSWORD_MIN_LENGTH, { message: PASSWORD_LENGTH_MESSAGE })
+  @MaxLength(PASSWORD_MAX_LENGTH, { message: PASSWORD_LENGTH_MESSAGE })
+  @Matches(PASSWORD_COMPLEXITY_REGEX, { message: PASSWORD_COMPLEXITY_MESSAGE })
   newPassword!: string;
 }

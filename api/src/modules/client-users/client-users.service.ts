@@ -12,6 +12,8 @@ import {
   PASSWORD_COMPLEXITY_MESSAGE,
   PASSWORD_COMPLEXITY_REGEX,
   PASSWORD_LENGTH_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
 } from '../../common/auth/password-policy.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, formatDateTimeInZone, hashPassword, parsePagination } from '../../common/utils/utils.js';
@@ -289,7 +291,7 @@ export class ClientUsersService {
 
   /** 重置密码（同时令旧令牌失效）。 */
   async resetPassword(id: number, newPassword: string): Promise<void> {
-    if (newPassword.length < 6 || newPassword.length > 32) {
+    if (newPassword.length < PASSWORD_MIN_LENGTH || newPassword.length > PASSWORD_MAX_LENGTH) {
       throw AppException.badRequest(PASSWORD_LENGTH_MESSAGE);
     }
     if (!PASSWORD_COMPLEXITY_REGEX.test(newPassword)) {

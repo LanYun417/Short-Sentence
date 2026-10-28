@@ -8,6 +8,7 @@
 import { useAuthStore } from '~/stores/auth';
 import { apiFetch } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
+import { PASSWORD_HINT } from '~/utils/password';
 import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -634,7 +635,7 @@ async function onChangePassword(): Promise<void> {
                   class="w-full"
                 />
               </UFormField>
-              <UFormField label="新密码" help="6~32 位，需同时包含字母和数字">
+              <UFormField label="新密码" :help="PASSWORD_HINT">
                 <UInput
                   v-model="newPassword"
                   type="password"

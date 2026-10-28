@@ -5,6 +5,7 @@
  */
 import { useAuthStore } from '~/stores/auth';
 import { useCaptcha } from '~/composables/useCaptcha';
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '~/utils/password';
 
 definePageMeta({ layout: 'auth' });
 
@@ -83,12 +84,12 @@ async function onSubmit(): Promise<void> {
           <UInput v-model="nickname" type="text" maxlength="50" size="lg" class="w-full" icon="i-lucide-user" />
         </UFormField>
 
-        <UFormField label="密码" help="6~32 位，需同时包含字母和数字">
+        <UFormField label="密码" :help="PASSWORD_HINT">
           <UInput
             v-model="password"
             type="password"
             required
-            minlength="6"
+            :minlength="PASSWORD_MIN_LENGTH"
             autocomplete="new-password"
             size="lg"
             class="w-full"
@@ -111,7 +112,7 @@ async function onSubmit(): Promise<void> {
           block
           size="lg"
           :loading="submitting"
-          :disabled="!email || password.length < 6 || (captcha?.enabled === true && !captchaCode)"
+          :disabled="!email || password.length < PASSWORD_MIN_LENGTH || (captcha?.enabled === true && !captchaCode)"
         >
           {{ submitting ? '注册中…' : '注册并登录' }}
           <template #trailing>

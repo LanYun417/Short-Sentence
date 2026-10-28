@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/password_policy.dart';
 import '../state/auth_controller.dart';
 import '../theme/palette.dart';
 
@@ -56,8 +57,8 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       setState(() => _error = '请输入原密码');
       return;
     }
-    if (newPassword.length < 6 || newPassword.length > 32) {
-      setState(() => _error = '新密码需 6~32 位');
+    if (!isPasswordLengthValid(newPassword)) {
+      setState(() => _error = kPasswordHint);
       return;
     }
     final hasLetter = RegExp('[A-Za-z]').hasMatch(newPassword);
@@ -135,7 +136,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
                 controller: _next,
                 obscureText: _obscure,
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(hintText: '新密码（6~32 位，含字母和数字）'),
+                decoration: const InputDecoration(hintText: '新密码（$kPasswordHint）'),
               ),
               const SizedBox(height: 12),
               TextField(

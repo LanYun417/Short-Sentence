@@ -22,6 +22,7 @@ import {
 import { useTable } from '@/composables/useTable';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime } from '@/utils/format';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MESSAGE, PASSWORD_REGEX } from '@/utils/validate';
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
@@ -236,8 +237,8 @@ async function submitResetPwd(): Promise<void> {
     return;
   }
   const password = pwdForm.value.password.trim();
-  if (password.length < 6 || password.length > 32) {
-    ElMessage.warning('密码长度需为 6~32 位');
+  if (!PASSWORD_REGEX.test(password)) {
+    ElMessage.warning(PASSWORD_MESSAGE);
     return;
   }
   pwdSaving.value = true;
@@ -575,8 +576,8 @@ onMounted(() => {
             v-model="pwdForm.password"
             type="password"
             show-password
-            maxlength="32"
-            placeholder="6~32 位，需含字母与数字"
+            :maxlength="PASSWORD_MAX_LENGTH"
+            :placeholder="PASSWORD_MESSAGE"
           />
         </el-form-item>
         <el-form-item>

@@ -2,7 +2,25 @@
  * 客户端鉴权 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsDateString, IsEmail, IsEnum, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+import {
+  PASSWORD_COMPLEXITY_MESSAGE,
+  PASSWORD_COMPLEXITY_REGEX,
+  PASSWORD_LENGTH_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '../../../common/auth/password-policy.js';
 
 /** 性别取值（保密为默认）。 */
 export const CLIENT_GENDER = {
@@ -17,9 +35,15 @@ export class ClientRegisterDto {
   @MaxLength(100, { message: '邮箱最长 100 个字符' })
   email!: string;
 
-  @IsString({ message: '密码必须为字符串' })
-  @MinLength(6, { message: '密码至少 6 位' })
-  @MaxLength(32, { message: '密码最长 32 位' })
+  /**
+   * 登录口令。注册时受口令策略约束（长度与复杂度），
+   * 与「后台重置密码 / 自助改密」同一口径（`common/auth/password-policy.ts`），
+   * 避免「注册时 6 位能过、改密要 8 位」这类前后不一致。
+   */
+  @IsString({ message: PASSWORD_LENGTH_MESSAGE })
+  @MinLength(PASSWORD_MIN_LENGTH, { message: PASSWORD_LENGTH_MESSAGE })
+  @MaxLength(PASSWORD_MAX_LENGTH, { message: PASSWORD_LENGTH_MESSAGE })
+  @Matches(PASSWORD_COMPLEXITY_REGEX, { message: PASSWORD_COMPLEXITY_MESSAGE })
   password!: string;
 
   @IsOptional()

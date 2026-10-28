@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api/auth_api.dart';
+import '../config/password_policy.dart';
 import '../state/auth_controller.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
@@ -287,17 +288,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                           color: colors.inkFaint,
                                         ),
                                       ),
-                                      helperText: isRegister
-                                          ? '6~32 位，需同时包含字母和数字'
-                                          : null,
+                                      helperText: isRegister ? kPasswordHint : null,
                                     ),
                                     validator: (value) {
                                       final text = value ?? '';
                                       if (text.isEmpty) {
                                         return '请输入密码';
                                       }
-                                      if (isRegister && text.length < 6) {
-                                        return '密码至少 6 位';
+                                      if (isRegister && text.length < kPasswordMinLength) {
+                                        return '密码至少 $kPasswordMinLength 位';
                                       }
                                       return null;
                                     },

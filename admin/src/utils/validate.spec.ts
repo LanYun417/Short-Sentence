@@ -3,6 +3,9 @@ import type { FormItemRule } from 'element-plus';
 
 import {
   EMAIL_REGEX,
+  PASSWORD_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
   PASSWORD_REGEX,
   PHONE_REGEX,
   USERNAME_REGEX,
@@ -52,6 +55,15 @@ describe('validate utils', () => {
       expect(PASSWORD_REGEX.test('abcdefgh')).toBe(false);
       expect(PASSWORD_REGEX.test('12345678')).toBe(false);
       expect(PASSWORD_REGEX.test('Ab1')).toBe(false);
+    });
+
+    it('PASSWORD_REGEX 长度边界与导出的常量一致（8 与 20 通过，7 与 21 拒绝）', () => {
+      expect(PASSWORD_REGEX.test('Abc1234x')).toBe(true); // 8 位
+      expect(PASSWORD_REGEX.test(`Ab1${'x'.repeat(PASSWORD_MAX_LENGTH - 3)}`)).toBe(true); // 20 位
+      expect(PASSWORD_REGEX.test('Abc123x')).toBe(false); // 7 位
+      expect(PASSWORD_REGEX.test(`Ab1${'x'.repeat(PASSWORD_MAX_LENGTH - 2)}`)).toBe(false); // 21 位
+      expect(PASSWORD_MESSAGE).toContain(String(PASSWORD_MIN_LENGTH));
+      expect(PASSWORD_MESSAGE).toContain(String(PASSWORD_MAX_LENGTH));
     });
   });
 

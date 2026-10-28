@@ -10,15 +10,19 @@ export const PHONE_REGEX = /^1[3-9]\d{9}$/;
 export const EMAIL_REGEX = /^[\w.-]+@[\w-]+(\.[\w-]+)+$/;
 /** 用户名正则：3-20 位字母、数字、下划线 */
 export const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
+/** 密码长度边界（需与后端 `common/auth/password-policy.ts` 默认值一致）。 */
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_LENGTH = 20;
 /**
  * 密码正则：8-20 位，且至少包含字母和数字。
- * 需与后端 `ly-admin-api/src/common/auth/password-policy.ts` 保持一致
+ * 需与后端 `api/src/common/auth/password-policy.ts` 保持一致
  * （后端可用 PASSWORD_MIN_LENGTH / PASSWORD_REQUIRE_COMPLEXITY 调整，前端为固定提示口径）。
+ * 长度边界若调整，同步改上面的 PASSWORD_MIN_LENGTH / PASSWORD_MAX_LENGTH。
  */
 export const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[a-zA-Z0-9_!@#$%^&*.]{8,20}$/;
 
-/** 密码规则提示文案（三处复用，避免各写一份后走样）。 */
-export const PASSWORD_MESSAGE = '密码为 8-20 位，且至少包含字母和数字';
+/** 密码规则提示文案（多处复用，避免各写一份后走样）。 */
+export const PASSWORD_MESSAGE = `密码为 ${PASSWORD_MIN_LENGTH}-${PASSWORD_MAX_LENGTH} 位，且至少包含字母和数字`;
 
 /** 是否手机号 */
 export function isPhone(value: string): boolean {
