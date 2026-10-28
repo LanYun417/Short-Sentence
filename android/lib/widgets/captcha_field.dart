@@ -17,6 +17,10 @@ class CaptchaField extends StatelessWidget {
     super.key,
   });
 
+  /// 输入框与图片共用的高度：两边都按这个值排，避免「图比框矮一截」。
+  /// 后端的验证码图是 120×40（3:1），所以图片宽度固定取 `高度 × 3`。
+  static const double fieldHeight = 48;
+
   /// `data:image/png;base64,...`
   final String image;
 
@@ -42,6 +46,10 @@ class CaptchaField extends StatelessWidget {
             decoration: const InputDecoration(
               hintText: '验证码',
               prefixIcon: Icon(Icons.shield_outlined, size: 20),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              // 只锁「输入框」的高度；错误提示仍然在框下方正常展开
+              constraints: BoxConstraints(minHeight: fieldHeight, maxHeight: fieldHeight),
             ),
             validator: (value) {
               if ((value ?? '').trim().isEmpty) {
@@ -54,28 +62,24 @@ class CaptchaField extends StatelessWidget {
         const SizedBox(width: 12),
         // 图片即刷新按钮。
         //
-        // 尺寸按后端原图比例（120×40 = 3:1）给，**不要写死高度**：
-        // 后端 `CaptchaService.buildSvg` 生成的就是 120×40，容器一旦比它「高」，
-        // BoxFit.cover 会按短边缩放并把长边裁掉——字符被切头去尾，
-        // 用户自然输不对（曾经的 bug：容器 116×52 把图上下各裁了一截）。
+        // 尺寸严格按后端原图比例（120×40 = 3:1）：高度与输入框一致（48），
+        // 宽度取 144——既保证两边齐平，也不会让 BoxFit 裁掉字符。
         SizedBox(
-          width: 120,
-          child: AspectRatio(
-            aspectRatio: 3,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onRefresh,
-                  child: Image.memory(
-                    _decodeBase64(image),
-                    fit: BoxFit.fill,
-                    gaplessPlayback: true,
-                    errorBuilder: (context, error, stack) => const ColoredBox(
-                      color: Color(0xFFE2E8F0),
-                      child: Center(child: Icon(Icons.refresh, size: 20)),
-                    ),
+          width: fieldHeight * 3,
+          height: fieldHeight,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onRefresh,
+                child: Image.memory(
+                  _decodeBase64(image),
+                  fit: BoxFit.fill,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stack) => const ColoredBox(
+                    color: Color(0xFFE2E8F0),
+                    child: Center(child: Icon(Icons.refresh, size: 20)),
                   ),
                 ),
               ),

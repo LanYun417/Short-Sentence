@@ -67,4 +67,9 @@ class TiltStreamHandler(context: Context) :
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    fun dispose() {
+        sensorManager.unregisterListener(this)
+        sink = null
+    }
 }

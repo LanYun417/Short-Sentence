@@ -17,6 +17,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../state/gyro.dart';
 import '../theme/motion.dart';
 
 /// 液态流体背景（铺满父级，颜色随阶段色变化）。
@@ -39,6 +40,9 @@ class LiquidAurora extends StatefulWidget {
 class _LiquidAuroraState extends State<LiquidAurora> with SingleTickerProviderStateMixin {
   ui.FragmentShader? _shader;
   final ValueNotifier<double> _time = ValueNotifier<double>(5.5);
+
+  /// 陀螺仪摇动 → 液体位移（-1..1）。只有 Hero 挂载时才订阅传感器。
+  final GyroTilt _gyro = GyroTilt();
 
   late final Ticker _ticker = createTicker(_onTick);
   Duration _last = Duration.zero;
@@ -82,6 +86,12 @@ class _LiquidAuroraState extends State<LiquidAurora> with SingleTickerProviderSt
   void didChangeDependencies() {
     super.didChangeDependencies();
     final animate = Motion.loopAnimations && !Motion.reduced(context);
+    // 减弱动效时不订阅传感器：省电，也避免背景跟着晃
+    if (animate) {
+      _gyro.start();
+    } else {
+      _gyro.stop();
+    }
     if (animate && !_ticker.isTicking) {
       _last = Duration.zero;
       _ticker.start();
@@ -93,6 +103,7 @@ class _LiquidAuroraState extends State<LiquidAurora> with SingleTickerProviderSt
   @override
   void dispose() {
     _ticker.dispose();
+    _gyro.dispose();
     _time.dispose();
     _shader?.dispose();
     super.dispose();
@@ -118,6 +129,7 @@ class _LiquidAuroraState extends State<LiquidAurora> with SingleTickerProviderSt
         painter: _LiquidPainter(
           shader: shader,
           time: _time,
+          gyro: _gyro,
           from: widget.from,
           via: widget.via,
           to: widget.to,
@@ -131,13 +143,15 @@ class _LiquidPainter extends CustomPainter {
   _LiquidPainter({
     required this.shader,
     required this.time,
+    required this.gyro,
     required this.from,
     required this.via,
     required this.to,
-  }) : super(repaint: time);
+  }) : super(repaint: Listenable.merge(<Listenable>[time, gyro]));
 
   final ui.FragmentShader shader;
   final ValueNotifier<double> time;
+  final GyroTilt gyro;
   final Color from;
   final Color via;
   final Color to;
@@ -147,7 +161,9 @@ class _LiquidPainter extends CustomPainter {
     if (size.isEmpty) {
       return;
     }
-    // uniform 顺序与 liquid.frag 声明顺序一致：uSize(0,1) uTime(2) uFrom(3..5) uVia(6..8) uTo(9..11)
+    // uniform 顺序与 liquid.frag 声明顺序一致：
+    // uSize(0,1) uTime(2) uFrom(3..5) uVia(6..8) uTo(9..11) uTilt(12,13)
+    final Offset tilt = gyro.value;
     shader
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
@@ -160,7 +176,9 @@ class _LiquidPainter extends CustomPainter {
       ..setFloat(8, via.b)
       ..setFloat(9, to.r)
       ..setFloat(10, to.g)
-      ..setFloat(11, to.b);
+      ..setFloat(11, to.b)
+      ..setFloat(12, tilt.dx)
+      ..setFloat(13, tilt.dy);
     canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
   }
 

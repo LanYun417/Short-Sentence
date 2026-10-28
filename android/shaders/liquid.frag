@@ -10,6 +10,7 @@ uniform float uTime;
 uniform vec3 uFrom;
 uniform vec3 uVia;
 uniform vec3 uTo;
+uniform vec2 uTilt;
 
 out vec4 fragColor;
 
@@ -45,6 +46,9 @@ void main() {
   vec2 uv = FlutterFragCoord().xy / uSize;
   vec2 p = uv;
   p.x *= uSize.x / uSize.y;
+
+  // 陀螺仪摇动：整体采样坐标被"推"一下，液面跟着晃（Dart 侧已做惯性与回中）
+  p += uTilt * 0.22;
 
   float t = uTime * 0.10;
 

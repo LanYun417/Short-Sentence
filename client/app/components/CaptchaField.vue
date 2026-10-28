@@ -30,7 +30,7 @@ const emit = defineEmits<{ refresh: [] }>();
       />
       <button
         type="button"
-        class="grid h-11 w-[120px] shrink-0 place-items-center overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-sky-400 dark:ring-slate-700"
+        class="grid h-9 w-[108px] shrink-0 place-items-center overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-sky-400 dark:ring-slate-700"
         :class="loading && 'opacity-50'"
         title="看不清？点击刷新"
         aria-label="刷新验证码"
