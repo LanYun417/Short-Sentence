@@ -42,6 +42,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  shaders:
+    # 液态流体背景（刷题页 Hero）：与 Web 端 HeroAurora 同一套 GLSL，
+    # 构建期由 impellerc 编译，运行时经 FragmentProgram.fromAsset 加载。
+    - shaders/liquid.frag
+
   assets:
     # 品牌标：由 Web 端 client/public/favicon.svg 经 api 的 sharp 渲染而来
     # （重新生成：见 api/scripts 里用 sharp 转 PNG 的一次性脚本，源文件改了就重跑）

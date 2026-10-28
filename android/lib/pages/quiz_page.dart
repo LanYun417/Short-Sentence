@@ -28,7 +28,7 @@ import '../sheets/claim_card.dart';
 import '../sheets/report_sheet.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
-import '../widgets/aurora.dart';
+import '../widgets/liquid_aurora.dart';
 import '../widgets/starlight.dart';
 import '../widgets/celebration.dart';
 import '../widgets/count_up.dart';
@@ -619,16 +619,15 @@ class _ProgressHero extends StatelessWidget {
           borderRadius: BorderRadius.circular(26),
           child: Stack(
             children: <Widget>[
-              // 流动柔光：让渐变「活着」，而不是一块死色
+              // 液态流体：域扭曲 FBM 着色器（与 Web 端同一套算法）
               Positioned.fill(
-                child: AuroraBackground(
-                  gradient: const LinearGradient(
-                    colors: <Color>[Colors.transparent, Colors.transparent],
-                  ),
-                  intensity: 0.2,
+                child: LiquidAurora(
+                  from: stage.from,
+                  via: stage.via,
+                  to: stage.to,
                 ),
               ),
-              // 星光：在极光之上散布闪烁星点 → 「星光流体渐变」
+              // 星光：在液态之上散布流动 + 闪烁的星点
               const Positioned.fill(child: StarlightOverlay()),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
