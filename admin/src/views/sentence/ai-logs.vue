@@ -129,57 +129,49 @@ onMounted(async () => {
 <template>
   <div class="sentence-ai-logs-page">
     <!-- 当前筛选范围汇总：改任何筛选条件都会重算 -->
-    <el-row :gutter="16" class="mb-4">
-      <el-col :xs="12" :sm="6" class="my-1">
-        <StatCard
-          title="当前范围调用"
-          :value="summary?.calls ?? 0"
-          :sub="`失败 ${summary?.failed ?? 0}`"
-          icon="cpu"
-          :color="STAT_COLORS[0]"
-        />
-      </el-col>
-      <el-col :xs="12" :sm="6" class="my-1">
-        <StatCard
-          title="Token 合计"
-          :value="tokenText(summary?.totalTokens ?? 0)"
-          :sub="`入 ${tokenText(summary?.promptTokens ?? 0)} · 出 ${tokenText(summary?.completionTokens ?? 0)}`"
-          icon="coin"
-          :color="STAT_COLORS[1]"
-        />
-      </el-col>
-      <el-col :xs="12" :sm="6" class="my-1">
-        <StatCard
-          title="失败率"
-          :value="`${summary?.failRate ?? 0}%`"
-          :sub="`平均耗时 ${summary?.avgLatencyMs ?? 0}ms`"
-          icon="activity"
-          :color="STAT_COLORS[2]"
-        />
-      </el-col>
-      <el-col :xs="12" :sm="6" class="my-1">
-        <StatCard
-          title="近 7 日调用"
-          :value="statsTotal"
-          sub="全部类型合计"
-          icon="graph-up-arrow"
-          :color="STAT_COLORS[3]"
-        />
-      </el-col>
-    </el-row>
+    <div class="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <StatCard
+        title="当前范围调用"
+        :value="summary?.calls ?? 0"
+        :sub="`失败 ${summary?.failed ?? 0}`"
+        icon="cpu"
+        :color="STAT_COLORS[0]"
+      />
+      <StatCard
+        title="Token 合计"
+        :value="tokenText(summary?.totalTokens ?? 0)"
+        :sub="`入 ${tokenText(summary?.promptTokens ?? 0)} · 出 ${tokenText(summary?.completionTokens ?? 0)}`"
+        icon="coin"
+        :color="STAT_COLORS[1]"
+      />
+      <StatCard
+        title="失败率"
+        :value="`${summary?.failRate ?? 0}%`"
+        :sub="`平均耗时 ${summary?.avgLatencyMs ?? 0}ms`"
+        icon="activity"
+        :color="STAT_COLORS[2]"
+      />
+      <StatCard
+        title="近 7 日调用"
+        :value="statsTotal"
+        sub="全部类型合计"
+        icon="graph-up-arrow"
+        :color="STAT_COLORS[3]"
+      />
+    </div>
 
     <!-- 近 7 日按类型拆分 -->
-    <el-row :gutter="16" class="mb-4">
-      <el-col v-for="(item, index) in stats" :key="item.name" :xs="24" :sm="12" :md="6" class="my-1">
-        <StatCard
-          :title="`${TYPE_LABEL[item.name] ?? item.name}（近 7 日）`"
-          :value="item.calls"
-          :sub="`失败 ${item.failed} · token ${item.promptTokens + item.completionTokens}`"
-          icon="cpu"
-          :color="STAT_COLORS[index % STAT_COLORS.length]"
-        />
-      </el-col>
-    </el-row>
+    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <StatCard
+        v-for="(item, index) in stats"
+        :key="item.name"
+        :title="`${TYPE_LABEL[item.name] ?? item.name}（近 7 日）`"
+        :value="item.calls"
+        :sub="`失败 ${item.failed} · token ${item.promptTokens + item.completionTokens}`"
+        icon="cpu"
+        :color="STAT_COLORS[index % STAT_COLORS.length]"
+      />
+    </div>
     <el-card v-if="stats.length === 0" shadow="never" class="mb-4">
       <p class="py-6 text-center text-sm text-muted">近 7 日暂无 AI 调用记录</p>
     </el-card>
