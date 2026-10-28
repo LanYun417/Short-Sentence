@@ -27,6 +27,7 @@ import '../api/auth_api.dart';
 import '../api/models/growth.dart';
 import '../state/tilt.dart';
 import '../theme/motion.dart';
+import '../widgets/tts_button.dart';
 
 /* ------------------------------ 色板（与网页端一致） ------------------------------ */
 
@@ -571,6 +572,14 @@ class _CardFront extends StatelessWidget {
             _CardPhoto(card: card, sheen: sheen),
             const SizedBox(height: 8),
             const _CardFooter(),
+            const SizedBox(height: 8),
+            // 朗读：句签本身就是一句英文短句，听读是核心场景；右对齐避免被拉伸成药丸条
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                SentenceTtsButton(text: card.sentenceEn, lang: 'en-US'),
+              ],
+            ),
           ],
         ),
       ),

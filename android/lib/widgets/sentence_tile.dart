@@ -12,6 +12,7 @@ import '../api/models/library_item.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
 import 'app_card.dart';
+import 'tts_button.dart';
 
 /// 列表项。
 class SentenceTile extends StatelessWidget {
@@ -124,6 +125,13 @@ class SentenceTile extends StatelessWidget {
                             fontSize: 10.5,
                           ),
                         ),
+                      const SizedBox(width: 6),
+                      // 朗读：列表项里的紧凑图标按钮，不挤占正文
+                      SentenceTtsButton(
+                        text: item.sentenceEn,
+                        lang: 'en-US',
+                        compact: true,
+                      ),
                     ],
                   ),
                 ],
