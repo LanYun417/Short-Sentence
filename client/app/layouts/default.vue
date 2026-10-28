@@ -158,7 +158,12 @@ function onLogout(): void {
     <!-- 主内容：内容区自己滚（header 固定），移动端底部为 Tab 栏留白 -->
     <main class="min-h-0 flex-1">
       <AppScrollArea>
-        <div class="pb-16 md:pb-0">
+        <!--
+          移动端底部留白 = Tab 栏高度（约 59px）+ 安全区（iPhone 34px）+ 间距。
+          原来写死 pb-16（64px）：Tab 栏本身就有 59px，再叠安全区就盖住内容最后一截
+          （题卡背面的「你的答案」曾被压住，2026-10-28 用户截图）。
+        -->
+        <div class="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           <slot />
         </div>
       </AppScrollArea>

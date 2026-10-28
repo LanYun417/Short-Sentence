@@ -340,8 +340,10 @@ async function onSubmitReport(): Promise<void> {
       </div>
 
       <!-- 背面：加载中 / 正确答案 -->
+      <!-- overflow-hidden 必须留：背面绝对定位、高度等于正面，内容一长就会溢出卡面，
+           跑到卡片外被底部 Tab 压住（2026-10-28 用户截图） -->
       <div
-        class="card-face card-face--back absolute inset-0 rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
+        class="card-face card-face--back absolute inset-0 overflow-hidden rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
         <!-- 加载下一题：保持背面转一会儿，比直接硬切自然 -->
         <div v-if="loading" class="flex h-full flex-col items-center justify-center gap-3 text-slate-400">
@@ -349,7 +351,7 @@ async function onSubmitReport(): Promise<void> {
           <p class="text-sm">加载下一题…</p>
         </div>
 
-        <div v-else class="flex h-full flex-col">
+        <div v-else class="flex h-full min-h-0 flex-col">
           <!-- 结果条 -->
           <div
             class="anim-pop mb-3 flex items-center gap-2 rounded-2xl px-3 py-2"
@@ -372,36 +374,45 @@ async function onSubmitReport(): Promise<void> {
             />
           </div>
 
-          <!-- 答案内容：在结果条与底栏之间垂直居中，避免卡背下方留一大块空白 -->
-          <div class="flex flex-1 flex-col justify-center">
-            <div class="flex items-start justify-between gap-2">
-              <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
-                {{ result?.sentenceEn }}
-              </p>
-              <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
-              <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
-            </div>
-            <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
-              {{ result.ipa }}
-            </p>
-            <!-- 输入模式多答案：列出该句中其它同样算对的写法 -->
-            <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
-              <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
-              <p
-                v-for="alternative in result.validAnswers"
-                :key="alternative"
-                class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
-              >
-                {{ alternative }}
-              </p>
-            </div>
-            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              {{ result?.translationZh }}
-            </p>
+          <!--
+            答案内容区：短内容垂直居中，长内容（多条"也算对"的写法）在卡内滚动。
+            1. 外层 min-h-0 + overflow-y-auto：flex 子项默认可被内容撑高，必须 min-h-0 才能滚；
+            2. 内层 min-h-full + 内容 my-auto：内容短时撑满居中，内容长时自动 margin 归零、
+               从顶部开始排（若用 justify-center 处理溢出，顶部会被裁掉且滚不上去）。
+          -->
+          <div class="ss-viewport min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div class="flex min-h-full flex-col">
+              <div class="my-auto py-0.5">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
+                    {{ result?.sentenceEn }}
+                  </p>
+                  <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
+                  <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
+                </div>
+                <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
+                  {{ result.ipa }}
+                </p>
+                <!-- 输入模式多答案：列出该句中其它同样算对的写法 -->
+                <div v-if="result?.validAnswers?.length" class="mt-2.5 space-y-1.5" data-testid="valid-answers">
+                  <p class="text-xs font-medium text-slate-400 dark:text-slate-500">这些说法也算对</p>
+                  <p
+                    v-for="alternative in result.validAnswers"
+                    :key="alternative"
+                    class="text-[15px] leading-snug text-slate-600 dark:text-slate-300"
+                  >
+                    {{ alternative }}
+                  </p>
+                </div>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  {{ result?.translationZh }}
+                </p>
 
-            <div v-if="!result?.isCorrect" class="mt-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-700/50">
-              <p class="text-slate-400">你的答案</p>
-              <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
+                <div v-if="!result?.isCorrect" class="mt-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-700/50">
+                  <p class="text-slate-400">你的答案</p>
+                  <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
+                </div>
+              </div>
             </div>
           </div>
 
