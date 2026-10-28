@@ -179,26 +179,63 @@
    光斑用径向渐变而非 filter:blur 的实图：后者在滚动时会反复重绘整层掉帧，
    径向渐变由 GPU 直接插值，成本低（与安卓 AuroraBackground 同思路）。 */
 
-/* 流体 mesh：背景放大到 185% 后整体平移，色团在卡片内连续游动交融（真正的流动，而非原地呼吸）。 */
-@keyframes ss-hero-flow {
-  0% {
-    background-position: 0% 0%;
+/* 流体 mesh：多团柔光球各自以不同周期 / 相位 / 路径独立漂移 + 缩放，互相交融又分离，
+   形成连续流动感（而非一整块纹理刚性的平移）。
+   每团取用父级阶段色，模糊后叠加；只动 transform（合成层），模糊纹理一次栅格化后复用，
+   滚动不重绘、不掉帧（与安卓 AuroraBackground 同思路）。 */
+@keyframes ss-hero-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
   }
 
-  25% {
-    background-position: 100% 0%;
+  33% {
+    transform: translate(20%, 14%) scale(1.18);
+  }
+
+  66% {
+    transform: translate(10%, 26%) scale(0.92);
+  }
+}
+
+@keyframes ss-hero-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(-18%, 18%) scale(0.9);
+  }
+
+  66% {
+    transform: translate(-6%, 6%) scale(1.14);
+  }
+}
+
+@keyframes ss-hero-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.05);
+  }
+
+  33% {
+    transform: translate(14%, -16%) scale(0.95);
+  }
+
+  66% {
+    transform: translate(-10%, -8%) scale(1.2);
+  }
+}
+
+@keyframes ss-hero-d {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
   }
 
   50% {
-    background-position: 100% 100%;
-  }
-
-  75% {
-    background-position: 0% 100%;
-  }
-
-  100% {
-    background-position: 0% 0%;
+    transform: translate(-16%, -12%) scale(1.25);
   }
 }
 
@@ -216,9 +253,54 @@
   }
 }
 
-.ss-hero-fluid {
-  opacity: 0.92;
-  animation: ss-hero-flow 24s ease-in-out infinite;
+.ss-hero-blobs {
+  filter: blur(2px);
+}
+
+.ss-hero-blob {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0.72;
+  filter: blur(38px);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.ss-hero-blob--from {
+  top: -20%;
+  left: -14%;
+  width: 78%;
+  height: 78%;
+  background: radial-gradient(circle at 35% 35%, var(--hero-from), transparent 68%);
+  animation: ss-hero-a 21s ease-in-out infinite;
+}
+
+.ss-hero-blob--via {
+  top: -12%;
+  right: -18%;
+  width: 84%;
+  height: 84%;
+  background: radial-gradient(circle at 60% 40%, var(--hero-via), transparent 66%);
+  animation: ss-hero-b 27s ease-in-out infinite;
+}
+
+.ss-hero-blob--to {
+  bottom: -24%;
+  left: 6%;
+  width: 88%;
+  height: 88%;
+  background: radial-gradient(circle at 50% 50%, var(--hero-to), transparent 64%);
+  animation: ss-hero-c 31s ease-in-out infinite;
+}
+
+.ss-hero-blob--glow {
+  right: 2%;
+  bottom: -12%;
+  width: 56%;
+  height: 56%;
+  background: radial-gradient(circle at 50% 50%, #fff, transparent 60%);
+  opacity: 0.4;
+  animation: ss-hero-d 24s ease-in-out infinite;
 }
 
 .ss-star {
@@ -471,7 +553,7 @@
   .anim-float,
   .anim-drift,
   .anim-gradient,
-  .ss-hero-fluid,
+  .ss-hero-blob,
   .ss-star,
   .anim-stagger,
   .page-enter-active,

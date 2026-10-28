@@ -2,12 +2,14 @@
 /**
  * 今日进度 Hero 的「星光流体渐变」背景层（纯 CSS、零依赖）。
  *
- * - 流体：四团取用父级阶段色（--hero-from / --hero-via / --hero-to）的径向光斑，
- *   缓缓游动、互相交融，叠在底色之上形成 mesh 流动感；阶段升温时颜色随父级平滑过渡。
+ * - 流体：多团取用父级阶段色（--hero-from / --hero-via / --hero-to）的柔光球，
+ *   各自以不同周期 / 相位 / 路径独立漂移 + 缩放，互相交融又分离，形成连续流动感
+ *   （而非一整块纹理刚性的平移）。阶段升温时颜色随父级平滑过渡。
+ *   只动 transform（合成层），模糊纹理一次栅格化后复用，滚动不重绘、不掉帧。
  * - 星光：散布的白色星点呼吸闪烁。
  *
  * 父级需为 .ss-hero（提供 --hero-* 变量）。减弱动效时由 main.css 媒体查询关闭动画，
- * 退化为静态光斑 + 微亮星点。星点位置固定，避免 SSR 与客户端随机不一致导致水合错位。
+ * 退化为静态柔光团 + 微亮星点。星点位置固定，避免 SSR 与客户端随机不一致导致水合错位。
  */
 // 星点：固定位置 / 尺寸 / 相位（确定性，不随机）
 const STARS = [
@@ -32,20 +34,14 @@ const STARS = [
 
 <template>
   <div class="pointer-events-none absolute inset-0 overflow-hidden">
-    <!-- 流体 mesh：父级阶段色（--hero-*）堆叠的多个大号径向渐变，整层缓慢平移，
-         色团互相交融形成连续流动感（而非几颗分离的小球）。 -->
-    <div
-      class="ss-hero-fluid absolute inset-0"
-      style="
-        background:
-          radial-gradient(58% 68% at 16% 20%, var(--hero-from), transparent 62%),
-          radial-gradient(62% 72% at 84% 14%, var(--hero-via), transparent 62%),
-          radial-gradient(70% 80% at 74% 86%, var(--hero-to), transparent 60%),
-          radial-gradient(50% 60% at 26% 80%, #fff, transparent 55%);
-        background-repeat: no-repeat;
-        background-size: 185% 185%;
-      "
-    />
+    <!-- 流体 mesh：多团柔光球各自独立缓动、互相交融，形成连续流动的渐变
+         （而非整屏刚性平移）。每团取用一个阶段色，模糊后叠加。 -->
+    <div class="ss-hero-blobs absolute inset-0">
+      <span class="ss-hero-blob ss-hero-blob--from" />
+      <span class="ss-hero-blob ss-hero-blob--via" />
+      <span class="ss-hero-blob ss-hero-blob--to" />
+      <span class="ss-hero-blob ss-hero-blob--glow" />
+    </div>
 
     <!-- 星光：白色星点呼吸闪烁 -->
     <span

@@ -246,7 +246,7 @@ function onFavorite(): void {
   <div class="mx-auto max-w-xl px-4 py-6 md:py-8">
     <!-- 今日进度 Hero：配色随完成度升温（未开始青蓝 → 冲刺玫红 → 达标金橙），见 heroStage -->
     <section
-      class="ss-hero anim-in anim-gradient relative mb-5 overflow-hidden rounded-3xl bg-size-[200%_200%] p-5 text-white"
+      class="ss-hero anim-in relative mb-5 overflow-hidden rounded-3xl p-5 text-white"
       :class="{ 'ss-hero--done': heroStage.key === 'done', 'scale-[1.012]': heroPulse }"
       :style="{
         '--hero-from': heroStage.from,

@@ -124,7 +124,11 @@ async function share(): Promise<void> {
         class="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-slate-950/70 p-4 backdrop-blur-sm"
         @click.self="emit('close')"
       >
-        <div ref="visual" class="overflow-hidden rounded-3xl shadow-2xl">
+        <div
+          ref="visual"
+          class="overflow-hidden"
+          style="border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 55%)"
+        >
           <ShareCardVisual :card="card" />
         </div>
 
