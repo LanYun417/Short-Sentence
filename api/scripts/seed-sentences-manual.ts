@@ -14,6 +14,7 @@
 import sharp from 'sharp';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
+import { AiBudgetService } from '../src/common/ai/ai-budget.service.js';
 import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { FileService } from '../src/common/file/file.service.js';
 import { imageGenConfig } from '../src/common/config/image-gen-config.js';
@@ -932,7 +933,7 @@ async function main(): Promise<void> {
     }
     console.log(`待生图：${pending.length} 张（并发 ${IMAGE_CONCURRENCY}）`);
 
-    const imageGen = new AgnesImageProvider(new AiCallLogService(prisma));
+    const imageGen = new AgnesImageProvider(new AiCallLogService(prisma), new AiBudgetService(prisma));
     const fileService = new FileService(prisma);
     let done = 0;
     let failed = 0;

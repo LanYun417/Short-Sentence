@@ -5,6 +5,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { RequirePermissions } from '../../common/auth/permission.guard.js';
 import type { PageResult } from '../../common/types.js';
+import type { AiBudgetStatus } from '../../common/ai/ai-budget.service.js';
 import {
   AnalyticsService,
   type ActiveTrend,
@@ -102,5 +103,12 @@ export class AnalyticsController {
   @RequirePermissions('analytics:view')
   activeTrend(@Query('days') days?: string): Promise<ActiveTrend> {
     return this.analytics.activeTrend(Number(days ?? 14));
+  }
+
+  /** 今日 AI 预算状态（跨所有调用方的成本闸门）。 */
+  @Get('ai-budget')
+  @RequirePermissions('analytics:view')
+  aiBudget(): Promise<AiBudgetStatus> {
+    return this.analytics.aiBudget();
   }
 }

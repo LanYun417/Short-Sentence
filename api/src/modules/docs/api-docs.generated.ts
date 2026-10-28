@@ -6369,6 +6369,41 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/analytics/ai-budget",
+        "summary": "今日 AI 预算状态（跨所有调用方的成本闸门）",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-budget?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/analytics/ai-calls",
         "summary": "近 N 日 AI 调用统计",
         "permission": [

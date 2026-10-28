@@ -4,6 +4,7 @@
 import { get } from './request';
 import type {
   ActiveTrend,
+  AiBudgetStatus,
   AiCallLogItem,
   AiCallLogQuery,
   AiCallLogSummary,
@@ -71,4 +72,9 @@ export function getRetentionApi(days = 14): Promise<RetentionResult> {
 /** 新增 / 日活趋势 */
 export function getActiveTrendApi(days = 14): Promise<ActiveTrend> {
   return get<ActiveTrend>('/analytics/active-trend', { days });
+}
+
+/** AI 今日预算状态（跨所有调用方的成本闸门） */
+export function getAiBudgetApi(): Promise<AiBudgetStatus> {
+  return get<AiBudgetStatus>('/analytics/ai-budget');
 }

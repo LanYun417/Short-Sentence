@@ -23,6 +23,7 @@ import { ImageScaleService, HotlinkGuardMiddleware, ImageScaleMiddleware } from 
 import { IpRegionService } from './ip/ip-region.service.js';
 import { AiCallLogService } from './ai/ai-call-log.service.js';
 import { AiQuotaService } from './ai/ai-quota.service.js';
+import { AiBudgetService } from './ai/ai-budget.service.js';
 import { AgnesSentenceProvider } from './ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from './ai/agnes-image.provider.js';
 
@@ -51,6 +52,8 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     // AI 能力（「短句」题库生题/生图；密钥缺失时由各 Provider 的 enabled 标记禁用）
     AiCallLogService,
     AiQuotaService,
+    // 全局每日 AI 预算闸门（跨所有 AI 调用入口；0 = 不限）
+    AiBudgetService,
     AgnesSentenceProvider,
     AgnesImageProvider,
     // 静态资源链的中间件：由 app.setup.ts 显式挂到 express 上，需要能被 app.get 解析
@@ -78,6 +81,7 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     IpRegionService,
     AiCallLogService,
     AiQuotaService,
+    AiBudgetService,
     AgnesSentenceProvider,
     AgnesImageProvider,
   ],

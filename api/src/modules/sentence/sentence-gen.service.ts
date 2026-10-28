@@ -21,6 +21,7 @@ import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AgnesSentenceProvider } from '../../common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
+import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
 
@@ -93,6 +94,7 @@ export class SentenceGenService {
     private readonly sentenceGen: AgnesSentenceProvider,
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
+    private readonly budget: AiBudgetService,
   ) {}
 
   /** 取生图闸门（懒加载：首次用到时才按配置建）。 */
@@ -397,6 +399,8 @@ export class SentenceGenService {
       let control: 'run' | 'pause' | 'cancel' = 'run';
       /** 审核阶段剔除的条数（未入库；单独统计，便于判断提示词是否过严） */
       let rejectedCount = 0;
+      /** 是否因「已达每日 AI 预算上限」提前结束（落终止原因用）。 */
+      let budgetHit = false;
 
       // 续跑（继续 / 失败重跑）时可能还有上次没排产的待配图题目：
       // 若文字已达标、循环一次都不进，这里不补排就永远不会有图。
@@ -410,6 +414,13 @@ export class SentenceGenService {
           this.logger.log(
             `[SentenceGen] 批次 ${taskId} 收到${control === 'pause' ? '暂停' : '取消'}指令，在批次边界停止`,
           );
+          break;
+        }
+        // 预算闸门：达每日 AI 上限就不再开新批次（正在飞的请求不硬打断），如实落终止原因。
+        // 与 Provider 里的闸门是双保险：这里让批次「干净地停」，那里兜住任何直接调用。
+        if (await this.budget.isOverBudget()) {
+          budgetHit = true;
+          this.logger.warn(`[SentenceGen] 已达每日 AI 预算上限，批次 ${taskId} 提前结束生题`);
           break;
         }
         const need = Math.min(TEXT_CHUNK, task.targetCount - textDone);
@@ -528,7 +539,11 @@ export class SentenceGenService {
           imageDone,
           // failCount 记「未入库条数」：调用失败 + 审核剔除（运营只看这个数字判断要不要补跑）
           failCount: failCount + rejectedCount,
-          errorMessage: ok ? null : '本轮未产出任何题目（详见服务日志）',
+          errorMessage: budgetHit
+            ? '已达每日 AI 预算上限，本批提前结束（明天 0 点恢复）'
+            : ok
+              ? null
+              : '本轮未产出任何题目（详见服务日志）',
           finishedAt: new Date(),
         },
       });

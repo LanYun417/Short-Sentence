@@ -13,6 +13,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../config/config.js';
 import type { DayContext } from '../calendar/day-context.js';
 import { AiCallLogService } from './ai-call-log.service.js';
+import { AiBudgetService } from './ai-budget.service.js';
 import {
   AiProviderError,
   type RejectedDraft,
@@ -194,7 +195,10 @@ const REVIEW_SYSTEM_PROMPT = [
 export class AgnesSentenceProvider implements SentenceGenProvider {
   private readonly logger = new Logger(AgnesSentenceProvider.name);
 
-  constructor(private readonly aiCallLog: AiCallLogService) {}
+  constructor(
+    private readonly aiCallLog: AiCallLogService,
+    private readonly budget: AiBudgetService,
+  ) {}
 
   /** 密钥未配置时禁用生题能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
@@ -406,6 +410,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     temperature: number,
     options: { bizId?: number; validate?: (content: string) => void } = {},
   ): Promise<string> {
+    // 预算闸门放在 try 之前：超额时直接抛不可重试错误，**不写 ai_call_log**
+    // （被拦下的调用不算「消费」，也不该污染失败率统计）。放在这里即覆盖所有文本调用
+    // （生题/优化/审核/句签/词根/造句）。
+    await this.budget.assertWithinBudget();
     const startedAt = Date.now();
     try {
       const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {

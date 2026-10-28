@@ -1205,6 +1205,22 @@ export interface ActiveTrend {
   activeUsers: number[];
 }
 
+/** AI 今日预算状态（跨所有调用方的成本闸门） */
+export interface AiBudgetStatus {
+  calls: number;
+  tokens: number;
+  /** 每日调用次数上限（0 = 不限） */
+  callBudget: number;
+  /** 每日 token 上限（0 = 不限） */
+  tokenBudget: number;
+  /** 是否已达上限 */
+  overBudget: boolean;
+  /** 剩余可用调用次数（null = 不限） */
+  remainingCalls: number | null;
+  /** 剩余可用 token（null = 不限） */
+  remainingTokens: number | null;
+}
+
 /** 场景分类条目 */
 export interface SentenceCategoryItem {
   id: number;

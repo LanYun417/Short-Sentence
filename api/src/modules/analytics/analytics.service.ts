@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import type { PageResult } from '../../common/types.js';
+import { AiBudgetService, type AiBudgetStatus } from '../../common/ai/ai-budget.service.js';
 import { aiTypeFilterValues, aiTypeLabel } from './ai-type.js';
 
 /** 天数归一（非法值回退，并夹到合理上限，避免全表扫描拖垮接口）。 */
@@ -197,7 +198,15 @@ export interface ActiveTrend {
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly budget: AiBudgetService,
+  ) {}
+
+  /** 今日 AI 预算状态（跨所有调用方的成本闸门；供运营看板展示）。 */
+  aiBudget(): Promise<AiBudgetStatus> {
+    return this.budget.status();
+  }
 
   /** 总览卡片。 */
   async overview(): Promise<AnalyticsOverview> {

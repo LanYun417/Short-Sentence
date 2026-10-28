@@ -20,6 +20,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { FileService } from '../src/common/file/file.service.js';
 import { ImageScaleService } from '../src/common/file/file-guards.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
+import { AiBudgetService } from '../src/common/ai/ai-budget.service.js';
 import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
@@ -46,11 +47,13 @@ async function main(): Promise<void> {
   // 手动装配：删文件用 FilesService（磁盘 + 缩略图缓存），生题用 SentenceGenService
   const files = new FilesService(prisma, new ImageScaleService());
   const aiCallLog = new AiCallLogService(prisma);
+  const budget = new AiBudgetService(prisma);
   const gen = new SentenceGenService(
     prisma,
-    new AgnesSentenceProvider(aiCallLog),
-    new AgnesImageProvider(aiCallLog),
+    new AgnesSentenceProvider(aiCallLog, budget),
+    new AgnesImageProvider(aiCallLog, budget),
     new FileService(prisma),
+    budget,
   );
 
   try {

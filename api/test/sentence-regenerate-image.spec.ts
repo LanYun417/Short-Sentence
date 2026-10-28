@@ -62,10 +62,10 @@ function fakePrismaMany(rows: Array<{ id: bigint; scenePrompt: string; status: s
   };
 }
 
-/** 装配被测服务（sentenceGen provider 与批次逻辑无关，传空对象即可）。 */
+/** 装配被测服务（sentenceGen provider / 预算闸门与本次被测逻辑无关，传空对象即可）。 */
 function buildService(prisma: unknown, imageGen: unknown): SentenceGenService {
   const fileService = { save: async () => ({ file: { id: 7 } }) };
-  return new SentenceGenService(prisma as never, {} as never, imageGen as never, fileService as never);
+  return new SentenceGenService(prisma as never, {} as never, imageGen as never, fileService as never, {} as never);
 }
 
 describe('SentenceGenService.regenerateImage', () => {

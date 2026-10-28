@@ -332,6 +332,17 @@ export const config = {
      * 先按 50 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
      */
     dailyQuota: Math.max(1, toNumber(process.env.AI_DAILY_QUOTA, 50)),
+    /**
+     * 全局每日 AI 预算（跨所有调用方：批次生题/生图、客户端造句/词根、句签）。
+     * 0 = 不限制（默认）。任一维度达到上限即闸断所有 AI 调用入口。
+     *
+     * 为什么需要：客户端已有「每人每日次数」额度，但**没有全局天花板**——
+     * 被多账号刷或批量生题失控时成本无上限；这里是最后一道成本闸门。
+     * 为什么用「次数」为主口径：上游按 token/图片的计费口径尚未固化，次数最直观可控；
+     * token 维度作为辅助上限（防单次超长输出把成本拉爆）。
+     */
+    dailyCallBudget: Math.max(0, toNumber(process.env.AI_DAILY_CALL_BUDGET, 0)),
+    dailyTokenBudget: Math.max(0, toNumber(process.env.AI_DAILY_TOKEN_BUDGET, 0)),
   },
   /**
    * 成长体系（XP / 等级 / 成就）防刷配置。

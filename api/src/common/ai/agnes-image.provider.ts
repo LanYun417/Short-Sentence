@@ -11,6 +11,7 @@
 import { Injectable } from '@nestjs/common';
 import { config } from '../config/config.js';
 import { AiCallLogService } from './ai-call-log.service.js';
+import { AiBudgetService } from './ai-budget.service.js';
 import { AiProviderError, type GeneratedImage, type ImageGenProvider } from './ai.types.js';
 
 /** Agnes 图像响应结构。 */
@@ -20,7 +21,10 @@ interface AgnesImageResponse {
 
 @Injectable()
 export class AgnesImageProvider implements ImageGenProvider {
-  constructor(private readonly aiCallLog: AiCallLogService) {}
+  constructor(
+    private readonly aiCallLog: AiCallLogService,
+    private readonly budget: AiBudgetService,
+  ) {}
 
   /** 密钥未配置时禁用生图能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
@@ -32,6 +36,8 @@ export class AgnesImageProvider implements ImageGenProvider {
     if (!this.enabled) {
       throw new AiProviderError('生图能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
     }
+    // 预算闸门放在 try 之前：超额时抛不可重试错误且不写 ai_call_log（详见 agnes-sentence.provider）
+    await this.budget.assertWithinBudget();
 
     const startedAt = Date.now();
     try {

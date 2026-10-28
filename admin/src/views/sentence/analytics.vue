@@ -5,6 +5,7 @@
  */
 import {
   getActiveTrendApi,
+  getAiBudgetApi,
   getAnalyticsOverviewApi,
   getAnswerTrendApi,
   getAiCallStatsApi,
@@ -16,6 +17,7 @@ import {
 } from '@/api/analytics';
 import type {
   ActiveTrend,
+  AiBudgetStatus,
   AiCallStat,
   AnalyticsOverview,
   AnswerTrend,
@@ -46,6 +48,30 @@ const checkin = ref<CheckinStat | null>(null);
 const activeTrend = ref<ActiveTrend>({ dates: [], newUsers: [], activeUsers: [] });
 const funnel = ref<FunnelResult>({ registered: 0, stages: [] });
 const retention = ref<RetentionResult>({ rows: [], avg: { d0: null, d1: null, d3: null, d7: null } });
+const budget = ref<AiBudgetStatus | null>(null);
+
+/** 预算是否已配置（两个维度都为 0 即「不限」）。 */
+const budgetConfigured = computed(
+  () => !!budget.value && (budget.value.callBudget > 0 || budget.value.tokenBudget > 0),
+);
+
+/** 把「已用 / 上限」整理成进度条参数（上限 0 = 不限，不画进度）。 */
+function toProgress(
+  used: number,
+  limit: number,
+): { percent: number; status: '' | 'success' | 'exception'; text: string } {
+  if (limit <= 0) {
+    return { percent: 0, status: '', text: `${used}（不限）` };
+  }
+  return {
+    percent: Math.min(100, Math.round((used / limit) * 100)),
+    status: used >= limit ? 'exception' : 'success',
+    text: `${used} / ${limit}`,
+  };
+}
+
+const callProgress = computed(() => toProgress(budget.value?.calls ?? 0, budget.value?.callBudget ?? 0));
+const tokenProgress = computed(() => toProgress(budget.value?.tokens ?? 0, budget.value?.tokenBudget ?? 0));
 
 /** 趋势天数 */
 const trendDays = ref(7);
@@ -124,7 +150,7 @@ const CARDS = computed(() => {
 async function loadAll(): Promise<void> {
   loading.value = true;
   try {
-    const [o, t, d, c, a, ck, at, f, r] = await Promise.all([
+    const [o, t, d, c, a, ck, at, f, r, b] = await Promise.all([
       getAnalyticsOverviewApi(),
       getAnswerTrendApi(trendDays.value),
       getDifficultyApi(),
@@ -134,6 +160,7 @@ async function loadAll(): Promise<void> {
       getActiveTrendApi(14),
       getFunnelApi(cohortDays.value),
       getRetentionApi(cohortDays.value),
+      getAiBudgetApi(),
     ]);
     overview.value = o;
     trend.value = t;
@@ -144,6 +171,7 @@ async function loadAll(): Promise<void> {
     activeTrend.value = at;
     funnel.value = f;
     retention.value = r;
+    budget.value = b;
   } finally {
     loading.value = false;
   }
@@ -174,6 +202,15 @@ onMounted(() => {
       <h2 class="text-xl font-bold text-ink">数据分析</h2>
       <p class="mt-1.5 text-[13px] text-muted">题库、答题、打卡与 AI 调用的运营概览</p>
     </header>
+
+    <el-alert
+      v-if="budget?.overBudget"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb-4"
+      title="今日 AI 预算已达上限，所有 AI 调用已暂停（次日 0 点恢复）"
+    />
 
     <!-- 指标卡 -->
     <el-row :gutter="16">
@@ -304,6 +341,38 @@ onMounted(() => {
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- AI 今日预算（成本闸门） -->
+    <el-card shadow="never" class="mt-4">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span>AI 今日预算</span>
+          <el-tag v-if="budget?.overBudget" type="danger" size="small">已达上限</el-tag>
+          <el-tag v-else-if="budgetConfigured" type="success" size="small">正常</el-tag>
+          <el-tag v-else type="info" size="small">未限制</el-tag>
+        </div>
+      </template>
+      <template v-if="budgetConfigured">
+        <div class="mb-3">
+          <div class="mb-1 flex items-center justify-between text-[13px]">
+            <span>调用次数</span>
+            <span class="text-muted">{{ callProgress.text }}</span>
+          </div>
+          <el-progress :percentage="callProgress.percent" :status="callProgress.status" :show-text="false" />
+        </div>
+        <div>
+          <div class="mb-1 flex items-center justify-between text-[13px]">
+            <span>Token</span>
+            <span class="text-muted">{{ tokenProgress.text }}</span>
+          </div>
+          <el-progress :percentage="tokenProgress.percent" :status="tokenProgress.status" :show-text="false" />
+        </div>
+        <p class="mt-3 text-xs text-muted">
+          跨所有调用方（批次生题 / 生图、客户端造句 / 词根、句签）。任一维度达上限即暂停所有 AI 调用。
+        </p>
+      </template>
+      <el-empty v-else description="未配置每日预算（AI 调用不受全局上限约束）" :image-size="60" />
+    </el-card>
 
     <!-- 打卡 -->
     <el-row :gutter="16" class="mt-4">
