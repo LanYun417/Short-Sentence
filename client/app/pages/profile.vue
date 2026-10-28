@@ -127,6 +127,56 @@ function closePreview(): void {
   previewCard.value = null;
 }
 
+/** 分享中的句签（点「分享卡片」后打开的出图弹层）。 */
+const sharingCard = ref<SentenceCard | null>(null);
+
+/** 打开分享弹层。 */
+function openShare(card: SentenceCard): void {
+  sharingCard.value = card;
+}
+
+/* ------------------------------ 每日提醒 ------------------------------ */
+
+const {
+  setting: reminderSetting,
+  load: loadReminder,
+  persist: persistReminder,
+  supported: reminderSupported,
+  permission: reminderPermission,
+  requestPermission: requestReminderPermission,
+} = useDailyReminder();
+
+/** 用户拒绝了通知权限（给出提示，避免开关看起来「开了却没生效」）。 */
+const reminderDenied = ref(false);
+
+/** 提醒时间选项（0~23 点）。 */
+const REMINDER_HOURS = Array.from({ length: 24 }, (_, hour) => ({
+  label: `${String(hour).padStart(2, '0')}:00`,
+  value: hour,
+}));
+
+/** 开关提醒：开启前先确保拿到通知权限（被拒则不开）。 */
+async function toggleReminder(enabled: boolean): Promise<void> {
+  if (enabled) {
+    const granted = await requestReminderPermission();
+    if (!granted) {
+      reminderDenied.value = true;
+      return;
+    }
+    reminderDenied.value = false;
+  }
+  persistReminder({ ...reminderSetting.value, enabled });
+}
+
+/** 切换提醒时间。 */
+function changeReminderHour(hour: number): void {
+  persistReminder({ ...reminderSetting.value, hour });
+}
+
+onMounted(() => {
+  loadReminder();
+});
+
 /* ------------------------------ 未拥有的句签 ------------------------------ */
 
 const missingVisible = ref(false);
@@ -521,6 +571,45 @@ async function onChangePassword(): Promise<void> {
               <span v-if="saveMessage" class="text-sm text-slate-400">{{ saveMessage }}</span>
             </div>
           </div>
+
+          <!-- 每日句签提醒（Web 本地通知；SSR 不渲染，避免权限 API 造成水合不一致） -->
+          <ClientOnly>
+            <div
+              class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    <UIcon name="i-lucide-bell-ring" class="h-4 w-4 text-sky-500" />
+                    每日句签提醒
+                  </p>
+                  <p class="mt-1 text-xs text-slate-400">到点提醒你来领当天的闪卡（页面在前台时生效）</p>
+                </div>
+                <USwitch
+                  :model-value="reminderSetting.enabled"
+                  :disabled="!reminderSupported()"
+                  @update:model-value="(value) => toggleReminder(Boolean(value))"
+                />
+              </div>
+
+              <div v-if="reminderSetting.enabled" class="mt-4 flex items-center gap-2">
+                <span class="text-sm text-slate-500 dark:text-slate-400">提醒时间</span>
+                <USelect
+                  :model-value="reminderSetting.hour"
+                  :items="REMINDER_HOURS"
+                  value-key="value"
+                  label-key="label"
+                  class="w-28"
+                  @update:model-value="(value) => changeReminderHour(Number(value))"
+                />
+              </div>
+
+              <p v-if="!reminderSupported()" class="mt-3 text-xs text-slate-400">当前浏览器不支持通知。</p>
+              <p v-else-if="reminderDenied || reminderPermission() === 'denied'" class="mt-3 text-xs text-amber-500">
+                未获得通知权限：请在浏览器地址栏的站点设置里允许通知后再开启。
+              </p>
+            </div>
+          </ClientOnly>
         </template>
 
         <!-- 成长：XP / 等级 / 成就 / 场景探索 -->
@@ -642,25 +731,30 @@ async function onChangePassword(): Promise<void> {
           <div class="flex w-[min(92vw,26rem)] flex-col items-center gap-3">
             <SentenceCard :card="previewCard" />
 
-            <!-- 设为个人主页背景；已是当前背景则提供恢复默认 -->
-            <UButton
-              v-if="auth.user?.bgCardId !== previewCard.id"
-              :loading="settingBg"
-              icon="i-lucide-layers"
-              @click="setBackground(previewCard.id)"
-            >
-              设为个人主页背景
-            </UButton>
-            <UButton
-              v-else
-              :loading="settingBg"
-              color="neutral"
-              variant="soft"
-              icon="i-lucide-rotate-ccw"
-              @click="setBackground(0)"
-            >
-              恢复默认背景
-            </UButton>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <!-- 设为个人主页背景；已是当前背景则提供恢复默认 -->
+              <UButton
+                v-if="auth.user?.bgCardId !== previewCard.id"
+                :loading="settingBg"
+                icon="i-lucide-layers"
+                @click="setBackground(previewCard.id)"
+              >
+                设为个人主页背景
+              </UButton>
+              <UButton
+                v-else
+                :loading="settingBg"
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-rotate-ccw"
+                @click="setBackground(0)"
+              >
+                恢复默认背景
+              </UButton>
+              <UButton color="neutral" variant="soft" icon="i-lucide-share-2" @click="openShare(previewCard)">
+                分享卡片
+              </UButton>
+            </div>
 
             <p v-if="bgMessage" class="text-xs text-white/85">{{ bgMessage }}</p>
             <p class="text-center text-xs text-white/60">移动鼠标可看到 3D 视差效果</p>
@@ -676,6 +770,9 @@ async function onChangePassword(): Promise<void> {
         </div>
       </Transition>
     </Teleport>
+
+    <!-- 分享卡片：出图 + 保存 / 系统分享 -->
+    <ShareCardSheet :card="sharingCard" @close="sharingCard = null" />
 
     <!-- 未拥有的句签 -->
     <UModal
