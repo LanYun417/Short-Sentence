@@ -37,6 +37,7 @@ import '../widgets/press_scale.dart';
 import '../widgets/segmented.dart';
 import '../widgets/shimmer.dart';
 import '../widgets/staggered.dart';
+import '../widgets/tts_button.dart';
 
 class QuizPage extends ConsumerStatefulWidget {
   const QuizPage({this.autoLoad = true, super.key});
@@ -1961,14 +1962,24 @@ class _BackFace extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  result.sentenceEn,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                    height: 1.4,
-                    letterSpacing: -0.2,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        result.sentenceEn,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // 翻转看答案后，可点读正确答案英文（零依赖原生 TTS 桥）
+                    SentenceTtsButton(text: result.sentenceEn, lang: 'en-US'),
+                  ],
                 ),
                 if (result.ipa != null && result.ipa!.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 6),
