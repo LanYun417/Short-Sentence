@@ -14,6 +14,7 @@
 import type { SentenceCategory, SentenceLibraryItem } from '~/types';
 import { apiFetch } from '~/composables/useApi';
 import { DIFFICULTIES, type DifficultyLevel } from '~/composables/useQuestionSession';
+import { parseDate, today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
 /** 缩略图地址。 */
 function itemSrc(url?: string | null): string {
@@ -68,6 +69,35 @@ function clearFilters(): void {
   categoryId.value = undefined;
   from.value = '';
   to.value = '';
+}
+
+/* ----------------------------- 日期范围选择（日历弹层，替代原生 date 输入） ----------------------------- */
+const todayDate = today(getLocalTimeZone());
+const fromOpen = ref(false);
+const toOpen = ref(false);
+
+/** 把 YYYY-MM-DD 字符串转成日历组件需要的 DateValue；空串返回 undefined。 */
+function toDateValue(value: string): DateValue | undefined {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    return parseDate(value);
+  } catch {
+    return undefined;
+  }
+}
+
+/** 日历选中后回写；空值（清除）亦支持；选完自动收起弹层。 */
+function onDatePick(which: 'from' | 'to', value: unknown): void {
+  const str = value ? (value as DateValue).toString() : '';
+  if (which === 'from') {
+    from.value = str;
+    fromOpen.value = false;
+  } else {
+    to.value = str;
+    toOpen.value = false;
+  }
 }
 
 /** 日期格式化（本地时区，MM-DD HH:mm）。 */
@@ -332,8 +362,42 @@ const emptyText = computed(() => {
           clearable
           class="w-36"
         />
-        <UInput v-model="from" type="date" placeholder="起始日期" size="sm" class="w-36" />
-        <UInput v-model="to" type="date" placeholder="结束日期" size="sm" class="w-36" />
+        <UPopover v-model:open="fromOpen" :content="{ align: 'start' }">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-calendar"
+            size="sm"
+            class="w-36 justify-between font-normal"
+          >
+            <span :class="!from && 'text-slate-400'">{{ from || '起始日期' }}</span>
+          </UButton>
+          <template #content>
+            <UCalendar
+              :model-value="toDateValue(from)"
+              :max-value="todayDate"
+              @update:model-value="onDatePick('from', $event)"
+            />
+          </template>
+        </UPopover>
+        <UPopover v-model:open="toOpen" :content="{ align: 'start' }">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-calendar"
+            size="sm"
+            class="w-36 justify-between font-normal"
+          >
+            <span :class="!to && 'text-slate-400'">{{ to || '结束日期' }}</span>
+          </UButton>
+          <template #content>
+            <UCalendar
+              :model-value="toDateValue(to)"
+              :max-value="todayDate"
+              @update:model-value="onDatePick('to', $event)"
+            />
+          </template>
+        </UPopover>
       </div>
     </div>
 

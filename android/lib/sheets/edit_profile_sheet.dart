@@ -1,8 +1,9 @@
 /// 编辑资料弹窗：昵称 / 性别 / 生日 / 签名。
 ///
-/// 生日用三个下拉而不是 `showDatePicker`：后者在本工程未接本地化代理时
-/// 会显示英文月份（`October`），在一个全中文的界面里很突兀；
-/// 自己拼三个下拉既保持中文，也不用为此引入 `flutter_localizations` 与 `intl`。
+/// 生日用「点击字段 → 底部弹层内三个中文下拉」而不是 `showDatePicker`：
+/// 后者在本工程未接本地化代理时会显示英文月份（`October`），在一个全中文的
+/// 界面里很突兀；自己拼中文下拉既保持语言一致，也不用为此引入
+/// `flutter_localizations` 与 `intl`（零新增依赖）。
 library;
 
 import 'package:flutter/material.dart';
@@ -125,7 +126,6 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final theme = Theme.of(context);
-    final years = <int>[for (var y = DateTime.now().year - 6; y >= 1940; y--) y];
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -169,47 +169,15 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               const SizedBox(height: 18),
               _Label(text: '生日'),
               const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 4,
-                    child: _Dropdown<int>(
-                      value: _year,
-                      hint: '年',
-                      items: years,
-                      labelOf: (value) => '$value',
-                      onChanged: (value) => setState(() {
-                        _year = value;
-                        _day = _day?.clamp(1, _daysInMonth);
-                      }),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: _Dropdown<int>(
-                      value: _month,
-                      hint: '月',
-                      items: List<int>.generate(12, (index) => index + 1),
-                      labelOf: (value) => '$value',
-                      onChanged: (value) => setState(() {
-                        _month = value;
-                        _day = _day?.clamp(1, _daysInMonth);
-                      }),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: _Dropdown<int>(
-                      value: _day,
-                      hint: '日',
-                      items: List<int>.generate(_daysInMonth, (index) => index + 1),
-                      labelOf: (value) => '$value',
-                      onChanged: (value) => setState(() => _day = value),
-                    ),
-                  ),
-                ],
+              _BirthdayField(
+                year: _year,
+                month: _month,
+                day: _day,
+                onChanged: (y, m, d) => setState(() {
+                  _year = y;
+                  _month = m;
+                  _day = d;
+                }),
               ),
               const SizedBox(height: 18),
               _Label(text: '个性签名'),
@@ -309,6 +277,191 @@ class _Dropdown<T> extends StatelessWidget {
               ),
           ],
           onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+/// 生日选择字段：表单里只露一颗「输入框」，点击展开底部弹层做选择，
+/// 比三颗下拉直接铺在表单里更整洁，也更像「日期选择器」。
+class _BirthdayField extends StatelessWidget {
+  const _BirthdayField({
+    required this.year,
+    required this.month,
+    required this.day,
+    required this.onChanged,
+  });
+
+  final int? year;
+  final int? month;
+  final int? day;
+  final void Function(int? year, int? month, int? day) onChanged;
+
+  String get _text {
+    if (year == null || month == null || day == null) {
+      return '请选择生日';
+    }
+    final m = month!.toString().padLeft(2, '0');
+    final d = day!.toString().padLeft(2, '0');
+    return '$year-$m-$d';
+  }
+
+  bool get _selected => year != null && month != null && day != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          await showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            builder: (_) => _BirthdaySheet(
+              year: year,
+              month: month,
+              day: day,
+              onChanged: onChanged,
+            ),
+          );
+        },
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: colors.cardMuted,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.line),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.calendar_today_rounded, size: 18, color: colors.inkFaint),
+              const SizedBox(width: 10),
+              Text(
+                _text,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _selected ? colors.ink : colors.inkFaint,
+                ),
+              ),
+              const Spacer(),
+              Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkFaint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 生日底部弹层：年 / 月 / 日 三列中文下拉，确认后回写父组件。
+class _BirthdaySheet extends StatefulWidget {
+  const _BirthdaySheet({
+    required this.year,
+    required this.month,
+    required this.day,
+    required this.onChanged,
+  });
+
+  final int? year;
+  final int? month;
+  final int? day;
+  final void Function(int? year, int? month, int? day) onChanged;
+
+  @override
+  State<_BirthdaySheet> createState() => _BirthdaySheetState();
+}
+
+class _BirthdaySheetState extends State<_BirthdaySheet> {
+  late int? _y = widget.year;
+  late int? _m = widget.month;
+  late int? _d = widget.day;
+
+  int get _daysInMonth {
+    if (_y == null || _m == null) {
+      return 31;
+    }
+    return DateTime(_y!, _m! + 1, 0).day;
+  }
+
+  void _commit() {
+    widget.onChanged(_y, _m, _d);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final years = <int>[for (var y = DateTime.now().year - 6; y >= 1940; y--) y];
+    final months = List<int>.generate(12, (index) => index + 1);
+    final days = List<int>.generate(_daysInMonth, (index) => index + 1);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text('选择生日', style: theme.textTheme.titleMedium),
+                  TextButton(onPressed: _commit, child: const Text('确定')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 4,
+                    child: _Dropdown<int>(
+                      value: _y,
+                      hint: '年',
+                      items: years,
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() {
+                        _y = value;
+                        _d = _d?.clamp(1, _daysInMonth);
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: _Dropdown<int>(
+                      value: _m,
+                      hint: '月',
+                      items: months,
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() {
+                        _m = value;
+                        _d = _d?.clamp(1, _daysInMonth);
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: _Dropdown<int>(
+                      value: _d,
+                      hint: '日',
+                      items: days,
+                      labelOf: (value) => '$value',
+                      onChanged: (value) => setState(() => _d = value),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
