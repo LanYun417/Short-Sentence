@@ -56,6 +56,8 @@ export interface LevelInfo {
   min: number;
   /** 下一等级起始 XP（满级为 null） */
   next: number | null;
+  /** 下一等级名称（满级为 null）；展示用，避免客户端再维护一份 code→name 映射 */
+  nextName: string | null;
   /** 距下一等级还需 XP（满级为 0） */
   toNext: number;
   /** 当前等级进度（0~100，满级为 100） */
@@ -225,7 +227,15 @@ export class GamifyService {
     const current = LEVELS[index];
     const next = LEVELS[index + 1] ?? null;
     if (!next) {
-      return { code: current.code, name: current.name, min: current.min, next: null, toNext: 0, progress: 100 };
+      return {
+        code: current.code,
+        name: current.name,
+        min: current.min,
+        next: null,
+        nextName: null,
+        toNext: 0,
+        progress: 100,
+      };
     }
     const span = next.min - current.min;
     const done = xp - current.min;
@@ -235,6 +245,7 @@ export class GamifyService {
       name: current.name,
       min: current.min,
       next: next.min,
+      nextName: next.name,
       toNext: next.min - xp,
       progress,
     };

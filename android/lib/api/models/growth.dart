@@ -11,14 +11,15 @@ class LevelInfo {
     required this.name,
     required this.min,
     required this.next,
+    this.nextName,
     required this.toNext,
     required this.progress,
   });
 
-  /// 等级码（A1~C2）。
+  /// 等级码（A1~C2）。仅用于调试/兼容，界面不再展示。
   final String code;
 
-  /// 等级名（如「初级」）。
+  /// 等级名（如「进阶」）。界面展示这个，而不是 code。
   final String name;
 
   /// 当前等级起始 XP。
@@ -26,6 +27,9 @@ class LevelInfo {
 
   /// 下一等级起始 XP（满级为 null）。
   final int? next;
+
+  /// 下一等级名称（满级为 null）。
+  final String? nextName;
 
   /// 距下一等级还需 XP（满级为 0）。
   final int toNext;
@@ -41,6 +45,7 @@ class LevelInfo {
       name: json['name'] as String? ?? '',
       min: (json['min'] as num?)?.toInt() ?? 0,
       next: (json['next'] as num?)?.toInt(),
+      nextName: json['nextName'] as String?,
       toNext: (json['toNext'] as num?)?.toInt() ?? 0,
       progress: (json['progress'] as num?)?.toInt() ?? 0,
     );

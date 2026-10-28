@@ -50,20 +50,28 @@ function iconOf(name: string): string {
     <!-- XP + 等级 -->
     <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80">
       <div class="flex items-center gap-4">
+        <!-- 等级徽标显示具体名称（入门/基础/进阶/高阶/精通/母语级），
+             不再显示 B1 这类 CEFR 代码——对用户没有意义。 -->
         <div
-          class="anim-pop grid size-16 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-sky-500 to-indigo-600 text-xl font-black text-white shadow-lg shadow-indigo-500/25"
+          class="anim-pop grid size-16 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/25"
         >
-          {{ overview.level.code }}
+          <span class="font-black tracking-tight" :class="overview.level.name.length > 2 ? 'text-[15px]' : 'text-xl'">
+            {{ overview.level.name }}
+          </span>
         </div>
         <div class="min-w-0 flex-1">
-          <div class="flex items-baseline gap-2">
-            <span class="text-lg font-bold text-slate-900 dark:text-slate-50">{{ overview.level.name }}</span>
-            <span class="text-sm tabular-nums text-slate-400">{{ overview.xp }} XP</span>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-xl font-bold tabular-nums text-slate-900 dark:text-slate-50">{{ overview.xp }}</span>
+            <span class="text-sm font-medium text-slate-400">XP</span>
           </div>
           <div class="mt-2">
             <UProgress :model-value="overview.level.progress" size="sm" />
             <p class="mt-1 text-xs text-slate-400">
-              {{ overview.level.next ? `距下一等级还需 ${overview.level.toNext} XP` : '已达最高等级 🎉' }}
+              {{
+                overview.level.next
+                  ? `距${overview.level.nextName ?? '下一等级'}还需 ${overview.level.toNext} XP`
+                  : '已达最高等级 🎉'
+              }}
             </p>
           </div>
         </div>

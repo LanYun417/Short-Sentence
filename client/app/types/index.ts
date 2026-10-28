@@ -133,6 +133,8 @@ export interface GamifyLevel {
   name: string;
   min: number;
   next: number | null;
+  /** 下一等级名称（满级为 null；旧接口可能缺失） */
+  nextName?: string | null;
   toNext: number;
   progress: number;
 }

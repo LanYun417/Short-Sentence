@@ -215,7 +215,7 @@ class _LevelHero extends StatelessWidget {
             children: <Widget>[
               _LevelRing(
                 progress: progress,
-                code: info?.code ?? 'A1',
+                name: info?.name ?? '入门',
                 isMax: info?.isMax ?? false,
               ),
               const SizedBox(width: 16),
@@ -224,7 +224,7 @@ class _LevelHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      info == null ? '正在读取等级…' : '${info.name} · ${info.code}',
+                      info == null ? '正在读取等级…' : '累计经验',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
@@ -264,7 +264,7 @@ class _LevelHero extends StatelessWidget {
                           ? ''
                           : info.isMax
                           ? '已达最高等级'
-                          : '距离 ${_nextName(info)} 还需 ${info.toNext} XP',
+                          : '距${info.nextName ?? '下一等级'}还需 ${info.toNext} XP',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.68),
                         fontSize: 11.5,
@@ -325,18 +325,6 @@ class _LevelHero extends StatelessWidget {
     margin: const EdgeInsets.symmetric(horizontal: 12),
     color: Colors.white.withValues(alpha: 0.16),
   );
-
-  static String _nextName(LevelInfo info) {
-    // 后端只给下一级的起始 XP，不给名称；用等级码推断的下一个区间即可读。
-    return switch (info.code) {
-      'A1' => 'A2',
-      'A2' => 'B1',
-      'B1' => 'B2',
-      'B2' => 'C1',
-      'C1' => 'C2',
-      _ => '下一级',
-    };
-  }
 }
 
 class _HeroStat extends StatelessWidget {
@@ -389,12 +377,15 @@ class _HeroStat extends StatelessWidget {
 class _LevelRing extends StatelessWidget {
   const _LevelRing({
     required this.progress,
-    required this.code,
+    required this.name,
     required this.isMax,
   });
 
   final double progress;
-  final String code;
+
+  /// 等级名称（入门 / 基础 / 进阶 / 高阶 / 精通 / 母语级）。
+  /// 不显示 CEFR 代码（A1/B1…）——对用户没有意义。
+  final String name;
   final bool isMax;
 
   @override
@@ -415,10 +406,11 @@ class _LevelRing extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  code,
-                  style: const TextStyle(
+                  name,
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    // 「母语级」三个字要小一号才塞得进圆环
+                    fontSize: name.length > 2 ? 14 : 18,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4,
                     height: 1.1,
