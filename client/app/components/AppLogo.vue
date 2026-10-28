@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
     <g :filter="`url(#${uid}-shadow)`">
       <path
         d="M 40 35 L 120 35 C 133 35 140 42 140 55 L 140 90 C 140 103 133 110 120 110 L 65 110 L 42 128 C 41 129 39 128 40 126 L 45 110 L 40 110 C 27 110 20 103 20 90 L 20 55 C 20 42 27 35 40 35 Z"
-        fill="url(#${uid}-main)"
+        :fill="`url(#${uid}-main)`"
       />
     </g>
 

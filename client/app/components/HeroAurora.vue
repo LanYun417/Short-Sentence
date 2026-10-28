@@ -32,22 +32,19 @@ const STARS = [
 
 <template>
   <div class="pointer-events-none absolute inset-0 overflow-hidden">
-    <!-- 流体光斑：四团不同阶段的色，缓慢游动交融 -->
+    <!-- 流体 mesh：父级阶段色（--hero-*）堆叠的多个大号径向渐变，整层缓慢平移，
+         色团互相交融形成连续流动感（而非几颗分离的小球）。 -->
     <div
-      class="anim-blob-a absolute -left-10 -top-12 h-56 w-56 rounded-full opacity-60 blur-3xl"
-      style="background: radial-gradient(circle at 50% 50%, var(--hero-from), transparent 70%)"
-    />
-    <div
-      class="anim-blob-b absolute -right-12 -bottom-16 h-64 w-64 rounded-full opacity-55 blur-3xl"
-      style="background: radial-gradient(circle at 50% 50%, var(--hero-via), transparent 70%)"
-    />
-    <div
-      class="anim-blob-c absolute left-1/3 -bottom-10 h-52 w-52 rounded-full opacity-50 blur-3xl"
-      style="background: radial-gradient(circle at 50% 50%, var(--hero-to), transparent 70%)"
-    />
-    <div
-      class="anim-blob-a absolute right-1/4 -top-8 h-44 w-44 rounded-full opacity-45 blur-3xl"
-      style="background: radial-gradient(circle at 50% 50%, #fff, transparent 70%); animation-delay: -7s"
+      class="ss-hero-fluid absolute inset-0"
+      style="
+        background:
+          radial-gradient(58% 68% at 16% 20%, var(--hero-from), transparent 62%),
+          radial-gradient(62% 72% at 84% 14%, var(--hero-via), transparent 62%),
+          radial-gradient(70% 80% at 74% 86%, var(--hero-to), transparent 60%),
+          radial-gradient(50% 60% at 26% 80%, #fff, transparent 55%);
+        background-repeat: no-repeat;
+        background-size: 185% 185%;
+      "
     />
 
     <!-- 星光：白色星点呼吸闪烁 -->
