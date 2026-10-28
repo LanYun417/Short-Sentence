@@ -24,12 +24,15 @@ const props = defineProps<{
   loading: boolean;
   /** 作答模式：input 自己敲，assemble 点选词块 */
   mode: AnswerMode;
+  /** 是否显示「换一题」（跳过当前题；由页面决定，避免组件里写死请求逻辑） */
+  canSkip?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'submit', answer: string): void;
   (e: 'next'): void;
   (e: 'favorite'): void;
+  (e: 'skip'): void;
 }>();
 
 /** 配图地址。 */
@@ -226,6 +229,11 @@ async function onSubmitReport(): Promise<void> {
       <div
         class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
+        <!--
+          顶栏：分类/难度 → 「换一题」→ 今日进度 → 举报。
+          「换一题」原先贴在卡片下方右对齐（离题目远、要额外扫一眼），
+          收进顶栏后与题卡信息同处一行，且不抢底部「确定」的主操作位。
+        -->
         <div class="mb-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <UBadge v-if="question.categoryName" color="primary" variant="subtle" size="sm">
             {{ question.categoryName }}
@@ -233,16 +241,32 @@ async function onSubmitReport(): Promise<void> {
           <UBadge v-if="difficultyText" color="warning" variant="subtle" size="sm">
             {{ difficultyText }}
           </UBadge>
-          <span class="ml-auto tabular-nums">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
-          <UButton
-            icon="i-lucide-flag"
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            title="举报 / 反馈此题"
-            aria-label="举报或反馈此题"
-            @click="openReport"
-          />
+          <div class="ml-auto flex shrink-0 items-center gap-1">
+            <UButton
+              v-if="canSkip"
+              icon="i-lucide-refresh-cw"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              title="换一题（跳过当前题）"
+              aria-label="换一题"
+              :loading="loading"
+              @click="emit('skip')"
+            >
+              <!-- 极窄屏（<380px）只留图标，避免顶栏挤爆（社区机型 360px 仍常见） -->
+              <span class="hidden min-[380px]:inline">换一题</span>
+            </UButton>
+            <span class="whitespace-nowrap tabular-nums">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
+            <UButton
+              icon="i-lucide-flag"
+              variant="ghost"
+              color="neutral"
+              size="xs"
+              title="举报 / 反馈此题"
+              aria-label="举报或反馈此题"
+              @click="openReport"
+            />
+          </div>
         </div>
 
         <!-- 题干 -->

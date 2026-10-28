@@ -338,24 +338,12 @@ function onFavorite(): void {
           :submitting="submitting"
           :loading="loading"
           :mode="mode"
+          can-skip
           @submit="onSubmit"
           @next="onNext"
           @favorite="onFavorite"
+          @skip="onSkip"
         />
-      </div>
-
-      <!-- 换一题：跳过当前题（未提交也能用）。贴卡片右下角，不抢「确定」的主操作位 -->
-      <div class="anim-in mx-auto mt-2 flex max-w-xl justify-end" :style="{ animationDelay: '180ms' }">
-        <UButton
-          size="sm"
-          color="neutral"
-          variant="ghost"
-          icon="i-lucide-refresh-cw"
-          :loading="loading"
-          @click="onSkip"
-        >
-          换一题
-        </UButton>
       </div>
     </template>
 
