@@ -732,6 +732,8 @@ async function onChangePassword(): Promise<void> {
             <SentenceCard :card="previewCard" />
 
             <div class="flex flex-wrap items-center justify-center gap-2">
+              <!-- 朗读：句签就是一句英文短句，听读是核心场景；与下方操作按钮同排 -->
+              <TtsButton :text="previewCard.sentenceEn" lang="en-US" />
               <!-- 设为个人主页背景；已是当前背景则提供恢复默认 -->
               <UButton
                 v-if="auth.user?.bgCardId !== previewCard.id"

@@ -193,10 +193,5 @@ const dateText = computed(() => {
     >
       「{{ card.blessing }}」
     </p>
-
-    <!-- 朗读：句签本身就是一句英文短句，听读是核心场景；放在倾斜容器之外，不干扰 3D 视差 -->
-    <div class="mt-2 flex justify-end">
-      <TtsButton :text="card.sentenceEn" lang="en-US" />
-    </div>
   </div>
 </template>
