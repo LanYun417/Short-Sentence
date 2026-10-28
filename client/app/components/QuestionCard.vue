@@ -348,9 +348,13 @@ async function onSubmitReport(): Promise<void> {
             />
           </div>
 
-          <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
-            {{ result?.sentenceEn }}
-          </p>
+          <div class="flex items-start justify-between gap-2">
+            <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
+              {{ result?.sentenceEn }}
+            </p>
+            <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
+            <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
+          </div>
           <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
             {{ result.ipa }}
           </p>
