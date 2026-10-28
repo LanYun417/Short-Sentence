@@ -76,11 +76,7 @@ function onLogout(): void {
       <div class="mx-auto flex h-14 max-w-3xl items-center gap-1 px-4 md:h-16">
         <!-- 品牌字标 -->
         <NuxtLink to="/" class="group mr-2 flex items-center gap-2 md:mr-4">
-          <img
-            src="/favicon.svg"
-            alt="短句"
-            class="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110"
-          />
+          <AppLogo class="h-8 w-8 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" />
           <span
             class="bg-linear-to-r from-sky-600 to-indigo-600 bg-clip-text text-lg font-bold tracking-tight text-transparent dark:from-sky-400 dark:to-indigo-400"
             >短句</span

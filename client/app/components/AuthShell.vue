@@ -25,10 +25,10 @@ defineProps<{
 
     <div class="relative w-full max-w-sm">
       <!-- 品牌：与 default 布局顶栏保持一致（图标 + 渐变字标）。
-           刻意不用 logo.svg：它的 viewBox 留白很大（内容只占中间一块且偏左上），
-           按高度缩放后既显小又不在正中。 -->
+           用 AppLogo 内联 SVG 组件（干净 160×160 图标区、瞳孔随鼠标转向），
+           刻意不用 logo.svg：它的 viewBox 留白很大（内容只占中间一块且偏左上）。 -->
       <div class="anim-in mb-6 flex items-center justify-center gap-2.5">
-        <img src="/favicon.svg" alt="" class="h-10 w-10" />
+        <AppLogo class="h-10 w-10" />
         <span
           class="bg-linear-to-r from-sky-600 to-indigo-600 bg-clip-text text-2xl font-bold tracking-tight text-transparent dark:from-sky-400 dark:to-indigo-400"
         >
