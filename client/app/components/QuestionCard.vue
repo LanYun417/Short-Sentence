@@ -73,8 +73,29 @@ const canSubmit = computed(() => (assembleMode.value ? wordsAllUsed.value : answ
  * 注意不能对 360 取模：取模会让 180→360 变回 180→0，又成了反向回翻。
  */
 const flipDeg = ref(0);
-watch(flipped, () => {
+/**
+ * 翻到背面后隐藏正面，让卡片收缩到背面内容的实际高度。
+ * 两面在 grid 里叠同一格、高度取较高者——正面（含配图）通常比背面高一大截，
+ * 不隐藏时卡背上下会留出大片空白（内容被 justify-center 居中在剩余空间里）。
+ * 收缩/长高都安排在翻转经过侧棱（约 90°/270°、卡片宽度为零）的时刻进行，
+ * 高度跳变发生在卡片最窄的一刻，肉眼不可见。
+ */
+const frontHidden = ref(false);
+/** 正面隐藏定时器（浏览器定时器，理由同 favTimer） */
+let collapseTimer: number | undefined;
+/** 与 main.css 里 .card-3d 的 transition 时长保持一致 */
+const FLIP_DURATION_MS = 450;
+/** ease-out 曲线下翻转进行到约 13% 时正好经过侧棱（90°/270°） */
+const EDGE_ON_DELAY_MS = Math.round(FLIP_DURATION_MS * 0.13);
+
+watch(flipped, (isFlipped) => {
   flipDeg.value += 180;
+  window.clearTimeout(collapseTimer);
+  // 减弱动效时翻转无过渡（瞬间完成），无需等侧棱
+  const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : EDGE_ON_DELAY_MS;
+  collapseTimer = window.setTimeout(() => {
+    frontHidden.value = !isFlipped;
+  }, delay);
 });
 
 /** 难度文案 */
@@ -122,6 +143,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   window.clearTimeout(favTimer);
+  window.clearTimeout(collapseTimer);
 });
 
 /** 回车双态：输入态=提交，翻转态=下一题。 */
@@ -230,6 +252,7 @@ async function onSubmitReport(): Promise<void> {
            （拼词已选区）的 min-content（词块总宽）撑爆，把整卡顶出 max-w-xl 列宽；置 0 让它收缩到网格可用宽度。 -->
       <div
         class="card-face min-w-0 rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
+        :class="{ hidden: frontHidden }"
       >
         <!--
           顶栏：分类/难度 → 「换一题」→ 今日进度 → 举报。
@@ -343,8 +366,9 @@ async function onSubmitReport(): Promise<void> {
 
       <!--
         背面：加载中 / 正确答案。
-        两面在 CSS 里叠成同一格（.card-3d 是 grid），卡片高度取较高的一面；
-        所以背面**只在提交后 / 换题加载中才渲染**——否则未作答时它就先把卡片撑高了。
+        两面在 CSS 里叠成同一格（.card-3d 是 grid）；背面渲染期间正面会被隐藏
+        （frontHidden，见脚本），卡片高度贴合背面内容，避免卡背上下大片留白。
+        背面**只在提交后 / 换题加载中才渲染**——否则未作答时它就先把卡片撑高了。
         内容也不需要卡内滚动：卡片会跟着长高，整页滚一下就能看全（单一滚动轴，
         比「卡里还能滚」的嵌套滚动更直观）。
       -->
@@ -382,9 +406,8 @@ async function onSubmitReport(): Promise<void> {
           </div>
 
           <!--
-            答案内容区：卡片高度取两面较高者，所以这里不需要溢出处理。
-            内容比正面矮时（桌面常见）用 justify-center 垂直居中，避免卡背下方一大块空；
-            内容更高时卡片整体变高，整页滚动看全。
+            答案内容区：卡片高度已贴合背面内容（正面隐藏），自然流式排布即可；
+            justify-center 仅在收缩前的一瞬（翻转中）和内容超高时兜底起作用。
           -->
           <div class="flex flex-1 flex-col justify-center py-0.5">
             <div class="flex items-start justify-between gap-2">
