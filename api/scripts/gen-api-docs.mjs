@@ -60,6 +60,35 @@ const SUMMARY_OVERRIDES = {
   'HealthController.health': '健康检查：返回服务名称、状态与服务器时间',
   'HealthController.live': '存活探针：仅证明进程可响应，不探测任何依赖（供 livenessProbe）',
   'HealthController.ready': '就绪探针：探测 MySQL 与 Redis；MySQL 不可用返回 503，Redis 不可用标记 degraded（仍 200）',
+  // 解析方法：类 JSDoc 较长（含额度说明），文档摘要取这行短的
+  'ClientAiController.analyze': '题目解析：答题后无论对错都给出语法与关键词形态的讲解（SSE）',
+};
+
+/**
+ * 按控制器**挂载路径**（`@Controller` 的实参）覆盖模块中文名。
+ *
+ * 为什么不用 GROUP_OVERRIDES（按类名）：客户端控制器里存在**同名类**——
+ * `FeedbackController`、`ReportController` 在后台模块与 client 模块各有一个，
+ * 按类名覆盖会同时命中两者；挂载路径唯一，用它才能精确区分。
+ *
+ * 这些控制器都是用户端接口、**没有 `@OperationLog`**（模块名本就推断不出来），
+ * 且类上没有紧邻的 JSDoc，`pickGroup` 会一路回退成英文类名（如 `ClientAi`），
+ * 故在此逐个映射为中文。新增用户端控制器时按同样方式补一条即可。
+ */
+const GROUP_BY_CONTROLLER_PATH = {
+  analytics: '数据分析',
+  'client/auth': '客户端认证',
+  'client/questions': '刷题',
+  client: '语句库',
+  'client/ai': 'AI 拓展',
+  'client/checkin': '每日打卡',
+  'client/gamify': '成长激励',
+  'client/sentence-card': '句签',
+  'client/word-roots': '词根查询',
+  'client/categories': '场景分类',
+  'client/report': '题目举报',
+  'client/feedback': '用户反馈',
+  'client/notices': '客户端公告',
 };
 
 /** 模块展示顺序（未列出的模块排在最后，按名称排序）。 */
@@ -747,8 +776,12 @@ function parseControllerFile(file, dtoMap) {
       return;
     }
 
-    // 模块名：显式覆盖 > 操作日志里出现最多的 module 名 > 类 JSDoc > 类名。
-    const group = GROUP_OVERRIDES[className] ?? pickGroup(moduleNames, classJsDoc, className);
+    // 模块名：挂载路径显式映射（用户端控制器）> 类名覆盖 > 操作日志里最多的 module 名
+    // > 类 JSDoc > 类名。
+    const group =
+      GROUP_BY_CONTROLLER_PATH[controllerPath] ??
+      GROUP_OVERRIDES[className] ??
+      pickGroup(moduleNames, classJsDoc, className);
     found.push({ group, endpoints });
   });
 

@@ -4496,6 +4496,155 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "场景分类",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/categories",
+        "summary": "启用中的分类（按 sort 升序）。游客可访问（首页展示用）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/categories?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "成长激励",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/gamify/overview",
+        "summary": "成长概览（XP / 等级 / 成就 / 场景地图）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/gamify/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "词根查询",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/word-roots",
+        "summary": "搜索词根词典（q 为空时返回热门词）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/word-roots?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/word-roots/:word",
+        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库。 缓存未命中会计一次 AI 额度（命中不扣）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "word",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/word-roots/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "word": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/word-roots",
+        "summary": "收录词条：把「AI 词根拆解」的结果落库（词库已有则不覆盖，幂等）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/word-roots\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
     "group": "词根词典",
     "endpoints": [
       {
@@ -4678,6 +4827,121 @@ export const API_DOCS: ApiDocGroup[] = [
           "pathParams": {
             "id": "1"
           }
+        }
+      }
+    ]
+  },
+  {
+    "group": "句签",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/sentence-card/mine",
+        "summary": "我的句签列表（按获得时间倒序）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/sentence-card/missing",
+        "summary": "未拥有的句签（已就绪 − 已获得；含总数与最近一批）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/missing?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/sentence-card/today",
+        "summary": "今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/today?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/sentence-card/claim",
+        "summary": "领取今日句签（完成每日目标且今日句签就绪时返回；否则 null）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/sentence-card/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]
@@ -5029,6 +5293,285 @@ export const API_DOCS: ApiDocGroup[] = [
             "reply": "示例值",
             "handleNote": "示例值"
           }
+        }
+      }
+    ]
+  },
+  {
+    "group": "客户端公告",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/notices",
+        "summary": "我的通知列表（已发布；置顶优先，其次按发布时间倒序）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "noticeType",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "isRead",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/notices?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/notices/unread-count",
+        "summary": "未读数（客户端红点）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/notices/unread-count?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/notices/:id/read",
+        "summary": "标记单条已读（幂等，重复点不报错）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/1/read\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/notices/read-all",
+        "summary": "全部标记已读",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/read-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "客户端认证",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/auth/captcha",
+        "summary": "图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/captcha?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/auth/me",
+        "summary": "我的资料",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/me?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/auth/avatar",
+        "summary": "上传头像（单文件；自动替换旧头像并清理原文件）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/avatar\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/auth/login",
+        "summary": "登录",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/login\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/auth/logout",
+        "summary": "登出（服务端令旧令牌失效）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/logout\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/auth/refresh",
+        "summary": "刷新令牌",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/refresh\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/auth/register",
+        "summary": "注册",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/register\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client/auth/me",
+        "summary": "更新资料",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/me\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client/auth/me/background",
+        "summary": "设置个人主页背景句签（cardId=0 恢复默认渐变；仅限已获得的句签）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/me/background\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/client/auth/password",
+        "summary": "修改密码",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/password\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]
@@ -5466,6 +6009,590 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X DELETE \"http://localhost:3000/api/client-users/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "每日打卡",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/checkin/today",
+        "summary": "今日进度",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/checkin/today?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/checkin",
+        "summary": "打卡（幂等；返回海报数据）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/checkin\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "数据分析",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/analytics/active-trend",
+        "summary": "新增 / 日活趋势",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/active-trend?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/ai-budget",
+        "summary": "今日 AI 预算状态（跨所有调用方的成本闸门）",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-budget?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/ai-calls",
+        "summary": "近 N 日 AI 调用统计",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-calls?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/ai-logs",
+        "summary": "AI 调用日志（分页）",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/ai-logs/summary",
+        "summary": "AI 调用日志汇总（与列表同一套筛选）。 ⚠️ 必须声明在 `ai-logs` 之前不影响（两者都无参数段），但**必须在任何 `:param` 路由之前**",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs/summary?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/answer-trend",
+        "summary": "近 N 日答题趋势",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/answer-trend?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/category",
+        "summary": "分类运营数据",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/category?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/checkin",
+        "summary": "打卡统计",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/checkin?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/difficulty",
+        "summary": "题目难度分布",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/difficulty?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/funnel",
+        "summary": "留存漏斗（窗口内注册用户：注册 → 激活 → 打卡 → 领句签）",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/funnel?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/overview",
+        "summary": "总览指标",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/analytics/retention",
+        "summary": "队列留存（按注册日的 D0/D1/D3/D7）",
+        "permission": [
+          "analytics:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/analytics/retention?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "刷题",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/questions/next",
+        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/next?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/questions/:id/answer",
+        "summary": "提交答案（返回正确答案，用于翻转面）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/questions/1/answer\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/questions/:id/favorite",
+        "summary": "收藏 / 取消收藏",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/questions/1/favorite\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/client/questions/:id/favorite",
+        "summary": "取消收藏（显式 DELETE，语义优先）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/client/questions/1/favorite\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
           }
@@ -6330,860 +7457,23 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
-    "group": "Analytics",
+    "group": "题目举报",
     "endpoints": [
       {
-        "method": "GET",
-        "path": "/api/analytics/active-trend",
-        "summary": "新增 / 日活趋势",
-        "permission": [
-          "analytics:view"
-        ],
+        "method": "POST",
+        "path": "/api/client/report",
+        "summary": "提交举报/反馈",
+        "permission": [],
         "isPublic": false,
         "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
         "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/active-trend?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/ai-budget",
-        "summary": "今日 AI 预算状态（跨所有调用方的成本闸门）",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-budget?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/ai-calls",
-        "summary": "近 N 日 AI 调用统计",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-calls?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/ai-logs",
-        "summary": "AI 调用日志（分页）",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/ai-logs/summary",
-        "summary": "AI 调用日志汇总（与列表同一套筛选）。 ⚠️ 必须声明在 `ai-logs` 之前不影响（两者都无参数段），但**必须在任何 `:param` 路由之前**",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/ai-logs/summary?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/answer-trend",
-        "summary": "近 N 日答题趋势",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/answer-trend?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/category",
-        "summary": "分类运营数据",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/category?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/checkin",
-        "summary": "打卡统计",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/checkin?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/difficulty",
-        "summary": "题目难度分布",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/difficulty?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/funnel",
-        "summary": "留存漏斗（窗口内注册用户：注册 → 激活 → 打卡 → 领句签）",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/funnel?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/overview",
-        "summary": "总览指标",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/analytics/retention",
-        "summary": "队列留存（按注册日的 D0/D1/D3/D7）",
-        "permission": [
-          "analytics:view"
-        ],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/analytics/retention?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
+          "curl": "curl -X POST \"http://localhost:3000/api/client/report\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]
   },
   {
-    "group": "Categories",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/categories",
-        "summary": "启用中的分类（按 sort 升序）。游客可访问（首页展示用）",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/categories?page=1&pageSize=10\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      }
-    ]
-  },
-  {
-    "group": "Checkin",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/checkin/today",
-        "summary": "今日进度",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/checkin/today?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/checkin",
-        "summary": "打卡（幂等；返回海报数据）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/checkin\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
-    "group": "ClientAi",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/ai/quota",
-        "summary": "今日 AI 额度（前端展示「剩余 N 次」并在用尽前置灰按钮）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/ai/quota?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/ai/expand",
-        "summary": "场景延展造句（SSE）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/expand\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "isRawResponse": true
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/ai/word-root",
-        "summary": "词根词缀拆解（SSE）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/word-root\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "isRawResponse": true
-        }
-      }
-    ]
-  },
-  {
-    "group": "ClientAuth",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/auth/captcha",
-        "summary": "图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/captcha?page=1&pageSize=10\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/auth/me",
-        "summary": "我的资料",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/me?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/auth/avatar",
-        "summary": "上传头像（单文件；自动替换旧头像并清理原文件）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/avatar\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/auth/login",
-        "summary": "登录",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/login\""
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/auth/logout",
-        "summary": "登出（服务端令旧令牌失效）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/logout\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/auth/refresh",
-        "summary": "刷新令牌",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/refresh\""
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/auth/register",
-        "summary": "注册",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/register\""
-        }
-      },
-      {
-        "method": "PUT",
-        "path": "/api/client/auth/me",
-        "summary": "更新资料",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/me\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      },
-      {
-        "method": "PUT",
-        "path": "/api/client/auth/me/background",
-        "summary": "设置个人主页背景句签（cardId=0 恢复默认渐变；仅限已获得的句签）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/me/background\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      },
-      {
-        "method": "PUT",
-        "path": "/api/client/auth/password",
-        "summary": "修改密码",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/password\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
-    "group": "ClientNotice",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/notices",
-        "summary": "我的通知列表（已发布；置顶优先，其次按发布时间倒序）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "noticeType",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "isRead",
-            "in": "query",
-            "type": "number",
-            "required": false,
-            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/notices?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/notices/unread-count",
-        "summary": "未读数（客户端红点）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/notices/unread-count?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/notices/:id/read",
-        "summary": "标记单条已读（幂等，重复点不报错）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "id",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
-        ],
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/1/read\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "pathParams": {
-            "id": "1"
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/notices/read-all",
-        "summary": "全部标记已读",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/notices/read-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
-    "group": "Feedback",
+    "group": "用户反馈",
     "endpoints": [
       {
         "method": "GET",
@@ -7232,45 +7522,7 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
-    "group": "Gamify",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/gamify/overview",
-        "summary": "成长概览（XP / 等级 / 成就 / 场景地图）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/gamify/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      }
-    ]
-  },
-  {
-    "group": "Library",
+    "group": "语句库",
     "endpoints": [
       {
         "method": "GET",
@@ -7381,12 +7633,12 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
-    "group": "Questions",
+    "group": "AI 拓展",
     "endpoints": [
       {
         "method": "GET",
-        "path": "/api/client/questions/next",
-        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "path": "/api/client/ai/quota",
+        "summary": "今日 AI 额度（前端展示「剩余 N 次」并在用尽前置灰按钮）",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -7409,7 +7661,7 @@ export const API_DOCS: ApiDocGroup[] = [
           }
         ],
         "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/next?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "curl": "curl -X GET \"http://localhost:3000/api/client/ai/quota?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -7418,278 +7670,38 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
-        "path": "/api/client/questions/:id/answer",
-        "summary": "提交答案（返回正确答案，用于翻转面）",
+        "path": "/api/client/ai/analyze",
+        "summary": "题目解析：答题后无论对错都给出语法与关键词形态的讲解（SSE）",
         "permission": [],
         "isPublic": false,
         "action": "",
-        "params": [
-          {
-            "name": "id",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
-        ],
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/questions/1/answer\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "pathParams": {
-            "id": "1"
-          }
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/analyze\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
         }
       },
       {
         "method": "POST",
-        "path": "/api/client/questions/:id/favorite",
-        "summary": "收藏 / 取消收藏",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "id",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
-        ],
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/questions/1/favorite\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "pathParams": {
-            "id": "1"
-          }
-        }
-      },
-      {
-        "method": "DELETE",
-        "path": "/api/client/questions/:id/favorite",
-        "summary": "取消收藏（显式 DELETE，语义优先）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "id",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
-        ],
-        "examples": {
-          "curl": "curl -X DELETE \"http://localhost:3000/api/client/questions/1/favorite\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "pathParams": {
-            "id": "1"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "group": "Report",
-    "endpoints": [
-      {
-        "method": "POST",
-        "path": "/api/client/report",
-        "summary": "提交举报/反馈",
+        "path": "/api/client/ai/expand",
+        "summary": "场景延展造句（SSE）",
         "permission": [],
         "isPublic": false,
         "action": "",
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/report\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
-    "group": "SentenceCard",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/sentence-card/mine",
-        "summary": "我的句签列表（按获得时间倒序）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/sentence-card/missing",
-        "summary": "未拥有的句签（已就绪 − 已获得；含总数与最近一批）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/missing?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/sentence-card/today",
-        "summary": "今日句签是否已获得（导航头像常驻特效用；轻量查询，不返回卡片内容）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/sentence-card/today?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/expand\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
         }
       },
       {
         "method": "POST",
-        "path": "/api/client/sentence-card/claim",
-        "summary": "领取今日句签（完成每日目标且今日句签就绪时返回；否则 null）",
+        "path": "/api/client/ai/word-root",
+        "summary": "词根词缀拆解（SSE）",
         "permission": [],
         "isPublic": false,
         "action": "",
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/sentence-card/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      }
-    ]
-  },
-  {
-    "group": "WordRoot",
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/api/client/word-roots",
-        "summary": "搜索词根词典（q 为空时返回热门词）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/word-roots?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/word-roots/:word",
-        "summary": "查词：命中缓存直接返回，未命中实时 AI 解析并入库。 缓存未命中会计一次 AI 额度（命中不扣）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "word",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/word-roots/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "pathParams": {
-            "word": "1"
-          }
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/word-roots",
-        "summary": "收录词条：把「AI 词根拆解」的结果落库（词库已有则不覆盖，幂等）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/word-roots\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/word-root\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
         }
       }
     ]
