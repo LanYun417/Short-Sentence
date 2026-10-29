@@ -97,6 +97,7 @@ async function onSubmit(): Promise<void> {
             size="lg"
             class="w-full"
             icon="i-lucide-mail"
+            placeholder="输入邮箱地址"
           />
         </UFormField>
 
@@ -109,6 +110,7 @@ async function onSubmit(): Promise<void> {
             size="lg"
             class="w-full"
             icon="i-lucide-lock"
+            placeholder="输入密码"
           />
         </UFormField>
 

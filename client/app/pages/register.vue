@@ -77,11 +77,20 @@ async function onSubmit(): Promise<void> {
             size="lg"
             class="w-full"
             icon="i-lucide-mail"
+            placeholder="输入邮箱地址"
           />
         </UFormField>
 
         <UFormField label="昵称（可选）">
-          <UInput v-model="nickname" type="text" maxlength="50" size="lg" class="w-full" icon="i-lucide-user" />
+          <UInput
+            v-model="nickname"
+            type="text"
+            maxlength="50"
+            size="lg"
+            class="w-full"
+            icon="i-lucide-user"
+            placeholder="不填则默认取邮箱前缀"
+          />
         </UFormField>
 
         <UFormField label="密码" :help="PASSWORD_HINT">
@@ -94,6 +103,7 @@ async function onSubmit(): Promise<void> {
             size="lg"
             class="w-full"
             icon="i-lucide-lock"
+            placeholder="设置登录密码"
           />
         </UFormField>
 
