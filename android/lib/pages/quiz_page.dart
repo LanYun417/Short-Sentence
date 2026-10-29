@@ -1543,6 +1543,10 @@ class _AssembleAreaState extends State<_AssembleArea> {
   /// 已选词块的横向滚动控制器（单行不折行，所以要主动跟到最后）。
   final ScrollController _pickedScroll = ScrollController();
 
+  /// 已选区是否还能向左 / 向右滑（控制走马灯翻页按钮与边缘渐隐的显隐）。
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
   /// 上一次构建时的已选词数。
   ///
   /// ⚠️ 不能拿 `oldWidget.picked.length` 跟 `widget.picked.length` 比：
@@ -1556,13 +1560,81 @@ class _AssembleAreaState extends State<_AssembleArea> {
   void initState() {
     super.initState();
     _pickedCount = widget.picked.length;
+    _pickedScroll.addListener(_updateScrollState);
+    // 首帧后容器尺寸就绪，初始化一次左右可滚动态
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScrollState());
   }
 
   @override
   void dispose() {
+    _pickedScroll.removeListener(_updateScrollState);
     _pickedScroll.dispose();
     super.dispose();
   }
+
+  /// 根据当前横向滚动位置，更新左右两侧翻页按钮 / 渐隐的可见性。
+  void _updateScrollState() {
+    if (!_pickedScroll.hasClients) {
+      return;
+    }
+    final pos = _pickedScroll.position;
+    final max = pos.maxScrollExtent;
+    final left = pos.pixels > 1.0;
+    final right = pos.pixels < max - 1.0;
+    if (left != _canScrollLeft || right != _canScrollRight) {
+      _canScrollLeft = left;
+      _canScrollRight = right;
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  /// 点击翻页按钮：按可视宽度的 0.8（至少 120、至多 320 逻辑像素）翻一页。
+  void _scrollByPage(int dir) {
+    if (!_pickedScroll.hasClients) {
+      return;
+    }
+    final pos = _pickedScroll.position;
+    final delta = (pos.viewportDimension * 0.8).clamp(120.0, 320.0) * dir;
+    final target = (pos.pixels + delta).clamp(0.0, pos.maxScrollExtent);
+    _pickedScroll.animateTo(target, duration: Motion.normal, curve: Motion.standard);
+  }
+
+  /// 边缘渐隐遮罩（从卡片底色渐变到透明），提示还有内容可滑。
+  Widget _fadeMask(AxisDirection side, Color color) => Positioned(
+        top: 0,
+        bottom: 0,
+        left: side == AxisDirection.left ? 0 : null,
+        right: side == AxisDirection.right ? 0 : null,
+        width: 24,
+        child: IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: side == AxisDirection.left ? Alignment.centerLeft : Alignment.centerRight,
+                end: side == AxisDirection.left ? Alignment.centerRight : Alignment.centerLeft,
+                colors: <Color>[color, Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+      );
+
+  /// 左右翻页圆形按钮（滚到头的一侧自动隐藏，由 _canScroll* 控制是否渲染）。
+  Widget _scrollArrow(AxisDirection side, VoidCallback onTap) => Positioned(
+        top: 0,
+        bottom: 0,
+        left: side == AxisDirection.left ? 3 : null,
+        right: side == AxisDirection.right ? 3 : null,
+        child: Center(
+          child: _CarouselButton(
+            icon: side == AxisDirection.left ? Icons.chevron_left : Icons.chevron_right,
+            onTap: onTap,
+          ),
+        ),
+      );
+
 
   @override
   void didUpdateWidget(covariant _AssembleArea oldWidget) {
@@ -1676,28 +1748,46 @@ class _AssembleAreaState extends State<_AssembleArea> {
                     ),
                   ),
                 )
-              : SingleChildScrollView(
-                  controller: _pickedScroll,
-                  scrollDirection: Axis.horizontal,
-                  // 左右滑到头就停（不要 Web 那种回弹，拼句时容易误以为还能滑）
-                  physics: const ClampingScrollPhysics(),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
                     children: <Widget>[
-                      for (var i = 0; i < picked.length; i++)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: i == picked.length - 1 ? 0 : 7,
-                          ),
-                          child: _WordChip(
-                            key: ValueKey<String>(_keyOfPicked(i)),
-                            text: picked[i],
-                            picked: true,
-                            // 点哪一个就退哪一个：拼错位置时不必从末尾一路撤
-                            onTap: busy ? null : () => onRemovePick(i),
-                            appear: true,
-                          ),
+                      SingleChildScrollView(
+                        controller: _pickedScroll,
+                        scrollDirection: Axis.horizontal,
+                        // 左右滑到头就停（不要 Web 那种回弹，拼句时容易误以为还能滑）
+                        physics: const ClampingScrollPhysics(),
+                        // 左右各留 26 给翻页按钮，避免词块贴到按钮底下
+                        padding: const EdgeInsets.symmetric(horizontal: 26),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            for (var i = 0; i < picked.length; i++)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  right: i == picked.length - 1 ? 0 : 7,
+                                ),
+                                child: _WordChip(
+                                  key: ValueKey<String>(_keyOfPicked(i)),
+                                  text: picked[i],
+                                  picked: true,
+                                  // 点哪一个就退哪一个：拼错位置时不必从末尾一路撤
+                                  onTap: busy ? null : () => onRemovePick(i),
+                                  appear: true,
+                                ),
+                              ),
+                          ],
                         ),
+                      ),
+                      // 走马灯：滚到头的一侧隐藏其渐隐与按钮（对齐 Web 端）
+                      if (_canScrollLeft)
+                        _fadeMask(AxisDirection.left, colors.cardMuted.withValues(alpha: 0.6)),
+                      if (_canScrollRight)
+                        _fadeMask(AxisDirection.right, colors.cardMuted.withValues(alpha: 0.6)),
+                      if (_canScrollLeft)
+                        _scrollArrow(AxisDirection.left, () => _scrollByPage(-1)),
+                      if (_canScrollRight)
+                        _scrollArrow(AxisDirection.right, () => _scrollByPage(1)),
                     ],
                   ),
                 ),
@@ -1752,6 +1842,43 @@ class _AssembleAreaState extends State<_AssembleArea> {
           onPressed: busy || !complete ? null : onSubmit,
         ),
       ],
+    );
+  }
+}
+
+/// 已选区走马灯翻页按钮：小圆形，收在盒内边缘，滚到头的一侧不渲染。
+class _CarouselButton extends StatelessWidget {
+  const _CarouselButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: colors.card,
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.line),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 16, color: colors.inkSoft),
+        ),
+      ),
     );
   }
 }

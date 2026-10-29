@@ -390,6 +390,10 @@ void main() {
     expect(position.maxScrollExtent, greaterThan(0));
     expect(position.pixels, position.maxScrollExtent);
 
+    // 已自动滚到最右 → 走马灯「向左」翻页按钮出现、右侧隐藏（滚到头的一侧自动隐藏）
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+
     container.dispose();
   });
 
