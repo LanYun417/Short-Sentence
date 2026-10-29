@@ -239,6 +239,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 横向滑动容器隐藏滚动条（项目滚动条统一隐藏），配合左右翻页按钮使用 */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /*
  * 词块「移入答题框」动效：
  * - 进场（词块被选入答题框）：从下方 10px、缩小到 0.88、透明，弹性落到位；
