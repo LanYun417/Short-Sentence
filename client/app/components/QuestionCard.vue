@@ -75,33 +75,14 @@ const canSubmit = computed(() => (assembleMode.value ? wordsAllUsed.value : answ
  */
 const flipDeg = ref(0);
 /**
- * 翻到背面后隐藏正面（frontHidden=true），让卡片收缩到背面内容的实际高度。
- * 两面在 grid 里叠同一格、高度取较高者——正面（含配图）通常比背面高一大截，
- * 不隐藏时卡背上下会留出大片空白。隐藏后卡片贴合背面内容，留白只剩内容自身的自然间距。
- * 隐藏/显示都安排在翻转经过侧棱（约 90°/270°、卡片宽度为零）的时刻进行，
- * 高度跳变发生在卡片最窄的一刻，肉眼不可见。
+ * 翻转时**不隐藏正面**，让卡片高度在翻转前后保持一致：
+ * 两面在 grid 里叠同一格（.card-3d），高度取较高者——正面含 16:9 配图，通常比背面答案高，
+ * 所以卡片高度恒等于正面高度。背面（答案）内容比正面矮时，卡片留有自然余量，
+ * 底部「回车继续 / 下一题」贴底、内容顶对齐，不强行把卡片收缩到背面高度（那样会有突兀的高度跳变）。
+ * 正面在翻到背面时被 3D 转到背向（backface-visibility 隐身），不影响观感，只保留其 grid 占位以维持高度。
  */
-const frontHidden = ref(false);
-/** 正面隐藏定时器（浏览器定时器，理由同 favTimer） */
-let collapseTimer: number | undefined;
-/** 与 main.css 里 .card-3d 的 transition 时长保持一致 */
-const FLIP_DURATION_MS = 450;
-/** ease-out 曲线下翻转进行到约 13% 时正好经过侧棱（90°/270°） */
-const EDGE_ON_DELAY_MS = Math.round(FLIP_DURATION_MS * 0.13);
-
-watch(flipped, (isFlipped) => {
+watch(flipped, () => {
   flipDeg.value += 180;
-  window.clearTimeout(collapseTimer);
-  // 减弱动效时翻转无过渡（瞬间完成），无需等侧棱
-  const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : EDGE_ON_DELAY_MS;
-  // flipped=true（看答案）→ 隐藏正面，卡片收缩到背面内容高度（消除卡背上下留白）；
-  //           正面此时也被 3D 转到背向（backface-visibility 隐身），display:none 只负责把
-  //           它在 grid 里占的高度也去掉，让卡片贴合背面。
-  // flipped=false（回正面 / 下一题）→ 显示正面。若写成 !isFlipped 会在回到正面时把正面藏掉，
-  //           而背面恰好背向隐身，两面同时不可见 → 整张卡空白（曾出现的「点下一题没题了」）。
-  collapseTimer = window.setTimeout(() => {
-    frontHidden.value = isFlipped;
-  }, delay);
 });
 
 /** 难度文案 */
@@ -149,7 +130,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   window.clearTimeout(favTimer);
-  window.clearTimeout(collapseTimer);
 });
 
 /** 回车双态：输入态=提交，翻转态=下一题。 */
@@ -258,7 +238,6 @@ async function onSubmitReport(): Promise<void> {
            （拼词已选区）的 min-content（词块总宽）撑爆，把整卡顶出 max-w-xl 列宽；置 0 让它收缩到网格可用宽度。 -->
       <div
         class="card-face min-w-0 rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
-        :class="{ hidden: frontHidden }"
       >
         <!--
           顶栏：分类/难度 → 「换一题」→ 今日进度 → 举报。
