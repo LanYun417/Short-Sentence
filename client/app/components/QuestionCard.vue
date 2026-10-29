@@ -409,10 +409,10 @@ async function onSubmitReport(): Promise<void> {
           </div>
 
           <!--
-            答案内容区：卡片高度已贴合背面内容（正面隐藏），自然流式排布即可；
-            justify-center 仅在收缩前的一瞬（翻转中）和内容超高时兜底起作用。
+            答案内容区：顶对齐流式排布，**不做垂直居中**——内容紧随「答对了」标题之后；
+            flex-1 只负责把底部操作栏压到卡片底边（内容超高时整卡变高、整页滚动看全）。
           -->
-          <div class="flex flex-1 flex-col justify-center py-0.5">
+          <div class="flex flex-1 flex-col py-0.5">
             <div class="flex items-start justify-between gap-2">
               <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
                 {{ result?.sentenceEn }}
