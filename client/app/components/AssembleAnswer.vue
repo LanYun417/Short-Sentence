@@ -28,6 +28,18 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'update:answer', value: string): void }>();
 
+/** 已选区横向滚动容器，新词追加到末尾后用于自动滚到最右 */
+const selectedRef = ref<HTMLElement | null>(null);
+
+/** 已选区横向滚动到末尾（新选词追加到末尾时调用，确保刚选的词可见） */
+function scrollSelectedToEnd(): void {
+  const el = selectedRef.value;
+  if (!el) {
+    return;
+  }
+  el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+}
+
 /**
  * 词库（**全部**词块，固定原位，保持下发的乱序）。
  * 选中的词块不从词库里移除——只把对应槽位标灰、置为不可点，
@@ -86,6 +98,8 @@ function pick(chip: WordChip): void {
   }
   selected.value = [...selected.value, chip];
   sync();
+  // 新词追加到末尾后，横向滚动容器自动滚到最右，确保用户看到刚选的词
+  nextTick(scrollSelectedToEnd);
 }
 
 /** 从已选区移出（词库对应槽位自动恢复为可选）。 */
@@ -105,9 +119,10 @@ const allUsed = computed(() => bank.value.length > 0 && selected.value.length >=
   <div>
     <!-- 答题区：已选词块按顺序排列；空时给出引导文案 -->
     <TransitionGroup
+      ref="selectedRef"
       name="chip"
       tag="div"
-      class="relative flex min-h-13 flex-wrap content-center items-center gap-1.5 rounded-2xl border border-dashed p-2.5 transition-colors"
+      class="no-scrollbar relative flex min-h-13 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
       :class="[
         selected.length > 0
           ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
@@ -131,7 +146,7 @@ const allUsed = computed(() => bank.value.length > 0 && selected.value.length >=
     </TransitionGroup>
 
     <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
-    <div class="mt-3 flex flex-wrap items-center gap-2" aria-label="可选词块">
+    <div class="no-scrollbar mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto" aria-label="可选词块">
       <button
         v-for="chip in bank"
         :key="chip.index"
@@ -153,6 +168,16 @@ const allUsed = computed(() => bank.value.length > 0 && selected.value.length >=
 </template>
 
 <style scoped>
+/* 横向滑动容器隐藏滚动条（项目滚动条统一隐藏） */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /*
  * 词块「移入答题框」动效：
  * - 进场（词块被选入答题框）：从下方 10px、缩小到 0.88、透明，弹性落到位；
