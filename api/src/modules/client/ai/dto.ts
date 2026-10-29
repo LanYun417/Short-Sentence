@@ -2,7 +2,7 @@
  * 客户端 AI 能力 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /** 场景延展造句入参。 */
 export class ClientExpandDto {
@@ -32,4 +32,22 @@ export class ClientWordRootDto {
   @Type(() => Number)
   @IsInt({ message: '句子 id 必须为整数' })
   sentenceId?: number;
+}
+
+/** 题目解析入参（答题后无论对错都可请求）。 */
+export class ClientAnalyzeDto {
+  /** 题目句子 id（正文以它从库里取权威文本） */
+  @Type(() => Number)
+  @IsInt({ message: '句子 id 必须为整数' })
+  sentenceId!: number;
+
+  /** 用户本次作答（答对也可能非空；长度与答题记录口径一致） */
+  @IsOptional()
+  @IsString({ message: '作答必须为字符串' })
+  @MaxLength(300, { message: '作答最长 300 个字符' })
+  userAnswer?: string;
+
+  /** 判定结果（true 答对 / false 答错）；仅用于组织解析措辞，无副作用 */
+  @IsBoolean({ message: '判定结果必须为布尔值' })
+  isCorrect!: boolean;
 }

@@ -12,6 +12,7 @@
 import type { AnswerResult, NextQuestion } from '~/types';
 import type { AnswerMode } from '~/composables/useQuestionSession';
 import { apiFetch } from '~/composables/useApi';
+import { streamSse } from '~/composables/useSse';
 
 const props = defineProps<{
   /** 当前题目（sentenceId 变化即换卡） */
@@ -123,6 +124,89 @@ watch(
   },
 );
 
+/* ------------------------------ AI 题目解析 ------------------------------ */
+
+/**
+ * 题目解析（无论对错都生成）：语法结构 + 关键词形态（时态 / 过去式 / 复数…）。
+ * 流式文本，拿结果即自动开始；换下一题（结果清空 / 进入加载）时中止并复位。
+ */
+const analysisText = ref('');
+/** idle 未开始 / loading 生成中 / done 完成 / error 失败 */
+const analysisState = ref<'idle' | 'loading' | 'done' | 'error'>('idle');
+/** 中止句柄：换题 / 卸载时终止上游，避免浪费额度与串题 */
+let analysisAbort: (() => void) | null = null;
+/**
+ * 本次解析对应的句子 id。
+ * 迟到分片（旧流在新题到达后才回来）据此丢弃，避免解析串到下一题。
+ */
+let analysisFor: number | null = null;
+
+/** 中止当前解析并复位。 */
+function resetAnalysis(): void {
+  analysisAbort?.();
+  analysisAbort = null;
+  analysisFor = null;
+  analysisText.value = '';
+  analysisState.value = 'idle';
+}
+
+/** 生成题目解析（流式展示，纯文本多行原样渲染）。 */
+async function startAnalysis(): Promise<void> {
+  const current = props.result;
+  if (!current) {
+    return;
+  }
+  analysisAbort?.();
+  analysisFor = current.sentenceId;
+  analysisText.value = '';
+  analysisState.value = 'loading';
+  const stream = await streamSse(
+    '/client/ai/analyze',
+    { sentenceId: current.sentenceId, userAnswer: answer.value.trim(), isCorrect: current.isCorrect },
+    {
+      onChunk: (text) => {
+        if (analysisFor !== current.sentenceId) {
+          return;
+        }
+        analysisText.value += text;
+      },
+      onDone: () => {
+        if (analysisFor === current.sentenceId) {
+          analysisState.value = 'done';
+        }
+      },
+      onError: () => {
+        if (analysisFor === current.sentenceId) {
+          analysisState.value = 'error';
+        }
+      },
+    },
+  );
+  analysisAbort = stream.abort;
+}
+
+// 拿到结果（无论对错）即自动生成解析；结果被清空（换题）则中止复位
+watch(
+  () => props.result,
+  (value) => {
+    if (value) {
+      void startAnalysis();
+    } else {
+      resetAnalysis();
+    }
+  },
+);
+
+// 进入下一题加载态时（此时 result 还挂着上一题）立即中止，避免旧解析白跑
+watch(
+  () => props.loading,
+  (value) => {
+    if (value) {
+      resetAnalysis();
+    }
+  },
+);
+
 onMounted(() => {
   focusInput();
   window.addEventListener('keydown', onKeydown);
@@ -130,6 +214,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   window.clearTimeout(favTimer);
+  resetAnalysis();
 });
 
 /** 回车双态：输入态=提交，翻转态=下一题。 */
@@ -425,6 +510,30 @@ async function onSubmitReport(): Promise<void> {
             <div v-if="!result?.isCorrect" class="mt-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-700/50">
               <p class="text-slate-400">你的答案</p>
               <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
+            </div>
+
+            <!-- AI 解析：无论对错都生成（语法结构 + 关键词形态），流式逐字展示 -->
+            <div class="mt-3 rounded-xl bg-sky-50/70 p-3 ring-1 ring-sky-100 dark:bg-sky-500/10 dark:ring-sky-500/15">
+              <p class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
+                AI 解析
+                <UIcon
+                  v-if="analysisState === 'loading'"
+                  name="i-lucide-loader-circle"
+                  class="ml-auto h-3.5 w-3.5 animate-spin text-sky-400"
+                />
+              </p>
+              <p
+                v-if="analysisText"
+                class="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-200"
+              >
+                {{ analysisText }}
+              </p>
+              <p v-else-if="analysisState === 'loading'" class="text-sm text-slate-400">正在生成解析…</p>
+              <p v-else-if="analysisState === 'error'" class="flex items-center gap-2 text-sm text-slate-400">
+                解析生成失败
+                <UButton size="xs" variant="link" color="primary" @click="startAnalysis">重试</UButton>
+              </p>
             </div>
           </div>
 

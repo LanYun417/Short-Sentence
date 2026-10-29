@@ -11,9 +11,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { config } from '../../../common/config/config.js';
+import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiProviderError } from '../../../common/ai/ai.types.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
 
 /** 上游 SSE 解析产出。 */
 interface UpstreamChunk {
@@ -37,6 +39,7 @@ export class ClientAiService {
   constructor(
     private readonly aiCallLog: AiCallLogService,
     private readonly aiQuota: AiQuotaService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -69,6 +72,49 @@ export class ClientAiService {
     ].join('\n');
     const user = sentenceId ? `单词：${word}\n上下文句子 id：${sentenceId}` : `单词：${word}`;
     return this.streamChat({ system, user, type: 'word_root', bizId: sentenceId ?? userId, userId });
+  }
+
+  /**
+   * 题目解析：答题后（无论对错）针对该题输出一段语法 / 词形解析。
+   *
+   * 与 expand / word-root 的**单行紧凑 JSON** 不同——解析是给人读的讲解，允许换行：
+   * 提示词要求每点以「· 」开头分行输出；前端 useSse 逐帧拼接后原样渲染（whitespace-pre-wrap）。
+   * 句子正文以 id 从库里取（权威文本，客户端不可伪造）；判定结果由客户端上报，仅用于组织措辞。
+   */
+  async analyzeStream(params: {
+    userId: number;
+    sentenceId: number;
+    userAnswer: string;
+    isCorrect: boolean;
+  }): Promise<Observable<SseFrame>> {
+    const sentence = await this.prisma.sentence.findFirst({
+      where: { id: BigInt(params.sentenceId), status: 'ready' },
+      select: { sentenceEn: true, translationZh: true },
+    });
+    if (!sentence) {
+      throw AppException.notFound('题目不存在或未就绪');
+    }
+    const system = [
+      '你是英语老师。用户刚做了一道「看中文写英文」的题，请针对这道题给出简明解析。',
+      '要求：',
+      '- 分点讲解，聚焦两件事：① 句子整体语法结构；② 句中关键词的形态（时态、过去式、第三人称单数、复数、比较级、非谓语等），逐个说明它在句中的形式与用法。',
+      '- 若用户答错，再点出他的答案与正确写法的关键差异。',
+      '- 用中文讲解，英文原词与例句保留英文。',
+      '- 3 到 6 个要点，总长 120 到 220 字；纯文本，每点以「· 」开头并换行；不要 markdown 代码块、标题或表情符号。',
+    ].join('\n');
+    const user = [
+      `正确英文：${sentence.sentenceEn}`,
+      `中文：${sentence.translationZh}`,
+      `用户作答：${params.userAnswer.trim() || '（未作答）'}`,
+      `判定：${params.isCorrect ? '答对' : '答错'}`,
+    ].join('\n');
+    return this.streamChat({
+      system,
+      user,
+      type: 'analysis',
+      bizId: params.sentenceId,
+      userId: params.userId,
+    });
   }
 
   /** 通用流式转发（上游 OpenAI 兼容 SSE → 前端 SseFrame）。 */

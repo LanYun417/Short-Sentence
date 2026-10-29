@@ -14,7 +14,7 @@ import { AiQuotaService, type AiQuotaUsage } from '../../../common/ai/ai-quota.s
 import { RawResponse } from '../../../common/http/response.interceptor.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { ClientAiService, type SseFrame } from './client-ai.service.js';
-import { ClientExpandDto, ClientWordRootDto } from './dto.js';
+import { ClientAnalyzeDto, ClientExpandDto, ClientWordRootDto } from './dto.js';
 
 @Controller('client/ai')
 export class ClientAiController {
@@ -54,6 +54,30 @@ export class ClientAiController {
     this.writeSse(res, this.clientAi.wordRootStream(user.userId, dto.word, dto.sentenceId));
   }
 
+  /**
+   * 题目解析（SSE）：答题后无论对错都可调用，讲解语法与词形。
+   *
+   * **不占用「AI 拓展」额度**：解析是答题的配套学习环节（每题都要给），
+   * 与用户主动发起的 expand / word-root 不是一类；因此这里不 consume 额度，仅落日志。
+   * 若日后要控成本，在此加 `await this.aiQuota.consume(user.userId, 'analysis')` 即可。
+   */
+  @Post('analyze')
+  @RawResponse()
+  async analyze(
+    @CurrentClientUser() user: ClientUserContext,
+    @Body() dto: ClientAnalyzeDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    // 句子查找失败会在此抛 404（写 SSE 头之前），前端拿到的是正常 JSON 错误
+    const stream = await this.clientAi.analyzeStream({
+      userId: user.userId,
+      sentenceId: dto.sentenceId,
+      userAnswer: dto.userAnswer ?? '',
+      isCorrect: dto.isCorrect,
+    });
+    this.writeSse(res, stream);
+  }
+
   /** 把 SSE 帧流写到 HTTP 响应（event/data 双行 + 空行分帧）。 */
   private writeSse(res: Response, stream: Observable<SseFrame>): void {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -68,7 +92,15 @@ export class ClientAiController {
         if (res.writableEnded) {
           return;
         }
-        res.write(`event: ${frame.event ?? 'message'}\ndata: ${frame.data}\n\n`);
+        // SSE 规范：data 字段可跨多行，每行各带一个 `data: ` 前缀（空行才是帧分隔符）。
+        // AI 解析是分点文本、含换行，必须逐行加前缀——否则换行之后的内容会被前端丢弃
+        // （前端按行读，只认以 data: 开头的行）。单行 payload（expand / word-root）走同一路径，
+        // split 后只有一行，行为与旧写法完全一致。
+        const payload = frame.data
+          .split('\n')
+          .map((line) => `data: ${line}`)
+          .join('\n');
+        res.write(`event: ${frame.event ?? 'message'}\n${payload}\n\n`);
       },
       error: () => {
         if (!res.writableEnded) {

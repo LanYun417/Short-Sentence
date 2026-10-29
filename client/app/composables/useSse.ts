@@ -82,7 +82,8 @@ export async function streamSse(path: string, body: unknown, handlers: SseHandle
         for (const raw of events) {
           const lines = raw.split('\n');
           let eventName = 'message';
-          let data = '';
+          /** 同一帧的 data 行（SSE 规范：多行以 \n 连接，用于承载带换行的内容）。 */
+          const dataLines: string[] = [];
           for (const line of lines) {
             if (line.startsWith('event:')) {
               eventName = line.slice(6).trim();
@@ -92,9 +93,12 @@ export async function streamSse(path: string, body: unknown, handlers: SseHandle
               // 按 SSE 规范只去掉冒号后的「单个」分隔空格：服务端写的是 `data: <内容>`，
               // 这个空格是分隔符，内容自身的首空格必须保留。
               const value = line.slice(5);
-              data += value.startsWith(' ') ? value.slice(1) : value;
+              dataLines.push(value.startsWith(' ') ? value.slice(1) : value);
             }
           }
+          // SSE 规范：多条 data 行以 \n 连接（AI 解析是分点多行文本，逐行前缀、逐字还原）。
+          // 单行 payload 时数组只有一个元素，行为与旧的直接拼接完全一致。
+          const data = dataLines.join('\n');
           if (eventName === 'done') {
             handlers.onDone?.();
             return;
