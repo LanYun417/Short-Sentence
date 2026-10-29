@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  AppVersion: 'AppVersion',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -102,6 +103,25 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const AppVersionScalarFieldEnum = {
+  id: 'id',
+  platform: 'platform',
+  version: 'version',
+  versionCode: 'versionCode',
+  fileId: 'fileId',
+  fileSize: 'fileSize',
+  changelog: 'changelog',
+  forceUpdate: 'forceUpdate',
+  status: 'status',
+  downloadCount: 'downloadCount',
+  publishedAt: 'publishedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AppVersionScalarFieldEnum = (typeof AppVersionScalarFieldEnum)[keyof typeof AppVersionScalarFieldEnum]
 
 
 export const ClientFeedbackScalarFieldEnum = {
@@ -661,6 +681,15 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const AppVersionOrderByRelevanceFieldEnum = {
+  platform: 'platform',
+  version: 'version',
+  changelog: 'changelog'
+} as const
+
+export type AppVersionOrderByRelevanceFieldEnum = (typeof AppVersionOrderByRelevanceFieldEnum)[keyof typeof AppVersionOrderByRelevanceFieldEnum]
 
 
 export const NullsOrder = {

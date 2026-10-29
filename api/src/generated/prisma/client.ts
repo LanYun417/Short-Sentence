@@ -31,8 +31,8 @@ export * from "./enums.js"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more ClientFeedbacks
- * const clientFeedbacks = await prisma.clientFeedback.findMany()
+ * // Fetch zero or more AppVersions
+ * const appVersions = await prisma.appVersion.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -41,6 +41,16 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
+/**
+ * Model AppVersion
+ * App 版本（Android 安装包；Web 端「下载 App」入口读最新上架版本）
+ * 
+ * 为什么要有「版本表」而不是只存一个最新包：
+ * 1. 用户装的是旧版本时，客户端要能拿到「比当前新」的版本与其更新说明；
+ * 2. 回滚要能查到历史包（旧包不删，只把新版本下架）；
+ * 3. 下载量是运营关心的指标，按版本统计才有意义。
+ */
+export type AppVersion = Prisma.AppVersionModel
 /**
  * Model ClientFeedback
  * 客户端用户反馈（对产品本身的意见）

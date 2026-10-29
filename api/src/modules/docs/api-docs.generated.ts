@@ -7749,5 +7749,394 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       }
     ]
+  },
+  {
+    "group": "App 版本",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/app-versions",
+        "summary": "分页列表（筛选 platform / status / keyword）",
+        "permission": [
+          "system:app-version:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "platform",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "number",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/app-versions?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/app-versions",
+        "summary": "新增版本",
+        "permission": [
+          "system:app-version:add"
+        ],
+        "isPublic": false,
+        "action": "App 版本 · 新增",
+        "params": [
+          {
+            "name": "platform",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "平台（当前只做 android；ios 预留）",
+            "example": "示例值"
+          },
+          {
+            "name": "version",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "版本名（展示用，如 1.2.0）",
+            "example": "示例值"
+          },
+          {
+            "name": "versionCode",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "版本序号（Android versionCode，越大越新）",
+            "example": 1
+          },
+          {
+            "name": "fileId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "安装包文件 id（先调专用上传接口拿到）",
+            "example": 1
+          },
+          {
+            "name": "fileSize",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "安装包大小（字节；不传则由文件记录兜底）",
+            "example": 1
+          },
+          {
+            "name": "changelog",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "更新说明（多行文本）",
+            "example": "示例值"
+          },
+          {
+            "name": "forceUpdate",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "是否强制更新：1 是 / 0 否",
+            "example": 1
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "状态：1 上架 / 0 下架",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/app-versions\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"platform\": \"示例值\",\n      \"version\": \"示例值\",\n      \"versionCode\": 1,\n      \"fileId\": 1,\n      \"fileSize\": 1,\n      \"changelog\": \"示例值\",\n      \"forceUpdate\": 1,\n      \"status\": 1\n    }'",
+          "requestBody": {
+            "platform": "示例值",
+            "version": "示例值",
+            "versionCode": 1,
+            "fileId": 1,
+            "fileSize": 1,
+            "changelog": "示例值",
+            "forceUpdate": 1,
+            "status": 1
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/app-versions/upload",
+        "summary": "上传安装包（.apk，≤200MB）。 单独一个入口而不是复用 `/files/upload`：那份配置限制 10MB、白名单是\"业务附件\"， 安装包过不去；这里只收 .apk 且上限 200MB（配 APK_MULTER_OPTIONS）",
+        "permission": [
+          "system:app-version:add"
+        ],
+        "isPublic": false,
+        "action": "App 版本 · 上传安装包",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/app-versions/upload\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/app-versions/:id",
+        "summary": "编辑版本",
+        "permission": [
+          "system:app-version:edit"
+        ],
+        "isPublic": false,
+        "action": "App 版本 · 编辑",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "platform",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "平台（当前只做 android；ios 预留）",
+            "example": "示例值"
+          },
+          {
+            "name": "version",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "版本名（展示用，如 1.2.0）",
+            "example": "示例值"
+          },
+          {
+            "name": "versionCode",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "版本序号（Android versionCode，越大越新）",
+            "example": 1
+          },
+          {
+            "name": "fileId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "安装包文件 id（先调专用上传接口拿到）",
+            "example": 1
+          },
+          {
+            "name": "fileSize",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "安装包大小（字节；不传则由文件记录兜底）",
+            "example": 1
+          },
+          {
+            "name": "changelog",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "更新说明（多行文本）",
+            "example": "示例值"
+          },
+          {
+            "name": "forceUpdate",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "是否强制更新：1 是 / 0 否",
+            "example": 1
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "状态：1 上架 / 0 下架",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/app-versions/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"platform\": \"示例值\",\n      \"version\": \"示例值\",\n      \"versionCode\": 1,\n      \"fileId\": 1,\n      \"fileSize\": 1,\n      \"changelog\": \"示例值\",\n      \"forceUpdate\": 1,\n      \"status\": 1\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "platform": "示例值",
+            "version": "示例值",
+            "versionCode": 1,
+            "fileId": 1,
+            "fileSize": 1,
+            "changelog": "示例值",
+            "forceUpdate": 1,
+            "status": 1
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/app-versions/:id/status",
+        "summary": "上下架",
+        "permission": [
+          "system:app-version:edit"
+        ],
+        "isPublic": false,
+        "action": "App 版本 · 上下架",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/app-versions/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": 1\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": 1
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/app-versions/:id",
+        "summary": "删除版本记录（物理安装包由「文件管理」统一清理）",
+        "permission": [
+          "system:app-version:remove"
+        ],
+        "isPublic": false,
+        "action": "App 版本 · 删除",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/app-versions/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "ClientApp",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/app/download/:id",
+        "summary": "下载安装包（游客可访问；每次下载计一次数）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/app/download/1\"",
+          "pathParams": {
+            "id": "1"
+          },
+          "isRawResponse": true
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/app/latest",
+        "summary": "最新上架版本（游客可访问：下载页不需要登录）。空 = 尚未发布",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/app/latest?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
   }
 ];

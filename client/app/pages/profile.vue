@@ -543,6 +543,9 @@ async function onChangePassword(): Promise<void> {
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
+    <!-- 下载 App 入口：点击后取最新上架版本并提供安装包下载 -->
+    <AppDownloadEntry />
+
     <!-- ============ 表单 Tabs ============ -->
     <section class="anim-in mt-5" style="animation-delay: 120ms">
       <UTabs :items="TABS" variant="pill" :content="true">

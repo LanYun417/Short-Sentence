@@ -81,6 +81,35 @@ export const FEEDBACK_IMAGE_MULTER_OPTIONS = {
 };
 
 /**
+ * App 安装包（.apk）上传专用 multer 配置。
+ *
+ * 为什么单独一份：
+ * 1. 安装包动辄几十 MB，远超全局 `UPLOAD_MAX_SIZE`（默认 10MB），用同一份配置必然被拒；
+ * 2. 只收 `.apk` 一种类型，比"业务附件"白名单窄得多；
+ * 3. 走 memoryStorage 交给 FileService.save —— 需要内容哈希做秒传与统一落盘。
+ */
+export const APK_MULTER_OPTIONS = {
+  storage: multer.memoryStorage(),
+  limits: {
+    // 200MB：足够容纳正式包（含 Flutter 运行时），又不至于把内存打爆
+    fileSize: 200 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ): void => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.apk') {
+      cb(AppException.badRequest('仅支持 .apk 安装包'), false);
+      return;
+    }
+    cb(null, true);
+  },
+};
+
+/**
  * CSV 导入专用 multer 配置。
  *
  * 为什么不复用 `UPLOAD_MULTER_OPTIONS`：

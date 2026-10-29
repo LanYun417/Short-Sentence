@@ -138,6 +138,8 @@ export const UPLOAD_ALLOWED_MIME = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain',
   'application/zip',
+  // Android 安装包（App 版本管理上传；仅后台权限接口使用）
+  'application/vnd.android.package-archive',
 ];
 
 /** 上传允许的扩展名白名单。 */
@@ -155,6 +157,8 @@ export const UPLOAD_ALLOWED_EXT = [
   '.xlsx',
   '.txt',
   '.zip',
+  // Android 安装包（App 版本管理上传；大小由专用上传接口单独限制）
+  '.apk',
 ];
 
 /** 分页默认值。 */

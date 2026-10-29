@@ -18,6 +18,16 @@ export { Prisma }
 export * as $Enums from './enums.js'
 export * from './enums.js';
 /**
+ * Model AppVersion
+ * App 版本（Android 安装包；Web 端「下载 App」入口读最新上架版本）
+ * 
+ * 为什么要有「版本表」而不是只存一个最新包：
+ * 1. 用户装的是旧版本时，客户端要能拿到「比当前新」的版本与其更新说明；
+ * 2. 回滚要能查到历史包（旧包不删，只把新版本下架）；
+ * 3. 下载量是运营关心的指标，按版本统计才有意义。
+ */
+export type AppVersion = Prisma.AppVersionModel
+/**
  * Model ClientFeedback
  * 客户端用户反馈（对产品本身的意见）
  */

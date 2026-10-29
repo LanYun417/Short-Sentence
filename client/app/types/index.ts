@@ -94,6 +94,19 @@ export interface SentenceLibraryItem {
   userAnswer?: string | null;
 }
 
+/** App 最新版本（下载入口用）。 */
+export interface LatestAppVersion {
+  id: number;
+  version: string;
+  versionCode: number;
+  /** 安装包字节数 */
+  fileSize: number;
+  changelog: string;
+  /** 是否强制更新（客户端可据此提示必须升级） */
+  forceUpdate: boolean;
+  publishedAt: string;
+}
+
 /** 分页响应。 */
 export interface PageResult<T> {
   list: T[];

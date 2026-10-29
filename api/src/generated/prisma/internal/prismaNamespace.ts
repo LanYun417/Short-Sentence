@@ -397,6 +397,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  AppVersion: 'AppVersion',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -447,10 +448,76 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    AppVersion: {
+      payload: Prisma.$AppVersionPayload<ExtArgs>
+      fields: Prisma.AppVersionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AppVersionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AppVersionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        findFirst: {
+          args: Prisma.AppVersionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AppVersionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        findMany: {
+          args: Prisma.AppVersionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>[]
+        }
+        create: {
+          args: Prisma.AppVersionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        createMany: {
+          args: Prisma.AppVersionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.AppVersionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        update: {
+          args: Prisma.AppVersionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        deleteMany: {
+          args: Prisma.AppVersionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AppVersionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.AppVersionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AppVersionPayload>
+        }
+        aggregate: {
+          args: Prisma.AppVersionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAppVersion>
+        }
+        groupBy: {
+          args: Prisma.AppVersionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AppVersionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AppVersionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AppVersionCountAggregateOutputType> | number
+        }
+      }
+    }
     ClientFeedback: {
       payload: Prisma.$ClientFeedbackPayload<ExtArgs>
       fields: Prisma.ClientFeedbackFieldRefs
@@ -2800,6 +2867,25 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const AppVersionScalarFieldEnum = {
+  id: 'id',
+  platform: 'platform',
+  version: 'version',
+  versionCode: 'versionCode',
+  fileId: 'fileId',
+  fileSize: 'fileSize',
+  changelog: 'changelog',
+  forceUpdate: 'forceUpdate',
+  status: 'status',
+  downloadCount: 'downloadCount',
+  publishedAt: 'publishedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AppVersionScalarFieldEnum = (typeof AppVersionScalarFieldEnum)[keyof typeof AppVersionScalarFieldEnum]
+
+
 export const ClientFeedbackScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3359,6 +3445,15 @@ export const JsonNullValueInput = {
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
+export const AppVersionOrderByRelevanceFieldEnum = {
+  platform: 'platform',
+  version: 'version',
+  changelog: 'changelog'
+} as const
+
+export type AppVersionOrderByRelevanceFieldEnum = (typeof AppVersionOrderByRelevanceFieldEnum)[keyof typeof AppVersionOrderByRelevanceFieldEnum]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
@@ -3709,16 +3804,16 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
- * Reference to a field of type 'DateTime'
+ * Reference to a field of type 'Int'
  */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'DateTime'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
     
 
 
@@ -3893,6 +3988,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  appVersion?: Prisma.AppVersionOmit
   clientFeedback?: Prisma.ClientFeedbackOmit
   clientNotice?: Prisma.ClientNoticeOmit
   clientNoticeRead?: Prisma.ClientNoticeReadOmit

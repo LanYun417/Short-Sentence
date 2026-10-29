@@ -926,6 +926,46 @@ export interface SentenceSavePayload {
   status?: SentenceStatus;
 }
 
+/** App 版本条目（管理端） */
+export interface AppVersionItem {
+  id: number;
+  /** android / ios */
+  platform: string;
+  version: string;
+  versionCode: number;
+  fileId: number;
+  /** 安装包静态地址（后台复制/预览用） */
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number;
+  changelog: string;
+  forceUpdate: boolean;
+  /** 1 上架 / 0 下架 */
+  status: number;
+  downloadCount: number;
+  publishedAt: string;
+  createdAt: string;
+}
+
+/** App 版本查询参数 */
+export interface AppVersionQuery extends PageQuery {
+  platform?: string;
+  status?: number;
+  keyword?: string;
+}
+
+/** App 版本新增/编辑入参 */
+export interface AppVersionPayload {
+  platform?: string;
+  version: string;
+  versionCode: number;
+  fileId: number;
+  fileSize?: number;
+  changelog?: string;
+  forceUpdate?: number;
+  status?: number;
+}
+
 /** 生成批次列表条目 */
 export interface GenTaskItem {
   id: number;

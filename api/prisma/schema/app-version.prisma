@@ -1,0 +1,40 @@
+/// App 版本（Android 安装包；Web 端「下载 App」入口读最新上架版本）
+///
+/// 为什么要有「版本表」而不是只存一个最新包：
+/// 1. 用户装的是旧版本时，客户端要能拿到「比当前新」的版本与其更新说明；
+/// 2. 回滚要能查到历史包（旧包不删，只把新版本下架）；
+/// 3. 下载量是运营关心的指标，按版本统计才有意义。
+model AppVersion {
+  /// 主键
+  id            BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 平台（当前只有 android；预留 ios）
+  platform      String   @default("android") @db.VarChar(20)
+  /// 版本名（展示用，如 1.2.0；同平台唯一）
+  version       String   @db.VarChar(50)
+  /// 版本序号（整数，比较新旧用；对应 Android 的 versionCode）
+  versionCode   Int      @map("version_code") @db.Int
+  /// 安装包文件 id（指向 sys_file；不建外键，与其他业务附件一致）
+  fileId        BigInt   @map("file_id") @db.BigInt
+  /// 安装包大小（字节，展示「xx MB」与下载提示用）
+  fileSize      BigInt   @default(0) @map("file_size") @db.BigInt
+  /// 更新说明（可多行，展示在下载页/客户端更新提示）
+  changelog     String   @db.VarChar(1000)
+  /// 是否强制更新：1 是 / 0 否（客户端可据此做「必须升级」提示）
+  forceUpdate   Int      @default(0) @map("force_update") @db.TinyInt
+  /// 状态：1 上架 / 0 下架（下架后客户端不可见，历史包保留可回滚）
+  status        Int      @default(1) @db.TinyInt
+  /// 下载次数（客户端走专用下载接口时累加）
+  downloadCount Int      @default(0) @map("download_count") @db.Int
+  /// 发布时间（客户端「更新说明」按它倒序）
+  publishedAt   DateTime @default(now()) @map("published_at")
+  /// 创建时间
+  createdAt     DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  /// 同一平台下版本名唯一（防止把同一个包传两遍）
+  @@unique([platform, version])
+  /// 客户端取「最新上架版本」与后台按版本号排序
+  @@index([platform, status, versionCode])
+  @@map("app_version")
+}

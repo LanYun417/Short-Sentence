@@ -36,6 +36,7 @@ import { ClientModule } from './modules/client/client.module.js';
 import { SentenceModule } from './modules/sentence/sentence.module.js';
 import { SentenceCardsModule } from './modules/sentence-cards/sentence-cards.module.js';
 import { WordRootsModule } from './modules/word-roots/word-roots.module.js';
+import { AppVersionsModule } from './modules/app-versions/app-versions.module.js';
 import { ClientUsersModule } from './modules/client-users/client-users.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
@@ -72,6 +73,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     // 「短句」运营后台：每日句签管理（/api/sentence-cards）与词根词典管理（/api/word-roots）
     SentenceCardsModule,
     WordRootsModule,
+    // App 版本管理（/api/app-versions）与用户端下载（/api/client/app）
+    AppVersionsModule,
     ClientUsersModule,
     AnalyticsModule,
   ],
