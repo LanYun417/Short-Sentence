@@ -110,9 +110,6 @@ function unpick(chip: WordChip): void {
   selected.value = selected.value.filter((item) => item.index !== chip.index);
   sync();
 }
-
-/** 是否已把所有词块用上（用完了提示可以提交）。 */
-const allUsed = computed(() => bank.value.length > 0 && selected.value.length >= bank.value.length);
 </script>
 
 <template>
@@ -146,7 +143,8 @@ const allUsed = computed(() => bank.value.length > 0 && selected.value.length >=
     </TransitionGroup>
 
     <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
-    <div class="no-scrollbar mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto" aria-label="可选词块">
+    <!-- py-2 给 hover 上浮（-translate-y-0.5）留出空间：容器 overflow-x-auto 会顺带把 overflow-y 算成 auto，不加竖边距上浮会被裁 -->
+    <div class="no-scrollbar mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto py-2" aria-label="可选词块">
       <button
         v-for="chip in bank"
         :key="chip.index"
@@ -162,7 +160,6 @@ const allUsed = computed(() => bank.value.length > 0 && selected.value.length >=
       >
         {{ chip.text }}
       </button>
-      <p v-if="allUsed" class="self-center text-sm text-slate-400">词块已用完，点「确定」检查</p>
     </div>
   </div>
 </template>
