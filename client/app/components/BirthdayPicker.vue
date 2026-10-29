@@ -86,7 +86,7 @@ function clear(): void {
 
 <template>
   <UPopover v-model:open="open" :content="{ align: 'start' }">
-    <UButton color="neutral" variant="outline" class="w-full justify-between font-normal" icon="i-lucide-calendar">
+    <UButton color="neutral" variant="outline" class="w-full font-normal" icon="i-lucide-calendar">
       <span :class="!modelValue && 'text-slate-400'">{{ displayText }}</span>
     </UButton>
 

@@ -363,13 +363,7 @@ const emptyText = computed(() => {
           class="w-36"
         />
         <UPopover v-model:open="fromOpen" :content="{ align: 'start' }">
-          <UButton
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-calendar"
-            size="sm"
-            class="w-36 justify-between font-normal"
-          >
+          <UButton color="neutral" variant="outline" icon="i-lucide-calendar" size="sm" class="w-36 font-normal">
             <span :class="!from && 'text-slate-400'">{{ from || '起始日期' }}</span>
           </UButton>
           <template #content>
@@ -381,13 +375,7 @@ const emptyText = computed(() => {
           </template>
         </UPopover>
         <UPopover v-model:open="toOpen" :content="{ align: 'start' }">
-          <UButton
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-calendar"
-            size="sm"
-            class="w-36 justify-between font-normal"
-          >
+          <UButton color="neutral" variant="outline" icon="i-lucide-calendar" size="sm" class="w-36 font-normal">
             <span :class="!to && 'text-slate-400'">{{ to || '结束日期' }}</span>
           </UButton>
           <template #content>
