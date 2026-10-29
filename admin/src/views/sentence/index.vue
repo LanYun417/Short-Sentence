@@ -645,6 +645,7 @@ onMounted(async () => {
               v-if="row.imageUrl"
               :src="`${row.imageUrl}?scale=200`"
               :preview-src-list="[row.imageUrl]"
+              preview-teleported
               fit="cover"
               style="width: 88px; height: 50px; border-radius: 6px"
             />
