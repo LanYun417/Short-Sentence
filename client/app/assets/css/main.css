@@ -16,12 +16,17 @@
   perspective: 1600px;
 }
 
+/* 两面叠在同一格（grid area 1/1），卡片高度取较高的一面：
+   正面高度由配图决定，背面内容多时（多条「也算对」）卡片整体变高、页面滚动看全。
+   曾经两面都用 absolute inset-0（高度恒等于正面），长内容溢出卡面被底部 Tab 压住。 */
 .card-3d {
+  display: grid;
   transform-style: preserve-3d;
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .card-face {
+  grid-area: 1 / 1;
   backface-visibility: hidden;
 }
 
