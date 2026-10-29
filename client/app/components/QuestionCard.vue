@@ -75,10 +75,10 @@ const canSubmit = computed(() => (assembleMode.value ? wordsAllUsed.value : answ
  */
 const flipDeg = ref(0);
 /**
- * 翻到背面后隐藏正面，让卡片收缩到背面内容的实际高度。
+ * 翻到背面后隐藏正面（frontHidden=true），让卡片收缩到背面内容的实际高度。
  * 两面在 grid 里叠同一格、高度取较高者——正面（含配图）通常比背面高一大截，
- * 不隐藏时卡背上下会留出大片空白（内容被 justify-center 居中在剩余空间里）。
- * 收缩/长高都安排在翻转经过侧棱（约 90°/270°、卡片宽度为零）的时刻进行，
+ * 不隐藏时卡背上下会留出大片空白。隐藏后卡片贴合背面内容，留白只剩内容自身的自然间距。
+ * 隐藏/显示都安排在翻转经过侧棱（约 90°/270°、卡片宽度为零）的时刻进行，
  * 高度跳变发生在卡片最窄的一刻，肉眼不可见。
  */
 const frontHidden = ref(false);
@@ -94,8 +94,13 @@ watch(flipped, (isFlipped) => {
   window.clearTimeout(collapseTimer);
   // 减弱动效时翻转无过渡（瞬间完成），无需等侧棱
   const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : EDGE_ON_DELAY_MS;
+  // flipped=true（看答案）→ 隐藏正面，卡片收缩到背面内容高度（消除卡背上下留白）；
+  //           正面此时也被 3D 转到背向（backface-visibility 隐身），display:none 只负责把
+  //           它在 grid 里占的高度也去掉，让卡片贴合背面。
+  // flipped=false（回正面 / 下一题）→ 显示正面。若写成 !isFlipped 会在回到正面时把正面藏掉，
+  //           而背面恰好背向隐身，两面同时不可见 → 整张卡空白（曾出现的「点下一题没题了」）。
   collapseTimer = window.setTimeout(() => {
-    frontHidden.value = !isFlipped;
+    frontHidden.value = isFlipped;
   }, delay);
 });
 
