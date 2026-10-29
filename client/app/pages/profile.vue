@@ -24,6 +24,8 @@ const nickname = ref('');
 const birthday = ref('');
 const gender = ref('secret');
 const signature = ref('');
+/** 每日学习提醒邮件开关（1 订阅 / 0 不订阅，随「保存资料」一起提交） */
+const emailReminder = ref(false);
 const saving = ref(false);
 const saveMessage = ref('');
 
@@ -91,6 +93,7 @@ function fillForm(): void {
   birthday.value = user.birthday ?? '';
   gender.value = user.gender;
   signature.value = user.signature ?? '';
+  emailReminder.value = user.emailReminder === 1;
 }
 
 /**
@@ -345,6 +348,7 @@ async function onSave(): Promise<void> {
       birthday: birthday.value || undefined,
       gender: gender.value,
       signature: signature.value,
+      emailReminder: emailReminder.value ? 1 : 0,
     });
     saveMessage.value = '已保存';
   } catch (error) {
@@ -574,6 +578,25 @@ async function onChangePassword(): Promise<void> {
               <UButton icon="i-lucide-check" :loading="saving" @click="onSave">保存资料</UButton>
               <span v-if="saveMessage" class="text-sm text-slate-400">{{ saveMessage }}</span>
             </div>
+          </div>
+
+          <!-- 每日学习提醒（邮件）：由服务端定时任务发送，不需要页面在前台 -->
+          <div
+            class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <UIcon name="i-lucide-mail" class="h-4 w-4 text-sky-500" />
+                  每日学习提醒（邮件）
+                </p>
+                <p class="mt-1 text-xs text-slate-400">
+                  每天早上一封邮件，提醒你完成当天的题目（发送到 {{ auth.user?.email }}）
+                </p>
+              </div>
+              <USwitch v-model="emailReminder" />
+            </div>
+            <p class="mt-3 text-xs text-slate-400">开关随「保存资料」一起提交。</p>
           </div>
 
           <!-- 每日句签提醒（Web 本地通知；SSR 不渲染，避免权限 API 造成水合不一致） -->

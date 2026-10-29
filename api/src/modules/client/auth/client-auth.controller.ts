@@ -14,11 +14,13 @@ import { UPLOAD_MULTER_OPTIONS } from '../../../common/file/upload.config.js';
 import type { CaptchaResult } from '../../../common/types.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { ClientAuthUserService, type ClientUserProfile } from './client-auth.service.js';
+import { EmailCodeService } from './email-code.service.js';
 import {
   ChangeClientPasswordDto,
   ClientLoginDto,
   ClientRefreshDto,
   ClientRegisterDto,
+  SendEmailCodeDto,
   SetClientBackgroundDto,
   UpdateClientProfileDto,
 } from './dto.js';
@@ -32,7 +34,18 @@ export interface ClientAuthResult {
 
 @Controller('client/auth')
 export class ClientAuthController {
-  constructor(private readonly clientAuth: ClientAuthUserService) {}
+  constructor(
+    private readonly clientAuth: ClientAuthUserService,
+    private readonly emailCode: EmailCodeService,
+  ) {}
+
+  /** 发送邮箱验证码（注册/登录/重置密码；同邮箱同用途 60 秒只能发一次）。 */
+  @Public()
+  @Post('email-code')
+  async sendEmailCode(@Body() dto: SendEmailCodeDto): Promise<ResponseEnvelope<null>> {
+    await this.emailCode.issue(dto.email, dto.purpose);
+    return { __raw: true, data: null, message: '验证码已发送，请查收邮箱' };
+  }
 
   /** 图形验证码（登录/注册前拉取；关闭验证码时 enabled=false）。 */
   @Public()
@@ -51,6 +64,7 @@ export class ClientAuthController {
       dto.nickname,
       dto.captchaId,
       dto.captchaCode,
+      dto.emailCode,
     );
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
@@ -60,7 +74,7 @@ export class ClientAuthController {
   @Public()
   @Post('login')
   async login(@Body() dto: ClientLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.login(dto.email, dto.password, dto.captchaId, dto.captchaCode);
+    const tokens = await this.clientAuth.login(dto.email, dto.password, dto.captchaId, dto.captchaCode, dto.emailCode);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }

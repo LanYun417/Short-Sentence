@@ -26,6 +26,7 @@ import { AiQuotaService } from './ai/ai-quota.service.js';
 import { AiBudgetService } from './ai/ai-budget.service.js';
 import { AgnesSentenceProvider } from './ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from './ai/agnes-image.provider.js';
+import { MailService } from './mail/mail.service.js';
 
 @Global()
 @Module({
@@ -56,6 +57,8 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     AiBudgetService,
     AgnesSentenceProvider,
     AgnesImageProvider,
+    // 邮件（腾讯云 SES；凭证存 sys_config，后台可编辑，缺配置时发送接口报可读错误）
+    MailService,
     // 静态资源链的中间件：由 app.setup.ts 显式挂到 express 上，需要能被 app.get 解析
     HotlinkGuardMiddleware,
     ImageScaleMiddleware,
@@ -84,6 +87,7 @@ import { AgnesImageProvider } from './ai/agnes-image.provider.js';
     AiBudgetService,
     AgnesSentenceProvider,
     AgnesImageProvider,
+    MailService,
   ],
 })
 export class CommonModule {}

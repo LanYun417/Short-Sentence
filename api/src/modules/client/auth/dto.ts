@@ -8,6 +8,7 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  Max,
   IsString,
   Matches,
   MaxLength,
@@ -62,6 +63,12 @@ export class ClientRegisterDto {
   @IsString({ message: '验证码必须为字符串' })
   @MaxLength(10, { message: '验证码最长 10 个字符' })
   captchaCode?: string;
+
+  /** 邮箱验证码（可选：传了就校验邮箱验证码，不再校验图形验证码） */
+  @IsOptional()
+  @IsString({ message: '邮箱验证码必须为字符串' })
+  @MaxLength(10, { message: '邮箱验证码最长 10 个字符' })
+  emailCode?: string;
 }
 
 /** 登录入参。 */
@@ -83,6 +90,12 @@ export class ClientLoginDto {
   @IsString({ message: '验证码必须为字符串' })
   @MaxLength(10, { message: '验证码最长 10 个字符' })
   captchaCode?: string;
+
+  /** 邮箱验证码（可选：传了就校验邮箱验证码，不再校验图形验证码） */
+  @IsOptional()
+  @IsString({ message: '邮箱验证码必须为字符串' })
+  @MaxLength(10, { message: '邮箱验证码最长 10 个字符' })
+  emailCode?: string;
 }
 
 /** 刷新令牌入参。 */
@@ -117,6 +130,25 @@ export class UpdateClientProfileDto {
   @IsString({ message: '个性签名必须为字符串' })
   @MaxLength(200, { message: '个性签名最长 200 个字符' })
   signature?: string;
+
+  /** 每日学习提醒邮件：1 订阅 / 0 不订阅（用户主动开启才发） */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '邮件提醒开关必须为整数' })
+  @Min(0, { message: '邮件提醒开关只能为 0 或 1' })
+  @Max(1, { message: '邮件提醒开关只能为 0 或 1' })
+  emailReminder?: number;
+}
+
+/** 发送邮箱验证码入参。 */
+export class SendEmailCodeDto {
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @MaxLength(100, { message: '邮箱最长 100 个字符' })
+  email!: string;
+
+  /** 用途：register 注册 / login 登录 / reset 重置密码 */
+  @IsEnum(['register', 'login', 'reset'], { message: '验证码用途不正确' })
+  purpose!: 'register' | 'login' | 'reset';
 }
 
 /** 设置个人主页背景句签入参。 */

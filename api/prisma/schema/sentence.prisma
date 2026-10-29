@@ -30,6 +30,8 @@ model ClientUser {
   xp                Int       @default(0) @db.Int
   /// 1 启用 / 0 禁用
   status            Int       @default(1) @db.TinyInt
+  /// 每日学习提醒邮件：1 订阅 / 0 不订阅（用户主动开启才发，即视为同意接收）
+  emailReminder     Int       @default(0) @map("email_reminder") @db.TinyInt
   /// 最后登录时间
   lastLoginAt       DateTime? @map("last_login_at")
   /// 密码最后修改时间（改密后旧 Token 失效判定）

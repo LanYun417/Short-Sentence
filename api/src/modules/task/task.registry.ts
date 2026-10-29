@@ -88,6 +88,8 @@ export interface TaskDeps {
   ingestWordRoots: () => Promise<void>;
   /** 每日句签生成（SentenceCardService.generateDaily；AI 文案 + 生图，当天已就绪则跳过） */
   generateDailySentenceCard: () => Promise<void>;
+  /** 每日学习提醒邮件（DailyReminderService.run；只发给主动开启提醒的用户） */
+  sendDailyReminders: () => Promise<void>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -151,6 +153,19 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: config.sentence.cronEnabled,
       create: (deps) => async () => {
         await deps.generateSentences();
+      },
+    },
+    {
+      name: 'daily-reminder',
+      title: '每日学习提醒邮件',
+      description:
+        '给「我的 → 每日邮件提醒」开启的用户发送学习提醒（腾讯云 SES 模板 66223，变量 nickname）。' +
+        '仅在邮件服务已启用且配置齐全时执行；单次最多 500 封，串行发送避免上游限流。',
+      // 早上 9 点：既在通勤前，也避开 00:30 的题库生成高峰
+      schedule: { kind: 'daily', hour: 9, minute: 0 },
+      enabled: true,
+      create: (deps) => async () => {
+        await deps.sendDailyReminders();
       },
     },
     {

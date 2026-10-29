@@ -5499,6 +5499,17 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/client/auth/email-code",
+        "summary": "发送邮箱验证码（注册/登录/重置密码；同邮箱同用途 60 秒只能发一次）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/email-code\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/client/auth/login",
         "summary": "登录",
         "permission": [],
@@ -7561,6 +7572,161 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/feedback\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "邮件设置",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/mail-settings",
+        "summary": "读取设置（密钥只回掩码）",
+        "permission": [
+          "system:mail:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/mail-settings?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/mail-settings/test",
+        "summary": "发送测试邮件（用验证码模板发一条，验证凭证/模板/域名是否都配好）",
+        "permission": [
+          "system:mail:edit"
+        ],
+        "isPublic": false,
+        "action": "邮件设置 · 测试发信",
+        "params": [
+          {
+            "name": "to",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/mail-settings/test\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"to\": \"示例值\"\n    }'",
+          "requestBody": {
+            "to": "示例值"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/mail-settings",
+        "summary": "保存设置（secretKey 传空 = 不修改）",
+        "permission": [
+          "system:mail:edit"
+        ],
+        "isPublic": false,
+        "action": "邮件设置 · 保存",
+        "params": [
+          {
+            "name": "enabled",
+            "in": "body",
+            "type": "boolean",
+            "required": true,
+            "description": "总开关",
+            "example": true
+          },
+          {
+            "name": "secretId",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "secretKey",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "留空 = 保持原密钥不变",
+            "example": "示例值"
+          },
+          {
+            "name": "region",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "fromAddress",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "fromAlias",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "templateCaptcha",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "templateReminder",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/mail-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"enabled\": true,\n      \"secretId\": \"示例值\",\n      \"secretKey\": \"示例值\",\n      \"region\": \"示例值\",\n      \"fromAddress\": \"示例值\",\n      \"fromAlias\": \"示例值\",\n      \"templateCaptcha\": 1,\n      \"templateReminder\": 1\n    }'",
+          "requestBody": {
+            "enabled": true,
+            "secretId": "示例值",
+            "secretKey": "示例值",
+            "region": "示例值",
+            "fromAddress": "示例值",
+            "fromAlias": "示例值",
+            "templateCaptcha": 1,
+            "templateReminder": 1
+          }
         }
       }
     ]

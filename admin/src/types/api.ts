@@ -926,6 +926,37 @@ export interface SentenceSavePayload {
   status?: SentenceStatus;
 }
 
+/** 邮件设置（管理端；密钥只回掩码） */
+export interface MailSettings {
+  enabled: boolean;
+  /** 凭证与模板是否齐全（齐全才可能发出去） */
+  ready: boolean;
+  /** 缺失项中文名（ready=false 时非空） */
+  missing: string[];
+  /** 掩码后的 SecretId */
+  secretId: string;
+  secretKeyConfigured: boolean;
+  /** 掩码后的 SecretKey */
+  secretKeyMasked: string;
+  region: string;
+  fromAddress: string;
+  fromAlias: string;
+  templateCaptcha: number;
+  templateReminder: number;
+}
+
+/** 保存邮件设置入参（secretId / secretKey 留空 = 不修改） */
+export interface SaveMailSettingsPayload {
+  enabled: boolean;
+  secretId?: string;
+  secretKey?: string;
+  region?: string;
+  fromAddress?: string;
+  fromAlias?: string;
+  templateCaptcha?: number;
+  templateReminder?: number;
+}
+
 /** App 版本条目（管理端） */
 export interface AppVersionItem {
   id: number;

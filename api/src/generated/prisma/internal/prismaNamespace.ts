@@ -3142,6 +3142,7 @@ export const ClientUserScalarFieldEnum = {
   bgCardId: 'bgCardId',
   xp: 'xp',
   status: 'status',
+  emailReminder: 'emailReminder',
   lastLoginAt: 'lastLoginAt',
   passwordChangedAt: 'passwordChangedAt',
   createdAt: 'createdAt',

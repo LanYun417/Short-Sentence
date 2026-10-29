@@ -356,6 +356,27 @@ const MENU_TREE: MenuSeedNode[] = [
         ],
       },
       {
+        key: 'system:mail',
+        menuName: '邮件设置',
+        menuType: MenuType.MENU,
+        path: '/system/mail',
+        component: 'system/mail/index',
+        icon: 'envelope',
+        permission: 'system:mail:list',
+        sort: 9,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'system:mail:edit',
+            menuName: '编辑邮件设置',
+            menuType: MenuType.BUTTON,
+            permission: 'system:mail:edit',
+            sort: 1,
+          },
+        ],
+      },
+      {
         key: 'system:notice',
         menuName: '通知中心',
         menuType: MenuType.MENU,

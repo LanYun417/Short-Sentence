@@ -24,6 +24,7 @@ import type { Express } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { FilesService } from '../../files/files.service.js';
 import { AccountLockService } from '../../../common/auth/account-lock.service.js';
+import { EmailCodeService } from './email-code.service.js';
 import { CaptchaService } from '../../../common/auth/captcha.service.js';
 import type { CaptchaResult } from '../../../common/types.js';
 
@@ -36,6 +37,8 @@ export interface ClientUserProfile {
   birthday: string | null;
   gender: string;
   signature: string | null;
+  /** 每日学习提醒邮件：1 订阅 / 0 不订阅 */
+  emailReminder: number;
   createdAt: Date;
   /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
   bgCardId: number;
@@ -63,6 +66,7 @@ export class ClientAuthUserService {
     private readonly filesService: FilesService,
     private readonly captchaService: CaptchaService,
     private readonly accountLock: AccountLockService,
+    private readonly emailCode: EmailCodeService,
   ) {}
 
   /** 图形验证码（登录/注册用；服务端关闭验证码时 enabled=false，前端不渲染输入框）。 */
@@ -77,10 +81,16 @@ export class ClientAuthUserService {
     nickname?: string,
     captchaId?: string,
     captchaCode?: string,
+    emailCode?: string,
   ): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
-    // 图形验证码先校验（廉价、无 DB 查询）：挡掉脚本批量注册，失败直接拒绝
-    if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
+    // 验证码先校验（廉价、无 DB 查询）：挡掉脚本批量注册。
+    // 传了 emailCode 就走邮箱通道；否则沿用图形验证码（向后兼容，前端可逐步切换）
+    if (emailCode) {
+      if (!(await this.emailCode.verify(normalizedEmail, 'register', emailCode))) {
+        throw AppException.badRequest('邮箱验证码错误或已过期');
+      }
+    } else if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
       throw AppException.badRequest('验证码错误或已过期');
     }
     this.assertPasswordStrength(password, normalizedEmail);
@@ -104,10 +114,20 @@ export class ClientAuthUserService {
   }
 
   /** 登录（邮箱 + 密码）。 */
-  async login(email: string, password: string, captchaId?: string, captchaCode?: string): Promise<ClientTokenPair> {
+  async login(
+    email: string,
+    password: string,
+    captchaId?: string,
+    captchaCode?: string,
+    emailCode?: string,
+  ): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
-    // 同注册：先校验验证码再查库，避免爆破消耗数据库
-    if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
+    // 同注册：先校验验证码再查库，避免爆破消耗数据库（邮箱验证码优先）
+    if (emailCode) {
+      if (!(await this.emailCode.verify(normalizedEmail, 'login', emailCode))) {
+        throw AppException.badRequest('邮箱验证码错误或已过期');
+      }
+    } else if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
       throw AppException.badRequest('验证码错误或已过期');
     }
     // 按账号维度的失败锁定（与按 IP 的限流互补；不透露账号是否存在）
@@ -174,6 +194,7 @@ export class ClientAuthUserService {
         birthday: true,
         gender: true,
         signature: true,
+        emailReminder: true,
         bgCardId: true,
         createdAt: true,
       },
@@ -189,6 +210,7 @@ export class ClientAuthUserService {
       birthday: row.birthday ? row.birthday.toISOString().slice(0, 10) : null,
       gender: row.gender,
       signature: row.signature,
+      emailReminder: row.emailReminder,
       createdAt: row.createdAt,
       ...(await this.resolveBackground(Number(row.bgCardId))),
     };
@@ -272,7 +294,14 @@ export class ClientAuthUserService {
   /** 更新资料（只更新传入的字段）。 */
   async updateProfile(
     userId: number,
-    input: { nickname?: string; avatarFileId?: number; birthday?: string; gender?: string; signature?: string },
+    input: {
+      nickname?: string;
+      avatarFileId?: number;
+      birthday?: string;
+      gender?: string;
+      signature?: string;
+      emailReminder?: number;
+    },
   ): Promise<ClientUserProfile> {
     const data: Record<string, unknown> = {};
     if (input.nickname !== undefined) {
@@ -289,6 +318,9 @@ export class ClientAuthUserService {
     }
     if (input.signature !== undefined) {
       data.signature = input.signature.trim() || null;
+    }
+    if (input.emailReminder !== undefined) {
+      data.emailReminder = input.emailReminder === 1 ? 1 : 0;
     }
     if (Object.keys(data).length === 0) {
       return this.getProfile(userId);

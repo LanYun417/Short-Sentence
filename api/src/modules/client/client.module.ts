@@ -11,6 +11,7 @@ import { SentenceCardModule } from './sentence-card/sentence-card.module.js';
 import { GamifyModule } from './gamify/gamify.module.js';
 import { ClientAuthController } from './auth/client-auth.controller.js';
 import { ClientAuthUserService } from './auth/client-auth.service.js';
+import { EmailCodeService } from './auth/email-code.service.js';
 import { QuestionsController } from './questions/questions.controller.js';
 import { QuestionsService } from './questions/questions.service.js';
 import { LibraryController } from './library/library.controller.js';
@@ -47,6 +48,8 @@ import { ClientNoticeService } from './notice/client-notice.service.js';
   ],
   providers: [
     ClientAuthUserService,
+    // 邮箱验证码（注册/登录/重置密码；依赖 Redis + 全局 MailService）
+    EmailCodeService,
     QuestionsService,
     CheckinService,
     ReportService,

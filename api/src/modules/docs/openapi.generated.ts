@@ -125,6 +125,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "用户反馈"
     },
     {
+      "name": "邮件设置"
+    },
+    {
       "name": "语句库"
     },
     {
@@ -9786,6 +9789,44 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/auth/email-code": {
+      "post": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "发送邮箱验证码（注册/登录/重置密码；同邮箱同用途 60 秒只能发一次）",
+        "operationId": "post__api_client_auth_email_code",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/client/auth/login": {
       "post": {
         "tags": [
@@ -13958,6 +13999,199 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/mail-settings": {
+      "get": {
+        "tags": [
+          "邮件设置"
+        ],
+        "summary": "读取设置（密钥只回掩码）",
+        "operationId": "get__api_mail_settings",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "邮件设置"
+        ],
+        "summary": "保存设置（secretKey 传空 = 不修改）",
+        "operationId": "put__api_mail_settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMailSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UpdateMailSettingsDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/mail-settings/test": {
+      "post": {
+        "tags": [
+          "邮件设置"
+        ],
+        "summary": "发送测试邮件（用验证码模板发一条，验证凭证/模板/域名是否都配好）",
+        "operationId": "post__api_mail_settings_test",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestMailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TestMailDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/favorites": {
       "get": {
         "tags": [
@@ -15939,6 +16173,60 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         },
         "required": [
           "status"
+        ]
+      },
+      "TestMailDto": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "example": "示例值"
+          }
+        },
+        "required": [
+          "to"
+        ]
+      },
+      "UpdateMailSettingsDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "总开关",
+            "example": true
+          },
+          "secretId": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "secretKey": {
+            "type": "string",
+            "description": "留空 = 保持原密钥不变",
+            "example": "示例值"
+          },
+          "region": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "fromAddress": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "fromAlias": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "templateCaptcha": {
+            "type": "number",
+            "example": 1
+          },
+          "templateReminder": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "enabled"
         ]
       },
       "SaveAppVersionDto": {

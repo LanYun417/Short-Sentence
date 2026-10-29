@@ -17,6 +17,8 @@ export interface ClientUserProfile {
   /** male / female / secret */
   gender: string;
   signature: string | null;
+  /** 每日学习提醒邮件：1 订阅 / 0 不订阅 */
+  emailReminder: number;
   createdAt: string;
   /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
   bgCardId: number;

@@ -20,6 +20,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { FileLoggerService } from '../../common/log/file-logger.service.js';
 import { ImageScaleService } from '../../common/file/file-guards.js';
 import { SentenceGenService } from '../sentence/sentence-gen.service.js';
+import { DailyReminderService } from '../mail/daily-reminder.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
@@ -122,6 +123,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly sentenceGen: SentenceGenService,
     private readonly wordRoot: WordRootService,
     private readonly sentenceCard: SentenceCardService,
+    private readonly dailyReminder: DailyReminderService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -136,6 +138,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
         await this.wordRoot.ingestDaily();
       },
       generateDailySentenceCard: () => this.sentenceCard.generateDaily(),
+      sendDailyReminders: () => this.dailyReminder.run(),
     };
 
     const registry = buildTaskRegistry();
