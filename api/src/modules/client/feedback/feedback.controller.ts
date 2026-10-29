@@ -2,9 +2,12 @@
  * 产品反馈控制器（/api/client/feedback）。
  * 权限口径：需登录（client 令牌）；不使用权限码，按 userId 记录提交人。
  */
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import type { Express } from 'express';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
+import { FEEDBACK_IMAGE_MULTER_OPTIONS } from '../../../common/file/upload.config.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { FeedbackService } from './feedback.service.js';
 import { CreateFeedbackDto } from './dto.js';
@@ -13,13 +16,15 @@ import { CreateFeedbackDto } from './dto.js';
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
-  /** 提交产品反馈。 */
+  /** 提交产品反馈（文本 + 最多 5 张图片，multipart）。 */
   @Post()
+  @UseInterceptors(FilesInterceptor('images', 5, FEEDBACK_IMAGE_MULTER_OPTIONS))
   async create(
     @CurrentClientUser() user: ClientUserContext,
     @Body() dto: CreateFeedbackDto,
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ResponseEnvelope<{ id: number }>> {
-    const result = await this.feedbackService.create(user.userId, dto);
+    const result = await this.feedbackService.create(user.userId, dto, files ?? []);
     return { __raw: true, data: result, message: '已收到你的反馈，感谢！' };
   }
 

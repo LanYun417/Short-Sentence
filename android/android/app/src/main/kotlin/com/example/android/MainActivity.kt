@@ -1,5 +1,6 @@
 package com.example.android
 
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -17,6 +18,17 @@ class MainActivity : FlutterActivity() {
             .setStreamHandler(gyroHandler)
         // 文本朗读：原生 TextToSpeech 桥（零新增依赖）
         ttsBridge = TtsBridge(flutterEngine, this)
+        // 反馈截图选择：系统 SAF 文件选择器桥（零新增依赖）
+        imagePickBridge = ImagePickBridge(this)
+        imagePickBridge?.attach(flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        // 图片选择结果由 ImagePickBridge 消费（返回 true = 已处理）
+        if (imagePickBridge?.handleActivityResult(requestCode, resultCode, data) == true) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDestroy() {
@@ -25,6 +37,7 @@ class MainActivity : FlutterActivity() {
         tiltHandler?.dispose()
         gyroHandler?.dispose()
         ttsBridge?.dispose()
+        imagePickBridge?.dispose()
         super.onDestroy()
     }
 
@@ -36,4 +49,6 @@ class MainActivity : FlutterActivity() {
     private var ttsBridge: TtsBridge? = null
     private var tiltHandler: TiltStreamHandler? = null
     private var gyroHandler: GyroStreamHandler? = null
+    private var imagePickBridge: ImagePickBridge? = null
 }
+

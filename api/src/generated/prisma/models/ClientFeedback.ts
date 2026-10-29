@@ -47,6 +47,7 @@ export type ClientFeedbackMinAggregateOutputType = {
   status: string | null
   reply: string | null
   handleNote: string | null
+  images: string | null
   handledAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -63,6 +64,7 @@ export type ClientFeedbackMaxAggregateOutputType = {
   status: string | null
   reply: string | null
   handleNote: string | null
+  images: string | null
   handledAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -79,6 +81,7 @@ export type ClientFeedbackCountAggregateOutputType = {
   status: number
   reply: number
   handleNote: number
+  images: number
   handledAt: number
   createdAt: number
   updatedAt: number
@@ -107,6 +110,7 @@ export type ClientFeedbackMinAggregateInputType = {
   status?: true
   reply?: true
   handleNote?: true
+  images?: true
   handledAt?: true
   createdAt?: true
   updatedAt?: true
@@ -123,6 +127,7 @@ export type ClientFeedbackMaxAggregateInputType = {
   status?: true
   reply?: true
   handleNote?: true
+  images?: true
   handledAt?: true
   createdAt?: true
   updatedAt?: true
@@ -139,6 +144,7 @@ export type ClientFeedbackCountAggregateInputType = {
   status?: true
   reply?: true
   handleNote?: true
+  images?: true
   handledAt?: true
   createdAt?: true
   updatedAt?: true
@@ -242,6 +248,7 @@ export type ClientFeedbackGroupByOutputType = {
   status: string
   reply: string | null
   handleNote: string | null
+  images: string | null
   handledAt: Date | null
   createdAt: Date
   updatedAt: Date
@@ -281,6 +288,7 @@ export type ClientFeedbackWhereInput = {
   status?: Prisma.StringFilter<"ClientFeedback"> | string
   reply?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
   handleNote?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
+  images?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
   handledAt?: Prisma.DateTimeNullableFilter<"ClientFeedback"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientFeedback"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ClientFeedback"> | Date | string
@@ -297,6 +305,7 @@ export type ClientFeedbackOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   reply?: Prisma.SortOrderInput | Prisma.SortOrder
   handleNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  images?: Prisma.SortOrderInput | Prisma.SortOrder
   handledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -317,6 +326,7 @@ export type ClientFeedbackWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.StringFilter<"ClientFeedback"> | string
   reply?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
   handleNote?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
+  images?: Prisma.StringNullableFilter<"ClientFeedback"> | string | null
   handledAt?: Prisma.DateTimeNullableFilter<"ClientFeedback"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientFeedback"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ClientFeedback"> | Date | string
@@ -333,6 +343,7 @@ export type ClientFeedbackOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   reply?: Prisma.SortOrderInput | Prisma.SortOrder
   handleNote?: Prisma.SortOrderInput | Prisma.SortOrder
+  images?: Prisma.SortOrderInput | Prisma.SortOrder
   handledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -357,6 +368,7 @@ export type ClientFeedbackScalarWhereWithAggregatesInput = {
   status?: Prisma.StringWithAggregatesFilter<"ClientFeedback"> | string
   reply?: Prisma.StringNullableWithAggregatesFilter<"ClientFeedback"> | string | null
   handleNote?: Prisma.StringNullableWithAggregatesFilter<"ClientFeedback"> | string | null
+  images?: Prisma.StringNullableWithAggregatesFilter<"ClientFeedback"> | string | null
   handledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientFeedback"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ClientFeedback"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ClientFeedback"> | Date | string
@@ -373,6 +385,7 @@ export type ClientFeedbackCreateInput = {
   status?: string
   reply?: string | null
   handleNote?: string | null
+  images?: string | null
   handledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -389,6 +402,7 @@ export type ClientFeedbackUncheckedCreateInput = {
   status?: string
   reply?: string | null
   handleNote?: string | null
+  images?: string | null
   handledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -405,6 +419,7 @@ export type ClientFeedbackUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   reply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handleNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  images?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -421,6 +436,7 @@ export type ClientFeedbackUncheckedUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   reply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handleNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  images?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -437,6 +453,7 @@ export type ClientFeedbackCreateManyInput = {
   status?: string
   reply?: string | null
   handleNote?: string | null
+  images?: string | null
   handledAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -453,6 +470,7 @@ export type ClientFeedbackUpdateManyMutationInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   reply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handleNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  images?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -469,6 +487,7 @@ export type ClientFeedbackUncheckedUpdateManyInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   reply?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handleNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  images?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   handledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -491,6 +510,7 @@ export type ClientFeedbackCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   reply?: Prisma.SortOrder
   handleNote?: Prisma.SortOrder
+  images?: Prisma.SortOrder
   handledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -512,6 +532,7 @@ export type ClientFeedbackMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   reply?: Prisma.SortOrder
   handleNote?: Prisma.SortOrder
+  images?: Prisma.SortOrder
   handledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -528,6 +549,7 @@ export type ClientFeedbackMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   reply?: Prisma.SortOrder
   handleNote?: Prisma.SortOrder
+  images?: Prisma.SortOrder
   handledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -575,6 +597,7 @@ export type ClientFeedbackSelect<ExtArgs extends runtime.Types.Extensions.Intern
   status?: boolean
   reply?: boolean
   handleNote?: boolean
+  images?: boolean
   handledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -593,12 +616,13 @@ export type ClientFeedbackSelectScalar = {
   status?: boolean
   reply?: boolean
   handleNote?: boolean
+  images?: boolean
   handledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ClientFeedbackOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "type" | "content" | "contact" | "platform" | "appVersion" | "status" | "reply" | "handleNote" | "handledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clientFeedback"]>
+export type ClientFeedbackOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "type" | "content" | "contact" | "platform" | "appVersion" | "status" | "reply" | "handleNote" | "images" | "handledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clientFeedback"]>
 
 export type $ClientFeedbackPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ClientFeedback"
@@ -644,6 +668,10 @@ export type $ClientFeedbackPayload<ExtArgs extends runtime.Types.Extensions.Inte
      * 内部处理备注（**不下发用户端**，只给运营看）
      */
     handleNote: string | null
+    /**
+     * 反馈图片（最多 5 张；存图片访问 URL 的 JSON 数组；用户端可传截图辅助说明问题）
+     */
+    images: string | null
     /**
      * 处理时间
      */
@@ -1035,6 +1063,7 @@ export interface ClientFeedbackFieldRefs {
   readonly status: Prisma.FieldRef<"ClientFeedback", 'String'>
   readonly reply: Prisma.FieldRef<"ClientFeedback", 'String'>
   readonly handleNote: Prisma.FieldRef<"ClientFeedback", 'String'>
+  readonly images: Prisma.FieldRef<"ClientFeedback", 'String'>
   readonly handledAt: Prisma.FieldRef<"ClientFeedback", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ClientFeedback", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ClientFeedback", 'DateTime'>

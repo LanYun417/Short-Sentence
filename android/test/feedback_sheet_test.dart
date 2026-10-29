@@ -14,6 +14,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:short_sentence/api/dio_client.dart';
@@ -24,8 +25,11 @@ import 'package:short_sentence/theme/motion.dart';
 class _RecordAdapter implements HttpClientAdapter {
   final List<String> calls = <String>[];
 
-  /// 最近一次提交的请求体（POST /client/feedback 时记录）。
+  /// 最近一次提交的**文本字段**（FormData 的 fields）。
   Map<String, dynamic>? lastFeedback;
+
+  /// 最近一次提交携带的文件字段名（如 pics 走 'images'）。
+  List<String> lastFeedbackFileFields = <String>[];
 
   @override
   Future<ResponseBody> fetch(
@@ -39,6 +43,7 @@ class _RecordAdapter implements HttpClientAdapter {
           'id': 99,
           'type': 'feature',
           'content': '希望支持自定义每日题量',
+          'images': <String>[],
           'contact': null,
           'platform': 'android',
           'status': 0,
@@ -52,6 +57,7 @@ class _RecordAdapter implements HttpClientAdapter {
               'id': 99,
               'type': 'feature',
               'content': '希望支持自定义每日题量',
+              'images': <String>[],
               'contact': null,
               'platform': 'android',
               'status': 1,
@@ -66,8 +72,13 @@ class _RecordAdapter implements HttpClientAdapter {
         },
       _ => null,
     };
-    if (options.path == '/client/feedback' && options.data is Map<String, dynamic>) {
-      lastFeedback = Map<String, dynamic>.from(options.data as Map<String, dynamic>);
+    // 提交改走 multipart（FormData）：字段在 fields、图片在 files，都取出来断言
+    if (options.path == '/client/feedback' && options.data is FormData) {
+      final form = options.data as FormData;
+      lastFeedback = <String, dynamic>{
+        for (final field in form.fields) field.key: field.value,
+      };
+      lastFeedbackFileFields = form.files.map((entry) => entry.key).toList();
     }
     return ResponseBody.fromString(
       jsonEncode(<String, dynamic>{'code': 200, 'message': 'ok', 'data': payload}),
@@ -170,6 +181,48 @@ void main() {
     expect(find.text('已收到，下个版本会支持自定义题量'), findsOneWidget);
     // 成功提示
     expect(find.text('已收到你的反馈，我们会尽快处理'), findsOneWidget);
+  });
+
+  testWidgets('带图提交：FormData 携带 images 文件字段', (tester) async {
+    final adapter = _RecordAdapter();
+    // 桩住原生选图通道：返回一张「图片」（内容不是真图，只验证字段与文件名链路）
+    const channel = MethodChannel('short_sentence/image_pick');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method != 'pickImages') {
+        return null;
+      }
+      return <Map<String, dynamic>>[
+        <String, dynamic>{
+          'name': 'shot.png',
+          'mimeType': 'image/png',
+          // 真实 1×1 PNG：缩略图会走 Image.memory 解码，假字节会抛 Invalid image data
+          'bytes': base64Decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          ),
+        },
+      ];
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    await _pumpSheet(tester, adapter);
+    await tester.enterText(find.byType(TextField).at(0), '配上截图更清楚');
+    await tester.pumpAndSettle();
+
+    // 点「添加截图」格子 → 拉回一张缩略图
+    await tester.ensureVisible(find.byIcon(Icons.add_photo_alternate_outlined));
+    await tester.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+    await tester.pumpAndSettle();
+    expect(find.byType(Image), findsWidgets);
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, '提交反馈'));
+    await tester.tap(find.widgetWithText(FilledButton, '提交反馈'));
+    await tester.pumpAndSettle();
+
+    expect(adapter.calls, contains('POST /client/feedback'));
+    // 图片按 'images' 字段提交（与后端 FilesInterceptor('images', 5) 一致）
+    expect(adapter.lastFeedbackFileFields, contains('images'));
+    expect(adapter.lastFeedback?['content'], '配上截图更清楚');
   });
 
   testWidgets('我的反馈：渲染服务端条目与状态标签', (tester) async {

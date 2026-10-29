@@ -164,6 +164,18 @@ onMounted(() => {
         <el-table-column label="反馈内容" min-width="300">
           <template #default="{ row }">
             <p class="text-sm break-all line-clamp-2">{{ row.content }}</p>
+            <div v-if="row.images?.length" class="mt-1.5 flex flex-wrap gap-1.5">
+              <el-image
+                v-for="url in row.images"
+                :key="url"
+                :src="url"
+                :preview-src-list="row.images"
+                :initial-index="row.images.indexOf(url)"
+                fit="cover"
+                preview-teleported
+                class="h-12 w-12 shrink-0 cursor-zoom-in rounded border border-gray-200"
+              />
+            </div>
             <p v-if="row.reply" class="mt-1 text-xs text-success">已回复：{{ row.reply }}</p>
           </template>
         </el-table-column>
@@ -226,6 +238,18 @@ onMounted(() => {
       <div v-if="current" class="space-y-3">
         <div class="rounded bg-gray-50 p-3 text-sm">
           <p class="whitespace-pre-wrap break-all">{{ current.content }}</p>
+          <div v-if="current.images?.length" class="mt-2 flex flex-wrap gap-2">
+            <el-image
+              v-for="url in current.images"
+              :key="url"
+              :src="url"
+              :preview-src-list="current.images"
+              :initial-index="current.images.indexOf(url)"
+              fit="cover"
+              preview-teleported
+              class="h-16 w-16 cursor-zoom-in rounded border border-gray-200"
+            />
+          </div>
           <p class="mt-2 text-xs text-gray-400">
             {{ TYPE_LABEL[current.type] ?? current.type }} · {{ PLATFORM_LABEL[current.platform] ?? current.platform
             }}<template v-if="current.appVersion"> v{{ current.appVersion }}</template> ·

@@ -2811,6 +2811,7 @@ export const ClientFeedbackScalarFieldEnum = {
   status: 'status',
   reply: 'reply',
   handleNote: 'handleNote',
+  images: 'images',
   handledAt: 'handledAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -3373,7 +3374,8 @@ export const ClientFeedbackOrderByRelevanceFieldEnum = {
   appVersion: 'appVersion',
   status: 'status',
   reply: 'reply',
-  handleNote: 'handleNote'
+  handleNote: 'handleNote',
+  images: 'images'
 } as const
 
 export type ClientFeedbackOrderByRelevanceFieldEnum = (typeof ClientFeedbackOrderByRelevanceFieldEnum)[keyof typeof ClientFeedbackOrderByRelevanceFieldEnum]

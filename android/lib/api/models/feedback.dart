@@ -38,6 +38,7 @@ class ClientFeedbackItem {
     required this.id,
     required this.type,
     required this.content,
+    required this.images,
     required this.contact,
     required this.platform,
     required this.status,
@@ -49,6 +50,9 @@ class ClientFeedbackItem {
   final int id;
   final String type;
   final String content;
+
+  /// 反馈图片 URL 列表（最多 5 张；空列表 = 无图）。
+  final List<String> images;
   final String? contact;
   final String? platform;
   final int status;
@@ -61,6 +65,7 @@ class ClientFeedbackItem {
       id: (json['id'] as num?)?.toInt() ?? 0,
       type: json['type'] as String? ?? 'feature',
       content: json['content'] as String? ?? '',
+      images: (json['images'] as List<dynamic>?)?.whereType<String>().toList() ?? const <String>[],
       contact: json['contact'] as String?,
       platform: json['platform'] as String?,
       status: (json['status'] as num?)?.toInt() ?? 0,

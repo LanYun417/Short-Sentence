@@ -7,12 +7,15 @@
 /// - 「我的反馈」里**只展示下发的字段**（运营回复），内部备注永远不会出现在这里。
 library;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_exception.dart';
+import '../api/auth_api.dart';
 import '../api/feedback_api.dart';
 import '../api/models/feedback.dart';
+import '../config/image_pick.dart';
 import '../theme/palette.dart';
 
 /// 打开意见反馈。
@@ -94,14 +97,47 @@ class _SubmitPaneState extends ConsumerState<_SubmitPane> {
   final _contact = TextEditingController();
   bool _submitting = false;
   String? _error;
+  final List<PickedImage> _images = <PickedImage>[];
 
   static const int _maxContent = 1000;
+  static const int _maxImages = 5;
+  static const int _maxImageBytes = 10 * 1024 * 1024;
 
   @override
   void dispose() {
     _content.dispose();
     _contact.dispose();
     super.dispose();
+  }
+
+  /// 打开系统选择器补选图片（不超过上限；超限/超大给出行内提示）。
+  Future<void> _pickImages() async {
+    final room = _maxImages - _images.length;
+    if (room <= 0) {
+      setState(() => _error = '最多上传 $_maxImages 张图片');
+      return;
+    }
+    final picked = await pickImages(maxCount: room);
+    if (picked.isEmpty) {
+      return;
+    }
+    final accepted = <PickedImage>[];
+    String? notice;
+    for (final image in picked) {
+      if (image.bytes.length > _maxImageBytes) {
+        notice = '「${image.name}」超过 10MB，已跳过';
+        continue;
+      }
+      accepted.add(image);
+    }
+    setState(() {
+      _images.addAll(accepted);
+      _error = notice;
+    });
+  }
+
+  void _removeImage(int index) {
+    setState(() => _images.removeAt(index));
   }
 
   Future<void> _submit() async {
@@ -123,6 +159,7 @@ class _SubmitPaneState extends ConsumerState<_SubmitPane> {
             type: _type.value,
             content: content,
             contact: _contact.text.trim(),
+            images: List<PickedImage>.of(_images),
           );
       if (!mounted) {
         return;
@@ -130,6 +167,7 @@ class _SubmitPaneState extends ConsumerState<_SubmitPane> {
       // 切到「我的反馈」并刷新
       _content.clear();
       _contact.clear();
+      setState(_images.clear);
       final sheet = context.findAncestorStateOfType<_FeedbackSheetState>();
       sheet?.setState(() => sheet._tab = 1);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,6 +281,26 @@ class _SubmitPaneState extends ConsumerState<_SubmitPane> {
             ),
           ),
           const SizedBox(height: 14),
+          Text('截图（选填，最多 $_maxImages 张）', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              for (var i = 0; i < _images.length; i++)
+                _PickThumb(
+                  image: _images[i],
+                  onRemove: _submitting ? null : () => _removeImage(i),
+                ),
+              if (_images.length < _maxImages)
+                _AddThumb(
+                  count: _images.length,
+                  max: _maxImages,
+                  onTap: _submitting ? null : _pickImages,
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
           if (_error != null) ...<Widget>[
             Text(_error!, style: TextStyle(fontSize: 12.5, color: colors.danger)),
             const SizedBox(height: 10),
@@ -280,6 +338,122 @@ class _SubmitPaneState extends ConsumerState<_SubmitPane> {
       FeedbackType.experience => (Icons.sentiment_satisfied_outlined, const Color(0xFF10B981)),
     };
   }
+}
+
+/// 待上传截图缩略图（右上角带移除按钮）。
+class _PickThumb extends StatelessWidget {
+  const _PickThumb({required this.image, required this.onRemove});
+
+  final PickedImage image;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(
+              image.bytes,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: colors.ink.withValues(alpha: 0.75),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, size: 13, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 「添加截图」格子。
+class _AddThumb extends StatelessWidget {
+  const _AddThumb({required this.count, required this.max, required this.onTap});
+
+  final int count;
+  final int max;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colors.line, width: 1),
+          color: colors.cardMuted,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(Icons.add_photo_alternate_outlined, size: 20, color: colors.inkSoft),
+            const SizedBox(height: 2),
+            Text(
+              '$count/$max',
+              style: TextStyle(fontSize: 10.5, color: colors.inkFaint),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 全屏看图（可双指缩放）。
+void _showImageViewer(BuildContext context, String url) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: '关闭预览',
+    barrierColor: Colors.black87,
+    pageBuilder: (dialogContext, _, _) => Dialog.fullscreen(
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        children: <Widget>[
+          Center(
+            child: InteractiveViewer(
+              maxScale: 4,
+              child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+            ),
+          ),
+          Positioned(
+            top: 36,
+            right: 16,
+            child: IconButton.filledTonal(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 我的反馈列表。
@@ -418,6 +592,40 @@ class _FeedbackTile extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(item.content, style: TextStyle(fontSize: 13.5, height: 1.55, color: colors.ink)),
+          if (item.images.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: <Widget>[
+                for (final url in item.images)
+                  GestureDetector(
+                    onTap: () => _showImageViewer(context, staticUrl(url)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: staticUrl(url),
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 192,
+                        placeholder: (_, _) => Container(
+                          width: 64,
+                          height: 64,
+                          color: colors.cardMuted,
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 64,
+                          height: 64,
+                          color: colors.cardMuted,
+                          child: Icon(Icons.broken_image_outlined, size: 18, color: colors.inkFaint),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           if (hasReply) ...<Widget>[
             const SizedBox(height: 10),
             Container(

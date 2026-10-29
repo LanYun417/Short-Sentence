@@ -12,11 +12,26 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import type { PageResult } from '../../common/types.js';
 import type { HandleFeedbackDto } from './feedback.dto.js';
 
+/** 把 DB 里的 images（JSON 数组或 null）安全解析成 string[]。 */
+function parseImages(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 /** 反馈列表项（后台视角：含联系方式、端信息、内部备注）。 */
 export interface FeedbackListItem {
   id: number;
   type: string;
   content: string;
+  /** 反馈图片 URL 列表（最多 5 张；空数组 = 无图） */
+  images: string[];
   contact: string | null;
   platform: string;
   appVersion: string | null;
@@ -65,6 +80,7 @@ export class FeedbackService {
           userId: true,
           type: true,
           content: true,
+          images: true,
           contact: true,
           platform: true,
           appVersion: true,
@@ -93,6 +109,7 @@ export class FeedbackService {
         id: Number(row.id),
         type: row.type,
         content: row.content,
+        images: parseImages(row.images),
         contact: row.contact,
         platform: row.platform,
         appVersion: row.appVersion,

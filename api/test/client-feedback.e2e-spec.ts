@@ -18,6 +18,12 @@ import { resolveSeedAdminPassword } from '../src/prisma/seed.service.js';
 const API = '/api';
 const CAPTCHA_KEY_PREFIX = 'auth:captcha:';
 
+/** 1×1 透明 PNG（最合法的图片字节，用于 multipart 上传用例）。 */
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 /** 反馈内容前缀（固定便于识别与清理）。 */
 const FEEDBACK_PREFIX = 'E2E 反馈：';
 const FEEDBACK_CONTENT = `${FEEDBACK_PREFIX}拼词模式的词块顺序偶尔和答案对不上，麻烦看下`;
@@ -140,6 +146,36 @@ describe('客户端产品反馈（用户提交 → 后台处理）(e2e)', () => 
     await clientPost('/client/feedback', { type: 'nope', content: FEEDBACK_CONTENT }).expect(400);
     // MinLength 挡不住「全是空格」，服务层要显式拦掉
     await clientPost('/client/feedback', { type: 'bug', content: '          ' }).expect(400);
+  });
+
+  it('带图提交（multipart，最多 5 张）：图片 URL 落库且两端可见', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`${API}/client/feedback`)
+      .set('authorization', `Bearer ${clientToken}`)
+      .field('type', 'suggestion')
+      .field('content', `${FEEDBACK_PREFIX}附截图说明：深色模式下对比度不足`)
+      .attach('images', TINY_PNG, { filename: 'e2e-shot.png', contentType: 'image/png' })
+      .expect(200);
+    const withImageId = (res.body.data as { id: number }).id;
+
+    const mine = await findInMine(withImageId);
+    expect(mine, '带图反馈应出现在「我的反馈」').toBeTruthy();
+    const mineImages = mine?.images as string[];
+    expect(Array.isArray(mineImages)).toBe(true);
+    expect(mineImages).toHaveLength(1);
+    expect(mineImages[0]).toMatch(/^\/static\//);
+
+    const adminHit = await findInAdminList(withImageId);
+    expect(adminHit?.images).toEqual(mineImages);
+  });
+
+  it('无图 JSON 提交仍可用（images 返回空数组）', async () => {
+    const res = await clientPost('/client/feedback', { type: 'bug', content: `${FEEDBACK_PREFIX}纯文本无图` }).expect(
+      200,
+    );
+    const id = (res.body.data as { id: number }).id;
+    const mine = await findInMine(id);
+    expect(mine?.images).toEqual([]);
   });
 
   it('后台列表可见：带提交人昵称、来源端与版本', async () => {

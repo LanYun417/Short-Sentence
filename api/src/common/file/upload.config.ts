@@ -54,6 +54,33 @@ export const UPLOAD_MULTER_OPTIONS = {
 };
 
 /**
+ * 产品反馈图片专用 multer 配置。
+ *
+ * 为什么不复用 `UPLOAD_MULTER_OPTIONS`：
+ * 1. 那份是 **diskStorage**（文件先落盘、buffer 为空），而反馈图片走 FileService.save(buffer)
+ *    做幻数校验 + 哈希秒传，必须拿到内容 → 用 memoryStorage；
+ * 2. 反馈只收图片，白名单比"业务附件"更窄（fileFilter 直接按 MIME 前缀过滤）。
+ */
+export const FEEDBACK_IMAGE_MULTER_OPTIONS = {
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 单张 ≤10MB（手机截图足够）
+    files: 5,
+  },
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ): void => {
+    if (!file.mimetype.startsWith('image/')) {
+      cb(AppException.badRequest('反馈图片仅支持图片格式'), false);
+      return;
+    }
+    cb(null, true);
+  },
+};
+
+/**
  * CSV 导入专用 multer 配置。
  *
  * 为什么不复用 `UPLOAD_MULTER_OPTIONS`：

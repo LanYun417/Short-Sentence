@@ -30,6 +30,8 @@ model ClientFeedback {
   reply      String?   @db.VarChar(500)
   /// 内部处理备注（**不下发用户端**，只给运营看）
   handleNote String?   @map("handle_note") @db.VarChar(500)
+  /// 反馈图片（最多 5 张；存图片访问 URL 的 JSON 数组；用户端可传截图辅助说明问题）
+  images     String?   @map("images") @db.VarChar(2000)
   /// 处理时间
   handledAt  DateTime? @map("handled_at")
   /// 创建时间

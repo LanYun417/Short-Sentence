@@ -7511,7 +7511,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "POST",
         "path": "/api/client/feedback",
-        "summary": "提交产品反馈",
+        "summary": "提交产品反馈（文本 + 最多 5 张图片，multipart）",
         "permission": [],
         "isPublic": false,
         "action": "",

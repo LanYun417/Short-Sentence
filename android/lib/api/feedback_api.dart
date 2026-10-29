@@ -7,6 +7,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/image_pick.dart';
 import 'api_exception.dart';
 import 'dio_client.dart';
 import 'models/feedback.dart';
@@ -18,22 +19,35 @@ class FeedbackApi {
 
   final Dio _dio;
 
-  /// 提交一条反馈。
+  /// 提交一条反馈（可带最多 5 张截图，multipart 上传）。
   Future<ClientFeedbackItem> submit({
     required String type,
     required String content,
     String? contact,
+    List<PickedImage> images = const <PickedImage>[],
   }) async {
     try {
-      final response = await _dio.post<dynamic>(
-        '/client/feedback',
-        data: <String, dynamic>{
-          'type': type,
-          'content': content,
-          if (contact != null && contact.isNotEmpty) 'contact': contact,
-          'platform': 'android',
-        },
-      );
+      final form = FormData.fromMap(<String, dynamic>{
+        'type': type,
+        'content': content,
+        if (contact != null && contact.isNotEmpty) 'contact': contact,
+        'platform': 'android',
+      });
+      for (final image in images) {
+        form.files.add(
+          MapEntry<String, MultipartFile>(
+            // 字段名必须与后端 FilesInterceptor('images', 5) 一致
+            'images',
+            MultipartFile.fromBytes(
+              image.bytes,
+              filename: image.name,
+              // 显式带上原 MIME（不依赖 dio 对文件名的推断，后端按 MIME 前缀过滤）
+              contentType: DioMediaType.parse(image.mimeType),
+            ),
+          ),
+        );
+      }
+      final response = await _dio.post<dynamic>('/client/feedback', data: form);
       final body = response.data;
       final data = body is Map<String, dynamic> ? body['data'] : null;
       if (data is Map<String, dynamic>) {

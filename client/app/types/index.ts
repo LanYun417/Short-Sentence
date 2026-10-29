@@ -269,6 +269,8 @@ export interface MyFeedbackItem {
   /** feature 功能建议 / bug 使用异常 / content 内容问题 / ux 体验建议 / other 其他 */
   type: string;
   content: string;
+  /** 反馈图片 URL 列表（最多 5 张；空数组 = 无图） */
+  images: string[];
   /** pending 待处理 / resolved 已处理 / dismissed 已驳回 */
   status: 'pending' | 'resolved' | 'dismissed';
   /** 运营回复（空 = 尚未回复） */

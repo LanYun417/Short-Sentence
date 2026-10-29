@@ -1423,6 +1423,8 @@ export interface ClientFeedbackItem {
   /** feature 功能建议 / bug 使用异常 / content 内容问题 / ux 体验建议 / other 其他 */
   type: string;
   content: string;
+  /** 反馈图片 URL 列表（最多 5 张；空数组 = 无图） */
+  images: string[];
   contact: string | null;
   /** 来源端：web / android */
   platform: string;

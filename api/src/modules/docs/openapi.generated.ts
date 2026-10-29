@@ -13859,7 +13859,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "用户反馈"
         ],
-        "summary": "提交产品反馈",
+        "summary": "提交产品反馈（文本 + 最多 5 张图片，multipart）",
         "operationId": "post__api_client_feedback",
         "responses": {
           "200": {
