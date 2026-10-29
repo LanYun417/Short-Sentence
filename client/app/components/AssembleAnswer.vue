@@ -29,6 +29,57 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'update:answer', value: string): void }>();
 
 /**
+ * 已选区横向滚动：
+ * - 词块过多超出可视宽度时，已选区内部横向滚动查看（候选词区仍是换行堆叠）；
+ * - 左右两侧各放一个翻页按钮，按可视宽度翻一页，按钮仅在可滚向那侧时可用；
+ * - 新词追加到末尾时自动滚到最右，确保刚选的词可见。
+ */
+/** 已选区滚动容器（DOM 节点，TransitionGroup 的 $el） */
+const selectedRef = ref<HTMLElement | null>(null);
+/** 左右是否还有可滚动空间（控制两侧按钮的可用态） */
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+
+/** TransitionGroup 的 ref 拿到的是组件实例，取其根 DOM 元素 */
+function setSelectedRef(el: unknown): void {
+  const node = el as { $el?: HTMLElement } | HTMLElement | null;
+  if (!node) {
+    selectedRef.value = null;
+    return;
+  }
+  selectedRef.value = (node as { $el?: HTMLElement }).$el ?? (node as HTMLElement);
+}
+
+/** 依据当前滚动位置刷新左右可滚动态 */
+function updateScrollState(): void {
+  const el = selectedRef.value;
+  if (!el) {
+    return;
+  }
+  canScrollLeft.value = el.scrollLeft > 1;
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+}
+
+/** 点两侧按钮时按可视宽度翻一页 */
+function scrollByAmount(dir: number): void {
+  const el = selectedRef.value;
+  if (!el) {
+    return;
+  }
+  const distance = Math.max(el.clientWidth * 0.8, 160);
+  el.scrollBy({ left: dir * distance, behavior: 'smooth' });
+}
+
+/** 新选词追加到末尾后，自动滚到最右，确保用户看到刚选的词 */
+function scrollSelectedToEnd(): void {
+  const el = selectedRef.value;
+  if (!el) {
+    return;
+  }
+  el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+}
+
+/**
  * 词库（**全部**词块，固定原位，保持下发的乱序）。
  * 选中的词块不从词库里移除——只把对应槽位标灰、置为不可点，
  * 避免剩余词块自动重排「递进」（与 App 端一致）。
@@ -44,6 +95,8 @@ watch(
     bank.value = (words ?? []).map((text, index) => ({ index, text }));
     selected.value = [];
     sync();
+    // 内容宽度变化后刷新左右可滚动态（immediate 首次时容器尚未挂载，内部已判空）
+    nextTick(updateScrollState);
   },
   { immediate: true },
 );
@@ -86,6 +139,11 @@ function pick(chip: WordChip): void {
   }
   selected.value = [...selected.value, chip];
   sync();
+  // 新词追加到末尾后，自动滚到最右并刷新左右可滚动态
+  nextTick(() => {
+    scrollSelectedToEnd();
+    updateScrollState();
+  });
 }
 
 /** 从已选区移出（词库对应槽位自动恢复为可选）。 */
@@ -95,37 +153,69 @@ function unpick(chip: WordChip): void {
   }
   selected.value = selected.value.filter((item) => item.index !== chip.index);
   sync();
+  // 移除后内容宽度变化，刷新左右可滚动态
+  nextTick(updateScrollState);
 }
+
+// 挂载完成后容器已就绪：初始化可滚动态，并直接挂原生 scroll 监听（比依赖组件事件透传更稳）
+onMounted(() => {
+  updateScrollState();
+  selectedRef.value?.addEventListener('scroll', updateScrollState, { passive: true });
+});
 </script>
 
 <template>
   <div>
-    <!-- 答题区：已选词块按顺序排列；空时给出引导文案 -->
-    <TransitionGroup
-      name="chip"
-      tag="div"
-      class="relative flex min-h-13 flex-wrap content-center items-center gap-1.5 rounded-2xl border border-dashed p-2.5 transition-colors"
-      :class="[
-        selected.length > 0
-          ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
-          : 'border-slate-300 bg-slate-50/70 dark:border-slate-600 dark:bg-slate-900/40',
-      ]"
-      aria-label="已选词块"
-    >
-      <span v-if="selected.length === 0" key="placeholder" class="self-center text-sm text-slate-400">
-        点下方词块，按顺序拼成英文句子
-      </span>
-      <button
-        v-for="chip in selected"
-        :key="chip.index"
-        type="button"
-        :disabled="disabled"
-        class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:ring-rose-300 active:scale-95 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
-        @click="unpick(chip)"
+    <!-- 答题区：已选词块按顺序排列；词块过多时内部横向滚动，左右两侧翻页按钮 -->
+    <div class="flex items-stretch gap-1">
+      <UButton
+        :disabled="!canScrollLeft"
+        icon="i-lucide-chevron-left"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        class="shrink-0 self-center"
+        aria-label="向左滚动已选词"
+        @click="scrollByAmount(-1)"
+      />
+      <TransitionGroup
+        :ref="setSelectedRef"
+        name="chip"
+        tag="div"
+        class="no-scrollbar relative flex min-h-13 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
+        :class="[
+          selected.length > 0
+            ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
+            : 'border-slate-300 bg-slate-50/70 dark:border-slate-600 dark:bg-slate-900/40',
+        ]"
+        aria-label="已选词块"
+        @scroll="updateScrollState"
       >
-        {{ chip.text }}
-      </button>
-    </TransitionGroup>
+        <span v-if="selected.length === 0" key="placeholder" class="self-center text-sm text-slate-400">
+          点下方词块，按顺序拼成英文句子
+        </span>
+        <button
+          v-for="chip in selected"
+          :key="chip.index"
+          type="button"
+          :disabled="disabled"
+          class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:ring-rose-300 active:scale-95 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
+          @click="unpick(chip)"
+        >
+          {{ chip.text }}
+        </button>
+      </TransitionGroup>
+      <UButton
+        :disabled="!canScrollRight"
+        icon="i-lucide-chevron-right"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        class="shrink-0 self-center"
+        aria-label="向右滚动已选词"
+        @click="scrollByAmount(1)"
+      />
+    </div>
 
     <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
     <div class="mt-3 flex flex-wrap items-center gap-2" aria-label="可选词块">
