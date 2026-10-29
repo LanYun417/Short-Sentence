@@ -186,8 +186,16 @@ void main() {
     );
     await tester.pump();
 
-    // 卡片、模式条都还在
+    // 卡片还在；作答方式切换现在在卡片下方（换一题右侧），滚下去确认仍在。
+    // 页面 ListView 是懒构建，底部那行一开始不在 element 树里，要拖动让它建出来；
+    // 页面里有多个 Scrollable（scrollUntilVisible 解析不了），改在页面级 ListView 上拖。
     expect(find.text('我一到就会给你打电话。'), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('默写'),
+      find.byType(ListView).first,
+      const Offset(0, -250),
+    );
+    await tester.pumpAndSettle();
     expect(find.text('默写'), findsOneWidget);
     // 主按钮改成「换题中…」（不能复用提交的转圈，否则像在判分）
     expect(find.text('换题中…'), findsOneWidget);

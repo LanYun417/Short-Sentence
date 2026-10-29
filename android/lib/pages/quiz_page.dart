@@ -356,15 +356,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
         ],
         StaggeredEntrance(
           index: 2,
-          child: _ModeBar(
-            mode: state.mode,
-            difficulty: state.difficulty,
-            onMode: (mode) {
-              _scrollToTop();
-              ref.read(quizControllerProvider.notifier).setMode(mode);
-            },
-            onDifficulty: _pickDifficulty,
-          ),
+          child: _DifficultyBar(difficulty: state.difficulty, onTap: _pickDifficulty),
         ),
         const SizedBox(height: 14),
         _StackedCards(
@@ -434,16 +426,44 @@ class _QuizPageState extends ConsumerState<QuizPage>
           ),
         ),
         const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: state.isBusy ? null : _next,
-            icon: const Icon(Icons.shuffle_rounded, size: 16),
-            label: const Text('换一题'),
-            style: TextButton.styleFrom(
-              foregroundColor: context.colors.inkSoft,
+        // 换一题 + 作答方式切换并排在卡片下方右侧：随时可换题、可切换默写/拼词
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            TextButton.icon(
+              onPressed: state.isBusy ? null : _next,
+              icon: const Icon(Icons.shuffle_rounded, size: 16),
+              label: const Text('换一题'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.colors.inkSoft,
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 176,
+              height: 40,
+              child: SegmentedControl<AnswerMode>(
+                value: state.mode,
+                onChanged: (mode) {
+                  _scrollToTop();
+                  ref.read(quizControllerProvider.notifier).setMode(mode);
+                },
+                height: 40,
+                segments: const <Segment<AnswerMode>>[
+                  Segment<AnswerMode>(
+                    value: AnswerMode.input,
+                    label: '默写',
+                    icon: Icons.keyboard_alt_outlined,
+                  ),
+                  Segment<AnswerMode>(
+                    value: AnswerMode.assemble,
+                    label: '拼词',
+                    icon: Icons.extension_outlined,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -916,74 +936,48 @@ class _ClaimBanner extends StatelessWidget {
   }
 }
 
-/* ------------------------------ 模式 / 难度 ------------------------------ */
+/* ------------------------------ 难度入口 ------------------------------ */
 
-class _ModeBar extends StatelessWidget {
-  const _ModeBar({
-    required this.mode,
-    required this.difficulty,
-    required this.onMode,
-    required this.onDifficulty,
-  });
+/// 难度入口：点击弹出难度选择（作答方式切换已挪到卡片下方、换一题右侧）。
+class _DifficultyBar extends StatelessWidget {
+  const _DifficultyBar({required this.difficulty, required this.onTap});
 
-  final AnswerMode mode;
   final int difficulty;
-  final ValueChanged<AnswerMode> onMode;
-  final VoidCallback onDifficulty;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: SegmentedControl<AnswerMode>(
-            value: mode,
-            onChanged: onMode,
-            height: 40,
-            segments: const <Segment<AnswerMode>>[
-              Segment<AnswerMode>(
-                value: AnswerMode.input,
-                label: '默写',
-                icon: Icons.keyboard_alt_outlined,
-              ),
-              Segment<AnswerMode>(
-                value: AnswerMode.assemble,
-                label: '拼词',
-                icon: Icons.extension_outlined,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: PressScale(
+        onTap: onTap,
+        scale: 0.94,
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: colors.line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(Icons.tune_rounded, size: 15, color: colors.inkSoft),
+              const SizedBox(width: 5),
+              Text(
+                _label(difficulty),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.inkSoft,
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        PressScale(
-          onTap: onDifficulty,
-          scale: 0.94,
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            decoration: BoxDecoration(
-              color: colors.card,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: colors.line),
-            ),
-            child: Row(
-              children: <Widget>[
-                Icon(Icons.tune_rounded, size: 15, color: colors.inkSoft),
-                const SizedBox(width: 5),
-                Text(
-                  _label(difficulty),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.inkSoft,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

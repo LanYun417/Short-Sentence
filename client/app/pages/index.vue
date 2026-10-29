@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * 首页刷题（核心页面）。
- * 布局：[今日进度 Hero] [作答方式] [难度] [题干 + 16:9 场景图 + 作答区] → 翻转 → [下一题]。
+ * 布局：[今日进度 Hero] [难度] [题干 + 16:9 场景图 + 作答区] → 翻转 → [下一题]。
+ * 作答方式切换在题卡顶栏（换一题右侧，见 QuestionCard）。
  * 作答支持两种模式（默写 / 拼词），页面不再放操作提示文案，只靠控件本身表达。
  * 达成每日目标后自动领取并展示「今日 AI 句签」。
  */
@@ -297,13 +298,8 @@ function onFavorite(): void {
       </div>
     </section>
 
-    <!-- 作答方式：拼词（点词块）/ 输入（自己敲）。切换后立刻按新模式重抽一题 -->
-    <div class="anim-in mb-3" :style="{ animationDelay: '40ms' }">
-      <PracticeModePicker :model-value="mode" @update:model-value="setMode" />
-    </div>
-
     <!-- 难度选择：开始刷题前选，中途也可随时切换（切换后立刻按新难度抽题） -->
-    <div class="anim-in mb-4" :style="{ animationDelay: '60ms' }">
+    <div class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 
@@ -343,6 +339,7 @@ function onFavorite(): void {
           @next="onNext"
           @favorite="onFavorite"
           @skip="onSkip"
+          @change-mode="setMode"
         />
       </div>
     </template>
