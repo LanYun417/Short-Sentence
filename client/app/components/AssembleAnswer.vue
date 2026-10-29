@@ -119,7 +119,7 @@ function unpick(chip: WordChip): void {
       ref="selectedRef"
       name="chip"
       tag="div"
-      class="no-scrollbar relative flex min-h-13 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
+      class="no-scrollbar relative flex min-h-13 min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
       :class="[
         selected.length > 0
           ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
@@ -144,7 +144,10 @@ function unpick(chip: WordChip): void {
 
     <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
     <!-- py-2 给 hover 上浮（-translate-y-0.5）留出空间：容器 overflow-x-auto 会顺带把 overflow-y 算成 auto，不加竖边距上浮会被裁 -->
-    <div class="no-scrollbar mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto py-2" aria-label="可选词块">
+    <div
+      class="no-scrollbar mt-3 flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto py-2"
+      aria-label="可选词块"
+    >
       <button
         v-for="chip in bank"
         :key="chip.index"

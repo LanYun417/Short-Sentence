@@ -226,8 +226,10 @@ async function onSubmitReport(): Promise<void> {
   <div class="card-scene anim-in mx-auto w-full max-w-xl">
     <div class="card-3d relative" :style="{ transform: `rotateY(${flipDeg}deg)` }">
       <!-- 正面：题干 + 场景图 + 输入 -->
+      <!-- min-w-0：card-face 是 .card-3d(grid) 的 grid item，默认 min-width:auto 会按内容（拼词词块）撑宽，
+           导致内部 overflow-x-auto 永不溢出而不滚动、整卡被撑大。置 0 让它收缩到网格可用宽度。 -->
       <div
-        class="card-face rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
+        class="card-face min-w-0 rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10"
       >
         <!--
           顶栏：分类/难度 → 「换一题」→ 今日进度 → 举报。
