@@ -60,31 +60,22 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** 登录（成功后缓存令牌与资料）。 */
-  async function login(
-    email: string,
-    password: string,
-    captcha?: { captchaId?: string; captchaCode?: string },
-  ): Promise<void> {
+  /** 登录（账号 + 密码即可，不再需要验证码）。 */
+  async function login(email: string, password: string): Promise<void> {
     const data = await apiFetch<{ accessToken: string; refreshToken: string; user: ClientUserProfile }>(
       '/client/auth/login',
-      { method: 'POST', body: { email, password, ...captcha } },
+      { method: 'POST', body: { email, password } },
     );
     applyToken(data.accessToken, data.refreshToken);
     setCachedUser(data.user);
     user.value = data.user;
   }
 
-  /** 注册（成功后直接登录）。 */
-  async function register(
-    email: string,
-    password: string,
-    nickname?: string,
-    captcha?: { captchaId?: string; captchaCode?: string },
-  ): Promise<void> {
+  /** 注册（成功后直接登录；必须先通过邮箱验证码）。 */
+  async function register(email: string, password: string, nickname?: string, emailCode?: string): Promise<void> {
     const data = await apiFetch<{ accessToken: string; refreshToken: string; user: ClientUserProfile }>(
       '/client/auth/register',
-      { method: 'POST', body: { email, password, nickname, ...captcha } },
+      { method: 'POST', body: { email, password, nickname, emailCode } },
     );
     applyToken(data.accessToken, data.refreshToken);
     setCachedUser(data.user);
@@ -115,9 +106,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = profile;
   }
 
-  /** 修改密码（成功后强制重新登录）。 */
-  async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
-    await apiFetch<null>('/client/auth/password', { method: 'PUT', body: { oldPassword, newPassword } });
+  /** 修改密码（需邮箱验证码；成功后强制重新登录）。 */
+  async function changePassword(oldPassword: string, newPassword: string, emailCode: string): Promise<void> {
+    await apiFetch<null>('/client/auth/password', {
+      method: 'PUT',
+      body: { oldPassword, newPassword, emailCode },
+    });
     await logout();
   }
 

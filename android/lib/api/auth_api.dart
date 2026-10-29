@@ -72,39 +72,39 @@ class AuthApi {
   /// 登录。
   ///
   /// [captchaId] / [captchaCode] 在服务端开启验证码时必填。
-  Future<AuthResult> login(
-    String email,
-    String password, {
-    String? captchaId,
-    String? captchaCode,
-  }) async {
+  /// 登录（账号 + 密码即可，不再需要验证码）。
+  Future<AuthResult> login(String email, String password) async {
     return _postAuth('/client/auth/login', <String, dynamic>{
       'email': email.trim(),
       'password': password,
-      if (captchaId != null && captchaCode != null) ...{
-        'captchaId': captchaId,
-        'captchaCode': captchaCode.trim(),
-      },
     });
   }
 
-  /// 注册（成功后直接登录）。
+  /// 注册（成功后直接登录；emailCode 为邮箱验证码，必填）。
   Future<AuthResult> register(
     String email,
     String password, {
     String? nickname,
-    String? captchaId,
-    String? captchaCode,
+    required String emailCode,
   }) async {
     return _postAuth('/client/auth/register', <String, dynamic>{
       'email': email.trim(),
       'password': password,
       if (nickname != null && nickname.trim().isNotEmpty) 'nickname': nickname.trim(),
-      if (captchaId != null && captchaCode != null) ...{
-        'captchaId': captchaId,
-        'captchaCode': captchaCode.trim(),
-      },
+      'emailCode': emailCode.trim(),
     });
+  }
+
+  /// 发送邮箱验证码（注册 purpose=register / 改密 purpose=reset；同邮箱 60 秒一封）。
+  Future<void> sendEmailCode({required String email, required String purpose}) async {
+    try {
+      await _dio.post<dynamic>(
+        '/client/auth/email-code',
+        data: <String, dynamic>{'email': email.trim(), 'purpose': purpose},
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
   }
 
   Future<AuthResult> _postAuth(String path, Map<String, dynamic> body) async {
@@ -168,6 +168,7 @@ class AuthApi {
   Future<void> changePassword({
     required String oldPassword,
     required String newPassword,
+    required String emailCode,
   }) async {
     try {
       await _dio.put<dynamic>(
@@ -175,6 +176,7 @@ class AuthApi {
         data: <String, dynamic>{
           'oldPassword': oldPassword,
           'newPassword': newPassword,
+          'emailCode': emailCode.trim(),
         },
       );
     } on DioException catch (error) {

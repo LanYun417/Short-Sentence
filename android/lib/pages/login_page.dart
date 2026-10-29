@@ -4,25 +4,22 @@
 /// 而不是把输入框直接铺在页面上——登录是用户看到的第一屏，
 /// 观感不统一会让后面的页面显得「两个 App」。
 ///
-/// **为什么带图形验证码**：后端 `CAPTCHA_ENABLED` 默认开启，
-/// 不带验证码的登录/注册请求会被直接拒绝（「验证码错误或已过期」）。
-/// 因此验证码不是可选项：先 [CaptchaField] 拉图，提交时连同 id / code 一起发。
-///
-/// 失败后必须**换一张**：后端验证码单次有效，失败即作废，
-/// 不换则用户重试只会再吃一次「验证码错误」（与 Web 端同样的处理）。
+/// **验证策略**（与 Web 端一致）：
+/// - 登录：账号 + 密码即可，**不再需要验证码**（防爆破靠 IP 限流 + 账号失败锁定）；
+/// - 注册：必须先获取邮箱验证码（`/client/auth/email-code`），60 秒一封、5 分钟有效。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../api/auth_api.dart';
 import '../config/password_policy.dart';
 import '../state/auth_controller.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
-import '../widgets/captcha_field.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/staggered.dart';
 
@@ -40,43 +37,72 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _captchaController = TextEditingController();
+  /// 注册用的邮箱验证码
+  final _emailCodeController = TextEditingController();
 
   bool _isRegister = false;
   bool _obscure = true;
-  String? _captchaId;
-  String? _captchaImage;
+  /// 验证码发送中
+  bool _sendingCode = false;
+  /// 重发倒计时（秒，0 = 可发送）
+  int _codeCountdown = 0;
+  Timer? _codeTimer;
+  /// 验证码相关的行内提示（发送成功 / 失败原因）
+  String? _codeMessage;
 
   /// 切换登录/注册时收起上一次的错误：换了模式还挂着旧报错会让人以为新表单也有问题。
   bool _showError = true;
 
   @override
-  void initState() {
-    super.initState();
-    _loadCaptcha();
-  }
-
-  @override
   void dispose() {
+    _codeTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
-    _captchaController.dispose();
+    _emailCodeController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadCaptcha() async {
-    try {
-      final captcha = await ref.read(authApiProvider).fetchCaptcha();
+  /// 发送注册验证码（60 秒倒计时；失败原因直接展示在表单里）。
+  Future<void> _sendCode() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _codeMessage = '请先填写正确的邮箱');
+      return;
+    }
+    setState(() {
+      _sendingCode = true;
+      _codeMessage = null;
+    });
+    final failure = await ref
+        .read(authControllerProvider.notifier)
+        .sendEmailCode(email: email, purpose: 'register');
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _sendingCode = false;
+      _codeMessage = failure ?? '验证码已发送，请查收邮箱（含垃圾箱）';
+    });
+    if (failure == null) {
+      _startCountdown();
+    }
+  }
+
+  void _startCountdown() {
+    _codeTimer?.cancel();
+    setState(() => _codeCountdown = 60);
+    _codeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
+        timer.cancel();
         return;
       }
       setState(() {
-        _captchaId = captcha.enabled ? captcha.captchaId : null;
-        _captchaImage = captcha.enabled ? captcha.image : null;
+        _codeCountdown -= 1;
+        if (_codeCountdown <= 0) {
+          timer.cancel();
+        }
       });
-    } catch (_) {
-      // 拉不到验证码不阻塞表单：服务端会给出明确错误
-    }
+    });
   }
 
   /// 本地提交闸门。
@@ -107,15 +133,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ? await auth.register(
               _emailController.text,
               _passwordController.text,
-              captchaId: _captchaId,
-              captchaCode: _captchaController.text,
+              emailCode: _emailCodeController.text.trim(),
             )
-          : await auth.login(
-              _emailController.text,
-              _passwordController.text,
-              captchaId: _captchaId,
-              captchaCode: _captchaController.text,
-            );
+          : await auth.login(_emailController.text, _passwordController.text);
       if (ok) {
         // 登录态变化**不会**自动触发 go_router 的 redirect（它只认路由事件），
         // 所以这里必须显式跳转，否则用户会停在登录页、以为没登上。
@@ -124,9 +144,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
         return;
       }
-      // 失败即换一张（单次有效，见文件头注释）
-      _captchaController.clear();
-      await _loadCaptcha();
     } finally {
       _submitting = false;
     }
@@ -137,9 +154,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _isRegister = !_isRegister;
       _showError = false;
       _formKey = GlobalKey<FormState>();
+      _codeMessage = null;
     });
-    _captchaController.clear();
-    _loadCaptcha();
+    _emailCodeController.clear();
   }
 
   @override
@@ -301,13 +318,76 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       return null;
                                     },
                                   ),
-                                  if (_captchaImage != null) ...<Widget>[
+                                  // 注册才需要邮箱验证码：登录是账号 + 密码
+                                  if (isRegister) ...<Widget>[
                                     const SizedBox(height: 12),
-                                    CaptchaField(
-                                      image: _captchaImage!,
-                                      controller: _captchaController,
-                                      onRefresh: _loadCaptcha,
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller: _emailCodeController,
+                                            keyboardType:
+                                                TextInputType.number,
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            maxLength: 6,
+                                            decoration: const InputDecoration(
+                                              hintText: '邮箱验证码',
+                                              counterText: '',
+                                              prefixIcon: Icon(
+                                                Icons.shield_outlined,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            validator: (value) {
+                                              final text =
+                                                  value?.trim() ?? '';
+                                              if (!RegExp(
+                                                r'^\d{6}$',
+                                              ).hasMatch(text)) {
+                                                return '请输入 6 位邮箱验证码';
+                                              }
+                                              return null;
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          child: OutlinedButton(
+                                            onPressed:
+                                                (_sendingCode ||
+                                                    _codeCountdown > 0)
+                                                ? null
+                                                : _sendCode,
+                                            child: Text(
+                                              _sendingCode
+                                                  ? '发送中'
+                                                  : _codeCountdown > 0
+                                                  ? '${_codeCountdown}s'
+                                                  : '发送验证码',
+                                              style: const TextStyle(
+                                                fontSize: 12.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    if (_codeMessage != null) ...<Widget>[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _codeMessage!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.inkSoft,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                   if (state.error != null &&
                                       _showError) ...<Widget>[

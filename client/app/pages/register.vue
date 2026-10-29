@@ -4,7 +4,7 @@
  * 与登录页共用 AuthShell：版式完全同构，仅标题与字段数不同。
  */
 import { useAuthStore } from '~/stores/auth';
-import { useCaptcha } from '~/composables/useCaptcha';
+import { useEmailCode } from '~/composables/useEmailCode';
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '~/utils/password';
 
 definePageMeta({ layout: 'auth' });
@@ -17,13 +17,14 @@ usePageSeo({
 
 const auth = useAuthStore();
 const route = useRoute();
+// 注册必须邮箱验证：验证码发到填写的邮箱，5 分钟有效、一次性
 const {
-  captcha,
-  code: captchaCode,
-  loading: captchaLoading,
-  refresh: refreshCaptcha,
-  payload: captchaPayload,
-} = useCaptcha();
+  code: emailCode,
+  sending: codeSending,
+  send: sendEmailCode,
+  sendText: codeSendText,
+  canSend: canSendCode,
+} = useEmailCode('register');
 
 const email = ref('');
 const password = ref('');
@@ -31,25 +32,32 @@ const nickname = ref('');
 const errorMessage = ref('');
 const submitting = ref(false);
 
-onMounted(() => {
-  void refreshCaptcha();
-});
+/** 发送邮箱验证码（失败原因直接展示在表单里）。 */
+async function onSendCode(): Promise<void> {
+  errorMessage.value = '';
+  const failure = await sendEmailCode(email.value);
+  if (failure) {
+    errorMessage.value = failure;
+  }
+}
 
 /** 注册成功后跳回来源页（缺省首页）。 */
 async function onSubmit(): Promise<void> {
   if (submitting.value) {
     return;
   }
+  if (!emailCode.value.trim()) {
+    errorMessage.value = '请填写邮箱验证码';
+    return;
+  }
   submitting.value = true;
   errorMessage.value = '';
   try {
-    await auth.register(email.value.trim(), password.value, nickname.value.trim() || undefined, captchaPayload());
+    await auth.register(email.value.trim(), password.value, nickname.value.trim() || undefined, emailCode.value.trim());
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
     await navigateTo(redirect);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '注册失败';
-    // 同登录：验证码单次有效，失败后必须换一张
-    void refreshCaptcha();
   } finally {
     submitting.value = false;
   }
@@ -107,13 +115,33 @@ async function onSubmit(): Promise<void> {
           />
         </UFormField>
 
-        <CaptchaField
-          v-if="captcha?.enabled && captcha.image"
-          v-model="captchaCode"
-          :image="captcha.image"
-          :loading="captchaLoading"
-          @refresh="refreshCaptcha"
-        />
+        <UFormField label="邮箱验证码" help="6 位数字，5 分钟内有效；收不到请检查垃圾箱">
+          <div class="flex gap-2">
+            <UInput
+              v-model="emailCode"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              autocomplete="one-time-code"
+              size="lg"
+              class="flex-1"
+              icon="i-lucide-shield-check"
+              placeholder="邮箱收到的验证码"
+            />
+            <UButton
+              type="button"
+              color="neutral"
+              variant="outline"
+              size="lg"
+              class="shrink-0"
+              :loading="codeSending"
+              :disabled="!email || !canSendCode"
+              @click="onSendCode"
+            >
+              {{ codeSendText }}
+            </UButton>
+          </div>
+        </UFormField>
 
         <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
@@ -122,7 +150,7 @@ async function onSubmit(): Promise<void> {
           block
           size="lg"
           :loading="submitting"
-          :disabled="!email || password.length < PASSWORD_MIN_LENGTH || (captcha?.enabled === true && !captchaCode)"
+          :disabled="!email || password.length < PASSWORD_MIN_LENGTH || emailCode.length !== 6"
         >
           {{ submitting ? '注册中…' : '注册并登录' }}
           <template #trailing>

@@ -75,23 +75,11 @@ export class ClientAuthUserService {
   }
 
   /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。 */
-  async register(
-    email: string,
-    password: string,
-    nickname?: string,
-    captchaId?: string,
-    captchaCode?: string,
-    emailCode?: string,
-  ): Promise<ClientTokenPair> {
+  async register(email: string, password: string, nickname?: string, emailCode?: string): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
-    // 验证码先校验（廉价、无 DB 查询）：挡掉脚本批量注册。
-    // 传了 emailCode 就走邮箱通道；否则沿用图形验证码（向后兼容，前端可逐步切换）
-    if (emailCode) {
-      if (!(await this.emailCode.verify(normalizedEmail, 'register', emailCode))) {
-        throw AppException.badRequest('邮箱验证码错误或已过期');
-      }
-    } else if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
-      throw AppException.badRequest('验证码错误或已过期');
+    // 注册必须先验证邮箱：这是「邮箱归属」的唯一凭证，也挡掉脚本批量注册
+    if (!emailCode || !(await this.emailCode.verify(normalizedEmail, 'register', emailCode))) {
+      throw AppException.badRequest('邮箱验证码错误或已过期');
     }
     this.assertPasswordStrength(password, normalizedEmail);
 
@@ -114,22 +102,10 @@ export class ClientAuthUserService {
   }
 
   /** 登录（邮箱 + 密码）。 */
-  async login(
-    email: string,
-    password: string,
-    captchaId?: string,
-    captchaCode?: string,
-    emailCode?: string,
-  ): Promise<ClientTokenPair> {
+  async login(email: string, password: string): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
-    // 同注册：先校验验证码再查库，避免爆破消耗数据库（邮箱验证码优先）
-    if (emailCode) {
-      if (!(await this.emailCode.verify(normalizedEmail, 'login', emailCode))) {
-        throw AppException.badRequest('邮箱验证码错误或已过期');
-      }
-    } else if (!(await this.captchaService.verifyCaptcha(captchaId, captchaCode))) {
-      throw AppException.badRequest('验证码错误或已过期');
-    }
+    // 登录不再要求验证码（产品决定：输入账号密码即可），防爆破靠两层：
+    // ① 按 IP 的登录限流（RateLimitMiddleware）；② 按账号的失败锁定（AccountLockService）
     // 按账号维度的失败锁定（与按 IP 的限流互补；不透露账号是否存在）
     await this.accountLock.assertNotLocked('client', normalizedEmail);
 
@@ -330,7 +306,7 @@ export class ClientAuthUserService {
   }
 
   /** 修改密码（校验旧密码；改后旧令牌因 passwordChangedAt 全部失效）。 */
-  async changePassword(userId: number, oldPassword: string, newPassword: string): Promise<void> {
+  async changePassword(userId: number, oldPassword: string, newPassword: string, emailCode: string): Promise<void> {
     const user = await this.prisma.clientUser.findUnique({
       where: { id: BigInt(userId) },
       select: { id: true, email: true, password: true },
@@ -340,6 +316,10 @@ export class ClientAuthUserService {
     }
     if (!(await comparePassword(oldPassword, user.password))) {
       throw AppException.unauthorized('原密码不正确');
+    }
+    // 邮箱验证码：光有旧密码不够（密码可能已泄露），必须证明对邮箱的控制权
+    if (!(await this.emailCode.verify(user.email, 'reset', emailCode))) {
+      throw AppException.badRequest('邮箱验证码错误或已过期');
     }
     this.assertPasswordStrength(newPassword, user.email);
     await this.prisma.clientUser.update({

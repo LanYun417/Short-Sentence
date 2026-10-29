@@ -32,6 +32,14 @@ const saveMessage = ref('');
 const oldPassword = ref('');
 const newPassword = ref('');
 const passwordMessage = ref('');
+/** 改密邮箱验证码（发到账号邮箱；5 分钟有效、一次性） */
+const {
+  code: passwordEmailCode,
+  sending: passwordCodeSending,
+  send: sendPasswordCode,
+  sendText: passwordCodeSendText,
+  canSend: canSendPasswordCode,
+} = useEmailCode('reset');
 
 const today = ref<TodayCheckin | null>(null);
 
@@ -358,11 +366,29 @@ async function onSave(): Promise<void> {
   }
 }
 
-/** 修改密码（成功后 store 会清本地态并需重新登录）。 */
+/** 发验证码到当前账号邮箱（改密必须验证邮箱归属，光有旧密码不够）。 */
+async function onSendPasswordCode(): Promise<void> {
+  passwordMessage.value = '';
+  const email = auth.user?.email ?? '';
+  if (!email) {
+    passwordMessage.value = '未获取到账号邮箱，请刷新后重试';
+    return;
+  }
+  const failure = await sendPasswordCode(email);
+  if (failure) {
+    passwordMessage.value = failure;
+  }
+}
+
+/** 修改密码（需邮箱验证码；成功后 store 会清本地态并需重新登录）。 */
 async function onChangePassword(): Promise<void> {
+  if (passwordEmailCode.value.length !== 6) {
+    passwordMessage.value = '请填写 6 位邮箱验证码';
+    return;
+  }
   passwordMessage.value = '';
   try {
-    await auth.changePassword(oldPassword.value, newPassword.value);
+    await auth.changePassword(oldPassword.value, newPassword.value, passwordEmailCode.value.trim());
     passwordMessage.value = '密码已修改，请重新登录';
   } catch (error) {
     passwordMessage.value = error instanceof Error ? error.message : '修改失败';
@@ -671,6 +697,36 @@ async function onChangePassword(): Promise<void> {
                 />
               </UFormField>
             </div>
+
+            <UFormField
+              label="邮箱验证码"
+              class="mt-4"
+              help="发送到你的账号邮箱，6 位数字，5 分钟内有效（改密需验证邮箱归属）"
+            >
+              <div class="flex gap-2">
+                <UInput
+                  v-model="passwordEmailCode"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="6"
+                  autocomplete="one-time-code"
+                  icon="i-lucide-shield-check"
+                  placeholder="邮箱收到的验证码"
+                  class="flex-1"
+                />
+                <UButton
+                  type="button"
+                  color="neutral"
+                  variant="outline"
+                  class="shrink-0"
+                  :loading="passwordCodeSending"
+                  :disabled="!canSendPasswordCode"
+                  @click="onSendPasswordCode"
+                >
+                  {{ passwordCodeSendText }}
+                </UButton>
+              </div>
+            </UFormField>
 
             <div class="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
               <UButton color="neutral" variant="outline" icon="i-lucide-key-round" @click="onChangePassword">

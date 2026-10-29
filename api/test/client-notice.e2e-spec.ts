@@ -69,20 +69,21 @@ describe('客户端公告（后台发布 → 用户端消费）(e2e)', () => {
 
   /** 客户端注册或登录（幂等）。 */
   async function loginClient(): Promise<string> {
-    const first = await captchaPair();
+    // 注册必须邮箱验证码：e2e 不配 SES，直接把码写进 Redis（与 EmailCodeService 同 key 格式）
+    await redis.set(`client:email-code:register:${CLIENT_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
     const reg = await request(app.getHttpServer())
       .post(`${API}/client/auth/register`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 公告账号', ...first });
+      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 公告账号', emailCode: '123456' });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }
     if (reg.status !== 409) {
       throw new Error(`客户端注册失败（HTTP ${reg.status}）：${JSON.stringify(reg.body)}`);
     }
-    const second = await captchaPair();
+    // 登录不再需要验证码（账号 + 密码即可）
     const login = await request(app.getHttpServer())
       .post(`${API}/client/auth/login`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, ...second })
+      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD })
       .expect(200);
     return (login.body.data as { accessToken: string }).accessToken;
   }

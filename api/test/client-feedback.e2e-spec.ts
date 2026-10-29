@@ -73,20 +73,21 @@ describe('客户端产品反馈（用户提交 → 后台处理）(e2e)', () => 
 
   /** 客户端注册或登录（幂等）。 */
   async function loginClient(): Promise<string> {
-    const first = await captchaPair();
+    // 注册必须邮箱验证码：e2e 不配 SES，直接把码写进 Redis（与 EmailCodeService 同 key 格式）
+    await redis.set(`client:email-code:register:${CLIENT_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
     const reg = await request(app.getHttpServer())
       .post(`${API}/client/auth/register`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 反馈账号', ...first });
+      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 反馈账号', emailCode: '123456' });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }
     if (reg.status !== 409) {
       throw new Error(`客户端注册失败（HTTP ${reg.status}）：${JSON.stringify(reg.body)}`);
     }
-    const second = await captchaPair();
+    // 登录不再需要验证码（账号 + 密码即可）
     const login = await request(app.getHttpServer())
       .post(`${API}/client/auth/login`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, ...second })
+      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD })
       .expect(200);
     return (login.body.data as { accessToken: string }).accessToken;
   }
@@ -152,7 +153,7 @@ describe('客户端产品反馈（用户提交 → 后台处理）(e2e)', () => 
     const res = await request(app.getHttpServer())
       .post(`${API}/client/feedback`)
       .set('authorization', `Bearer ${clientToken}`)
-      .field('type', 'suggestion')
+      .field('type', 'ux')
       .field('content', `${FEEDBACK_PREFIX}附截图说明：深色模式下对比度不足`)
       .attach('images', TINY_PNG, { filename: 'e2e-shot.png', contentType: 'image/png' })
       .expect(200);

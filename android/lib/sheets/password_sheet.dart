@@ -5,6 +5,8 @@
 /// 否则用户会在下一次请求时才被弹出去，以为 App 出了故障。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,17 +36,65 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   final _old = TextEditingController();
   final _next = TextEditingController();
   final _confirm = TextEditingController();
+  /// 邮箱验证码（改密必须验证邮箱归属：光有旧密码不够）
+  final _code = TextEditingController();
 
   bool _obscure = true;
   bool _saving = false;
   String? _error;
+  bool _sendingCode = false;
+  int _codeCountdown = 0;
+  Timer? _codeTimer;
+  String? _codeMessage;
 
   @override
   void dispose() {
+    _codeTimer?.cancel();
     _old.dispose();
     _next.dispose();
     _confirm.dispose();
+    _code.dispose();
     super.dispose();
+  }
+
+  /// 发送验证码到当前账号邮箱（60 秒倒计时）。
+  Future<void> _sendCode() async {
+    final email = ref.read(authControllerProvider).user?.email ?? '';
+    if (email.isEmpty) {
+      setState(() => _codeMessage = '未获取到账号邮箱，请重新登录后重试');
+      return;
+    }
+    setState(() {
+      _sendingCode = true;
+      _codeMessage = null;
+    });
+    final failure = await ref
+        .read(authControllerProvider.notifier)
+        .sendEmailCode(email: email, purpose: 'reset');
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _sendingCode = false;
+      _codeMessage = failure ?? '验证码已发送，请查收邮箱（含垃圾箱）';
+    });
+    if (failure != null) {
+      return;
+    }
+    _codeTimer?.cancel();
+    setState(() => _codeCountdown = 60);
+    _codeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _codeCountdown -= 1;
+        if (_codeCountdown <= 0) {
+          timer.cancel();
+        }
+      });
+    });
   }
 
   Future<void> _submit() async {
@@ -71,6 +121,11 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       setState(() => _error = '两次输入的新密码不一致');
       return;
     }
+    final emailCode = _code.text.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(emailCode)) {
+      setState(() => _error = '请输入 6 位邮箱验证码');
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -78,6 +133,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     final error = await ref.read(authControllerProvider.notifier).changePassword(
           oldPassword: oldPassword,
           newPassword: newPassword,
+          emailCode: emailCode,
         );
     if (!mounted) {
       return;
@@ -142,10 +198,50 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
               TextField(
                 controller: _confirm,
                 obscureText: _obscure,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(hintText: '再输入一次新密码'),
               ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _code,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      maxLength: 6,
+                      onSubmitted: (_) => _submit(),
+                      decoration: const InputDecoration(
+                        hintText: '邮箱验证码',
+                        counterText: '',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: OutlinedButton(
+                      onPressed: (_sendingCode || _codeCountdown > 0) ? null : _sendCode,
+                      child: Text(
+                        _sendingCode
+                            ? '发送中'
+                            : _codeCountdown > 0
+                                ? '${_codeCountdown}s'
+                                : '发送验证码',
+                        style: const TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_codeMessage != null) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(
+                  _codeMessage!,
+                  style: TextStyle(fontSize: 12, color: colors.inkSoft),
+                ),
+              ],
               if (_error != null) ...<Widget>[
                 const SizedBox(height: 12),
                 Row(

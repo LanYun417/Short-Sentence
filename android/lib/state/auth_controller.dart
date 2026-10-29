@@ -95,20 +95,10 @@ class AuthController extends Notifier<AuthState> {
   }
 
   /// 登录。
-  Future<bool> login(
-    String email,
-    String password, {
-    String? captchaId,
-    String? captchaCode,
-  }) async {
+  Future<bool> login(String email, String password) async {
     state = state.copyWith(submitting: true, error: null);
     try {
-      final result = await _api.login(
-        email,
-        password,
-        captchaId: captchaId,
-        captchaCode: captchaCode,
-      );
+      final result = await _api.login(email, password);
       await _persist(result);
       state = state.copyWith(user: result.user, submitting: false, error: null);
       return true;
@@ -123,8 +113,7 @@ class AuthController extends Notifier<AuthState> {
     String email,
     String password, {
     String? nickname,
-    String? captchaId,
-    String? captchaCode,
+    required String emailCode,
   }) async {
     state = state.copyWith(submitting: true, error: null);
     try {
@@ -132,8 +121,7 @@ class AuthController extends Notifier<AuthState> {
         email,
         password,
         nickname: nickname,
-        captchaId: captchaId,
-        captchaCode: captchaCode,
+        emailCode: emailCode,
       );
       await _persist(result);
       state = state.copyWith(user: result.user, submitting: false, error: null);
@@ -181,12 +169,27 @@ class AuthController extends Notifier<AuthState> {
   }
 
   /// 修改密码：成功返回 null，失败返回可展示的错误文案。
+  /// 发送邮箱验证码（注册/改密）。成功返回 null，失败返回可展示的错误文案。
+  Future<String?> sendEmailCode({required String email, required String purpose}) async {
+    try {
+      await _api.sendEmailCode(email: email, purpose: purpose);
+      return null;
+    } catch (error) {
+      return _message(error);
+    }
+  }
+
   Future<String?> changePassword({
     required String oldPassword,
     required String newPassword,
+    required String emailCode,
   }) async {
     try {
-      await _api.changePassword(oldPassword: oldPassword, newPassword: newPassword);
+      await _api.changePassword(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        emailCode: emailCode,
+      );
       return null;
     } catch (error) {
       return _message(error);

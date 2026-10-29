@@ -58,14 +58,7 @@ export class ClientAuthController {
   @Public()
   @Post('register')
   async register(@Body() dto: ClientRegisterDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.register(
-      dto.email,
-      dto.password,
-      dto.nickname,
-      dto.captchaId,
-      dto.captchaCode,
-      dto.emailCode,
-    );
+    const tokens = await this.clientAuth.register(dto.email, dto.password, dto.nickname, dto.emailCode);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
   }
@@ -74,7 +67,7 @@ export class ClientAuthController {
   @Public()
   @Post('login')
   async login(@Body() dto: ClientLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.login(dto.email, dto.password, dto.captchaId, dto.captchaCode, dto.emailCode);
+    const tokens = await this.clientAuth.login(dto.email, dto.password);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }
@@ -136,7 +129,7 @@ export class ClientAuthController {
     @CurrentClientUser() user: ClientUserContext,
     @Body() dto: ChangeClientPasswordDto,
   ): Promise<ResponseEnvelope<null>> {
-    await this.clientAuth.changePassword(user.userId, dto.oldPassword, dto.newPassword);
+    await this.clientAuth.changePassword(user.userId, dto.oldPassword, dto.newPassword, dto.emailCode);
     return { __raw: true, data: null, message: '密码已修改，请重新登录' };
   }
 

@@ -26,7 +26,6 @@ import { createTestApp } from './setup-app.js';
 /** 路由前缀（见 src/app.setup.ts 的 setGlobalPrefix）。 */
 const API = '/api';
 /** 验证码在 Redis 中的键前缀（见 src/common/auth/captcha.service.ts）。 */
-const CAPTCHA_KEY_PREFIX = 'auth:captcha:';
 
 /** 固定的端到端账号：已注册就登录，避免每跑一次堆一个用户。 */
 const E2E_EMAIL = 'e2e-client@example.com';
@@ -85,22 +84,13 @@ describe('用户端主链路 (e2e)', () => {
   const authPost = (path: string, body: object): request.Test =>
     request(app.getHttpServer()).post(`${API}${path}`).set('authorization', `Bearer ${token}`).send(body);
 
-  /** 取一组可用验证码（关闭验证码时返回空串；验证码单次有效，注册与登录各取一次）。 */
-  async function captchaPair(): Promise<{ captchaId: string | null; captchaCode: string }> {
-    const captcha = await request(app.getHttpServer()).get(`${API}/client/auth/captcha`).expect(200);
-    const { enabled, captchaId } = captcha.body.data as { enabled: boolean; captchaId: string | null };
-    if (!enabled || !captchaId) {
-      return { captchaId: null, captchaCode: '' };
-    }
-    return { captchaId, captchaCode: (await redis.get(`${CAPTCHA_KEY_PREFIX}${captchaId}`)) ?? '' };
-  }
-
   /** 注册或登录（幂等）：返回访问令牌。 */
   async function registerOrLogin(): Promise<string> {
-    const first = await captchaPair();
+    // 注册必须邮箱验证码：e2e 不配 SES，直接把码写进 Redis（与 EmailCodeService 同 key 格式）
+    await redis.set(`client:email-code:register:${E2E_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
     const reg = await request(app.getHttpServer())
       .post(`${API}/client/auth/register`)
-      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, ...first });
+      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, emailCode: '123456' });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }
@@ -108,10 +98,10 @@ describe('用户端主链路 (e2e)', () => {
     if (reg.status !== 409) {
       throw new Error(`客户端注册失败（HTTP ${reg.status}）：${JSON.stringify(reg.body)}`);
     }
-    const second = await captchaPair();
+    // 登录不再需要验证码（账号 + 密码即可）
     const login = await request(app.getHttpServer())
       .post(`${API}/client/auth/login`)
-      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, ...second })
+      .send({ email: E2E_EMAIL, password: E2E_PASSWORD })
       .expect(200);
     return (login.body.data as { accessToken: string }).accessToken;
   }

@@ -52,23 +52,13 @@ export class ClientRegisterDto {
   @MaxLength(50, { message: '昵称最长 50 个字符' })
   nickname?: string;
 
-  /** 图形验证码 id（服务端开启验证码时必填） */
-  @IsOptional()
-  @IsString({ message: '验证码 id 必须为字符串' })
-  @MaxLength(64, { message: '验证码 id 最长 64 个字符' })
-  captchaId?: string;
-
-  /** 图形验证码字符（服务端开启验证码时必填；大小写不敏感） */
-  @IsOptional()
-  @IsString({ message: '验证码必须为字符串' })
-  @MaxLength(10, { message: '验证码最长 10 个字符' })
-  captchaCode?: string;
-
-  /** 邮箱验证码（可选：传了就校验邮箱验证码，不再校验图形验证码） */
-  @IsOptional()
+  /**
+   * 邮箱验证码（**必填**）。
+   * 先调 `POST /client/auth/email-code`（purpose=register）发送，5 分钟内有效、一次性。
+   */
   @IsString({ message: '邮箱验证码必须为字符串' })
-  @MaxLength(10, { message: '邮箱验证码最长 10 个字符' })
-  emailCode?: string;
+  @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
+  emailCode!: string;
 }
 
 /** 登录入参。 */
@@ -78,24 +68,6 @@ export class ClientLoginDto {
 
   @IsString({ message: '密码必须为字符串' })
   password!: string;
-
-  /** 图形验证码 id（服务端开启验证码时必填） */
-  @IsOptional()
-  @IsString({ message: '验证码 id 必须为字符串' })
-  @MaxLength(64, { message: '验证码 id 最长 64 个字符' })
-  captchaId?: string;
-
-  /** 图形验证码字符（服务端开启验证码时必填；大小写不敏感） */
-  @IsOptional()
-  @IsString({ message: '验证码必须为字符串' })
-  @MaxLength(10, { message: '验证码最长 10 个字符' })
-  captchaCode?: string;
-
-  /** 邮箱验证码（可选：传了就校验邮箱验证码，不再校验图形验证码） */
-  @IsOptional()
-  @IsString({ message: '邮箱验证码必须为字符串' })
-  @MaxLength(10, { message: '邮箱验证码最长 10 个字符' })
-  emailCode?: string;
 }
 
 /** 刷新令牌入参。 */
@@ -169,4 +141,13 @@ export class ChangeClientPasswordDto {
   @MinLength(6, { message: '新密码至少 6 位' })
   @MaxLength(32, { message: '新密码最长 32 位' })
   newPassword!: string;
+
+  /**
+   * 邮箱验证码（**必填**）。
+   * 先调 `POST /client/auth/email-code`（purpose=reset）发送到账号邮箱——
+   * 光有旧密码还不够：密码若已泄露，攻击者同样知道旧密码。
+   */
+  @IsString({ message: '邮箱验证码必须为字符串' })
+  @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
+  emailCode!: string;
 }
