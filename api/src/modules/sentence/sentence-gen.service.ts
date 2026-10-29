@@ -797,6 +797,79 @@ export class SentenceGenService {
   }
 
   /** 生题入库（按 sentenceEn 唯一约束去重；返回净增条数）。 */
+  /** 解析回填每批送进模型的题数（解析输出比生题短，20 条一批兼顾省 token 与超时）。 */
+  private static readonly EXPLAIN_BATCH_SIZE = 20;
+
+  /**
+   * 给存量题补解析（管理端手动触发，按批调用，可反复点到补完为止）。
+   *
+   * 为什么做成「按批手动」而不是定时全自动：现存题量上千，全量补一遍要花不少 token，
+   * 而这件事并不紧急——该花多少、什么时候花应当由运营决定。返回 remaining，
+   * 运营可以看着数字一批批补到 0（响应里也带 scanned/updated，便于判断是否卡住）。
+   */
+  async backfillExplanations(limit = 20): Promise<{
+    scanned: number;
+    updated: number;
+    remaining: number;
+  }> {
+    if (!this.sentenceGen.enabled) {
+      throw AppException.badRequest('生题能力未配置（AI_AGNES_API_KEY 缺失），无法补全解析');
+    }
+    // 只补「已就绪但还没有解析」的题：pending_image 的题等生图完成后再补，避免重复劳动
+    const pendingWhere = {
+      status: 'ready',
+      OR: [{ explanation: null }, { explanation: '' }],
+    };
+    const rows = await this.prisma.sentence.findMany({
+      where: pendingWhere,
+      // 新题优先：新题最可能被用户抽到，先补它们的体验收益最大
+      orderBy: { id: 'desc' },
+      take: limit,
+      select: { id: true, sentenceEn: true, translationZh: true, difficulty: true },
+    });
+    if (rows.length === 0) {
+      return { scanned: 0, updated: 0, remaining: 0 };
+    }
+
+    let updated = 0;
+    for (let start = 0; start < rows.length; start += SentenceGenService.EXPLAIN_BATCH_SIZE) {
+      const batch = rows.slice(start, start + SentenceGenService.EXPLAIN_BATCH_SIZE);
+      let explanations: string[];
+      try {
+        explanations = await this.sentenceGen.explainBatch(
+          batch.map((row) => ({
+            sentenceEn: row.sentenceEn,
+            translationZh: row.translationZh,
+            difficulty: row.difficulty,
+          })),
+        );
+      } catch (error) {
+        // 单批失败不阻断整轮：已完成的部分保留，剩下的下次再补（与生题批次同一取舍）
+        this.logger.warn(
+          `[SentenceGen] 解析回填批次失败（第 ${start + 1}~${start + batch.length} 条）：${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        continue;
+      }
+      for (const [index, row] of batch.entries()) {
+        const explanation = explanations[index]?.trim();
+        // 模型漏掉的条目保持原样（绝不用空串覆盖，否则下一轮还会重复补）
+        if (!explanation) {
+          continue;
+        }
+        await this.prisma.sentence.update({
+          where: { id: row.id },
+          data: { explanation: explanation.slice(0, 500) },
+        });
+        updated += 1;
+      }
+    }
+
+    const remaining = await this.prisma.sentence.count({ where: pendingWhere });
+    return { scanned: rows.length, updated, remaining };
+  }
+
   private async persistDrafts(drafts: SentenceDraft[], taskId: bigint): Promise<number> {
     if (drafts.length === 0) {
       return 0;
@@ -833,6 +906,8 @@ export class SentenceGenService {
             draft.alternateAnswers && draft.alternateAnswers.length > 0 ? JSON.stringify(draft.alternateAnswers) : null,
           translationZh: draft.translationZh.trim(),
           ipa: draft.ipa || null,
+          // 解析允许缺失（模型漏输出时不阻断入库，用户端只是不显示解析块）
+          explanation: draft.explanation?.trim() ? draft.explanation.trim().slice(0, 500) : null,
           scenePrompt: scenePrompt.slice(0, 500),
           source: 'ai',
           status: 'pending_image',

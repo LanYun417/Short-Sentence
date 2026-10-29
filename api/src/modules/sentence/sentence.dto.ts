@@ -64,6 +64,11 @@ export class SaveSentenceDto {
   ipa?: string;
 
   @IsOptional()
+  @IsString({ message: '题目解析必须为字符串' })
+  @MaxLength(500, { message: '题目解析最长 500 个字符' })
+  explanation?: string;
+
+  @IsOptional()
   @IsString({ message: '场景提示词必须为字符串' })
   @MaxLength(500, { message: '场景提示词最长 500 个字符' })
   scenePrompt?: string;
@@ -76,6 +81,21 @@ export class SaveSentenceDto {
   @IsOptional()
   @IsString({ message: '状态取值不正确' })
   status?: string;
+}
+
+/** 存量题解析回填入参（管理端手动触发，按批补）。 */
+export class BackfillExplanationDto {
+  /**
+   * 本批补多少条（缺省 20，上限 100）。
+   * 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时，
+   * 分批点几次更可控，接口每次都返回剩余条数。
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '数量必须为整数' })
+  @Min(1, { message: '数量至少为 1' })
+  @Max(100, { message: '单批最多 100 条' })
+  limit?: number;
 }
 
 /** 手动触发批量生成入参。 */

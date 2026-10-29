@@ -161,6 +161,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
     validAnswers: <String>[],
     translationZh: '',
     ipa: null,
+    explanation: null,
     imageUrl: null,
     favorited: false,
     todayDone: 0,
@@ -2174,9 +2175,50 @@ class _BackFace extends StatelessWidget {
             ),
           ],
 
+          // 题目解析：无论对错都展示（生题时生成，随答案下发；老题未回填则不占位）
+          if (result.explanation != null && result.explanation!.trim().isNotEmpty) ...<Widget>[
+            const SizedBox(height: 14),
+            StaggeredEntrance(
+              index: 4,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.brand.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: colors.brand.withValues(alpha: 0.12)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(Icons.auto_awesome_outlined, size: 13, color: colors.brand),
+                        const SizedBox(width: 5),
+                        Text(
+                          '题目解析',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: colors.brand,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      result.explanation!.trim(),
+                      style: TextStyle(fontSize: 13, height: 1.6, color: colors.ink),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 18),
           StaggeredEntrance(
-            index: 4,
+            index: 5,
             child: Row(
               children: <Widget>[
                 _GhostAction(

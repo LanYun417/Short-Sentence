@@ -124,11 +124,18 @@ watch(
   },
 );
 
-/* ------------------------------ AI 题目解析 ------------------------------ */
+/* ------------------------------ 题目解析 ------------------------------ */
 
 /**
- * 题目解析（无论对错都生成）：语法结构 + 关键词形态（时态 / 过去式 / 复数…）。
- * 流式文本，拿结果即自动开始；换下一题（结果清空 / 进入加载）时中止并复位。
+ * 题目解析（无论对错都展示）：语法结构 + 关键词形态（时态 / 过去式 / 复数…）。
+ *
+ * 两级来源：
+ * 1. **题目自带解析**（生题时由模型生成，随 `result.explanation` 下发）——直接展示，
+ *    零延迟、零 AI 调用；
+ * 2. 老题尚未回填（explanation 为空）时才回退到**流式 AI 实时生成**（`/client/ai/analyze`），
+ *    保证任何题都能看到解析。
+ *
+ * 换下一题（结果清空 / 进入加载）时中止并复位，避免串题与白烧额度。
  */
 const analysisText = ref('');
 /** idle 未开始 / loading 生成中 / done 完成 / error 失败 */
@@ -150,14 +157,25 @@ function resetAnalysis(): void {
   analysisState.value = 'idle';
 }
 
-/** 生成题目解析（流式展示，纯文本多行原样渲染）。 */
+/** 生成题目解析：优先用题目自带解析，没有才调 AI（流式展示，纯文本多行原样渲染）。 */
 async function startAnalysis(): Promise<void> {
   const current = props.result;
   if (!current) {
     return;
   }
   analysisAbort?.();
+  analysisAbort = null;
   analysisFor = current.sentenceId;
+
+  // 第一条路：题目自带解析——即刻展示，不发起任何请求
+  const baked = current.explanation?.trim();
+  if (baked) {
+    analysisText.value = baked;
+    analysisState.value = 'done';
+    return;
+  }
+
+  // 第二条路：老题兜底，实时流式生成
   analysisText.value = '';
   analysisState.value = 'loading';
   const stream = await streamSse(
@@ -438,10 +456,10 @@ async function onSubmitReport(): Promise<void> {
 
       <!--
         背面：加载中 / 正确答案。
-        两面在 CSS 里叠成同一格（.card-3d 是 grid）；背面渲染期间正面会被隐藏
-        （frontHidden，见脚本），卡片高度贴合背面内容，避免卡背上下大片留白。
+        两面在 CSS 里叠成同一格（.card-3d 是 grid），**卡片高度取较高的一面**——
+        正面带 16:9 配图本来就比背面高，所以翻面前后卡片高度一致（不收缩，避免高度跳变）。
         背面**只在提交后 / 换题加载中才渲染**——否则未作答时它就先把卡片撑高了。
-        内容也不需要卡内滚动：卡片会跟着长高，整页滚一下就能看全（单一滚动轴，
+        内容也不需要卡内滚动：超长时整页滚一下就能看全（单一滚动轴，
         比「卡里还能滚」的嵌套滚动更直观）。
       -->
       <div
@@ -512,11 +530,11 @@ async function onSubmitReport(): Promise<void> {
               <p class="text-slate-600 line-through dark:text-slate-300">{{ answer }}</p>
             </div>
 
-            <!-- AI 解析：无论对错都生成（语法结构 + 关键词形态），流式逐字展示 -->
+            <!-- 题目解析：无论对错都展示；优先题目自带解析，老题回退流式生成 -->
             <div class="mt-3 rounded-xl bg-sky-50/70 p-3 ring-1 ring-sky-100 dark:bg-sky-500/10 dark:ring-sky-500/15">
               <p class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
                 <UIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
-                AI 解析
+                题目解析
                 <UIcon
                   v-if="analysisState === 'loading'"
                   name="i-lucide-loader-circle"

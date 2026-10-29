@@ -84,6 +84,9 @@ model Sentence {
   translationZh    String   @map("translation_zh") @db.VarChar(300)
   /// IPA 音标（英美合并，如 /ˈkɒfi ˈplez/）
   ipa              String?  @db.VarChar(200)
+  /// 题目解析（中文：语法点 / 时态语态 / 关键词形与搭配 / 易错点）。
+  /// 答题后**无论对错都展示**，帮用户理解为什么这么写；运营手工创建的题可留空。
+  explanation      String?  @db.VarChar(500)
   /// 生图提示词（描述「两人对话场景」构图，供运营审核）
   scenePrompt      String   @map("scene_prompt") @db.VarChar(500)
   /// 配图文件 id（0 = 未生成，指向 sys_file；故不建外键）

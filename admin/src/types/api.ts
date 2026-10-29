@@ -893,6 +893,8 @@ export interface SentenceItem {
   sentenceEn: string;
   translationZh: string;
   ipa: string | null;
+  /** 题目解析（语法 / 时态 / 词形；答题后无论对错都展示给用户） */
+  explanation: string | null;
   scenePrompt: string;
   difficulty: number;
   imageFileId: number;
@@ -918,6 +920,7 @@ export interface SentenceSavePayload {
   sentenceEn: string;
   translationZh: string;
   ipa?: string;
+  explanation?: string;
   scenePrompt?: string;
   difficulty?: number;
   status?: SentenceStatus;

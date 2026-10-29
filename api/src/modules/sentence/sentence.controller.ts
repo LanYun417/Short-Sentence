@@ -17,6 +17,7 @@ import {
   SaveCategoryDto,
   SaveSentenceDto,
   TriggerGenDto,
+  BackfillExplanationDto,
   SENTENCE_STATUS,
   BatchSentenceStatusDto,
   BatchRegenerateImageDto,
@@ -199,6 +200,25 @@ export class SentenceController {
       data: result,
       message,
     };
+  }
+
+  /**
+   * 补全存量题解析（管理端手动、按批）。
+   *
+   * 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token；
+   * 该花多少、什么时候花应由运营决定。每批返回 scanned/updated/remaining，
+   * 运营看着 remaining 点到 0 即可。
+   */
+  @Post('explanation/backfill')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '补全解析')
+  async backfillExplanations(
+    @Body() dto: BackfillExplanationDto,
+  ): Promise<ResponseEnvelope<{ scanned: number; updated: number; remaining: number }>> {
+    const result = await this.sentenceGen.backfillExplanations(dto.limit ?? 20);
+    const message =
+      result.scanned === 0 ? '所有题目都已有解析' : `已补 ${result.updated} 条，剩余 ${result.remaining} 条待补`;
+    return { __raw: true, data: result, message };
   }
 
   /**

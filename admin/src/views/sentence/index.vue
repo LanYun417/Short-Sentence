@@ -21,6 +21,7 @@ import {
   regenerateSentenceImageApi,
   resumeGenTaskApi,
   triggerGenApi,
+  backfillExplanationsApi,
   updateSentenceApi,
   type SentenceCategoryOption,
 } from '@/api/sentence';
@@ -114,6 +115,7 @@ const form = ref<SentenceSavePayload>({
   sentenceEn: '',
   translationZh: '',
   ipa: '',
+  explanation: '',
   scenePrompt: '',
   difficulty: 2,
   status: 'ready',
@@ -127,6 +129,7 @@ function handleCreate(): void {
     sentenceEn: '',
     translationZh: '',
     ipa: '',
+    explanation: '',
     scenePrompt: '',
     difficulty: 2,
     status: 'ready',
@@ -142,6 +145,7 @@ function handleEdit(row: SentenceItem): void {
     sentenceEn: row.sentenceEn,
     translationZh: row.translationZh,
     ipa: row.ipa ?? '',
+    explanation: row.explanation ?? '',
     scenePrompt: row.scenePrompt,
     difficulty: row.difficulty,
     status: row.status === 'offline' ? 'offline' : 'ready',
@@ -166,6 +170,7 @@ async function handleSave(): Promise<void> {
       sentenceEn: form.value.sentenceEn.trim(),
       translationZh: form.value.translationZh.trim(),
       ipa: form.value.ipa?.trim() || undefined,
+      explanation: form.value.explanation?.trim() || undefined,
       scenePrompt: form.value.scenePrompt?.trim() || undefined,
       difficulty: form.value.difficulty,
       status: form.value.status,
@@ -416,6 +421,8 @@ const genPageSize = ref(10);
 /** 「触发生成」表单：数量 / 可选难度 / 可选定向场景。 */
 const genFormVisible = ref(false);
 const genSubmitting = ref(false);
+/** 解析回填进行中（按钮 loading，避免连点烧配额） */
+const backfilling = ref(false);
 const genForm = ref<{ count: number; difficulty?: number; categoryName?: string }>({
   count: 30,
   difficulty: undefined,
@@ -453,6 +460,36 @@ async function submitGenForm(): Promise<void> {
     await loadGenTasks();
   } finally {
     genSubmitting.value = false;
+  }
+}
+
+/**
+ * 补全存量题解析（按批，可反复点到补完）。
+ *
+ * 走 `ElMessageBox.confirm` 而不是直接执行：这是要花 AI 配额的写操作，
+ * 运营点一下就该知道「它会调模型、会产生费用」，而不是无感地批量烧钱。
+ */
+async function handleBackfillExplanations(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '将为「已就绪但没有解析」的题目调用 AI 生成语法解析（每批 20 条，会产生 AI 调用费用）。继续？',
+      '补全题目解析',
+      { type: 'warning', confirmButtonText: '开始补全', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  backfilling.value = true;
+  try {
+    const result = await backfillExplanationsApi(20);
+    if (result.scanned === 0) {
+      ElMessage.success('所有题目都已有解析');
+    } else {
+      ElMessage.success(`本批补了 ${result.updated} 条，还剩 ${result.remaining} 条待补`);
+      await getList();
+    }
+  } finally {
+    backfilling.value = false;
   }
 }
 
@@ -627,6 +664,9 @@ onMounted(async () => {
             </span>
           </el-tooltip>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
+          <el-button v-permission="'sentence:gen'" :loading="backfilling" plain @click="handleBackfillExplanations">
+            补全解析
+          </el-button>
           <el-button :loading="exporting" @click="handleExport">
             <template #icon><i class="bi bi-download" /></template>
             导出
@@ -729,6 +769,16 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="音标">
           <el-input v-model="form.ipa" maxlength="200" placeholder="如 /kəˈfeɪ/" />
+        </el-form-item>
+        <el-form-item label="题目解析">
+          <el-input
+            v-model="form.explanation"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+            placeholder="答题后展示给用户的语法说明（时态/词形/搭配/易错点），留空则不显示解析块"
+          />
         </el-form-item>
         <el-form-item label="生图提示词">
           <el-input

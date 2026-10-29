@@ -101,6 +101,15 @@ export function triggerGenApi(params?: {
   return post<{ taskId: number }>('/sentences/gen/batch', params);
 }
 
+/** 补全存量题解析（按批；返回扫描/更新/剩余条数）。 */
+export function backfillExplanationsApi(limit?: number): Promise<{
+  scanned: number;
+  updated: number;
+  remaining: number;
+}> {
+  return post<{ scanned: number; updated: number; remaining: number }>('/sentences/explanation/backfill', { limit });
+}
+
 /** 生成批次列表（运营监控） */
 export function getGenTaskListApi(params: GenTaskQuery): Promise<PageResult<GenTaskItem>> {
   return get<PageResult<GenTaskItem>>('/sentences/gen-tasks', params);

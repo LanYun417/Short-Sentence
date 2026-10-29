@@ -50,6 +50,7 @@ export type SentenceMinAggregateOutputType = {
   alternateAnswers: string | null
   translationZh: string | null
   ipa: string | null
+  explanation: string | null
   scenePrompt: string | null
   imageFileId: bigint | null
   source: string | null
@@ -67,6 +68,7 @@ export type SentenceMaxAggregateOutputType = {
   alternateAnswers: string | null
   translationZh: string | null
   ipa: string | null
+  explanation: string | null
   scenePrompt: string | null
   imageFileId: bigint | null
   source: string | null
@@ -84,6 +86,7 @@ export type SentenceCountAggregateOutputType = {
   alternateAnswers: number
   translationZh: number
   ipa: number
+  explanation: number
   scenePrompt: number
   imageFileId: number
   source: number
@@ -119,6 +122,7 @@ export type SentenceMinAggregateInputType = {
   alternateAnswers?: true
   translationZh?: true
   ipa?: true
+  explanation?: true
   scenePrompt?: true
   imageFileId?: true
   source?: true
@@ -136,6 +140,7 @@ export type SentenceMaxAggregateInputType = {
   alternateAnswers?: true
   translationZh?: true
   ipa?: true
+  explanation?: true
   scenePrompt?: true
   imageFileId?: true
   source?: true
@@ -153,6 +158,7 @@ export type SentenceCountAggregateInputType = {
   alternateAnswers?: true
   translationZh?: true
   ipa?: true
+  explanation?: true
   scenePrompt?: true
   imageFileId?: true
   source?: true
@@ -257,6 +263,7 @@ export type SentenceGroupByOutputType = {
   alternateAnswers: string | null
   translationZh: string
   ipa: string | null
+  explanation: string | null
   scenePrompt: string
   imageFileId: bigint
   source: string
@@ -297,6 +304,7 @@ export type SentenceWhereInput = {
   alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  explanation?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
@@ -318,6 +326,7 @@ export type SentenceOrderByWithRelationInput = {
   alternateAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrderInput | Prisma.SortOrder
+  explanation?: Prisma.SortOrderInput | Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
@@ -343,6 +352,7 @@ export type SentenceWhereUniqueInput = Prisma.AtLeast<{
   alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  explanation?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
@@ -364,6 +374,7 @@ export type SentenceOrderByWithAggregationInput = {
   alternateAnswers?: Prisma.SortOrderInput | Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrderInput | Prisma.SortOrder
+  explanation?: Prisma.SortOrderInput | Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
@@ -389,6 +400,7 @@ export type SentenceScalarWhereWithAggregatesInput = {
   alternateAnswers?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
+  explanation?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntWithAggregatesFilter<"Sentence"> | bigint | number
   source?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
@@ -405,6 +417,7 @@ export type SentenceCreateInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -426,6 +439,7 @@ export type SentenceUncheckedCreateInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -445,6 +459,7 @@ export type SentenceUpdateInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -466,6 +481,7 @@ export type SentenceUncheckedUpdateInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -486,6 +502,7 @@ export type SentenceCreateManyInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -502,6 +519,7 @@ export type SentenceUpdateManyMutationInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -519,6 +537,7 @@ export type SentenceUncheckedUpdateManyInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -552,6 +571,7 @@ export type SentenceCountOrderByAggregateInput = {
   alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
+  explanation?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
@@ -577,6 +597,7 @@ export type SentenceMaxOrderByAggregateInput = {
   alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
+  explanation?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
@@ -594,6 +615,7 @@ export type SentenceMinOrderByAggregateInput = {
   alternateAnswers?: Prisma.SortOrder
   translationZh?: Prisma.SortOrder
   ipa?: Prisma.SortOrder
+  explanation?: Prisma.SortOrder
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
@@ -707,6 +729,7 @@ export type SentenceCreateWithoutCategoryInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -726,6 +749,7 @@ export type SentenceUncheckedCreateWithoutCategoryInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -775,6 +799,7 @@ export type SentenceScalarWhereInput = {
   alternateAnswers?: Prisma.StringNullableFilter<"Sentence"> | string | null
   translationZh?: Prisma.StringFilter<"Sentence"> | string
   ipa?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  explanation?: Prisma.StringNullableFilter<"Sentence"> | string | null
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
@@ -791,6 +816,7 @@ export type SentenceCreateWithoutRecordsInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -811,6 +837,7 @@ export type SentenceUncheckedCreateWithoutRecordsInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -845,6 +872,7 @@ export type SentenceUpdateWithoutRecordsInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -865,6 +893,7 @@ export type SentenceUncheckedUpdateWithoutRecordsInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -883,6 +912,7 @@ export type SentenceCreateWithoutFavoritesInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -903,6 +933,7 @@ export type SentenceUncheckedCreateWithoutFavoritesInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -937,6 +968,7 @@ export type SentenceUpdateWithoutFavoritesInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -957,6 +989,7 @@ export type SentenceUncheckedUpdateWithoutFavoritesInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -975,6 +1008,7 @@ export type SentenceCreateWithoutReportsInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -995,6 +1029,7 @@ export type SentenceUncheckedCreateWithoutReportsInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -1029,6 +1064,7 @@ export type SentenceUpdateWithoutReportsInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1049,6 +1085,7 @@ export type SentenceUncheckedUpdateWithoutReportsInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1067,6 +1104,7 @@ export type SentenceCreateManyCategoryInput = {
   alternateAnswers?: string | null
   translationZh: string
   ipa?: string | null
+  explanation?: string | null
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
@@ -1083,6 +1121,7 @@ export type SentenceUpdateWithoutCategoryInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1102,6 +1141,7 @@ export type SentenceUncheckedUpdateWithoutCategoryInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1121,6 +1161,7 @@ export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
   alternateAnswers?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   translationZh?: Prisma.StringFieldUpdateOperationsInput | string
   ipa?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  explanation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1187,6 +1228,7 @@ export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   alternateAnswers?: boolean
   translationZh?: boolean
   ipa?: boolean
+  explanation?: boolean
   scenePrompt?: boolean
   imageFileId?: boolean
   source?: boolean
@@ -1211,6 +1253,7 @@ export type SentenceSelectScalar = {
   alternateAnswers?: boolean
   translationZh?: boolean
   ipa?: boolean
+  explanation?: boolean
   scenePrompt?: boolean
   imageFileId?: boolean
   source?: boolean
@@ -1220,7 +1263,7 @@ export type SentenceSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
+export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "explanation" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
 export type SentenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
@@ -1266,6 +1309,11 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * IPA 音标（英美合并，如 /ˈkɒfi ˈplez/）
      */
     ipa: string | null
+    /**
+     * 题目解析（中文：语法点 / 时态语态 / 关键词形与搭配 / 易错点）。
+     * 答题后**无论对错都展示**，帮用户理解为什么这么写；运营手工创建的题可留空。
+     */
+    explanation: string | null
     /**
      * 生图提示词（描述「两人对话场景」构图，供运营审核）
      */
@@ -1674,6 +1722,7 @@ export interface SentenceFieldRefs {
   readonly alternateAnswers: Prisma.FieldRef<"Sentence", 'String'>
   readonly translationZh: Prisma.FieldRef<"Sentence", 'String'>
   readonly ipa: Prisma.FieldRef<"Sentence", 'String'>
+  readonly explanation: Prisma.FieldRef<"Sentence", 'String'>
   readonly scenePrompt: Prisma.FieldRef<"Sentence", 'String'>
   readonly imageFileId: Prisma.FieldRef<"Sentence", 'BigInt'>
   readonly source: Prisma.FieldRef<"Sentence", 'String'>

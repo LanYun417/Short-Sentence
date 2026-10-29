@@ -16,6 +16,7 @@ import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
 import {
   AiProviderError,
+  type ExplainItem,
   type RejectedDraft,
   type SentenceCardTheme,
   type SentenceDraft,
@@ -154,11 +155,45 @@ const POLISH_SYSTEM_PROMPT = [
   '7. alternateAnswers: rewrite the list so every entry still expresses the SAME meaning as the REWRITTEN',
   '   sentenceEn. Each must be natural, grammatically correct, different from sentenceEn and from each other.',
   '   Keep 3-5 entries; if the rewritten sentence made an entry invalid, replace or drop it. Never include sentenceEn.',
+  '8. explanation: rewrite it so it matches the REWRITTEN sentenceEn. If your rewrite changed the tense, voice,',
+  '   verb pattern or word form, the note MUST follow — an explanation that describes the old sentence is worse',
+  '   than none. Keep it Chinese, plain text, at most 2 short sentences, specific to this sentence.',
+  '   If the original note was generic boilerplate, replace it with something concrete.',
   '',
   DIFFICULTY_RULES,
   '',
   'Output JSON only:',
-  '{"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}',
+  '{"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","explanation":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}',
+].join('\n');
+
+/**
+ * 补全题目解析的 system 提示词（存量题回填专用）。
+ *
+ * 与生题阶段的 3d 规则同一口径，但**不看场景、不看备选答案**，
+ * 只要求「针对这一句，讲清楚值得学的那一两个点」。
+ */
+const EXPLAIN_SYSTEM_PROMPT = [
+  'You write short learning notes for an English-learning app.',
+  'The learner has just answered an item — right or wrong — and now sees a note explaining the grammar.',
+  'Below is a batch of items (a JSON array; every item has an index, the English sentence, its Chinese meaning,',
+  'and its difficulty level 1/2/3).',
+  '',
+  'Write the note for EVERY item and return EXACTLY the same number in the same order, with matching indexes.',
+  'Do not add, drop or merge items.',
+  '',
+  'Rules:',
+  '1. Chinese, plain text, at most 2 short sentences (30-120 characters). No markdown, no bullet symbols.',
+  '2. Explain WHY the sentence is built this way — the point worth learning — not what it means.',
+  '   The Chinese meaning is already shown to the learner, so repeating it wastes the note.',
+  '3. Cover the one or two things that actually matter for THAT sentence: the tense or voice used,',
+  '   the key verb pattern / collocation, the word-form change (e.g. an irregular past tense),',
+  '   or the pitfall where a literal Chinese-to-English translation would go wrong.',
+  '4. Match the depth to the difficulty: level 1 → the plain pattern behind a basic sentence;',
+  '   level 3 → clauses, idioms, subjunctive mood. Never lecture beyond what this sentence shows.',
+  '5. Be specific to this sentence. Never write generic advice such as "注意时态", never repeat the sentence,',
+  '   and never translate it word by word.',
+  '',
+  'Output JSON only: {"items":[{"index":0,"explanation":""}]}',
 ].join('\n');
 
 /** 三阶段（审核）的 system 提示词。 */
@@ -184,6 +219,9 @@ const REVIEW_SYSTEM_PROMPT = [
   '8. THE SENTENCE CANNOT BE ILLUSTRATED. The app shows one flat cartoon of two people talking, so the item',
   '   must depict a concrete, observable everyday scene. Reject purely abstract statements, inner states with',
   '   no visible action, and anything that only works as written text.',
+  '9. THE EXPLANATION TEACHES SOMETHING FALSE. If an explanation is present, it must describe the grammar the',
+  '   sentence ACTUALLY uses (tense, voice, pattern, word form). A note that contradicts the sentence misleads',
+  '   the learner — fail it. A missing explanation is not a reason to fail (the app can show the sentence alone).',
   '',
   'You MUST output exactly one verdict per item. An item with no verdict will be treated as FAILED.',
   'Be strict: better to drop an item than to let a bad one through.',
@@ -237,7 +275,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '2. Each item has: sentenceEn (natural spoken English), translationZh (Chinese meaning), ipa (British IPA),',
       '   scenePrompt (English image prompt), difficulty (1/2/3, judged by rule 4 below),',
       '   categoryName (Chinese category name, matching the theme or narrower),',
-      '   alternateAnswers (array of 3-5 OTHER natural English sentences that mean the SAME as sentenceEn).',
+      '   alternateAnswers (array of 3-5 OTHER natural English sentences that mean the SAME as sentenceEn),',
+      '   explanation (short Chinese learning note — see rule 3d).',
       '3. translationZh is the field most likely to go wrong. Three hard rules:',
       '   a. Natural Chinese: follow Chinese word order and collocations. Never map English word order literally.',
       '      The classic tell is leaving the object in front of the verb, or stacking adverbs before the verb.',
@@ -251,6 +290,14 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   - Provide 3 to 5 entries. Only use fewer if the sentence is a fixed courtesy formula with one obvious',
       '     alternative; never invent awkward ones.',
       '   - Do NOT include sentenceEn itself in this array.',
+      '3d. explanation rules (this is the note the learner sees after answering, right or wrong):',
+      '   - Chinese, plain text, at most 2 short sentences (30-120 characters). No markdown, no bullet symbols.',
+      '   - Explain WHY the sentence is built this way — the point worth learning — not what it means',
+      '     (translationZh already carries the meaning; repeating it wastes the slot).',
+      '   - Cover the one or two things that actually matter for THIS sentence: the tense or voice used,',
+      '     the key verb pattern / collocation, the word-form change (e.g. an irregular past tense),',
+      '     or the pitfall where literal Chinese-to-English translation would go wrong.',
+      '   - Be specific to this sentence. Never write generic advice such as "注意时态" or a grammar lecture.',
       '',
       DIFFICULTY_RULES,
       '',
@@ -272,7 +319,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     await this.chat(
       'sentence_gen',
       systemPrompt,
-      `Theme: ${theme}. Count: ${count}. Output JSON with shape {"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}.`,
+      `Theme: ${theme}. Count: ${count}. Output JSON with shape {"items":[{"index":0,"sentenceEn":"","translationZh":"","ipa":"","explanation":"","scenePrompt":"","difficulty":1,"categoryName":"","alternateAnswers":["",""]}]}.`,
       0.8,
       {
         bizId,
@@ -326,6 +373,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         sentenceEn: str(raw.sentenceEn, 300),
         translationZh: str(raw.translationZh, 300),
         ipa: str(raw.ipa, 200),
+        explanation: str(raw.explanation, 500),
         scenePrompt: str(raw.scenePrompt, 500),
         difficulty: this.clampDifficulty(raw.difficulty),
         categoryName: str(raw.categoryName, 50) || drafts[index].categoryName,
@@ -343,6 +391,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         ...next,
         translationZh: next.translationZh || draft.translationZh,
         ipa: next.ipa || draft.ipa,
+        // 解释漏了就留生题阶段的版本（「优化」不该让字段变空）
+        explanation: next.explanation || draft.explanation,
         scenePrompt: next.scenePrompt || draft.scenePrompt,
         // 优化改写句子后，主句对应的备用答案也要跟着换（漏了就留生题阶段版本）
         alternateAnswers: withFallback(next, next.alternateAnswers, draft.alternateAnswers),
@@ -394,6 +444,35 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       approved.push(draft);
     });
     return { approved, rejected };
+  }
+
+  /**
+   * 补全题目解析（存量题回填）。
+   *
+   * 为什么单独一次调用而不是复用 polish：这一批题目已经入库（无需改句、无需重审场景），
+   * 只为它们补一个字段；走 polish 会把整题重写一遍，既浪费 token 又有引入新错的风险。
+   */
+  async explainBatch(items: ExplainItem[], bizId?: number): Promise<string[]> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    if (items.length === 0) {
+      return [];
+    }
+    const payload = items.map((item, index) => ({ index, ...item }));
+    const content = await this.chat('sentence_explain', EXPLAIN_SYSTEM_PROMPT, JSON.stringify(payload), 0.4, { bizId });
+
+    // 与输入等长、同顺序：模型漏掉的条目留空串，调用方跳过（绝不写空值覆盖）
+    const out = new Array<string>(items.length).fill('');
+    for (const item of this.extractItems(content)) {
+      const raw = item as unknown as Record<string, unknown>;
+      const index = Number(raw.index);
+      if (!Number.isInteger(index) || index < 0 || index >= items.length) {
+        continue;
+      }
+      out[index] = str(raw.explanation, 500);
+    }
+    return out;
   }
 
   /**
@@ -751,6 +830,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         alternateAnswers: parseAlternatesWith(sentenceEn, draft.alternateAnswers),
         translationZh: str(draft.translationZh, 300),
         ipa: str(draft.ipa, 200),
+        explanation: str(draft.explanation, 500),
         scenePrompt: str(draft.scenePrompt, 500),
         difficulty: this.clampDifficulty(draft.difficulty),
         categoryName: str(draft.categoryName, 50),

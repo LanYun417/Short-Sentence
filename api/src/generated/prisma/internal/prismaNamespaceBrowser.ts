@@ -390,6 +390,7 @@ export const SentenceScalarFieldEnum = {
   alternateAnswers: 'alternateAnswers',
   translationZh: 'translationZh',
   ipa: 'ipa',
+  explanation: 'explanation',
   scenePrompt: 'scenePrompt',
   imageFileId: 'imageFileId',
   source: 'source',
@@ -870,6 +871,7 @@ export const SentenceOrderByRelevanceFieldEnum = {
   alternateAnswers: 'alternateAnswers',
   translationZh: 'translationZh',
   ipa: 'ipa',
+  explanation: 'explanation',
   scenePrompt: 'scenePrompt',
   source: 'source',
   status: 'status'

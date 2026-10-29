@@ -13271,6 +13271,61 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/explanation/backfill": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "补全存量题解析（管理端手动、按批）。 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token； 该花多少、什么时候花应由运营决定。每批返回 scanned/updated/remaining， 运营看着 remaining 点到 0 即可",
+        "operationId": "post__api_sentences_explanation_backfill",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillExplanationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BackfillExplanationDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/gen-tasks/{id}/cancel": {
       "post": {
         "tags": [
@@ -15227,6 +15282,10 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "type": "string",
             "example": "示例值"
           },
+          "explanation": {
+            "type": "string",
+            "example": "示例值"
+          },
           "scenePrompt": {
             "type": "string",
             "example": "示例值"
@@ -15322,6 +15381,16 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "required": [
           "name"
         ]
+      },
+      "BackfillExplanationDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
+            "example": 1
+          }
+        }
       },
       "TriggerGenDto": {
         "type": "object",

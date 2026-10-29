@@ -6847,6 +6847,14 @@ export const API_DOCS: ApiDocGroup[] = [
             "example": "示例值"
           },
           {
+            "name": "explanation",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
             "name": "scenePrompt",
             "in": "body",
             "type": "string",
@@ -6872,12 +6880,13 @@ export const API_DOCS: ApiDocGroup[] = [
           }
         ],
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/sentences\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\",\n      \"ipa\": \"示例值\",\n      \"scenePrompt\": \"示例值\",\n      \"difficulty\": 1,\n      \"status\": \"示例值\"\n    }'",
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\",\n      \"ipa\": \"示例值\",\n      \"explanation\": \"示例值\",\n      \"scenePrompt\": \"示例值\",\n      \"difficulty\": 1,\n      \"status\": \"示例值\"\n    }'",
           "requestBody": {
             "categoryId": 1,
             "sentenceEn": "示例值",
             "translationZh": "示例值",
             "ipa": "示例值",
+            "explanation": "示例值",
             "scenePrompt": "示例值",
             "difficulty": 1,
             "status": "示例值"
@@ -7041,6 +7050,32 @@ export const API_DOCS: ApiDocGroup[] = [
             "icon": "示例值",
             "sort": 1,
             "status": 1
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/explanation/backfill",
+        "summary": "补全存量题解析（管理端手动、按批）。 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token； 该花多少、什么时候花应由运营决定。每批返回 scanned/updated/remaining， 运营看着 remaining 点到 0 即可",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 补全解析",
+        "params": [
+          {
+            "name": "limit",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/explanation/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"limit\": 1\n    }'",
+          "requestBody": {
+            "limit": 1
           }
         }
       },
@@ -7263,6 +7298,14 @@ export const API_DOCS: ApiDocGroup[] = [
             "example": "示例值"
           },
           {
+            "name": "explanation",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
             "name": "scenePrompt",
             "in": "body",
             "type": "string",
@@ -7288,7 +7331,7 @@ export const API_DOCS: ApiDocGroup[] = [
           }
         ],
         "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/sentences/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\",\n      \"ipa\": \"示例值\",\n      \"scenePrompt\": \"示例值\",\n      \"difficulty\": 1,\n      \"status\": \"示例值\"\n    }'",
+          "curl": "curl -X PUT \"http://localhost:3000/api/sentences/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"sentenceEn\": \"示例值\",\n      \"translationZh\": \"示例值\",\n      \"ipa\": \"示例值\",\n      \"explanation\": \"示例值\",\n      \"scenePrompt\": \"示例值\",\n      \"difficulty\": 1,\n      \"status\": \"示例值\"\n    }'",
           "pathParams": {
             "id": "1"
           },
@@ -7297,6 +7340,7 @@ export const API_DOCS: ApiDocGroup[] = [
             "sentenceEn": "示例值",
             "translationZh": "示例值",
             "ipa": "示例值",
+            "explanation": "示例值",
             "scenePrompt": "示例值",
             "difficulty": 1,
             "status": "示例值"

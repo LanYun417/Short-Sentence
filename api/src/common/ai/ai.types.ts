@@ -14,6 +14,8 @@ export interface SentenceDraft {
   translationZh: string;
   /** IPA 音标 */
   ipa: string;
+  /** 题目解析（中文：语法点 / 时态语态 / 关键词形与搭配 / 易错点；答题后无论对错都展示） */
+  explanation?: string;
   /** 生图提示词（两人对话场景构图） */
   scenePrompt: string;
   /** 难度：1 易 / 2 中 / 3 难 */
@@ -26,6 +28,19 @@ export interface SentenceDraft {
 export interface RejectedDraft {
   draft: SentenceDraft;
   reason: string;
+}
+
+/**
+ * 待补解析的题目（存量题回填用）。
+ * 只送必要字段：解析要讲的是句子本身的语法结构，多余字段纯属浪费 token。
+ */
+export interface ExplainItem {
+  /** 英文句子 */
+  sentenceEn: string;
+  /** 中文释义（帮模型判断这句在教什么） */
+  translationZh: string;
+  /** 难度 1/2/3（决定解析深浅） */
+  difficulty: number;
 }
 
 /**
@@ -61,6 +76,17 @@ export interface SentenceGenProvider {
     drafts: SentenceDraft[],
     bizId?: number,
   ): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }>;
+
+  /**
+   * 补全题目解析（**存量题回填**用；新题在生题阶段就已带上 explanation）。
+   *
+   * 返回**与输入等长、同顺序**的解析数组：模型漏掉的条目返回空串，调用方据此跳过
+   * （不覆盖已有解析，也不把空值写进库）。
+   *
+   * @param items 待补条目（句子 + 释义 + 难度）
+   * @param bizId 关联业务 id（便于核对调用来源）
+   */
+  explainBatch(items: ExplainItem[], bizId?: number): Promise<string[]>;
 }
 
 /** 每日句签主题（AI 输出解析后的单条）。 */

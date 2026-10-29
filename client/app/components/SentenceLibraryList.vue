@@ -460,6 +460,13 @@ const emptyText = computed(() => {
             </div>
             <p class="font-mono text-xs text-slate-400">{{ item.ipa || '—' }}</p>
             <p class="mt-0.5 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ item.translationZh }}</p>
+            <!-- 题目解析摘要（老题未回填时为空，不占位） -->
+            <p
+              v-if="item.explanation"
+              class="mt-1 line-clamp-2 text-xs leading-relaxed text-sky-700/85 dark:text-sky-300/85"
+            >
+              {{ item.explanation }}
+            </p>
             <p v-if="isHistory && !item.isCorrect && item.userAnswer" class="mt-1 text-xs text-rose-500/80">
               你的作答：{{ item.userAnswer }}
             </p>

@@ -60,6 +60,8 @@ export interface SentenceItem {
   sentenceEn: string;
   translationZh: string;
   ipa: string | null;
+  /** 题目解析（语法 / 时态 / 词形；运营可手工修订） */
+  explanation: string | null;
   scenePrompt: string;
   difficulty: number;
   imageFileId: number;
@@ -141,6 +143,7 @@ export class SentenceService {
         sentenceEn: row.sentenceEn,
         translationZh: row.translationZh,
         ipa: row.ipa,
+        explanation: row.explanation,
         scenePrompt: row.scenePrompt,
         difficulty: row.difficulty,
         imageFileId: Number(row.imageFileId),
@@ -172,6 +175,7 @@ export class SentenceService {
       sentenceEn: row.sentenceEn,
       translationZh: row.translationZh,
       ipa: row.ipa,
+      explanation: row.explanation,
       scenePrompt: row.scenePrompt,
       difficulty: row.difficulty,
       imageFileId: Number(row.imageFileId),
@@ -200,6 +204,7 @@ export class SentenceService {
         sentenceEn: dto.sentenceEn.trim(),
         translationZh: dto.translationZh.trim(),
         ipa: dto.ipa?.trim() || null,
+        explanation: dto.explanation?.trim() || null,
         scenePrompt: dto.scenePrompt?.trim() || this.defaultScenePrompt(dto.sentenceEn),
         difficulty: dto.difficulty ?? 2,
         source: 'manual',
@@ -235,6 +240,7 @@ export class SentenceService {
         sentenceEn: dto.sentenceEn.trim(),
         translationZh: dto.translationZh.trim(),
         ipa: dto.ipa?.trim() || null,
+        explanation: dto.explanation?.trim() || null,
         // scenePrompt 非可空：缺省时用句子本身兜底构图（两人对话场景）
         scenePrompt: dto.scenePrompt?.trim() || this.defaultScenePrompt(dto.sentenceEn),
         difficulty: dto.difficulty ?? 2,

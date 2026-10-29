@@ -112,6 +112,7 @@ class AnswerResult {
     required this.validAnswers,
     required this.translationZh,
     required this.ipa,
+    required this.explanation,
     required this.imageUrl,
     required this.favorited,
     required this.todayDone,
@@ -134,6 +135,9 @@ class AnswerResult {
 
   /// 音标
   final String? ipa;
+
+  /// 题目解析（语法 / 时态 / 词形；生题时生成，老题为 null 则不显示解析块）
+  final String? explanation;
 
   final String? imageUrl;
 
@@ -163,6 +167,7 @@ class AnswerResult {
       validAnswers: validAnswers,
       translationZh: translationZh,
       ipa: ipa,
+      explanation: explanation,
       imageUrl: imageUrl,
       favorited: favorited ?? this.favorited,
       todayDone: todayDone,
@@ -183,6 +188,7 @@ class AnswerResult {
       validAnswers: valid is List ? valid.whereType<String>().toList() : const <String>[],
       translationZh: json['translationZh'] as String? ?? '',
       ipa: json['ipa'] as String?,
+      explanation: json['explanation'] as String?,
       imageUrl: json['imageUrl'] as String?,
       favorited: json['favorited'] as bool? ?? false,
       todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,

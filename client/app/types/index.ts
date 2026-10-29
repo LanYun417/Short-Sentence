@@ -57,6 +57,11 @@ export interface AnswerResult {
   validAnswers: string[];
   translationZh: string;
   ipa: string | null;
+  /**
+   * 题目自带解析（语法 / 时态 / 词形，生题时生成）。
+   * 有值就直接展示，**不必再调 AI 实时生成**；空值（老题尚未回填）才回退到流式解析。
+   */
+  explanation: string | null;
   imageUrl: string | null;
   favorited: boolean;
   todayDone: number;
@@ -75,6 +80,8 @@ export interface SentenceLibraryItem {
   sentenceEn: string;
   translationZh: string;
   ipa: string | null;
+  /** 题目解析（点开句子复习时展示；老题为空） */
+  explanation: string | null;
   imageUrl: string | null;
   categoryName: string | null;
   difficulty: number;

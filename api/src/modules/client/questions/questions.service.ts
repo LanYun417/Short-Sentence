@@ -62,6 +62,12 @@ export interface AnswerResult {
   validAnswers: string[];
   translationZh: string;
   ipa: string | null;
+  /**
+   * 题目解析（语法点 / 时态 / 关键词形与搭配 / 易错点）。
+   * **无论答对答错都下发**：这是学习闭环的核心——用户要知道为什么这么写。
+   * 空值 = 该题还没生成解析（老题尚未回填），客户端不显示解析块。
+   */
+  explanation: string | null;
   imageUrl: string | null;
   /** 当前是否已收藏 */
   favorited: boolean;
@@ -86,6 +92,8 @@ export interface SentenceLibraryItem {
   sentenceEn: string;
   translationZh: string;
   ipa: string | null;
+  /** 题目解析（语法 / 时态 / 词形；点开句子复习时展示；老题可能为空） */
+  explanation: string | null;
   imageUrl: string | null;
   categoryName: string | null;
   difficulty: number;
@@ -288,6 +296,7 @@ export class QuestionsService {
         alternateAnswers: true,
         translationZh: true,
         ipa: true,
+        explanation: true,
         imageFileId: true,
       },
     });
@@ -331,6 +340,7 @@ export class QuestionsService {
         validAnswers,
         translationZh: sentence.translationZh,
         ipa: sentence.ipa,
+        explanation: sentence.explanation,
         imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
         favorited: repeatedFavorite,
         todayDone: repeatedToday?.doneCount ?? 0,
@@ -396,6 +406,7 @@ export class QuestionsService {
       validAnswers,
       translationZh: sentence.translationZh,
       ipa: sentence.ipa,
+      explanation: sentence.explanation,
       imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
       favorited,
       todayDone: today?.doneCount ?? 0,
@@ -487,6 +498,7 @@ export class QuestionsService {
               sentenceEn: true,
               translationZh: true,
               ipa: true,
+              explanation: true,
               imageFileId: true,
               difficulty: true,
               category: { select: { name: true } },
@@ -507,6 +519,7 @@ export class QuestionsService {
         sentenceEn: sentence.sentenceEn,
         translationZh: sentence.translationZh,
         ipa: sentence.ipa,
+        explanation: sentence.explanation,
         imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
         categoryName: sentence.category?.name ?? null,
         difficulty: sentence.difficulty,
@@ -542,6 +555,7 @@ export class QuestionsService {
               sentenceEn: true,
               translationZh: true,
               ipa: true,
+              explanation: true,
               imageFileId: true,
               difficulty: true,
               category: { select: { name: true } },
@@ -562,6 +576,7 @@ export class QuestionsService {
         sentenceEn: sentence.sentenceEn,
         translationZh: sentence.translationZh,
         ipa: sentence.ipa,
+        explanation: sentence.explanation,
         imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
         categoryName: sentence.category?.name ?? null,
         difficulty: sentence.difficulty,
@@ -625,6 +640,7 @@ export class QuestionsService {
               sentenceEn: true,
               translationZh: true,
               ipa: true,
+              explanation: true,
               imageFileId: true,
               difficulty: true,
               category: { select: { name: true } },
@@ -646,6 +662,7 @@ export class QuestionsService {
         sentenceEn: sentence.sentenceEn,
         translationZh: sentence.translationZh,
         ipa: sentence.ipa,
+        explanation: sentence.explanation,
         imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
         categoryName: sentence.category?.name ?? null,
         difficulty: sentence.difficulty,
