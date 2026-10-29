@@ -282,8 +282,6 @@ async function onSubmitReport(): Promise<void> {
               <!-- 极窄屏（<380px）只留图标，避免顶栏挤爆（社区机型 360px 仍常见） -->
               <span class="hidden min-[380px]:inline">换一题</span>
             </UButton>
-            <!-- 作答方式切换：常驻「换一题」右侧，随时可切（<460px 只显图标） -->
-            <PracticeModePicker :model-value="mode" class="ml-0.5" @update:model-value="emit('change-mode', $event)" />
             <span class="whitespace-nowrap tabular-nums">今日 {{ question.todayDone }}/{{ question.todayGoal }}</span>
             <UButton
               icon="i-lucide-flag"
@@ -294,6 +292,8 @@ async function onSubmitReport(): Promise<void> {
               aria-label="举报或反馈此题"
               @click="openReport"
             />
+            <!-- 作答方式切换：顶栏最右，随时可切（<460px 只显图标） -->
+            <PracticeModePicker :model-value="mode" class="ml-1" @update:model-value="emit('change-mode', $event)" />
           </div>
         </div>
 
