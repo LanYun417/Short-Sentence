@@ -166,23 +166,17 @@ onMounted(() => {
 
 <template>
   <div>
-    <!-- 答题区：已选词块按顺序排列；词块过多时内部横向滚动，左右两侧翻页按钮 -->
-    <div class="flex items-stretch gap-1">
-      <UButton
-        :disabled="!canScrollLeft"
-        icon="i-lucide-chevron-left"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="shrink-0 self-center"
-        aria-label="向左滚动已选词"
-        @click="scrollByAmount(-1)"
-      />
+    <!--
+      答题区：已选词块按顺序排列；词块过多时内部横向滚动（无滚动条）。
+      走马灯样式：左右箭头收在盒内边缘、小圆形按钮，边缘渐隐提示还有内容；
+      某侧滚到头时该侧的渐隐与按钮自动隐藏。
+    -->
+    <div class="relative">
       <TransitionGroup
         :ref="setSelectedRef"
         name="chip"
         tag="div"
-        class="no-scrollbar relative flex min-h-13 min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
+        class="no-scrollbar relative flex min-h-13 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
         :class="[
           selected.length > 0
             ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
@@ -205,16 +199,36 @@ onMounted(() => {
           {{ chip.text }}
         </button>
       </TransitionGroup>
-      <UButton
-        :disabled="!canScrollRight"
-        icon="i-lucide-chevron-right"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        class="shrink-0 self-center"
-        aria-label="向右滚动已选词"
-        @click="scrollByAmount(1)"
-      />
+
+      <!-- 左缘：渐隐遮罩 + 翻页按钮（遮罩不挡点击，仅按钮可点） -->
+      <div
+        v-show="canScrollLeft"
+        class="pointer-events-none absolute inset-y-2.5 left-2.5 z-10 flex items-center rounded-l-xl bg-gradient-to-r from-white via-white/85 to-transparent pr-8 dark:from-slate-800 dark:via-slate-800/85"
+      >
+        <button
+          type="button"
+          class="pointer-events-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:text-sky-600 active:scale-90 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600 dark:hover:text-sky-400"
+          aria-label="向左滚动已选词"
+          @click="scrollByAmount(-1)"
+        >
+          <UIcon name="i-lucide-chevron-left" class="h-4 w-4" />
+        </button>
+      </div>
+
+      <!-- 右缘：渐隐遮罩 + 翻页按钮 -->
+      <div
+        v-show="canScrollRight"
+        class="pointer-events-none absolute inset-y-2.5 right-2.5 z-10 flex items-center justify-end rounded-r-xl bg-gradient-to-l from-white via-white/85 to-transparent pl-8 dark:from-slate-800 dark:via-slate-800/85"
+      >
+        <button
+          type="button"
+          class="pointer-events-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 shadow-md ring-1 ring-slate-200 transition hover:text-sky-600 active:scale-90 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600 dark:hover:text-sky-400"
+          aria-label="向右滚动已选词"
+          @click="scrollByAmount(1)"
+        >
+          <UIcon name="i-lucide-chevron-right" class="h-4 w-4" />
+        </button>
+      </div>
     </div>
 
     <!-- 词库：**全部**词块固定原位；已选走的原地标灰、不可点（不消失、不重排） -->
