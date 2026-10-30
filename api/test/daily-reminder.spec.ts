@@ -1,11 +1,12 @@
 /**
  * 每日学习提醒：**只提醒「今天还没完成目标」的人**（核心业务规则，容易被改坏）。
  *
- * 守住四件事：
+ * 守住五件事：
  * 1. 今天没有打卡记录（一道题没做）→ 要发；
  * 2. doneCount < goalCount（做了没达标）→ 要发；
  * 3. doneCount >= goalCount（已完成）→ 不发；
- * 4. 18 点前（深夜补跑）一律不发。
+ * 4. 18 点前（深夜补跑）一律不发；
+ * 5. 今天已经收到过提醒的人 → 不重复发（重启补跑也不重复）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DailyReminderService } from '../src/modules/mail/daily-reminder.service.js';
@@ -20,6 +21,8 @@ interface Candidate {
 function buildService(options: {
   candidates: Candidate[];
   checkins: Array<{ userId: bigint; doneCount: number; goalCount: number }>;
+  /** 今天已发过提醒的用户 id（模拟重启后重跑） */
+  alreadySent?: string[];
 }) {
   const sendDailyReminder = vi.fn(async () => undefined);
   const fakePrisma = {
@@ -30,8 +33,13 @@ function buildService(options: {
     status: vi.fn(async () => ({ enabled: true, ready: true, missing: [] as string[] })),
     sendDailyReminder,
   };
-  const service = new DailyReminderService(fakePrisma as never, fakeMail as never);
-  return { service, sendDailyReminder, fakeMail };
+  const fakeRedis = {
+    sMembers: vi.fn(async () => options.alreadySent ?? []),
+    sAdd: vi.fn(async () => true),
+    expire: vi.fn(async () => true),
+  };
+  const service = new DailyReminderService(fakePrisma as never, fakeMail as never, fakeRedis as never);
+  return { service, sendDailyReminder, fakeMail, fakeRedis };
 }
 
 describe('DailyReminderService', () => {
@@ -46,8 +54,8 @@ describe('DailyReminderService', () => {
     vi.useRealTimers();
   });
 
-  it('今天没有任何打卡记录 → 提醒', async () => {
-    const { service, sendDailyReminder } = buildService({
+  it('今天没有任何打卡记录 → 提醒，并记账（供重启后幂等）', async () => {
+    const { service, sendDailyReminder, fakeRedis } = buildService({
       candidates: [{ id: 1n, email: 'idle@example.com', nickname: '没做题' }],
       checkins: [],
     });
@@ -56,6 +64,7 @@ describe('DailyReminderService', () => {
 
     expect(sendDailyReminder).toHaveBeenCalledTimes(1);
     expect(sendDailyReminder).toHaveBeenCalledWith('idle@example.com', '没做题');
+    expect(fakeRedis.sAdd).toHaveBeenCalledWith(expect.stringContaining('mail:reminder:sent:'), '1');
   });
 
   it('做了但没达标 → 提醒；已达标的跳过', async () => {
@@ -97,5 +106,21 @@ describe('DailyReminderService', () => {
     await service.run();
 
     expect(sendDailyReminder).not.toHaveBeenCalled();
+  });
+
+  it('今天已提醒过的人不再重复发（重启补跑幂等）', async () => {
+    const { service, sendDailyReminder } = buildService({
+      candidates: [
+        { id: 1n, email: 'sent@example.com', nickname: '已提醒' },
+        { id: 2n, email: 'new@example.com', nickname: '待提醒' },
+      ],
+      checkins: [],
+      alreadySent: ['1'],
+    });
+
+    await service.run();
+
+    expect(sendDailyReminder).toHaveBeenCalledTimes(1);
+    expect(sendDailyReminder).toHaveBeenCalledWith('new@example.com', '待提醒');
   });
 });

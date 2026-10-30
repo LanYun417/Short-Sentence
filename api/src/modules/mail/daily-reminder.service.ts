@@ -11,11 +11,17 @@
  * - doneCount >= goalCount → 已完成，**跳过**。
  *
  * 只发给「我的 → 每日提醒」主动开启（`client_user.email_reminder=1`）且账号启用的用户。
- * 两个节流：单次最多 500 封、相邻邮件间隔 200ms（串行，避免被上游按 QPS 限流）。
+ *
+ * 三个节流：
+ * 1. 单次最多 500 封；
+ * 2. 相邻邮件间隔 200ms（串行，避免被上游按 QPS 限流）；
+ * 3. **按用户幂等**：今天已经收到过提醒的人跳过——500 封要发 100 秒左右，
+ *    中途部署重启会触发「启动补跑」，没有这层保护同一批人就会收到两封。
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../../common/config/config.js';
 import { MailService } from '../../common/mail/mail.service.js';
+import { RedisService } from '../../common/redis/redis.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 @Injectable()
@@ -34,10 +40,13 @@ export class DailyReminderService {
    * 18 点前一律跳过（当天后续的补跑也不会再来，宁可不发）。
    */
   private static readonly EARLIEST_HOUR = 18;
+  /** 当天已发集合的保留时长（跨天后自然失效） */
+  private static readonly SENT_TTL_MS = 24 * 60 * 60 * 1000;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
+    private readonly redis: RedisService,
   ) {}
 
   /** 本地时区的今天（YYYY-MM-DD），与 CheckinService 同口径。 */
@@ -84,7 +93,7 @@ export class DailyReminderService {
     const checkinMap = new Map(checkins.map((row) => [Number(row.userId), row]));
 
     // 只留「今天还没完成」的人：没有记录 = 一道题没做，也算未完成
-    const pending = candidates.filter((user) => {
+    const unfinished = candidates.filter((user) => {
       const record = checkinMap.get(Number(user.id));
       if (!record) {
         return true;
@@ -93,9 +102,19 @@ export class DailyReminderService {
       return record.doneCount < goal;
     });
 
-    const finished = candidates.length - pending.length;
-    if (pending.length === 0) {
+    const finished = candidates.length - unfinished.length;
+    if (unfinished.length === 0) {
       this.logger.log(`[DailyReminder] 今日候选 ${candidates.length} 人已完成目标，无需提醒`);
+      return;
+    }
+
+    // 幂等：跳过今天已经收到过提醒的人（重启补跑不会造成重复投递）
+    const sentKey = `mail:reminder:sent:${today}`;
+    const alreadySent = new Set((await this.redis.sMembers(sentKey)).map((id) => Number(id)));
+    const pending = unfinished.filter((user) => !alreadySent.has(Number(user.id)));
+    const skipped = unfinished.length - pending.length;
+    if (pending.length === 0) {
+      this.logger.log(`[DailyReminder] 未完成 ${unfinished.length} 人今日均已提醒过，本次跳过`);
       return;
     }
 
@@ -105,6 +124,8 @@ export class DailyReminderService {
       try {
         await this.mail.sendDailyReminder(user.email, user.nickname);
         sent += 1;
+        // 逐人记账：中途失败/重启后重跑只补发没发过的人
+        await this.redis.sAdd(sentKey, String(user.id));
       } catch (error) {
         failed += 1;
         this.logger.warn(
@@ -114,8 +135,12 @@ export class DailyReminderService {
       // 串行 + 固定间隔：邮件服务按 QPS 限流，并发发送只会换来一片 429
       await new Promise((resolve) => setTimeout(resolve, DailyReminderService.GAP_MS));
     }
+    // 集合留 24 小时（跨天后新的一天重新计）
+    await this.redis.expire(sentKey, DailyReminderService.SENT_TTL_MS);
+
     this.logger.log(
-      `[DailyReminder] 完成：未完成 ${pending.length} 人（已完成跳过 ${finished} 人），成功 ${sent} / 失败 ${failed}`,
+      `[DailyReminder] 完成：未完成 ${unfinished.length} 人（已完成跳过 ${finished} 人，今日已提醒跳过 ${skipped} 人），` +
+        `成功 ${sent} / 失败 ${failed}`,
     );
   }
 }
