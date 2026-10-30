@@ -114,6 +114,11 @@ docker compose -f deploy/docker-compose.yml up -d --build
 
 其余可调项见 `knowledge/后端开发规范/03-环境与配置.md`。
 
+> **AI 配置不走环境变量**：Agnes 的 Key / 上游地址 / 生文生图模型由后台
+> 「系统管理 → AI 设置」维护（存 `sys_config`，密钥只回掩码、保存后立即生效，无需重启）。
+> 环境变量 `AI_AGNES_*` 仅作**兜底**，供本地开发与 CI 使用；线上首次部署登录后台填一次即可，
+> 因此 compose 里不需要注入 AI 密钥。
+
 ## 5. 数据与备份
 
 | 卷           | 内容                       | 备份方式                                                 |

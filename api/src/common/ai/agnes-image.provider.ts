@@ -12,6 +12,7 @@ import { Injectable } from '@nestjs/common';
 import { config } from '../config/config.js';
 import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
+import { AiSettingsService } from './ai-settings.service.js';
 import { AiProviderError, type GeneratedImage, type ImageGenProvider } from './ai.types.js';
 
 /** Agnes 图像响应结构。 */
@@ -24,11 +25,12 @@ export class AgnesImageProvider implements ImageGenProvider {
   constructor(
     private readonly aiCallLog: AiCallLogService,
     private readonly budget: AiBudgetService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   /** 密钥未配置时禁用生图能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
-    return config.ai.agnes.apiKey.trim().length > 0;
+    return this.aiSettings.current.apiKey.trim().length > 0;
   }
 
   /** 按提示词生成一张图（URL 输出，下载后返回字节）。 */
@@ -41,14 +43,14 @@ export class AgnesImageProvider implements ImageGenProvider {
 
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${config.ai.agnes.baseUrl}/images/generations`, {
+      const response = await fetch(`${this.aiSettings.current.baseUrl}/images/generations`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${config.ai.agnes.apiKey}`,
+          Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.ai.agnes.imageModel,
+          model: this.aiSettings.current.imageModel,
           prompt,
           size: options.size,
           ratio: options.ratio,
@@ -104,7 +106,7 @@ export class AgnesImageProvider implements ImageGenProvider {
     await this.aiCallLog.record({
       type: 'image_gen',
       provider: 'agnes-ai',
-      model: config.ai.agnes.imageModel,
+      model: this.aiSettings.current.imageModel,
       latencyMs,
       status,
       errorMessage,

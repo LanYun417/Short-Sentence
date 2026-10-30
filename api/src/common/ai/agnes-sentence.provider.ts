@@ -14,6 +14,7 @@ import { config } from '../config/config.js';
 import type { DayContext } from '../calendar/day-context.js';
 import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
+import { AiSettingsService } from './ai-settings.service.js';
 import {
   AiProviderError,
   type ExplainItem,
@@ -236,11 +237,12 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   constructor(
     private readonly aiCallLog: AiCallLogService,
     private readonly budget: AiBudgetService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   /** 密钥未配置时禁用生题能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
-    return config.ai.agnes.apiKey.trim().length > 0;
+    return this.aiSettings.current.apiKey.trim().length > 0;
   }
 
   /**
@@ -495,14 +497,14 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     await this.budget.assertWithinBudget();
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${config.ai.agnes.apiKey}`,
+          Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: config.ai.agnes.textModel,
+          model: this.aiSettings.current.textModel,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent },
@@ -543,7 +545,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       await this.aiCallLog.record({
         type: callType,
         provider: 'agnes',
-        model: config.ai.agnes.textModel,
+        model: this.aiSettings.current.textModel,
         bizId: options.bizId ?? 0,
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
@@ -555,7 +557,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       await this.aiCallLog.record({
         type: callType,
         provider: 'agnes',
-        model: config.ai.agnes.textModel,
+        model: this.aiSettings.current.textModel,
         bizId: options.bizId ?? 0,
         latencyMs: Date.now() - startedAt,
         status: 'failed',

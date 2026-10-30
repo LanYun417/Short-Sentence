@@ -957,6 +957,38 @@ export interface SaveMailSettingsPayload {
   templateReminder?: number;
 }
 
+/** AI 设置（管理端；API Key 只回掩码，永不回显明文） */
+export interface AiSettings {
+  /** API Key 是否已配置 */
+  apiKeyConfigured: boolean;
+  /** 掩码后的 API Key（末 4 位可见） */
+  apiKeyMasked: string;
+  /** 上游地址（含 /v1） */
+  baseUrl: string;
+  /** 生文模型 */
+  textModel: string;
+  /** 生图模型 */
+  imageModel: string;
+  /** 是否可用（等价于 apiKeyConfigured） */
+  enabled: boolean;
+}
+
+/** 保存 AI 设置入参（apiKey 留空 = 不修改） */
+export interface SaveAiSettingsPayload {
+  apiKey?: string;
+  baseUrl?: string;
+  textModel?: string;
+  imageModel?: string;
+}
+
+/** AI 连通性测试结果 */
+export interface AiTestResult {
+  /** 上游往返耗时（ms） */
+  latencyMs: number;
+  /** 本次使用的生文模型 */
+  model: string;
+}
+
 /** App 版本条目（管理端） */
 export interface AppVersionItem {
   id: number;

@@ -10,10 +10,10 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { config } from '../../../common/config/config.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
+import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
 import { AiProviderError } from '../../../common/ai/ai.types.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -40,6 +40,7 @@ export class ClientAiService {
     private readonly aiCallLog: AiCallLogService,
     private readonly aiQuota: AiQuotaService,
     private readonly prisma: PrismaService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   /**
@@ -133,17 +134,17 @@ export class ClientAiService {
 
       void (async () => {
         try {
-          if (config.ai.agnes.apiKey.trim().length === 0) {
+          if (this.aiSettings.current.apiKey.trim().length === 0) {
             throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
           }
-          const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
+          const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${config.ai.agnes.apiKey}`,
+              Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: config.ai.agnes.textModel,
+              model: this.aiSettings.current.textModel,
               messages: [
                 { role: 'system', content: params.system },
                 { role: 'user', content: params.user },
@@ -177,7 +178,7 @@ export class ClientAiService {
           await this.aiCallLog.record({
             type: params.type,
             provider: 'agnes',
-            model: config.ai.agnes.textModel,
+            model: this.aiSettings.current.textModel,
             bizId: params.bizId,
             promptTokens,
             completionTokens,
@@ -198,7 +199,7 @@ export class ClientAiService {
           await this.aiCallLog.record({
             type: params.type,
             provider: 'agnes',
-            model: config.ai.agnes.textModel,
+            model: this.aiSettings.current.textModel,
             bizId: params.bizId,
             latencyMs: Date.now() - startedAt,
             status: 'failed',

@@ -21,6 +21,7 @@ import { FileService } from '../src/common/file/file.service.js';
 import { ImageScaleService } from '../src/common/file/file-guards.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
 import { AiBudgetService } from '../src/common/ai/ai-budget.service.js';
+import { AiSettingsService } from '../src/common/ai/ai-settings.service.js';
 import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
@@ -48,10 +49,13 @@ async function main(): Promise<void> {
   const files = new FilesService(prisma, new ImageScaleService());
   const aiCallLog = new AiCallLogService(prisma);
   const budget = new AiBudgetService(prisma);
+  // AI 配置优先读 sys_config（与后台「AI 设置」同源），空值回落环境变量
+  const aiSettings = new AiSettingsService(prisma);
+  await aiSettings.reload();
   const gen = new SentenceGenService(
     prisma,
-    new AgnesSentenceProvider(aiCallLog, budget),
-    new AgnesImageProvider(aiCallLog, budget),
+    new AgnesSentenceProvider(aiCallLog, budget, aiSettings),
+    new AgnesImageProvider(aiCallLog, budget, aiSettings),
     new FileService(prisma),
     budget,
   );

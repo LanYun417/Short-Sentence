@@ -377,6 +377,27 @@ const MENU_TREE: MenuSeedNode[] = [
         ],
       },
       {
+        key: 'system:ai',
+        menuName: 'AI 设置',
+        menuType: MenuType.MENU,
+        path: '/system/ai',
+        component: 'system/ai/index',
+        icon: 'robot',
+        permission: 'system:ai:list',
+        sort: 10,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'system:ai:edit',
+            menuName: '编辑 AI 设置',
+            menuType: MenuType.BUTTON,
+            permission: 'system:ai:edit',
+            sort: 1,
+          },
+        ],
+      },
+      {
         key: 'system:notice',
         menuName: '通知中心',
         menuType: MenuType.MENU,

@@ -38,6 +38,7 @@ import { SentenceCardsModule } from './modules/sentence-cards/sentence-cards.mod
 import { WordRootsModule } from './modules/word-roots/word-roots.module.js';
 import { AppVersionsModule } from './modules/app-versions/app-versions.module.js';
 import { MailModule } from './modules/mail/mail.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 import { ClientUsersModule } from './modules/client-users/client-users.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 
@@ -78,6 +79,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     AppVersionsModule,
     // 邮件设置（/api/mail-settings；发送能力在 CommonModule 的 MailService）
     MailModule,
+    // AI 设置（/api/ai-settings；运行时快照与调用能力在 CommonModule）
+    AiModule,
     ClientUsersModule,
     AnalyticsModule,
   ],

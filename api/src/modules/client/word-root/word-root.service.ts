@@ -8,10 +8,10 @@
  * - **限速友好**：每日入库逐条串行 + 指数退避（上游对突发很敏感）。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { config } from '../../../common/config/config.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
+import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
 /** 词根构件。 */
@@ -68,6 +68,7 @@ export class WordRootService {
     private readonly prisma: PrismaService,
     private readonly aiCallLog: AiCallLogService,
     private readonly aiQuota: AiQuotaService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   /** 搜索：按包含匹配，按热度排序（关键词为空时返回热门词）。 */
@@ -313,18 +314,18 @@ export class WordRootService {
 
   /** 调上游做一次词根解析（非流式）。 */
   private async analyze(word: string, userId?: number): Promise<WordRootAnalysis> {
-    if (config.ai.agnes.apiKey.trim().length === 0) {
+    if (this.aiSettings.current.apiKey.trim().length === 0) {
       throw new Error('AI 能力未配置（AI_AGNES_API_KEY 缺失）');
     }
     const startedAt = Date.now();
-    const response = await fetch(`${config.ai.agnes.baseUrl}/chat/completions`, {
+    const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.ai.agnes.apiKey}`,
+        Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: config.ai.agnes.textModel,
+        model: this.aiSettings.current.textModel,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `单词：${word}` },
@@ -347,7 +348,7 @@ export class WordRootService {
     await this.aiCallLog.record({
       type: 'word_root',
       provider: 'agnes',
-      model: config.ai.agnes.textModel,
+      model: this.aiSettings.current.textModel,
       // 带 userId 便于按用户归集 AI 用量（做会员分档与运营报表的依据）
       bizId: userId ?? 0,
       promptTokens: payload.usage?.prompt_tokens ?? 0,

@@ -7843,6 +7843,112 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "AI 设置",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/ai-settings",
+        "summary": "读取设置（API Key 只回掩码）",
+        "permission": [
+          "system:ai:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/ai-settings?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/ai-settings/test",
+        "summary": "测试连通性：用当前生文模型发一个极短的请求。 只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "permission": [
+          "system:ai:edit"
+        ],
+        "isPublic": false,
+        "action": "AI 设置 · 测试连通性",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/ai-settings/test\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/ai-settings",
+        "summary": "保存设置（apiKey 传空 = 不修改）",
+        "permission": [
+          "system:ai:edit"
+        ],
+        "isPublic": false,
+        "action": "AI 设置 · 保存",
+        "params": [
+          {
+            "name": "apiKey",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "Agnes API Key（留空 = 不修改）",
+            "example": "示例值"
+          },
+          {
+            "name": "baseUrl",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "上游地址（含 /v1；留空 = 不修改）",
+            "example": "示例值"
+          },
+          {
+            "name": "textModel",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "生文模型（留空 = 不修改）",
+            "example": "示例值"
+          },
+          {
+            "name": "imageModel",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "生图模型（留空 = 不修改）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/ai-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"apiKey\": \"示例值\",\n      \"baseUrl\": \"示例值\",\n      \"textModel\": \"示例值\",\n      \"imageModel\": \"示例值\"\n    }'",
+          "requestBody": {
+            "apiKey": "示例值",
+            "baseUrl": "示例值",
+            "textModel": "示例值",
+            "imageModel": "示例值"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "AI 拓展",
     "endpoints": [
       {

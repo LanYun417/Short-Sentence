@@ -24,6 +24,7 @@ import { IpRegionService } from './ip/ip-region.service.js';
 import { AiCallLogService } from './ai/ai-call-log.service.js';
 import { AiQuotaService } from './ai/ai-quota.service.js';
 import { AiBudgetService } from './ai/ai-budget.service.js';
+import { AiSettingsService } from './ai/ai-settings.service.js';
 import { AgnesSentenceProvider } from './ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from './ai/agnes-image.provider.js';
 import { MailService } from './mail/mail.service.js';
@@ -55,6 +56,8 @@ import { MailService } from './mail/mail.service.js';
     AiQuotaService,
     // 全局每日 AI 预算闸门（跨所有 AI 调用入口；0 = 不限）
     AiBudgetService,
+    // AI 配置运行时快照（sys_config 优先、环境变量兜底；后台改完刷新）
+    AiSettingsService,
     AgnesSentenceProvider,
     AgnesImageProvider,
     // 邮件（腾讯云 SES；凭证存 sys_config，后台可编辑，缺配置时发送接口报可读错误）
@@ -85,6 +88,7 @@ import { MailService } from './mail/mail.service.js';
     AiCallLogService,
     AiQuotaService,
     AiBudgetService,
+    AiSettingsService,
     AgnesSentenceProvider,
     AgnesImageProvider,
     MailService,

@@ -131,6 +131,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "语句库"
     },
     {
+      "name": "AI 设置"
+    },
+    {
       "name": "AI 拓展"
     },
     {
@@ -14456,6 +14459,187 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/ai-settings": {
+      "get": {
+        "tags": [
+          "AI 设置"
+        ],
+        "summary": "读取设置（API Key 只回掩码）",
+        "operationId": "get__api_ai_settings",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "AI 设置"
+        ],
+        "summary": "保存设置（apiKey 传空 = 不修改）",
+        "operationId": "put__api_ai_settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAiSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UpdateAiSettingsDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/ai-settings/test": {
+      "post": {
+        "tags": [
+          "AI 设置"
+        ],
+        "summary": "测试连通性：用当前生文模型发一个极短的请求。 只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "operationId": "post__api_ai_settings_test",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/ai/quota": {
       "get": {
         "tags": [
@@ -16228,6 +16412,31 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "required": [
           "enabled"
         ]
+      },
+      "UpdateAiSettingsDto": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string",
+            "description": "Agnes API Key（留空 = 不修改）",
+            "example": "示例值"
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "上游地址（含 /v1；留空 = 不修改）",
+            "example": "示例值"
+          },
+          "textModel": {
+            "type": "string",
+            "description": "生文模型（留空 = 不修改）",
+            "example": "示例值"
+          },
+          "imageModel": {
+            "type": "string",
+            "description": "生图模型（留空 = 不修改）",
+            "example": "示例值"
+          }
+        }
       },
       "SaveAppVersionDto": {
         "type": "object",
