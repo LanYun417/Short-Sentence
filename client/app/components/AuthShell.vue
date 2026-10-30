@@ -46,6 +46,11 @@ defineProps<{
       <div class="anim-in" :style="{ animationDelay: '120ms' }">
         <slot />
       </div>
+
+      <!-- 未登录用户也要能下载 App：入口固定在认证页底部（首页需登录，这里是唯一必经之地） -->
+      <div class="anim-in mt-6 text-center" :style="{ animationDelay: '180ms' }">
+        <AppDownloadEntry variant="link" />
+      </div>
     </div>
   </div>
 </template>

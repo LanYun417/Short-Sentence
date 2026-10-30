@@ -1,12 +1,16 @@
 <script setup lang="ts">
 /**
- * 「下载 App」入口（我的页）。
+ * 「下载 App」入口，两种呈现：
+ * - `card`（默认）：我的页里的整行卡片；
+ * - `link`：登录/注册页底部的轻量文字链接——**未登录用户也要能下载 App**。
  *
  * 点击才去取最新版本（首屏不为它多发一个请求）；下载走 api 专用接口
  * `/api/client/app/download/:id`——绕过 `/static` 的防盗链，同时能统计下载量。
  */
 import { apiFetch } from '~/composables/useApi';
 import type { LatestAppVersion } from '~/types';
+
+withDefaults(defineProps<{ variant?: 'card' | 'link' }>(), { variant: 'card' });
 
 const open = ref(false);
 const loading = ref(false);
@@ -47,7 +51,9 @@ function dateText(value: string): string {
 </script>
 
 <template>
+  <!-- 我的页：整行卡片 -->
   <button
+    v-if="variant === 'card'"
     type="button"
     class="anim-in mt-3 flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
     style="animation-delay: 115ms"
@@ -57,6 +63,17 @@ function dateText(value: string): string {
     <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">下载 App</span>
     <span class="shrink-0 text-xs text-slate-400">Android</span>
     <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+  </button>
+
+  <!-- 登录/注册页：轻量文字链接，不抢表单的视觉重心 -->
+  <button
+    v-else
+    type="button"
+    class="mx-auto flex items-center gap-1.5 text-sm text-slate-400 transition hover:text-sky-600 dark:hover:text-sky-400"
+    @click="openDialog"
+  >
+    <UIcon name="i-lucide-smartphone" class="h-4 w-4" />
+    下载 Android App
   </button>
 
   <UModal v-model:open="open" title="下载短句 App" description="装到手机上，通勤路上也能刷两题。">
