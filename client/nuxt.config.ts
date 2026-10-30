@@ -144,6 +144,22 @@ export default defineNuxtConfig({
     indexable: true,
   },
 
+  // nuxt-seo-utils 的配置（@nuxtjs/seo 把 seo-utils 子模块的 configKey 映射为 "seo"）。
+  seo: {
+    // 关掉 twitter:* 标签的自动派生。
+    // unhead v3 已把 twitter:card / twitter:image 等判为弃用，会在浏览器控制台刷
+    // "[unhead] twitter:card is deprecated. Use Open Graph metadata instead."。
+    // 社交平台现在读 Open Graph 即可（og:title / og:description / og:image），
+    // 保留一份 twitter 副本只会制造噪音告警，没有额外收益。
+    automaticTwitterTags: false,
+  },
+
+  // og-image：项目用的是**静态**分享图（public/og-image.png，见 app.vue 的 og:image），
+  // 不需要动态生成 OG 图。@nuxtjs/seo 会连带装 nuxt-og-image，它找不到渲染器（takumi/satori/
+  // chromium）时会持续在启动日志里警告 "No OG image renderer is installed"。
+  // 置 false 即不装载该子模块，消除噪声（不影响手写的 og:image）。
+  ogImage: false,
+
   // robots：私有页（需登录）一律禁止抓取——它们对爬虫没有内容，进索引只会稀释站点质量。
   // 「是否收录」仍由环境决定：开发环境自动全站 Disallow，生产才放开。
   // disallowNonIndexableRoutes 关掉：它会给每个 routeRule 非索引路由生成一个「空 Disallow」组，
@@ -167,26 +183,18 @@ export default defineNuxtConfig({
     // 页面切换动画（CSS 类见 assets/css/main.css 的 .page-* 定义）
     pageTransition: { name: 'page', mode: 'out-in' },
     head: {
-      // 文档语言：SEO 与读屏软件都依赖它，缺失时只能靠猜
-      htmlAttrs: { lang: 'zh-CN' },
       // 默认标题（无页面级标题时使用）；页面只写短标题，品牌后缀由 titleTemplate 统一拼
       title: '视觉场景英语闪卡',
       titleTemplate: '%s · 短句',
       meta: [
-        { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-        { name: 'description', content: SITE_DESCRIPTION },
-        // 分享卡片兜底图（页面级 ogImage 会覆盖）
-        { property: 'og:image', content: '/og-image.png' },
-        { property: 'og:image:type', content: 'image/png' },
-        { property: 'og:image:width', content: '1200' },
-        { property: 'og:image:height', content: '630' },
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:image', content: '/og-image.png' },
         // 浏览器 / 系统 UI 主题色（跟随亮暗）
         { name: 'theme-color', content: '#ffffff', media: '(prefers-color-scheme: light)' },
         { name: 'theme-color', content: '#0f172a', media: '(prefers-color-scheme: dark)' },
       ],
+      // 注：文档语言（htmlAttrs.lang）与分享图（og:image 等）都在 app.vue 里运行时声明。
+      // 原因：二者都依赖「当前站点域名」，构建期拿不到；写成静态相对值会被判定为
+      // 无效（相对 og:image 爬虫取不到，静态 lang 在装了 i18n 时算「钉死 locale」）。
       link: [
         // 矢量 favicon 优先（任意尺寸清晰），.ico 兜底旧浏览器
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

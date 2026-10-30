@@ -52,8 +52,19 @@ const siteConfig = useSiteConfig();
  */
 const colorMode = useColorMode();
 
+/**
+ * 站点兜底分享图（public/og-image.png）的绝对地址。
+ * 爬虫只认绝对 URL，所以必须在运行时按当前站点域名拼出来。
+ */
+const ogImage = useAbsoluteUrl('/og-image.png');
+
 useHead({
   htmlAttrs: {
+    // 文档语言：SEO 与读屏软件都依赖它，缺失时只能靠猜。
+    // 放在运行时而非 nuxt.config：装了 @nuxtjs/i18n 时，静态声明 lang 会被判定为
+    // 「把语言钉死在一个 locale」而报配置警告（i18n 的 strictSeo 关闭时它自己又不输出
+    // lang，删掉静态声明会导致 <html> 丢失语言声明）。运行时声明两者兼得。
+    lang: 'zh-CN',
     style: computed(() => {
       // value 可能是 light / dark / system（跟随系统时服务端 state 仍是字面量 'system'）：
       // 'system' 映射为合法的 `light dark`（跟随 UA 偏好），并兜底所有非法值，绝不渲染无效 CSS。
@@ -61,6 +72,14 @@ useHead({
       return `color-scheme: ${scheme}`;
     }),
   },
+  meta: [
+    // 站点兜底分享图。必须是绝对 URL（爬虫按绝对地址取图），因此在运行时拼，
+    // 而不是写死在 nuxt.config 里（那时还不知道部署域名）。
+    { property: 'og:image', content: ogImage },
+    { property: 'og:image:type', content: 'image/png' },
+    { property: 'og:image:width', content: '1600' },
+    { property: 'og:image:height', content: '840' },
+  ],
   script: [
     {
       type: 'application/ld+json',
