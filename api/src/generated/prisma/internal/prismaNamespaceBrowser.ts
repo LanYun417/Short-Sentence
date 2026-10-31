@@ -417,6 +417,9 @@ export const SentenceScalarFieldEnum = {
   source: 'source',
   status: 'status',
   genTaskId: 'genTaskId',
+  festivalName: 'festivalName',
+  festivalDate: 'festivalDate',
+  retiredAt: 'retiredAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -436,6 +439,8 @@ export const SentenceGenTaskScalarFieldEnum = {
   stage: 'stage',
   lastHeartbeatAt: 'lastHeartbeatAt',
   triggerType: 'triggerType',
+  festivalName: 'festivalName',
+  festivalDate: 'festivalDate',
   errorMessage: 'errorMessage',
   startedAt: 'startedAt',
   finishedAt: 'finishedAt',
@@ -904,7 +909,9 @@ export const SentenceOrderByRelevanceFieldEnum = {
   explanation: 'explanation',
   scenePrompt: 'scenePrompt',
   source: 'source',
-  status: 'status'
+  status: 'status',
+  festivalName: 'festivalName',
+  festivalDate: 'festivalDate'
 } as const
 
 export type SentenceOrderByRelevanceFieldEnum = (typeof SentenceOrderByRelevanceFieldEnum)[keyof typeof SentenceOrderByRelevanceFieldEnum]
@@ -915,6 +922,8 @@ export const SentenceGenTaskOrderByRelevanceFieldEnum = {
   status: 'status',
   stage: 'stage',
   triggerType: 'triggerType',
+  festivalName: 'festivalName',
+  festivalDate: 'festivalDate',
   errorMessage: 'errorMessage'
 } as const
 

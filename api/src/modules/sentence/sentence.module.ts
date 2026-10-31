@@ -13,6 +13,7 @@ import { ReportService } from './report.service.js';
   controllers: [SentenceController, ReportController],
   providers: [SentenceService, SentenceGenService, ReportService],
   // SentenceGenService 需要导出：client 模块的未来扩展（如用户端「等待更新」提示）可能查询批次状态
-  exports: [SentenceGenService],
+  // SentenceService 导出给 TaskModule 的「答题历史清理」任务使用（cleanupAnswerRecords）
+  exports: [SentenceGenService, SentenceService],
 })
 export class SentenceModule {}

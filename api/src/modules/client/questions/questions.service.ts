@@ -38,6 +38,8 @@ export interface NextQuestion {
   /** 场景图 URL（16:9） */
   imageUrl: string | null;
   categoryName: string | null;
+  /** 节日题库：所属节日名（普通题为 null；卡片上展示节日徽标） */
+  festivalName: string | null;
   difficulty: number;
   /** 今日已完成题数 */
   todayDone: number;
@@ -263,6 +265,7 @@ export class QuestionsService {
         translationZh: true,
         imageFileId: true,
         difficulty: true,
+        festivalName: true,
         category: { select: { name: true } },
       },
     });
@@ -276,6 +279,7 @@ export class QuestionsService {
       translationZh: sentence.translationZh,
       imageUrl: sentence.imageFileId > 0n ? await this.resolveImageUrl(Number(sentence.imageFileId)) : null,
       categoryName: sentence.category?.name ?? null,
+      festivalName: sentence.festivalName,
       difficulty: sentence.difficulty,
       todayDone: today?.doneCount ?? 0,
       todayGoal: config.sentence.dailyGoal,
@@ -537,7 +541,8 @@ export class QuestionsService {
       userId: BigInt(userId),
       isCorrect: 0,
       nextReviewAt: { lte: new Date() },
-      sentence: { status: 'ready' },
+      // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
+      sentence: { status: 'ready', retiredAt: null },
     };
     const [rows, total] = await Promise.all([
       this.prisma.sentenceRecord.findMany({
@@ -607,6 +612,10 @@ export class QuestionsService {
     const { page, pageSize, offset, limit } = parsePagination(query);
     const typeFilter = typeof query.type === 'string' ? query.type : 'all';
     const { sentenceWhere, dateWhere } = this.buildRecordFilters(query);
+    // 历史只保留最近一个月（不论对错）：未显式指定起始日期时，按保留天数截断
+    if (!dateWhere.gte && config.sentence.recordRetentionDays > 0) {
+      dateWhere.gte = new Date(Date.now() - config.sentence.recordRetentionDays * 24 * 60 * 60 * 1000);
+    }
 
     const where: Record<string, unknown> = { userId: BigInt(userId) };
     if (Object.keys(sentenceWhere).length > 0) {
@@ -698,7 +707,8 @@ export class QuestionsService {
    * @param difficulty 难度筛选（1/2/3）；不传则不限难度。
    */
   private async pickReadySentence(excludeIds: number[], difficulty?: number): Promise<number | null> {
-    const where: Record<string, unknown> = { status: 'ready' };
+    // retiredAt 非空 = 已退场的旧节日题：不再进入练习流（收藏/历史仍可见）
+    const where: Record<string, unknown> = { status: 'ready', retiredAt: null };
     if (difficulty) {
       where.difficulty = difficulty;
     }
@@ -726,7 +736,8 @@ export class QuestionsService {
       userId: BigInt(userId),
       isCorrect: 0,
       nextReviewAt: { lte: new Date() },
-      sentence: { status: 'ready' },
+      // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
+      sentence: { status: 'ready', retiredAt: null },
     };
     if (excludeIds.length > 0) {
       where.sentenceId = { notIn: excludeIds.map((id) => BigInt(id)) };

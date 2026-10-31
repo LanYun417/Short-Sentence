@@ -56,6 +56,8 @@ export type SentenceGenTaskMinAggregateOutputType = {
   stage: string | null
   lastHeartbeatAt: Date | null
   triggerType: string | null
+  festivalName: string | null
+  festivalDate: string | null
   errorMessage: string | null
   startedAt: Date | null
   finishedAt: Date | null
@@ -75,6 +77,8 @@ export type SentenceGenTaskMaxAggregateOutputType = {
   stage: string | null
   lastHeartbeatAt: Date | null
   triggerType: string | null
+  festivalName: string | null
+  festivalDate: string | null
   errorMessage: string | null
   startedAt: Date | null
   finishedAt: Date | null
@@ -94,6 +98,8 @@ export type SentenceGenTaskCountAggregateOutputType = {
   stage: number
   lastHeartbeatAt: number
   triggerType: number
+  festivalName: number
+  festivalDate: number
   errorMessage: number
   startedAt: number
   finishedAt: number
@@ -133,6 +139,8 @@ export type SentenceGenTaskMinAggregateInputType = {
   stage?: true
   lastHeartbeatAt?: true
   triggerType?: true
+  festivalName?: true
+  festivalDate?: true
   errorMessage?: true
   startedAt?: true
   finishedAt?: true
@@ -152,6 +160,8 @@ export type SentenceGenTaskMaxAggregateInputType = {
   stage?: true
   lastHeartbeatAt?: true
   triggerType?: true
+  festivalName?: true
+  festivalDate?: true
   errorMessage?: true
   startedAt?: true
   finishedAt?: true
@@ -171,6 +181,8 @@ export type SentenceGenTaskCountAggregateInputType = {
   stage?: true
   lastHeartbeatAt?: true
   triggerType?: true
+  festivalName?: true
+  festivalDate?: true
   errorMessage?: true
   startedAt?: true
   finishedAt?: true
@@ -277,6 +289,8 @@ export type SentenceGenTaskGroupByOutputType = {
   stage: string
   lastHeartbeatAt: Date | null
   triggerType: string
+  festivalName: string | null
+  festivalDate: string | null
   errorMessage: string | null
   startedAt: Date | null
   finishedAt: Date | null
@@ -319,6 +333,8 @@ export type SentenceGenTaskWhereInput = {
   stage?: Prisma.StringFilter<"SentenceGenTask"> | string
   lastHeartbeatAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringFilter<"SentenceGenTask"> | string
+  festivalName?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
+  festivalDate?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
@@ -338,6 +354,8 @@ export type SentenceGenTaskOrderByWithRelationInput = {
   stage?: Prisma.SortOrder
   lastHeartbeatAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerType?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  festivalDate?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -362,6 +380,8 @@ export type SentenceGenTaskWhereUniqueInput = Prisma.AtLeast<{
   stage?: Prisma.StringFilter<"SentenceGenTask"> | string
   lastHeartbeatAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringFilter<"SentenceGenTask"> | string
+  festivalName?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
+  festivalDate?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   errorMessage?: Prisma.StringNullableFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableFilter<"SentenceGenTask"> | Date | string | null
@@ -381,6 +401,8 @@ export type SentenceGenTaskOrderByWithAggregationInput = {
   stage?: Prisma.SortOrder
   lastHeartbeatAt?: Prisma.SortOrderInput | Prisma.SortOrder
   triggerType?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  festivalDate?: Prisma.SortOrderInput | Prisma.SortOrder
   errorMessage?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -408,6 +430,8 @@ export type SentenceGenTaskScalarWhereWithAggregatesInput = {
   stage?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
   lastHeartbeatAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SentenceGenTask"> | Date | string | null
   triggerType?: Prisma.StringWithAggregatesFilter<"SentenceGenTask"> | string
+  festivalName?: Prisma.StringNullableWithAggregatesFilter<"SentenceGenTask"> | string | null
+  festivalDate?: Prisma.StringNullableWithAggregatesFilter<"SentenceGenTask"> | string | null
   errorMessage?: Prisma.StringNullableWithAggregatesFilter<"SentenceGenTask"> | string | null
   startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SentenceGenTask"> | Date | string | null
   finishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"SentenceGenTask"> | Date | string | null
@@ -427,6 +451,8 @@ export type SentenceGenTaskCreateInput = {
   stage?: string
   lastHeartbeatAt?: Date | string | null
   triggerType?: string
+  festivalName?: string | null
+  festivalDate?: string | null
   errorMessage?: string | null
   startedAt?: Date | string | null
   finishedAt?: Date | string | null
@@ -446,6 +472,8 @@ export type SentenceGenTaskUncheckedCreateInput = {
   stage?: string
   lastHeartbeatAt?: Date | string | null
   triggerType?: string
+  festivalName?: string | null
+  festivalDate?: string | null
   errorMessage?: string | null
   startedAt?: Date | string | null
   finishedAt?: Date | string | null
@@ -465,6 +493,8 @@ export type SentenceGenTaskUpdateInput = {
   stage?: Prisma.StringFieldUpdateOperationsInput | string
   lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -484,6 +514,8 @@ export type SentenceGenTaskUncheckedUpdateInput = {
   stage?: Prisma.StringFieldUpdateOperationsInput | string
   lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -503,6 +535,8 @@ export type SentenceGenTaskCreateManyInput = {
   stage?: string
   lastHeartbeatAt?: Date | string | null
   triggerType?: string
+  festivalName?: string | null
+  festivalDate?: string | null
   errorMessage?: string | null
   startedAt?: Date | string | null
   finishedAt?: Date | string | null
@@ -522,6 +556,8 @@ export type SentenceGenTaskUpdateManyMutationInput = {
   stage?: Prisma.StringFieldUpdateOperationsInput | string
   lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -541,6 +577,8 @@ export type SentenceGenTaskUncheckedUpdateManyInput = {
   stage?: Prisma.StringFieldUpdateOperationsInput | string
   lastHeartbeatAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   triggerType?: Prisma.StringFieldUpdateOperationsInput | string
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   errorMessage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -571,6 +609,8 @@ export type SentenceGenTaskCountOrderByAggregateInput = {
   stage?: Prisma.SortOrder
   lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
@@ -599,6 +639,8 @@ export type SentenceGenTaskMaxOrderByAggregateInput = {
   stage?: Prisma.SortOrder
   lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
@@ -618,6 +660,8 @@ export type SentenceGenTaskMinOrderByAggregateInput = {
   stage?: Prisma.SortOrder
   lastHeartbeatAt?: Prisma.SortOrder
   triggerType?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
   errorMessage?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   finishedAt?: Prisma.SortOrder
@@ -648,6 +692,8 @@ export type SentenceGenTaskSelect<ExtArgs extends runtime.Types.Extensions.Inter
   stage?: boolean
   lastHeartbeatAt?: boolean
   triggerType?: boolean
+  festivalName?: boolean
+  festivalDate?: boolean
   errorMessage?: boolean
   startedAt?: boolean
   finishedAt?: boolean
@@ -669,6 +715,8 @@ export type SentenceGenTaskSelectScalar = {
   stage?: boolean
   lastHeartbeatAt?: boolean
   triggerType?: boolean
+  festivalName?: boolean
+  festivalDate?: boolean
   errorMessage?: boolean
   startedAt?: boolean
   finishedAt?: boolean
@@ -676,7 +724,7 @@ export type SentenceGenTaskSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "categoryId" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "stage" | "lastHeartbeatAt" | "triggerType" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
+export type SentenceGenTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "bizDate" | "categoryId" | "targetCount" | "textDone" | "imageDone" | "failCount" | "status" | "stage" | "lastHeartbeatAt" | "triggerType" | "festivalName" | "festivalDate" | "errorMessage" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentenceGenTask"]>
 
 export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SentenceGenTask"
@@ -729,6 +777,14 @@ export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.Int
      * 触发方式：cron 定时 / manual 手动
      */
     triggerType: string
+    /**
+     * 本批是否为节日题库：节日名（null = 普通批次）
+     */
+    festivalName: string | null
+    /**
+     * 节日日期（YYYY-MM-DD）；与 festivalName 一起标识「哪一年的哪个节日」
+     */
+    festivalDate: string | null
     /**
      * 失败原因摘要（截断到 500 字符）
      */
@@ -1129,6 +1185,8 @@ export interface SentenceGenTaskFieldRefs {
   readonly stage: Prisma.FieldRef<"SentenceGenTask", 'String'>
   readonly lastHeartbeatAt: Prisma.FieldRef<"SentenceGenTask", 'DateTime'>
   readonly triggerType: Prisma.FieldRef<"SentenceGenTask", 'String'>
+  readonly festivalName: Prisma.FieldRef<"SentenceGenTask", 'String'>
+  readonly festivalDate: Prisma.FieldRef<"SentenceGenTask", 'String'>
   readonly errorMessage: Prisma.FieldRef<"SentenceGenTask", 'String'>
   readonly startedAt: Prisma.FieldRef<"SentenceGenTask", 'DateTime'>
   readonly finishedAt: Prisma.FieldRef<"SentenceGenTask", 'DateTime'>

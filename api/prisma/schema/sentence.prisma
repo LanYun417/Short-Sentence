@@ -99,6 +99,12 @@ model Sentence {
   status           String   @default("pending_image") @db.VarChar(20)
   /// 所属生成批次 id（0 = 手工创建）
   genTaskId        BigInt   @default(0) @map("gen_task_id") @db.BigInt
+  /// 节日题库：所属节日名（如「春节」；普通题为 null）
+  festivalName     String?  @map("festival_name") @db.VarChar(50)
+  /// 节日题库：该次节日的公历日期（YYYY-MM-DD）。同一节日不同年份靠它区分新旧批次
+  festivalDate     String?  @map("festival_date") @db.VarChar(10)
+  /// 退场时间（非空 = 不再出现在练习流；旧节日题库在新一期生成成功后置位）
+  retiredAt        DateTime? @map("retired_at")
   /// 创建时间
   createdAt        DateTime @default(now()) @map("created_at")
   /// 更新时间
@@ -110,6 +116,8 @@ model Sentence {
   reports   SentenceReport[]
 
   @@index([status, categoryId])
+  @@index([status, retiredAt])
+  @@index([festivalName, festivalDate])
   @@index([genTaskId])
   @@map("sentence")
 }
@@ -141,6 +149,10 @@ model SentenceGenTask {
   lastHeartbeatAt DateTime? @map("last_heartbeat_at")
   /// 触发方式：cron 定时 / manual 手动
   triggerType     String    @default("cron") @map("trigger_type") @db.VarChar(20)
+  /// 本批是否为节日题库：节日名（null = 普通批次）
+  festivalName    String?   @map("festival_name") @db.VarChar(50)
+  /// 节日日期（YYYY-MM-DD）；与 festivalName 一起标识「哪一年的哪个节日」
+  festivalDate    String?   @map("festival_date") @db.VarChar(10)
   /// 失败原因摘要（截断到 500 字符）
   errorMessage    String?   @map("error_message") @db.VarChar(500)
   /// 开始时间

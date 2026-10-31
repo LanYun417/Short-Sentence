@@ -45,6 +45,7 @@ class Question {
     required this.todayDone,
     required this.todayGoal,
     required this.source,
+    this.festivalName,
     this.words,
   });
 
@@ -57,6 +58,9 @@ class Question {
   final String? imageUrl;
 
   final String? categoryName;
+
+  /// 节日题库：所属节日名（普通题为 null）
+  final String? festivalName;
 
   /// 难度 1/2/3
   final int difficulty;
@@ -79,6 +83,7 @@ class Question {
       translationZh: json['translationZh'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
       categoryName: json['categoryName'] as String?,
+      festivalName: json['festivalName'] as String?,
       difficulty: (json['difficulty'] as num?)?.toInt() ?? 1,
       todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,
       todayGoal: (json['todayGoal'] as num?)?.toInt() ?? 0,

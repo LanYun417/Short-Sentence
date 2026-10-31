@@ -426,6 +426,26 @@ export class SentenceService {
     await this.prisma.sentenceCategory.delete({ where: { id: BigInt(id) } });
   }
 
+  /**
+   * 清理过期的答题记录（默认保留最近 30 天，不论对错）。
+   *
+   * 只删 `sentence_record`：收藏（用户主动标记）与经验/成就账本（独立表）都不受影响。
+   * 副作用：超过保留期的错题不再出现在复习池——这正是「历史只保留一个月」的语义。
+   *
+   * @returns 删除条数（未启用 / 保留天数为 0 时返回 0）
+   */
+  async cleanupAnswerRecords(): Promise<number> {
+    const days = config.sentence.recordRetentionDays;
+    if (!config.sentence.recordRetentionEnabled || days <= 0) {
+      return 0;
+    }
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.sentenceRecord.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    return count;
+  }
+
   private defaultScenePrompt(sentenceEn: string): string {
     return `Two people having a natural conversation in a everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", warm natural light, 16:9 composition, no text in image`;
   }

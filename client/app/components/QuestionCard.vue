@@ -348,7 +348,11 @@ async function onSubmitReport(): Promise<void> {
           收进顶栏后与题卡信息同处一行，且不抢底部「确定」的主操作位。
         -->
         <div class="mb-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <UBadge v-if="question.categoryName" color="primary" variant="subtle" size="sm">
+          <UBadge v-if="question.festivalName" color="error" variant="subtle" size="sm">
+            <UIcon name="i-lucide-sparkles" class="mr-0.5 h-3 w-3" />
+            {{ question.festivalName }}
+          </UBadge>
+          <UBadge v-if="question.categoryName && !question.festivalName" color="primary" variant="subtle" size="sm">
             {{ question.categoryName }}
           </UBadge>
           <UBadge v-if="difficultyText" color="warning" variant="subtle" size="sm">

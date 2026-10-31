@@ -56,6 +56,9 @@ export type SentenceMinAggregateOutputType = {
   source: string | null
   status: string | null
   genTaskId: bigint | null
+  festivalName: string | null
+  festivalDate: string | null
+  retiredAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -74,6 +77,9 @@ export type SentenceMaxAggregateOutputType = {
   source: string | null
   status: string | null
   genTaskId: bigint | null
+  festivalName: string | null
+  festivalDate: string | null
+  retiredAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -92,6 +98,9 @@ export type SentenceCountAggregateOutputType = {
   source: number
   status: number
   genTaskId: number
+  festivalName: number
+  festivalDate: number
+  retiredAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -128,6 +137,9 @@ export type SentenceMinAggregateInputType = {
   source?: true
   status?: true
   genTaskId?: true
+  festivalName?: true
+  festivalDate?: true
+  retiredAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -146,6 +158,9 @@ export type SentenceMaxAggregateInputType = {
   source?: true
   status?: true
   genTaskId?: true
+  festivalName?: true
+  festivalDate?: true
+  retiredAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -164,6 +179,9 @@ export type SentenceCountAggregateInputType = {
   source?: true
   status?: true
   genTaskId?: true
+  festivalName?: true
+  festivalDate?: true
+  retiredAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -269,6 +287,9 @@ export type SentenceGroupByOutputType = {
   source: string
   status: string
   genTaskId: bigint
+  festivalName: string | null
+  festivalDate: string | null
+  retiredAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: SentenceCountAggregateOutputType | null
@@ -310,6 +331,9 @@ export type SentenceWhereInput = {
   source?: Prisma.StringFilter<"Sentence"> | string
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
+  festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  festivalDate?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  retiredAt?: Prisma.DateTimeNullableFilter<"Sentence"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
   category?: Prisma.XOR<Prisma.SentenceCategoryScalarRelationFilter, Prisma.SentenceCategoryWhereInput>
@@ -332,6 +356,9 @@ export type SentenceOrderByWithRelationInput = {
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  festivalDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  retiredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   category?: Prisma.SentenceCategoryOrderByWithRelationInput
@@ -358,6 +385,9 @@ export type SentenceWhereUniqueInput = Prisma.AtLeast<{
   source?: Prisma.StringFilter<"Sentence"> | string
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
+  festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  festivalDate?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  retiredAt?: Prisma.DateTimeNullableFilter<"Sentence"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
   category?: Prisma.XOR<Prisma.SentenceCategoryScalarRelationFilter, Prisma.SentenceCategoryWhereInput>
@@ -380,6 +410,9 @@ export type SentenceOrderByWithAggregationInput = {
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  festivalDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  retiredAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SentenceCountOrderByAggregateInput
@@ -406,6 +439,9 @@ export type SentenceScalarWhereWithAggregatesInput = {
   source?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   status?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntWithAggregatesFilter<"Sentence"> | bigint | number
+  festivalName?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
+  festivalDate?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
+  retiredAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Sentence"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Sentence"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Sentence"> | Date | string
 }
@@ -423,6 +459,9 @@ export type SentenceCreateInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
@@ -445,6 +484,9 @@ export type SentenceUncheckedCreateInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
@@ -465,6 +507,9 @@ export type SentenceUpdateInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
@@ -487,6 +532,9 @@ export type SentenceUncheckedUpdateInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
@@ -508,6 +556,9 @@ export type SentenceCreateManyInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -525,6 +576,9 @@ export type SentenceUpdateManyMutationInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -543,6 +597,9 @@ export type SentenceUncheckedUpdateManyInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -577,6 +634,9 @@ export type SentenceCountOrderByAggregateInput = {
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -603,6 +663,9 @@ export type SentenceMaxOrderByAggregateInput = {
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -621,6 +684,9 @@ export type SentenceMinOrderByAggregateInput = {
   source?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
+  festivalName?: Prisma.SortOrder
+  festivalDate?: Prisma.SortOrder
+  retiredAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -735,6 +801,9 @@ export type SentenceCreateWithoutCategoryInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordCreateNestedManyWithoutSentenceInput
@@ -755,6 +824,9 @@ export type SentenceUncheckedCreateWithoutCategoryInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
@@ -805,6 +877,9 @@ export type SentenceScalarWhereInput = {
   source?: Prisma.StringFilter<"Sentence"> | string
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
+  festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  festivalDate?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  retiredAt?: Prisma.DateTimeNullableFilter<"Sentence"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Sentence"> | Date | string
 }
@@ -822,6 +897,9 @@ export type SentenceCreateWithoutRecordsInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
@@ -843,6 +921,9 @@ export type SentenceUncheckedCreateWithoutRecordsInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   favorites?: Prisma.SentenceFavoriteUncheckedCreateNestedManyWithoutSentenceInput
@@ -878,6 +959,9 @@ export type SentenceUpdateWithoutRecordsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
@@ -899,6 +983,9 @@ export type SentenceUncheckedUpdateWithoutRecordsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   favorites?: Prisma.SentenceFavoriteUncheckedUpdateManyWithoutSentenceNestedInput
@@ -918,6 +1005,9 @@ export type SentenceCreateWithoutFavoritesInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
@@ -939,6 +1029,9 @@ export type SentenceUncheckedCreateWithoutFavoritesInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
@@ -974,6 +1067,9 @@ export type SentenceUpdateWithoutFavoritesInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
@@ -995,6 +1091,9 @@ export type SentenceUncheckedUpdateWithoutFavoritesInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
@@ -1014,6 +1113,9 @@ export type SentenceCreateWithoutReportsInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   category: Prisma.SentenceCategoryCreateNestedOneWithoutSentencesInput
@@ -1035,6 +1137,9 @@ export type SentenceUncheckedCreateWithoutReportsInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   records?: Prisma.SentenceRecordUncheckedCreateNestedManyWithoutSentenceInput
@@ -1070,6 +1175,9 @@ export type SentenceUpdateWithoutReportsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   category?: Prisma.SentenceCategoryUpdateOneRequiredWithoutSentencesNestedInput
@@ -1091,6 +1199,9 @@ export type SentenceUncheckedUpdateWithoutReportsInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
@@ -1110,6 +1221,9 @@ export type SentenceCreateManyCategoryInput = {
   source?: string
   status?: string
   genTaskId?: bigint | number
+  festivalName?: string | null
+  festivalDate?: string | null
+  retiredAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1127,6 +1241,9 @@ export type SentenceUpdateWithoutCategoryInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUpdateManyWithoutSentenceNestedInput
@@ -1147,6 +1264,9 @@ export type SentenceUncheckedUpdateWithoutCategoryInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   records?: Prisma.SentenceRecordUncheckedUpdateManyWithoutSentenceNestedInput
@@ -1167,6 +1287,9 @@ export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
   source?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  festivalDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  retiredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1234,6 +1357,9 @@ export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   source?: boolean
   status?: boolean
   genTaskId?: boolean
+  festivalName?: boolean
+  festivalDate?: boolean
+  retiredAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
@@ -1259,11 +1385,14 @@ export type SentenceSelectScalar = {
   source?: boolean
   status?: boolean
   genTaskId?: boolean
+  festivalName?: boolean
+  festivalDate?: boolean
+  retiredAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "explanation" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
+export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "explanation" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "festivalName" | "festivalDate" | "retiredAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
 export type SentenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
@@ -1334,6 +1463,18 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * 所属生成批次 id（0 = 手工创建）
      */
     genTaskId: bigint
+    /**
+     * 节日题库：所属节日名（如「春节」；普通题为 null）
+     */
+    festivalName: string | null
+    /**
+     * 节日题库：该次节日的公历日期（YYYY-MM-DD）。同一节日不同年份靠它区分新旧批次
+     */
+    festivalDate: string | null
+    /**
+     * 退场时间（非空 = 不再出现在练习流；旧节日题库在新一期生成成功后置位）
+     */
+    retiredAt: Date | null
     /**
      * 创建时间
      */
@@ -1728,6 +1869,9 @@ export interface SentenceFieldRefs {
   readonly source: Prisma.FieldRef<"Sentence", 'String'>
   readonly status: Prisma.FieldRef<"Sentence", 'String'>
   readonly genTaskId: Prisma.FieldRef<"Sentence", 'BigInt'>
+  readonly festivalName: Prisma.FieldRef<"Sentence", 'String'>
+  readonly festivalDate: Prisma.FieldRef<"Sentence", 'String'>
+  readonly retiredAt: Prisma.FieldRef<"Sentence", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Sentence", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Sentence", 'DateTime'>
 }

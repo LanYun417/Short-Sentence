@@ -277,3 +277,37 @@ export function lunarFestivalYears(): number[] {
     .map(Number)
     .sort((a, b) => a - b);
 }
+
+/** 全部节日名的缓存（节日表是静态的，算一次即可）。 */
+let festivalNameCache: Set<string> | null = null;
+
+/**
+ * 全部节日名（公历固定 + 浮动 + 农历 + 清明）。
+ *
+ * 用途：节日题库会给每个节日建一个场景分类（如「春节」），
+ * 日常生题的主题必须把这些分类排除掉，否则一年四季都在出节日题。
+ */
+export function festivalNameSet(): Set<string> {
+  if (!festivalNameCache) {
+    const names = new Set<string>();
+    for (const hit of Object.values(FIXED_FESTIVALS)) {
+      names.add(hit.name);
+    }
+    for (const item of FLOATING_FESTIVALS) {
+      names.add(item.hit.name);
+    }
+    for (const year of Object.values(LUNAR_FESTIVALS)) {
+      for (const hit of Object.values(year)) {
+        names.add(hit.name);
+      }
+    }
+    names.add(QINGMING_FESTIVAL.name);
+    festivalNameCache = names;
+  }
+  return festivalNameCache;
+}
+
+/** 该名称是否是节日（节日分类不进入日常生题主题）。 */
+export function isFestivalName(name: string): boolean {
+  return festivalNameSet().has(name);
+}

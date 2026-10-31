@@ -41,6 +41,8 @@ export interface NextQuestion {
   translationZh: string;
   imageUrl: string | null;
   categoryName: string | null;
+  /** 节日题库：所属节日名（普通题为 null） */
+  festivalName: string | null;
   difficulty: number;
   todayDone: number;
   todayGoal: number;

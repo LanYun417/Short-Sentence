@@ -203,6 +203,22 @@ export class SentenceController {
   }
 
   /**
+   * 手动触发「今天的节日题库」（运营补跑 / 测试用；非节日返回 400）。
+   * 与定时任务同一条链路：新一期生成成功后，同一节日的旧题整体退场。
+   */
+  @Post('gen/festival')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '触发节日题库')
+  async triggerFestival(): Promise<ResponseEnvelope<{ taskId: number; festivalName: string }>> {
+    const result = await this.sentenceGen.triggerFestival();
+    return {
+      __raw: true,
+      data: result,
+      message: `节日题库「${result.festivalName}」生成任务已启动`,
+    };
+  }
+
+  /**
    * 补全存量题解析（管理端手动、按批）。
    *
    * 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token；

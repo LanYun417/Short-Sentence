@@ -7213,6 +7213,19 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "POST",
+        "path": "/api/sentences/gen/festival",
+        "summary": "手动触发「今天的节日题库」（运营补跑 / 测试用；非节日返回 400）。 与定时任务同一条链路：新一期生成成功后，同一节日的旧题整体退场",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 触发节日题库",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/festival\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
         "method": "PUT",
         "path": "/api/reports/:id",
         "summary": "处理举报（标记已处理/已驳回 + 备注）",

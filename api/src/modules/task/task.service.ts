@@ -20,6 +20,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { FileLoggerService } from '../../common/log/file-logger.service.js';
 import { ImageScaleService } from '../../common/file/file-guards.js';
 import { SentenceGenService } from '../sentence/sentence-gen.service.js';
+import { SentenceService } from '../sentence/sentence.service.js';
 import { DailyReminderService } from '../mail/daily-reminder.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
@@ -121,6 +122,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly fileLogger: FileLoggerService,
     private readonly imageScale: ImageScaleService,
     private readonly sentenceGen: SentenceGenService,
+    private readonly sentenceService: SentenceService,
     private readonly wordRoot: WordRootService,
     private readonly sentenceCard: SentenceCardService,
     private readonly dailyReminder: DailyReminderService,
@@ -134,6 +136,9 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
         await this.imageScale.sweep();
       },
       generateSentences: () => this.sentenceGen.runScheduled(),
+      cleanAnswerRecords: async () => {
+        await this.sentenceService.cleanupAnswerRecords();
+      },
       ingestWordRoots: async () => {
         await this.wordRoot.ingestDaily();
       },

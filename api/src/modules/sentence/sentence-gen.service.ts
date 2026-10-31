@@ -16,6 +16,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import { config } from '../../common/config/config.js';
+import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
+import { isFestivalName } from '../../common/calendar/festivals.js';
 import { AppException } from '../../common/exception/app.exception.js';
 import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -106,6 +108,9 @@ export class SentenceGenService {
   /**
    * 定时触发入口（由 TaskModule 的 `sentence-gen` 任务调用）。
    * 与手动触发同一套心智模型，只是 triggerType 记 cron；今日已成功则直接跳过。
+   *
+   * 节日题库：当天命中节日时，本批改为「该节日的题库」——题数取 festivalTarget、
+   * 题目全部打上 festivalName/festivalDate；生成成功后把同节日的旧题整体退场（见 execute）。
    */
   async runScheduled(): Promise<void> {
     if (this.running) {
@@ -113,6 +118,7 @@ export class SentenceGenService {
       return;
     }
     const bizDate = this.today();
+    const festival = this.festivalOfToday();
     // 定时全量批次用 categoryId=0 的哨兵行；今天已有就复用它（复合唯一 bizDate+categoryId 保证）。
     const existing = await this.prisma.sentenceGenTask.findUnique({
       where: { bizDate_categoryId: { bizDate, categoryId: 0 } },
@@ -135,12 +141,19 @@ export class SentenceGenService {
       data: {
         bizDate,
         categoryId: 0,
-        targetCount: config.sentence.dailyTarget,
+        targetCount: festival ? config.sentence.festivalTarget : config.sentence.dailyTarget,
         triggerType: 'cron',
         status: 'pending',
+        festivalName: festival?.name ?? null,
+        festivalDate: festival?.date ?? null,
       },
       select: { id: true },
     });
+    if (festival) {
+      this.logger.log(
+        `[SentenceGen] 今天是「${festival.name}」，本批按节日题库生成 ${config.sentence.festivalTarget} 条`,
+      );
+    }
     void this.execute(task.id);
   }
 
@@ -201,6 +214,59 @@ export class SentenceGenService {
     // 目标分类已落在批次行（categoryId）上，execute 会从行里读，不用在这里写进程变量
     void this.execute(task.id);
     return { taskId: Number(task.id) };
+  }
+
+  /**
+   * 手动触发「今天的节日题库」（运营补跑 / 测试用；非节日直接拒绝）。
+   *
+   * 与定时任务共用今日批次行：已成功/已取消的批次不允许覆盖（与 triggerManual 同口径），
+   * 需要重建时先在「生成批次」里删除。
+   */
+  async triggerFestival(): Promise<{ taskId: number; festivalName: string }> {
+    if (this.running) {
+      throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
+    }
+    const festival = this.festivalOfToday();
+    if (!festival) {
+      throw AppException.badRequest('今天不是节日，无法生成节日题库');
+    }
+    const bizDate = this.today();
+    const existing = await this.prisma.sentenceGenTask.findUnique({
+      where: { bizDate_categoryId: { bizDate, categoryId: 0 } },
+      select: { id: true, status: true },
+    });
+    if (existing?.status === 'success') {
+      throw AppException.conflict('今日批次已成功完成；如需重建节日题库，请先在「生成批次」里删除它');
+    }
+    if (existing?.status === 'cancelled') {
+      throw AppException.conflict('今日批次已取消，请先在「生成批次」里删除它再重新生成');
+    }
+    const target = config.sentence.festivalTarget;
+    const task = existing
+      ? await this.prisma.sentenceGenTask.update({
+          where: { id: existing.id },
+          data: {
+            targetCount: target,
+            triggerType: 'manual',
+            festivalName: festival.name,
+            festivalDate: festival.date,
+          },
+          select: { id: true },
+        })
+      : await this.prisma.sentenceGenTask.create({
+          data: {
+            bizDate,
+            categoryId: 0,
+            targetCount: target,
+            triggerType: 'manual',
+            status: 'pending',
+            festivalName: festival.name,
+            festivalDate: festival.date,
+          },
+          select: { id: true },
+        });
+    void this.execute(task.id);
+    return { taskId: Number(task.id), festivalName: festival.name };
   }
 
   /* --------------------------- 运营控制：暂停 / 继续 / 取消 / 删除 --------------------------- */
@@ -382,11 +448,23 @@ export class SentenceGenService {
       const task = await this.prisma.sentenceGenTask.update({
         where: { id: taskId },
         data: { status: 'running', stage: 'generating', startedAt, lastHeartbeatAt: startedAt, errorMessage: null },
-        select: { targetCount: true },
+        select: { targetCount: true, festivalName: true, festivalDate: true },
       });
 
       // ---------- 1. 生题（分批 + 信号量 + 重试；每批入库后立即排入生图） ----------
       const theme = await this.currentTheme();
+      // 节日题库：主题用节日语境（名称 + 英文名 + 风格提示），生成器据此产出节日相关句子
+      const festivalCtx = task.festivalDate ? dayContextOf(parseDateKey(task.festivalDate)) : null;
+      const festivalTheme = festivalCtx
+        ? `${task.festivalName ?? festivalCtx.name}（${festivalCtx.nameEn}）：${festivalCtx.styleHint}`
+        : null;
+      // 节日题库：所有题目强制归到「该节日」的分类（没有则新建），
+      // 否则模型自报的节日分类名匹配不上，会全部落到第一个分类。
+      const festivalCategoryId =
+        festivalCtx && task.festivalName
+          ? await this.ensureFestivalCategory(task.festivalName, festivalCtx.nameEn)
+          : null;
+      const generationTheme = this.targetCategoryName ?? festivalTheme ?? theme;
       const textSemaphore = new Semaphore(config.ai.textConcurrency);
       const retry = {
         maxAttempts: config.ai.maxAttempts,
@@ -433,7 +511,7 @@ export class SentenceGenService {
             withRetry(
               () =>
                 this.sentenceGen.generateBatch(
-                  this.targetCategoryName ?? theme,
+                  generationTheme,
                   need,
                   this.focusDifficulty ?? undefined,
                   Number(taskId),
@@ -482,7 +560,13 @@ export class SentenceGenService {
           this.logger.warn(`[SentenceGen] 审核剔除 ${reviewed.rejected.length} 条，样例：${sample}`);
         }
 
-        const inserted = await this.persistDrafts(reviewed.approved, taskId);
+        const inserted = await this.persistDrafts(
+          reviewed.approved,
+          taskId,
+          task.festivalName,
+          task.festivalDate,
+          festivalCategoryId,
+        );
         textDone += inserted;
         // 计数器与心跳一起更新：前端每 3s 轮询，看到心跳就不再判断「卡住」
         await this.prisma.sentenceGenTask.update({
@@ -547,6 +631,29 @@ export class SentenceGenService {
           finishedAt: new Date(),
         },
       });
+      // 节日题库「全面更新」：新一期产出足够多时，把同一节日的旧题整体退场。
+      // 用 genTaskId（而非 festivalDate）区分批次：同一天重跑的新批次也要替换掉上一批。
+      // 产出不足一半时**不退休**——宁可新旧并存，也不要把节日题库打空。
+      if (ok && task.festivalName) {
+        const enough = textDone >= Math.ceil(task.targetCount * 0.5);
+        if (enough) {
+          const retired = await this.prisma.sentence.updateMany({
+            where: {
+              festivalName: task.festivalName,
+              genTaskId: { not: taskId },
+              retiredAt: null,
+            },
+            data: { retiredAt: new Date() },
+          });
+          if (retired.count > 0) {
+            this.logger.log(`[SentenceGen] 节日题库「${task.festivalName}」旧题已退场 ${retired.count} 条`);
+          }
+        } else {
+          this.logger.warn(
+            `[SentenceGen] 节日题库「${task.festivalName}」新一期仅产出 ${textDone}/${task.targetCount}，保留旧题不退休`,
+          );
+        }
+      }
       this.logger.log(
         `[SentenceGen] 批次 ${taskId} 完成：题目 +${textDone}，图片 +${imageDone}，` +
           `调用失败 ${failCount}，审核剔除 ${rejectedCount}`,
@@ -870,7 +977,13 @@ export class SentenceGenService {
     return { scanned: rows.length, updated, remaining };
   }
 
-  private async persistDrafts(drafts: SentenceDraft[], taskId: bigint): Promise<number> {
+  private async persistDrafts(
+    drafts: SentenceDraft[],
+    taskId: bigint,
+    festivalName: string | null = null,
+    festivalDate: string | null = null,
+    categoryIdOverride: bigint | null = null,
+  ): Promise<number> {
     if (drafts.length === 0) {
       return 0;
     }
@@ -891,10 +1004,12 @@ export class SentenceGenService {
       .map((draft) => {
         // 定向补场景：无视模型自报的 categoryName，强制归属目标分类
         // （模型偶尔仍会把题串到它熟悉的旧分类，必须用服务端分类覆盖才填得准）。
+        // 归属优先级：节日题库分类 > 指定场景补题 > 模型自报分类 > 兜底第一个分类
         const categoryId =
-          this.targetCategoryId != null
+          categoryIdOverride ??
+          (this.targetCategoryId != null
             ? BigInt(this.targetCategoryId)
-            : (byName.get(draft.categoryName) ?? fallbackCategoryId);
+            : (byName.get(draft.categoryName) ?? fallbackCategoryId));
         const scenePrompt =
           draft.scenePrompt.trim().length > 0 ? draft.scenePrompt : this.defaultScenePrompt(draft.sentenceEn);
         return {
@@ -912,6 +1027,9 @@ export class SentenceGenService {
           source: 'ai',
           status: 'pending_image',
           genTaskId: taskId,
+          // 节日题库标记：普通批次为 null（Prisma 会忽略 null 字段，等价于不写）
+          festivalName,
+          festivalDate,
         };
       })
       // 批内去重（模型偶发重复）
@@ -934,19 +1052,56 @@ export class SentenceGenService {
     return result.count;
   }
 
-  /** 当日主题（启用的分类名拼接，让模型在既有分类内产出）。 */
+  /**
+   * 当日主题（启用的分类名拼接，让模型在既有分类内产出）。
+   * **排除节日分类**：节日题库的分类（如「春节」）只在节日当天定向使用，
+   * 若混进日常主题，一年四季都会出节日题。
+   */
   private async currentTheme(): Promise<string> {
     const categories = await this.prisma.sentenceCategory.findMany({
       where: { status: 1 },
       select: { name: true },
       orderBy: { sort: 'asc' },
     });
-    return categories.length > 0 ? categories.map((category) => category.name).join('、') : '日常生活';
+    const names = categories.map((category) => category.name).filter((name) => !isFestivalName(name));
+    return names.length > 0 ? names.join('、') : '日常生活';
+  }
+
+  /** 确保该节日有对应的场景分类（节日题库），返回分类 id；没有则新建。 */
+  private async ensureFestivalCategory(name: string, nameEn: string): Promise<bigint> {
+    const existing = await this.prisma.sentenceCategory.findFirst({
+      where: { name },
+      select: { id: true },
+    });
+    if (existing) {
+      return existing.id;
+    }
+    const created = await this.prisma.sentenceCategory.create({
+      data: {
+        name,
+        nameEn: nameEn || null,
+        icon: null,
+        // 排在普通分类之后：管理端一眼能看出这是节日题库
+        sort: 999,
+        status: 1,
+      },
+      select: { id: true },
+    });
+    return created.id;
   }
 
   /** 无提示词时的兜底构图（两人对话场景）。 */
   private defaultScenePrompt(sentenceEn: string): string {
     return `Two people having a natural conversation in an everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", warm natural light, 16:9 composition, no text in image`;
+  }
+
+  /** 今天命中的节日（节日题库关闭或普通日返回 null）。 */
+  private festivalOfToday(): DayContext | null {
+    if (!config.sentence.festivalEnabled) {
+      return null;
+    }
+    const ctx = dayContextOf(new Date());
+    return ctx.kind === 'festival' ? ctx : null;
   }
 
   /** 本地时区今天（YYYY-MM-DD）。 */

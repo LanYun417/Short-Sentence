@@ -84,6 +84,8 @@ export interface TaskDeps {
   sweepImageCache: () => Promise<void>;
   /** 短句题库生成（SentenceGenService.runScheduled；今日已成功则跳过） */
   generateSentences: () => Promise<void>;
+  /** 答题历史清理（SentenceService.cleanupAnswerRecords；按保留天数删除过期记录） */
+  cleanAnswerRecords: () => Promise<void>;
   /** 词根词典每日入库（WordRootService.ingestDaily；从题库抽词并 AI 解析） */
   ingestWordRoots: () => Promise<void>;
   /** 每日句签生成（SentenceCardService.generateDaily；AI 文案 + 生图，当天已就绪则跳过） */
@@ -153,6 +155,17 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: config.sentence.cronEnabled,
       create: (deps) => async () => {
         await deps.generateSentences();
+      },
+    },
+    {
+      name: 'record-retention',
+      title: '答题历史清理',
+      description: '按保留天数删除过期的答题记录（默认 30 天，不论对错）；收藏与经验/成就账本不受影响。',
+      // 排在题库生成（00:00）与句签（00:10）之后，避免夜间任务互相抢 IO
+      schedule: { kind: 'daily', hour: 0, minute: 20 },
+      enabled: config.sentence.recordRetentionEnabled && config.sentence.recordRetentionDays > 0,
+      create: (deps) => async () => {
+        await deps.cleanAnswerRecords();
       },
     },
     {

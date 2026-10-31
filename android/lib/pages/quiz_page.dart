@@ -1357,7 +1357,15 @@ class _FrontFace extends StatelessWidget {
                 foreground: colors.gold,
                 background: colors.gold.withValues(alpha: 0.12),
               ),
-              if (question.categoryName != null) ...<Widget>[
+              if (question.festivalName != null) ...<Widget>[
+                const SizedBox(width: 6),
+                Pill(
+                  label: question.festivalName!,
+                  foreground: const Color(0xFFDC2626),
+                  background: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                ),
+              ],
+              if (question.categoryName != null && question.festivalName == null) ...<Widget>[
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(

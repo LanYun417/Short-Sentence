@@ -13593,6 +13593,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/gen/festival": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "手动触发「今天的节日题库」（运营补跑 / 测试用；非节日返回 400）。 与定时任务同一条链路：新一期生成成功后，同一节日的旧题整体退场",
+        "operationId": "post__api_sentences_gen_festival",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/reports/{id}": {
       "put": {
         "tags": [
