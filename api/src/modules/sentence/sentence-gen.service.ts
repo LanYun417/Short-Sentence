@@ -334,6 +334,9 @@ export class SentenceGenService {
         data: {
           targetCount: target,
           triggerType: 'manual',
+          // 重置为 pending：上次失败/进程重启留下的 running、failed 批次要能重新跑
+          //（计数保留，execute 从行里读回来续跑，不重复生成已入库的题）。
+          status: 'pending',
           festivalName: entry.name,
           festivalDate: entry.date,
         },
@@ -662,9 +665,12 @@ export class SentenceGenService {
         // ---------- 二阶段：优化（地道性 / 中文可读性 / 难度校准）----------
         // 失败降级为原稿：优化是「加分项」，挂掉不该让整批题目作废
         await this.heartbeat(taskId, 'polishing');
+        // 优化阶段必须用**本批真正的主题**（generationTheme），不能统一用当日主题：
+        // 节日批次的草稿是节日场景，却拿日常场景名去「优化」，模型会把句子改写成
+        // 日常场景甚至改坏，随后被审核整批拒绝——节日题库因此一条都进不了库。
         const polished = await this.runStage(
           '优化',
-          () => this.sentenceGen.polishBatch(drafts, theme, Number(taskId)),
+          () => this.sentenceGen.polishBatch(drafts, generationTheme, Number(taskId)),
           drafts,
         );
 
