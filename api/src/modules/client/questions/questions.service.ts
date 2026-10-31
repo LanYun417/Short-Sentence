@@ -354,11 +354,34 @@ export class QuestionsService {
       // 而不是从年底倒着排。同一节日跨年重新生成时日期会更新，顺序仍稳定。
       .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.name.localeCompare(b.name));
 
-    // 为每个节日挑一张已生成的配图当封面：取该节日里 imageFileId 最小的就绪题
-    // （确定性、稳定，避免每次刷新换图；所有节日插画都用同一节日 styleHint 生成，主题一致）。
+    // 封面优先用**节日专属封面**：为该节日单独生成的标志性主视觉，挂在节日分类上
+    // （见 SentenceGenService.generateFestivalCover）。
+    // 没有专属封面时才回退到「从题库里挑一张」——题图只体现节日氛围，常常看不出是哪个
+    // 节日（元旦=两人喝热饮、春节=提行李出门）。
+    const categories = await this.prisma.sentenceCategory.findMany({
+      where: { name: { in: banks.map((bank) => bank.name) } },
+      select: { name: true, coverFileId: true },
+    });
+    const dedicatedCover = new Map<string, number>();
+    for (const category of categories) {
+      // 同名分类可能不止一个（历史遗留），取第一个有封面的
+      if (category.coverFileId > 0n && !dedicatedCover.has(category.name)) {
+        dedicatedCover.set(category.name, Number(category.coverFileId));
+      }
+    }
+
     // 并发解析，避免 21 个节日串行等 IO。
     await Promise.all(
       banks.map(async (bank) => {
+        const dedicated = dedicatedCover.get(bank.name);
+        if (dedicated !== undefined) {
+          const url = await this.resolveImageUrl(dedicated);
+          if (url) {
+            bank.coverUrl = url;
+            return;
+          }
+        }
+        // 回退：取该节日里 imageFileId 最小的就绪题（确定性、稳定，刷新不换图）
         const cover = await this.prisma.sentence.findFirst({
           where: {
             festivalName: bank.name,

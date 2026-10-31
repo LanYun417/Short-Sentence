@@ -274,6 +274,76 @@ const LUNAR_FESTIVALS: Readonly<Record<number, Readonly<Record<string, FestivalH
   },
 };
 
+/* ------------------------------ 节日封面图 ------------------------------ */
+
+/**
+ * 节日**专属封面图**提示词：每个节日一张主视觉。
+ *
+ * 为什么不能复用 `styleHint`：styleHint 是给「日常场景句子」定调的（只描述氛围与
+ * 配色），照它生成的题图往往只有氛围、看不出是哪个节日——元旦成了「两人沙发喝热饮」、
+ * 春节成了「女人提行李出门」（2026-11-01 用户反馈「封面不贴合节日」）。
+ *
+ * 封面要的是**一眼认得出的标志性元素**：红灯笼 / 龙舟 / 圣诞树 / 南瓜灯……
+ * 所以单独维护这张表，与 styleHint 解耦（改题图风格不影响封面）。
+ *
+ * 约束：
+ * - **不出现文字**：模型画字必是乱码，且图像审核会把「以文字为主体」判不通过；
+ *   需要表达「年份/数字」时改用不含字形的实物（钟面、烛台、灯串）。
+ * - 人物出现时写明构成（避免生图模型随机出两个男性——情人节已出过这种事故）。
+ */
+const FESTIVAL_COVER_PROMPTS: Readonly<Record<string, string>> = {
+  元旦: 'midnight New Year celebration: golden fireworks bursting over a city skyline, a clock tower striking midnight, silver confetti and streamers drifting in the air, a glass of sparkling champagne on a windowsill, crisp gold and deep blue palette',
+  春节: 'Chinese New Year still life: rows of big red lanterns hanging overhead, red couplet papers on a wooden doorway, a round table with steaming dumplings and red envelopes, paper-cut window decorations, warm red and gold palette',
+  元宵节:
+    'a night street lined with glowing red and gold lanterns, a bowl of sweet tangyuan dumplings on a wooden table, a rabbit-shaped lantern floating above, deep blue night with warm amber glow',
+  情人节:
+    'a tender Valentine still life: two lit candles on a small table, a single red rose and a folded card, a heart-shaped box of chocolates, soft pink and cream palette, warm candlelight',
+  妇女节:
+    'a bright office desk beside a large window with a bouquet of tulips and sunflowers in a vase, spring blossoms visible outside the glass, a silk ribbon tied on the vase, warm rose and green palette',
+  清明节:
+    'Qingming spring remembrance: slender willow branches over a calm river, fine rain drizzle, green misty hills in the distance, a paper kite in the sky, fresh green and misty white palette, gentle and quiet, no gravestones',
+  愚人节:
+    'a playful prank still life: a jack-in-the-box toy mid-pop on a table, rubber spiders and a whoopee cushion beside it, a mismatched gift box, bright saturated colors, cheerful and light',
+  劳动节:
+    'the dignity of work: a hard hat, a wrench and rolled blueprints on a workbench beside a half-finished wooden bench, warm daylight through a workshop window, honest earthy palette',
+  儿童节:
+    "children's day joy: soap bubbles floating over a wooden floor with scattered colorful crayons and a paper airplane, a bunch of bright balloons tied to a chair, candy colors, simple and buoyant",
+  教师节:
+    'appreciation for a teacher: an open notebook with neat notes and a red pen on a desk, a green chalkboard behind, chalk dust floating in a beam of warm light, a small bouquet of flowers, warm study palette',
+  国庆节:
+    'National Day celebration: a city square with a huge red flag on a tall pole, golden fireworks in the sky, red and gold street decorations, warm red and gold palette',
+  万圣节:
+    'playful spooky Halloween, NOT scary: carved pumpkins glowing on a porch, paper bats hanging from a branch, a witch hat on a fence, candlelight, orange and deep purple palette, storybook friendly, no monsters',
+  平安夜:
+    'quiet Christmas Eve: a warmly lit window seen from outside with snow falling, a knitted scarf and a steaming mug on the sill, a small wreath on the door, deep green and warm amber palette',
+  圣诞节:
+    'cozy Christmas: a small decorated tree with glowing lights and ornaments, wrapped presents underneath, a mug of cocoa with steam, gingerbread cookies on a plate, green red and cream palette',
+  跨年夜:
+    'the last hour of the year: a city skyline at midnight with golden fireworks, a clock tower with a plain blank clock face, champagne glasses and confetti on a balcony railing in the foreground, deep blue night with warm gold accents',
+  母亲节:
+    'tenderness in a sunlit kitchen: a vase of pink carnations on the table beside a warm cup of tea and a folded card, soft morning light through the window, warm peach and sage palette',
+  父亲节:
+    'quiet support: a worn armchair with a folded newspaper, a toolbox and a fishing hat on a side table, a mug of coffee steaming, calm living room light, muted brown and blue palette',
+  感恩节:
+    'harvest gratitude: a long dining table with a roasted turkey, pumpkins and a cornucopia, candles in glass holders, autumn leaves on the windowsill, amber and rust palette',
+  端午节:
+    'dragon boat festival still life: a carved dragon boat head on a calm river at dawn, zongzi wrapped in bamboo leaves on a table, mugwort bundles and a colorful sachet by the door, vivid green and warm red palette',
+  中秋节:
+    'mid-autumn festival: a huge full moon above tiled rooftops, a table with mooncakes and a tea set, glowing paper lanterns, warm amber and deep blue palette',
+  重阳节:
+    'double ninth festival: blooming chrysanthemums on a stone table with a teapot and cups, a golden autumn hillside path in the distance, deep green and golden palette',
+};
+
+/**
+ * 取某节日的封面图提示词（没有则返回 null）。
+ *
+ * 用 name 查而不是靠 styleHint 推：封面是「这个节日的招牌画面」，
+ * 一一对应，不做推导（推导出来的画面必然不贴合）。
+ */
+export function festivalCoverPromptOf(name: string): string | null {
+  return FESTIVAL_COVER_PROMPTS[name] ?? null;
+}
+
 /* ------------------------------ 对外接口 ------------------------------ */
 
 /** 补零成两位。 */

@@ -19,6 +19,7 @@ import { config } from '../../common/config/config.js';
 import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
 import {
   allFestivalsOf,
+  festivalCoverPromptOf,
   festivalEntryOf,
   isFestivalName,
   type FestivalEntry,
@@ -1293,6 +1294,102 @@ export class SentenceGenService {
       select: { id: true },
     });
     return created.id;
+  }
+
+  /**
+   * 为某个节日生成**专属封面图**，贴到该节日分类上。
+   *
+   * 为什么不能拿题图当封面：题图只体现节日「氛围」，看不出是哪个节日——元旦成了
+   * 「两人沙发喝热饮」、春节成了「女人提行李出门」（2026-11-01 用户反馈「封面不贴合
+   * 节日」）。封面改用 `festivalCoverPromptOf` 里为每个节日单独写的**标志性元素**
+   * 提示词（红灯笼 / 龙舟 / 圣诞树 / 南瓜灯…），一眼认得出。
+   *
+   * 流程与题图一致：生图 → 转 webp → **视觉审核** → 落文件 → 回写分类。
+   * 审核不通过就不落文件（坏封面比没封面更糟），下次可重试。
+   */
+  async generateFestivalCover(
+    entry: FestivalEntry,
+    force = false,
+  ): Promise<{ ok: boolean; skipped: boolean; reason: string; fileId: number | null }> {
+    const coverPrompt = festivalCoverPromptOf(entry.name);
+    if (!coverPrompt) {
+      return { ok: false, skipped: false, reason: `节日「${entry.name}」没有封面提示词`, fileId: null };
+    }
+    const categoryId = await this.ensureFestivalCategory(entry.name, entry.nameEn);
+    const category = await this.prisma.sentenceCategory.findUnique({
+      where: { id: categoryId },
+      select: { coverFileId: true },
+    });
+    if (!force && category && category.coverFileId > 0n) {
+      return { ok: true, skipped: true, reason: '已有封面', fileId: Number(category.coverFileId) };
+    }
+    try {
+      const image = await withRetry(
+        () =>
+          this.imageGen.generate(`${coverPrompt}, ${IMAGE_STYLE_SUFFIX}`, {
+            size: config.sentence.imageSize,
+            ratio: config.sentence.imageRatio,
+          }),
+        IMAGE_RETRY,
+      );
+      const webp = await sharp(image.buffer)
+        .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
+        .webp({ quality: config.sentence.imageQuality })
+        .toBuffer();
+      // 封面同样过视觉审核：跑题 / 不适龄 / 画字 / 画成写实照片的封面不能贴到用户端
+      const review = await withRetry(
+        () => this.sentenceGen.reviewImage(webp, { scenePrompt: coverPrompt }),
+        IMAGE_RETRY,
+      );
+      if (!review.pass) {
+        this.logger.warn(`[SentenceGen] 节日封面审核未通过（${entry.name}）: ${review.reason}`);
+        return { ok: false, skipped: false, reason: review.reason, fileId: null };
+      }
+      const saved = await this.fileService.save(`${entry.name}-cover.webp`, 'image/webp', webp, null);
+      await this.prisma.sentenceCategory.update({
+        where: { id: categoryId },
+        data: { coverFileId: BigInt(saved.file.id) },
+      });
+      return { ok: true, skipped: false, reason: '已生成', fileId: saved.file.id };
+    } catch (error) {
+      this.logger.error(`[SentenceGen] 节日封面生成失败（${entry.name}）: ${this.errText(error)}`);
+      return { ok: false, skipped: false, reason: this.errText(error), fileId: null };
+    }
+  }
+
+  /**
+   * 为全年所有节日生成封面图。
+   *
+   * **串行**执行：生图上游并发 6 会持续 429（见 IMAGE_RETRY 注释），封面只有二十来张，
+   * 慢一点没关系，别把配额打爆、也别和正在跑的题库批次抢生图通道。
+   */
+  async generateFestivalCovers(force = false): Promise<{
+    total: number;
+    generated: number;
+    skipped: number;
+    failed: number;
+    details: Array<{ festivalName: string; ok: boolean; skipped: boolean; reason: string }>;
+  }> {
+    const festivals = allFestivalsOf(new Date().getFullYear());
+    const details: Array<{ festivalName: string; ok: boolean; skipped: boolean; reason: string }> = [];
+    let generated = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (const entry of festivals) {
+      const result = await this.generateFestivalCover(entry, force);
+      details.push({ festivalName: entry.name, ok: result.ok, skipped: result.skipped, reason: result.reason });
+      if (!result.ok) {
+        failed += 1;
+      } else if (result.skipped) {
+        skipped += 1;
+      } else {
+        generated += 1;
+      }
+    }
+    this.logger.log(
+      `[SentenceGen] 节日封面：共 ${festivals.length} 个节日，新生成 ${generated}，跳过 ${skipped}，失败 ${failed}`,
+    );
+    return { total: festivals.length, generated, skipped, failed, details };
   }
 
   /** 无提示词时的兜底构图（两人对话场景）。 */

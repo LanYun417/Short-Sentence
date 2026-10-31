@@ -246,6 +246,31 @@ export class SentenceController {
   }
 
   /**
+   * 为全年所有节日生成**专属封面图**。
+   *
+   * 与「生成节日题库」一样是**即发即忘**：二十来张图串行生成要十几分钟，
+   * 管理端 axios 超时只有 15 秒，同步返回必然超时。所以立即返回「已启动」，
+   * 进度通过题库页的封面出没来判断。
+   *
+   * 已有封面的节日默认跳过（不覆盖）；force=true 时强制重画（换掉不贴合的封面）。
+   */
+  @Post('gen/festival-covers')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '生成节日封面')
+  async triggerFestivalCovers(
+    @Body() body: { force?: boolean },
+  ): Promise<ResponseEnvelope<{ total: number; started: boolean }>> {
+    const force = body?.force === true;
+    // 后台串行跑；立即返回，避免管理端超时（与 triggerAllFestivals 同一套路）
+    void this.sentenceGen.generateFestivalCovers(force).catch(() => undefined);
+    return {
+      __raw: true,
+      data: { total: 0, started: true },
+      message: '节日封面生成已启动：将为全年各节日生成一张专属封面，稍后刷新题库页查看',
+    };
+  }
+
+  /**
    * 补全存量题解析（管理端手动、按批）。
    *
    * 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token；

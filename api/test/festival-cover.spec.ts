@@ -28,9 +28,14 @@ interface CoverRow {
 
 /**
  * 假 prisma：groupBy 返回给定的节日汇总；
- * findFirst 按 where.festivalName 在候选题里找「id 最小且有配图」的那条。
+ * findFirst 按 where.festivalName 在候选题里找「id 最小且有配图」的那条；
+ * sentenceCategory.findMany 返回各节日的专属封面文件 id（0 = 无专属封面）。
  */
-function fakePrisma(rows: FestivalRow[], covers: Record<string, CoverRow[]>) {
+function fakePrisma(
+  rows: FestivalRow[],
+  covers: Record<string, CoverRow[]>,
+  categoryCovers: Record<string, number> = {},
+) {
   const findFirstCalls: Array<{ where: Record<string, unknown> }> = [];
   return {
     findFirstCalls,
@@ -44,6 +49,12 @@ function fakePrisma(rows: FestivalRow[], covers: Record<string, CoverRow[]>) {
           // 模拟 Prisma 的 where 过滤：只取有配图的
           return list.filter((row) => row.imageFileId > 0n).sort((a, b) => (a.id < b.id ? -1 : 1))[0] ?? null;
         },
+      },
+      sentenceCategory: {
+        findMany: async (args: { where: { name: { in: string[] } } }) =>
+          args.where.name.in
+            .filter((name) => categoryCovers[name] !== undefined)
+            .map((name) => ({ name, coverFileId: BigInt(categoryCovers[name]) })),
       },
     },
   };
@@ -137,6 +148,35 @@ describe('QuestionsService.listFestivals（节日题库封面）', () => {
 
     const banks = await service.listFestivals();
     expect(banks[0].coverUrl).toBeNull();
+  });
+
+  it('有专属封面时优先用它，而不是从题库里挑一张', async () => {
+    const prisma = fakePrisma(
+      [{ festivalName: '元旦', _count: { _all: 30 }, _max: { festivalDate: '2026-01-01' } }],
+      { 元旦: [{ id: 11n, imageFileId: 101n }] },
+      // 节日分类上挂了专属封面（文件 id 900）
+      { 元旦: 900 },
+    );
+    const service = buildService(
+      prisma.client,
+      fakeFileService({ 101: '/static/webp/from-sentence.webp', 900: '/static/webp/dedicated-cover.webp' }),
+    );
+
+    const banks = await service.listFestivals();
+    expect(banks[0].coverUrl).toBe('/static/webp/dedicated-cover.webp');
+  });
+
+  it('专属封面文件缺失时回退到题库配图（不返回空封面）', async () => {
+    const prisma = fakePrisma(
+      [{ festivalName: '元旦', _count: { _all: 30 }, _max: { festivalDate: '2026-01-01' } }],
+      { 元旦: [{ id: 11n, imageFileId: 101n }] },
+      { 元旦: 900 },
+    );
+    // 文件表里没有 900（记录被删了）→ 回退
+    const service = buildService(prisma.client, fakeFileService({ 101: '/static/webp/from-sentence.webp' }));
+
+    const banks = await service.listFestivals();
+    expect(banks[0].coverUrl).toBe('/static/webp/from-sentence.webp');
   });
 
   it('节日列表仍按日期升序、题数与日期不变（封面只是新增字段）', async () => {
