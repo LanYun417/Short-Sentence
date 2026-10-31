@@ -311,7 +311,7 @@ const FESTIVAL_COVER_PROMPTS: Readonly<Record<string, string>> = {
   教师节:
     'appreciation for a teacher: an open notebook with neat notes and a red pen on a desk, a green chalkboard behind, chalk dust floating in a beam of warm light, a small bouquet of flowers, warm study palette',
   国庆节:
-    'National Day celebration: a city square with a huge red flag on a tall pole, golden fireworks in the sky, red and gold street decorations, warm red and gold palette',
+    'golden week holiday travel, still life with no people: a luggage trolley loaded with suitcases and a backpack on a quiet train platform, golden autumn evening light with falling leaves, a departures board glowing softly in the background, warm golden palette',
   万圣节:
     'playful spooky Halloween, NOT scary: carved pumpkins glowing on a porch, paper bats hanging from a branch, a witch hat on a fence, candlelight, orange and deep purple palette, storybook friendly, no monsters',
   平安夜:
