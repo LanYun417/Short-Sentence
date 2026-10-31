@@ -62,6 +62,16 @@ export interface FestivalBank {
   date: string | null;
 }
 
+/** 场景题库（题库页「按场景刷」入口；不含节日分类——那是 FestivalBank 的事）。 */
+export interface CategoryBank {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  /** 就绪且未退场的题目数 */
+  count: number;
+}
+
 /** 提交答案结果（含正确答案）。 */
 export interface AnswerResult {
   sentenceId: number;

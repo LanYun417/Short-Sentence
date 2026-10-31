@@ -81,12 +81,13 @@ function persistMode(cookieValue: Ref<string | null>, value: AnswerMode): void {
 
 /**
  * @param initialFestival 初始选中的节日题库（null = 日常混抽）。
+ * @param initialCategory 初始选中的场景题库 id（null = 不限场景）。与 initialFestival 互斥，节日优先。
  *
- * 从题库页带 `?festival=元旦` 直达时传入：让 SSR 与首屏状态一致——
- * 否则服务端已按该节日抽好题，页面却还显示「日常混抽」的状态，
+ * 从题库页带 `?festival=元旦` / `?category=3` 直达时传入：让 SSR 与首屏状态一致——
+ * 否则服务端已按该题库抽好题，页面却还显示「日常混抽」的状态，
  * 客户端还会因为状态对不上而白抽一次题（闪一下）。
  */
-export function useQuestionSession(initialFestival: string | null = null) {
+export function useQuestionSession(initialFestival: string | null = null, initialCategory: number | null = null) {
   // useCookie 必须在 setup/nuxt 上下文里创建（模块顶层没有实例会抛错）
   const difficultyCookie = useCookie<number | null>('ss_difficulty', {
     maxAge: 60 * 60 * 24 * 7,
@@ -113,6 +114,8 @@ export function useQuestionSession(initialFestival: string | null = null) {
   const mode = ref<AnswerMode>(readMode(modeCookie.value));
   /** 当前选择的节日题库（null = 全部/日常混抽） */
   const festival = ref<string | null>(initialFestival);
+  /** 当前选择的场景题库 id（null = 不限场景；与节日互斥，同时只锁一个范围） */
+  const category = ref<number | null>(initialCategory);
   /** 可选的节日题库（只含有就绪题目的节日） */
   const festivals = ref<FestivalBank[]>([]);
 
@@ -122,8 +125,12 @@ export function useQuestionSession(initialFestival: string | null = null) {
     errorMessage.value = '';
     try {
       question.value = await apiFetch<NextQuestion>('/client/questions/next', {
-        // festival 为 undefined 时 ofetch 会自动省略该参数（走日常混抽）
-        query: { difficulty: difficulty.value, festival: festival.value ?? undefined },
+        // festival / categoryId 为 undefined 时 ofetch 会自动省略该参数（走日常混抽）
+        query: {
+          difficulty: difficulty.value,
+          festival: festival.value ?? undefined,
+          categoryId: category.value ?? undefined,
+        },
       });
       result.value = null;
     } catch (error) {
@@ -138,12 +145,23 @@ export function useQuestionSession(initialFestival: string | null = null) {
     festivals.value = await apiFetch<FestivalBank[]>('/client/questions/festivals').catch(() => []);
   }
 
-  /** 切换节日题库（null = 全部）：立刻按新范围抽一张。 */
+  /** 切换节日题库（null = 全部）：清掉场景限定，立刻按新范围抽一张。 */
   async function setFestival(name: string | null): Promise<void> {
-    if (festival.value === name) {
+    if (festival.value === name && category.value === null) {
       return;
     }
     festival.value = name;
+    category.value = null;
+    await loadNext();
+  }
+
+  /** 切换场景题库（null = 全部）：清掉节日限定，立刻按新范围抽一张。 */
+  async function setCategory(id: number | null): Promise<void> {
+    if (category.value === id) {
+      return;
+    }
+    category.value = id;
+    festival.value = null;
     await loadNext();
   }
 
@@ -222,12 +240,14 @@ export function useQuestionSession(initialFestival: string | null = null) {
     difficulty,
     mode,
     festival,
+    category,
     festivals,
     loadNext,
     loadFestivals,
     setDifficulty,
     setMode,
     setFestival,
+    setCategory,
     prefill,
     submit,
     toggleFavorite,

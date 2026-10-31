@@ -21,14 +21,20 @@ usePageSeo({
 const route = useRoute();
 
 /**
- * 节日题库入口在**题库页**（/library）：刷题页不常驻任何节日入口——
- * 二十多个节日平铺会把题卡顶出首屏，常驻一行入口也会让页面变长。
+ * 专项题库入口在**题库页**（/library）：刷题页不常驻任何题库入口——
+ * 几十个入口平铺会把题卡顶出首屏，常驻一行入口也会让页面变长。
  *
- * 从题库页点某个节日过来时地址栏带 `?festival=元旦`，这里据此锁定该节日题库。
+ * 从题库页点某个题库过来时地址栏带 `?festival=元旦`（节日）或 `?category=3`（场景），
+ * 这里据此锁定该题库。
  */
 const festivalParam = computed(() => {
   const raw = route.query.festival;
   return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+});
+
+const categoryParam = computed(() => {
+  const id = Number(route.query.category);
+  return Number.isInteger(id) && id > 0 ? id : null;
 });
 
 const {
@@ -40,19 +46,26 @@ const {
   difficulty,
   mode,
   festival,
+  category,
   loadNext,
   setDifficulty,
   setMode,
   setFestival,
+  setCategory,
   prefill,
   submit,
   toggleFavorite,
-} = useQuestionSession(festivalParam.value);
+} = useQuestionSession(festivalParam.value, categoryParam.value);
 
-// 客户端路由改了 ?festival= 时跟着切（SSR 直达时初始值已经一致，不会重复抽题）
+// 客户端路由改了 ?festival= / ?category= 时跟着切（SSR 直达时初始值已经一致，不会重复抽题）
 watch(festivalParam, (name) => {
   if (name && name !== festival.value) {
     void setFestival(name);
+  }
+});
+watch(categoryParam, (id) => {
+  if (id && id !== category.value) {
+    void setCategory(id);
   }
 });
 
@@ -62,8 +75,9 @@ watch(festivalParam, (name) => {
  */
 const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
   difficulty: difficulty.value,
-  // 从题库页带 ?festival=元旦 直达时，服务端就按该节日抽题（首屏即是节日题，不先闪一张日常题）
+  // 从题库页带 ?festival=元旦 / ?category=3 直达时，服务端就按该题库抽题（首屏即是专项题，不先闪一张日常题）
   festival: festivalParam.value ?? undefined,
+  categoryId: categoryParam.value ?? undefined,
 });
 if (ssrQuestion.value) {
   prefill(ssrQuestion.value);
@@ -266,15 +280,31 @@ function onFavorite(): void {
   void toggleFavorite();
 }
 
-/** 换个节日 → 回题库页挑一个（刷题页不再常驻节日入口）。 */
-function onChangeFestival(): void {
+/** 专项模式（节日 / 场景）的提示文案；不在专项模式时为空。 */
+const bankLabel = computed(() => {
+  if (festival.value) {
+    return `正在刷「${festival.value}」节日题库`;
+  }
+  if (category.value) {
+    return `正在刷「${question.value?.categoryName ?? '该场景'}」场景题库`;
+  }
+  return '';
+});
+
+/** 换个题库 → 回题库页挑一个（刷题页不再常驻题库入口）。 */
+function onChangeBank(): void {
   void navigateTo('/library');
 }
 
-/** 退出节日模式：回到日常混抽，并清掉地址栏上的节日参数（否则刷新又回到节日模式）。 */
-async function onExitFestival(): Promise<void> {
-  await setFestival(null);
-  if (route.query.festival) {
+/** 退出专项模式：回到日常混抽，并清掉地址栏上的题库参数（否则刷新又回到专项模式）。 */
+async function onExitBank(): Promise<void> {
+  if (festival.value) {
+    await setFestival(null);
+  }
+  if (category.value) {
+    await setCategory(null);
+  }
+  if (route.query.festival || route.query.category) {
     await navigateTo({ path: '/', query: {} }, { replace: true });
   }
 }
@@ -335,12 +365,12 @@ async function onExitFestival(): Promise<void> {
       </div>
     </section>
 
-    <!-- 难度选择：只在日常混抽时可用（节日题库是一套固定题，不按难度筛） -->
-    <div v-if="!festival" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
+    <!-- 难度选择：只在日常混抽时可用（专项题库是一套固定题，不按难度筛） -->
+    <div v-if="!festival && !category" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 
-    <!-- 节日模式：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口） -->
+    <!-- 专项模式：正在专门刷某个节日 / 场景题库（难度选择器此时隐藏，这里给出明确状态与退出入口） -->
     <div
       v-else
       class="anim-in mb-4 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-400/30 dark:bg-amber-400/10"
@@ -348,11 +378,11 @@ async function onExitFestival(): Promise<void> {
     >
       <div class="flex min-w-0 items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
         <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0" />
-        <span class="truncate">正在刷「{{ festival }}」节日题库</span>
+        <span class="truncate">{{ bankLabel }}</span>
       </div>
       <div class="flex shrink-0 items-center gap-1">
-        <UButton size="xs" color="neutral" variant="soft" @click="onChangeFestival">换个节日</UButton>
-        <UButton size="xs" color="neutral" variant="soft" @click="onExitFestival">退出</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="onChangeBank">换个题库</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="onExitBank">退出</UButton>
       </div>
     </div>
 
