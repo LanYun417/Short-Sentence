@@ -101,6 +101,22 @@ export function triggerGenApi(params?: {
   return post<{ taskId: number }>('/sentences/gen/batch', params);
 }
 
+/**
+ * 一次性生成**全部节日**题库（首次铺库 / 换年后补齐）。
+ *
+ * 节日题库是常驻内容库：铺满后用户端随时能看到所有节日并专门刷题，
+ * 而不是只有节日当天才有题可选。只补题量不足的节日，已就绪的会跳过。
+ */
+export function triggerAllFestivalsApi(): Promise<{
+  total: number;
+  created: number;
+  skipped: number;
+  failed: number;
+  tasks: Array<{ festivalName: string; taskId: number }>;
+}> {
+  return post('/sentences/gen/festivals', {});
+}
+
 /** 补全存量题解析（按批；force = 连旧格式一起重新生成；返回扫描/更新/剩余条数）。 */
 export function backfillExplanationsApi(
   limit?: number,

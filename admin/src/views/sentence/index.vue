@@ -21,6 +21,7 @@ import {
   regenerateSentenceImageApi,
   resumeGenTaskApi,
   triggerGenApi,
+  triggerAllFestivalsApi,
   backfillExplanationsApi,
   updateSentenceApi,
   type SentenceCategoryOption,
@@ -470,6 +471,45 @@ async function submitGenForm(): Promise<void> {
   }
 }
 
+/* ------------------------------ 生成全部节日题库 ------------------------------ */
+
+/** 生成全部节日题库中（按钮 loading，避免连点烧配额）。 */
+const festivalGenSubmitting = ref(false);
+
+/**
+ * 一次性生成全部节日题库。
+ *
+ * 节日题库是常驻内容库：铺满后用户端随时能看到所有节日并专门刷题，
+ * 而不是只有节日当天才有题可选。只补题量不足的节日，已就绪的会跳过。
+ *
+ * 走 `ElMessageBox.confirm`：一次要调几十次模型 + 出图，量很大，
+ * 必须让运营点之前就知道「它会烧 AI 配额、会跑很久」。
+ */
+async function handleTriggerAllFestivals(): Promise<void> {
+  if (festivalGenSubmitting.value) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      '将为全年所有节日各生成一批题目（含生图，量较大，会消耗 AI 配额）。已就绪的节日会自动跳过。生成在后台串行执行，进度看「生成批次」列表。确认继续？',
+      '生成全部节日题库',
+      { type: 'warning', confirmButtonText: '开始生成', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  festivalGenSubmitting.value = true;
+  try {
+    const result = await triggerAllFestivalsApi();
+    const failed = result.failed > 0 ? `，失败 ${result.failed} 个` : '';
+    ElMessage.success(
+      `已启动：共 ${result.total} 个节日，新建 ${result.created} 批，跳过 ${result.skipped} 个（已就绪）${failed}`,
+    );
+  } finally {
+    festivalGenSubmitting.value = false;
+  }
+}
+
 /**
  * 补全存量题解析（按批，可反复点到补完）。
  *
@@ -679,6 +719,18 @@ onMounted(async () => {
             </span>
           </el-tooltip>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
+          <el-tooltip content="一次性为全年所有节日各生成一批题目，铺满后用户端随时可刷；已就绪的节日会自动跳过">
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                :loading="festivalGenSubmitting"
+                plain
+                @click="handleTriggerAllFestivals"
+              >
+                生成节日题库
+              </el-button>
+            </span>
+          </el-tooltip>
           <el-button v-permission="'sentence:gen'" :loading="backfilling" plain @click="handleBackfillExplanations()">
             补全解析
           </el-button>
