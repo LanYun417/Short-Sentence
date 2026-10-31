@@ -47,10 +47,7 @@ const activeTone = computed(() => TONES[DIFFICULTIES[activeIndex.value]?.value ?
 
 <template>
   <div>
-    <div class="mb-1.5 flex items-center justify-between">
-      <span class="text-xs font-medium text-slate-400">题目难度</span>
-      <span class="text-xs text-slate-400">可随时切换</span>
-    </div>
+    <div class="mb-1.5 text-xs font-medium text-slate-400">题目难度</div>
 
     <div
       class="relative grid grid-cols-3 gap-1.5 rounded-2xl bg-slate-100/80 p-1.5 ring-1 ring-slate-200/70 dark:bg-slate-800/60 dark:ring-slate-700/60"
