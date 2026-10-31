@@ -52,6 +52,16 @@ export interface NextQuestion {
   words: string[] | null;
 }
 
+/** 节日题库（用户端「专门刷题」入口）。 */
+export interface FestivalBank {
+  /** 节日名（如「春节」） */
+  name: string;
+  /** 当前题库的题目数 */
+  count: number;
+  /** 该期节日的公历日期（YYYY-MM-DD） */
+  date: string | null;
+}
+
 /** 提交答案结果（含正确答案）。 */
 export interface AnswerResult {
   sentenceId: number;

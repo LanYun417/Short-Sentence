@@ -12210,12 +12210,97 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/questions/festivals": {
+      "get": {
+        "tags": [
+          "刷题"
+        ],
+        "summary": "可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）",
+        "operationId": "get__api_client_questions_festivals",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/questions/next": {
       "get": {
         "tags": [
           "刷题"
         ],
-        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival 传了则只从该节日题库抽（专门刷题）。 拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
         "operationId": "get__api_client_questions_next",
         "parameters": [
           {
@@ -16361,6 +16446,11 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "type": "number",
             "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
             "example": 1
+          },
+          "force": {
+            "type": "boolean",
+            "description": "是否重新生成已有解析（缺省 false）。 true = 把「不是新三行格式」的旧解析也重新生成（空值 + 旧的冗长解析）， 用于把历史内容统一精简成固定格式；补完即收敛，可反复点到 remaining=0。",
+            "example": true
           }
         }
       },

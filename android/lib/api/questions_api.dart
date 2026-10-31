@@ -19,13 +19,17 @@ import 'models/question.dart';
 ///
 /// 词块现随题**恒定下发**，故不再携带作答模式——切换模式沿用当前题即可（与 Web 端一致）。
 class NextQuestionQuery {
-  const NextQuestionQuery({this.difficulty});
+  const NextQuestionQuery({this.difficulty, this.festival});
 
   /// 目标难度（1/2/3；不传则不限）
   final int? difficulty;
 
+  /// 节日题库名（传了则只从该节日的当前题库抽题）
+  final String? festival;
+
   Map<String, dynamic> toQuery() => <String, dynamic>{
         if (difficulty != null) 'difficulty': difficulty,
+        if (festival != null) 'festival': festival,
       };
 }
 
@@ -43,6 +47,27 @@ class QuestionsApi {
         queryParameters: query.toQuery(),
       );
       return Question.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 可选的节日题库列表（只含有就绪题目的节日）。
+  Future<List<FestivalBank>> listFestivals() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/questions/festivals');
+      final body = response.data;
+      if (body is Map<String, dynamic>) {
+        final data = body['data'];
+        if (data is List) {
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map(FestivalBank.fromJson)
+              .where((item) => item.name.isNotEmpty)
+              .toList();
+        }
+      }
+      return const <FestivalBank>[];
     } on DioException catch (error) {
       throw _wrap(error);
     }

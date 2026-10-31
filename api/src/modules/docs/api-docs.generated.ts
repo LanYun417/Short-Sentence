@@ -6506,8 +6506,41 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/client/questions/festivals",
+        "summary": "可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/festivals?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client/questions/next",
-        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival 传了则只从该节日题库抽（专门刷题）。 拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -7081,12 +7114,21 @@ export const API_DOCS: ApiDocGroup[] = [
             "required": false,
             "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
             "example": 1
+          },
+          {
+            "name": "force",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "是否重新生成已有解析（缺省 false）。 true = 把「不是新三行格式」的旧解析也重新生成（空值 + 旧的冗长解析）， 用于把历史内容统一精简成固定格式；补完即收敛，可反复点到 remaining=0。",
+            "example": true
           }
         ],
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/sentences/explanation/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"limit\": 1\n    }'",
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/explanation/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"limit\": 1,\n      \"force\": true\n    }'",
           "requestBody": {
-            "limit": 1
+            "limit": 1,
+            "force": true
           }
         }
       },

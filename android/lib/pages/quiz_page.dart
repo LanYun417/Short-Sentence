@@ -94,6 +94,8 @@ class _QuizPageState extends ConsumerState<QuizPage>
     // 首屏自动抽题（延到首帧后：此刻才能安全读 Riverpod 状态）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
+      // 节日题库入口（失败静默，不影响日常刷题）
+      ref.read(quizControllerProvider.notifier).loadFestivals();
       // 句签入口只需要「今天领没领」；句签册留给成长页去拉
       ref.read(cardControllerProvider.notifier).loadStatus();
     });
@@ -355,10 +357,22 @@ class _QuizPageState extends ConsumerState<QuizPage>
           ),
           const SizedBox(height: 12),
         ],
-        StaggeredEntrance(
-          index: 2,
-          child: _DifficultyBar(difficulty: state.difficulty, onTap: _pickDifficulty),
-        ),
+        if (state.festivals.isNotEmpty) ...<Widget>[
+          StaggeredEntrance(
+            index: 2,
+            child: _FestivalBar(
+              festivals: state.festivals,
+              selected: state.festival,
+              onTap: (name) => ref.read(quizControllerProvider.notifier).setFestival(name),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (state.festival == null)
+          StaggeredEntrance(
+            index: 2,
+            child: _DifficultyBar(difficulty: state.difficulty, onTap: _pickDifficulty),
+          ),
         const SizedBox(height: 14),
         _StackedCards(
           flip: _flipController,
@@ -931,6 +945,87 @@ class _ClaimBanner extends StatelessWidget {
             ),
             Icon(Icons.chevron_right_rounded, size: 20, color: colors.gold),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ------------------------------ 节日题库入口 ------------------------------ */
+
+/// 节日题库入口：有可刷的节日时才出现；选中后只刷该节日题库。
+class _FestivalBar extends StatelessWidget {
+  const _FestivalBar({required this.festivals, required this.selected, required this.onTap});
+
+  final List<FestivalBank> festivals;
+  final String? selected;
+  final ValueChanged<String?> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text(
+              '节日题库',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkFaint),
+            ),
+            Text('可选专门刷题', style: TextStyle(fontSize: 12, color: colors.inkFaint)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            _FestivalChip(label: '全部', selected: selected == null, onTap: () => onTap(null)),
+            for (final item in festivals)
+              _FestivalChip(
+                label: '${item.name} ${item.count}',
+                selected: selected == item.name,
+                onTap: () => onTap(item.name),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 单个节日胶囊。
+class _FestivalChip extends StatelessWidget {
+  const _FestivalChip({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return PressScale(
+      onTap: onTap,
+      scale: 0.94,
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? colors.brand : colors.card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? colors.brand : colors.line),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : colors.inkSoft,
+          ),
         ),
       ),
     );

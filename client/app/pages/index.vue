@@ -26,9 +26,13 @@ const {
   errorMessage,
   difficulty,
   mode,
+  festival,
+  festivals,
   loadNext,
+  loadFestivals,
   setDifficulty,
   setMode,
+  setFestival,
   prefill,
   submit,
   toggleFavorite,
@@ -211,6 +215,8 @@ onMounted(() => {
   if (!question.value) {
     void loadNext();
   }
+  // 有节日题库时展示可选入口（失败静默，不影响日常刷题）
+  void loadFestivals();
   // 刷新页面时若今日目标已完成，自动领取当日句签
   if (goalReached.value) {
     void claimSentenceCard();
@@ -298,8 +304,37 @@ function onFavorite(): void {
       </div>
     </section>
 
-    <!-- 难度选择：开始刷题前选，中途也可随时切换（切换后立刻按新难度抽题） -->
-    <div class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
+    <!-- 节日题库：有可刷的节日时才出现；选中后只刷该节日题库 -->
+    <div v-if="festivals.length" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
+      <div class="mb-1.5 flex items-center justify-between">
+        <span class="text-xs font-medium text-slate-400">节日题库</span>
+        <span class="text-xs text-slate-400">可选专门刷题</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          size="sm"
+          :color="festival === null ? 'primary' : 'neutral'"
+          :variant="festival === null ? 'solid' : 'soft'"
+          @click="setFestival(null)"
+        >
+          全部
+        </UButton>
+        <UButton
+          v-for="item in festivals"
+          :key="item.name"
+          size="sm"
+          :color="festival === item.name ? 'primary' : 'neutral'"
+          :variant="festival === item.name ? 'solid' : 'soft'"
+          @click="setFestival(item.name)"
+        >
+          {{ item.name }}
+          <span class="ml-1 text-[11px] opacity-70">{{ item.count }}</span>
+        </UButton>
+      </div>
+    </div>
+
+    <!-- 难度选择：只在日常混抽时可用（节日题库是一套固定题，不按难度筛） -->
+    <div v-if="!festival" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 

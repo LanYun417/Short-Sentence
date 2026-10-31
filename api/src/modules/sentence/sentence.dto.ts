@@ -6,6 +6,7 @@ import {
   ArrayMaxSize,
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -96,6 +97,15 @@ export class BackfillExplanationDto {
   @Min(1, { message: '数量至少为 1' })
   @Max(100, { message: '单批最多 100 条' })
   limit?: number;
+
+  /**
+   * 是否重新生成已有解析（缺省 false）。
+   * true = 把「不是新三行格式」的旧解析也重新生成（空值 + 旧的冗长解析），
+   * 用于把历史内容统一精简成固定格式；补完即收敛，可反复点到 remaining=0。
+   */
+  @IsOptional()
+  @IsBoolean({ message: 'force 必须为布尔值' })
+  force?: boolean;
 }
 
 /** 手动触发批量生成入参。 */

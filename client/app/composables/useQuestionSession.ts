@@ -5,7 +5,7 @@
  * 翻转后的结果只保留到下一次 loadNext；达标后的今日进度由页面层消费 result.todayDone。
  */
 import type { Ref } from 'vue';
-import type { AnswerResult, NextQuestion } from '~/types';
+import type { AnswerResult, FestivalBank, NextQuestion } from '~/types';
 import { apiFetch, getToken } from '~/composables/useApi';
 
 /** 本地持久化的难度偏好 key。 */
@@ -104,6 +104,10 @@ export function useQuestionSession() {
   const difficulty = ref<number>(readDifficulty(difficultyCookie.value));
   /** 作答模式（本地持久化；随 next 决定是否取词块，随 answer 上报用于经验计算） */
   const mode = ref<AnswerMode>(readMode(modeCookie.value));
+  /** 当前选择的节日题库（null = 全部/日常混抽） */
+  const festival = ref<string | null>(null);
+  /** 可选的节日题库（只含有就绪题目的节日） */
+  const festivals = ref<FestivalBank[]>([]);
 
   /** 拉取下一张卡（清空上一轮结果）。 */
   async function loadNext(): Promise<void> {
@@ -111,7 +115,8 @@ export function useQuestionSession() {
     errorMessage.value = '';
     try {
       question.value = await apiFetch<NextQuestion>('/client/questions/next', {
-        query: { difficulty: difficulty.value },
+        // festival 为 undefined 时 ofetch 会自动省略该参数（走日常混抽）
+        query: { difficulty: difficulty.value, festival: festival.value ?? undefined },
       });
       result.value = null;
     } catch (error) {
@@ -119,6 +124,20 @@ export function useQuestionSession() {
     } finally {
       loading.value = false;
     }
+  }
+
+  /** 拉取可选节日题库（失败静默：不影响日常刷题）。 */
+  async function loadFestivals(): Promise<void> {
+    festivals.value = await apiFetch<FestivalBank[]>('/client/questions/festivals').catch(() => []);
+  }
+
+  /** 切换节日题库（null = 全部）：立刻按新范围抽一张。 */
+  async function setFestival(name: string | null): Promise<void> {
+    if (festival.value === name) {
+      return;
+    }
+    festival.value = name;
+    await loadNext();
   }
 
   /** 切换难度：记住选择并立刻按新难度抽一张（中途切换也生效）。 */
@@ -195,9 +214,13 @@ export function useQuestionSession() {
     errorMessage,
     difficulty,
     mode,
+    festival,
+    festivals,
     loadNext,
+    loadFestivals,
     setDifficulty,
     setMode,
+    setFestival,
     prefill,
     submit,
     toggleFavorite,

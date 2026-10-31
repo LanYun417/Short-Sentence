@@ -55,6 +55,16 @@ export interface NextQuestion {
   words: string[] | null;
 }
 
+/** 节日题库（用户端「专门刷题」入口）。 */
+export interface FestivalBank {
+  /** 节日名（如「春节」） */
+  name: string;
+  /** 当前题库的题目数（只算就绪且未退场） */
+  count: number;
+  /** 该期节日的公历日期（YYYY-MM-DD） */
+  date: string | null;
+}
+
 /** 提交答案结果（含正确答案，用于翻转面）。 */
 export interface AnswerResult {
   sentenceId: number;
@@ -224,9 +234,22 @@ export class QuestionsService {
    *
    * @param difficulty 目标难度（1 易 / 2 中 / 3 难），仅作用于**新题**——
    *   复习题必须按间隔重复排期走，按难度过滤会打乱复习节奏。该难度无可用新题时回落到不限难度。
+   * @param festival 节日题库名（如「春节」）。传了则只从该节日的**当前题库**抽题（专门刷题），
+   *   不混入日常题与复习题；不传走日常混抽。
    */
-  async next(userId: number, difficulty?: number): Promise<NextQuestion> {
+  async next(userId: number, difficulty?: number, festival?: string): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
+
+    // 节日题库：专门刷题——只在该节日当前（未退场）的题库里抽
+    const festivalName = festival?.trim();
+    if (festivalName) {
+      const festivalSentenceId = await this.pickFestivalSentence(festivalName, recentIds);
+      if (festivalSentenceId === null) {
+        throw AppException.notFound(`「${festivalName}」题库暂无可用题目`);
+      }
+      return this.buildNextQuestion(userId, festivalSentenceId, 'new');
+    }
+
     const wantNew = Math.random() < config.sentence.newRatio;
 
     let sentenceId: number | null;
@@ -256,7 +279,11 @@ export class QuestionsService {
     if (sentenceId === null) {
       throw AppException.notFound('暂无可用题目，休息一下 or 等待每日更新');
     }
+    return this.buildNextQuestion(userId, sentenceId, source);
+  }
 
+  /** 题目 id → 下一张卡（含今日进度与拼词词块）。 */
+  private async buildNextQuestion(userId: number, sentenceId: number, source: 'new' | 'review'): Promise<NextQuestion> {
     const sentence = await this.prisma.sentence.findUnique({
       where: { id: BigInt(sentenceId) },
       select: {
@@ -286,6 +313,52 @@ export class QuestionsService {
       source,
       words: shuffleWords(sentence.sentenceEn),
     };
+  }
+
+  /**
+   * 当前有题的节日题库（按节日日期倒序）。
+   * 只统计「就绪且未退场」的题——退场旧题不会出现在列表里。
+   */
+  async listFestivals(): Promise<FestivalBank[]> {
+    const rows = await this.prisma.sentence.groupBy({
+      by: ['festivalName'],
+      where: { status: 'ready', retiredAt: null, festivalName: { not: null } },
+      _count: { _all: true },
+      _max: { festivalDate: true },
+    });
+    return rows
+      .map((row) => ({
+        name: row.festivalName ?? '',
+        count: row._count._all,
+        date: row._max.festivalDate ?? null,
+      }))
+      .filter((row) => row.name.length > 0)
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.name.localeCompare(b.name));
+  }
+
+  /** 从指定节日题库随机抽一道（排除防重窗口内的题）。 */
+  private async pickFestivalSentence(festivalName: string, excludeIds: number[]): Promise<number | null> {
+    const where: Record<string, unknown> = {
+      status: 'ready',
+      retiredAt: null,
+      festivalName,
+    };
+    if (excludeIds.length > 0) {
+      where.id = { notIn: excludeIds.map((id) => BigInt(id)) };
+    }
+    const total = await this.prisma.sentence.count({ where });
+    if (total === 0) {
+      return null;
+    }
+    const offset = Math.floor(Math.random() * total);
+    const rows = await this.prisma.sentence.findMany({
+      where,
+      orderBy: { id: 'asc' },
+      skip: offset,
+      take: 1,
+      select: { id: true },
+    });
+    return rows[0] ? Number(rows[0].id) : null;
   }
 
   /**

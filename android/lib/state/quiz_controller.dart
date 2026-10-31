@@ -44,6 +44,8 @@ class QuizState {
     this.startedAt,
     this.loadingNext = false,
     this.difficulty = 2,
+    this.festival,
+    this.festivals = const <FestivalBank>[],
   });
 
   /// 当前题目（null = 尚未抽到）
@@ -74,6 +76,12 @@ class QuizState {
   /// 目标难度（1 易 / 2 中 / 3 难）。只作用于新题；复习题仍按间隔重复排期走。
   final int difficulty;
 
+  /// 当前选择的节日题库（null = 全部/日常混抽）
+  final String? festival;
+
+  /// 可选的节日题库（只含有就绪题目的节日）
+  final List<FestivalBank> festivals;
+
   bool get isAnswered => phase == QuizPhase.answered;
 
   bool get isBusy => phase == QuizPhase.loading || phase == QuizPhase.submitting;
@@ -94,6 +102,9 @@ class QuizState {
     bool clearQuestion = false,
     bool? loadingNext,
     int? difficulty,
+    String? festival,
+    bool clearFestival = false,
+    List<FestivalBank>? festivals,
   }) {
     return QuizState(
       question: clearQuestion ? null : (question ?? this.question),
@@ -107,6 +118,8 @@ class QuizState {
       // 于是「点下一题」时卡片会当着用户的面往回翻（见 quiz_page 注释）。
       loadingNext: loadingNext ?? this.loadingNext,
       difficulty: difficulty ?? this.difficulty,
+      festival: clearFestival ? null : (festival ?? this.festival),
+      festivals: festivals ?? this.festivals,
     );
   }
 }
@@ -160,7 +173,7 @@ class QuizController extends Notifier<QuizState> {
     );
     try {
       final question = await _api.next(
-        NextQuestionQuery(difficulty: difficulty ?? state.difficulty),
+        NextQuestionQuery(difficulty: difficulty ?? state.difficulty, festival: state.festival),
       );
       state = state.copyWith(
         question: question,
@@ -190,6 +203,25 @@ class QuizController extends Notifier<QuizState> {
     }
     // 同样不清 result（见 [loadNext]：保留 todayDone，避免计数回落）。
     state = state.copyWith(difficulty: next, error: null);
+    await loadNext();
+  }
+
+  /// 拉取可选节日题库（失败静默：不影响日常刷题）。
+  Future<void> loadFestivals() async {
+    try {
+      final list = await _api.listFestivals();
+      state = state.copyWith(festivals: list);
+    } catch (_) {
+      // 入口加载失败不打扰用户，日常刷题不受影响
+    }
+  }
+
+  /// 切换节日题库（null = 全部）：立刻按新范围抽一题。
+  Future<void> setFestival(String? name) async {
+    if (state.festival == name) {
+      return;
+    }
+    state = state.copyWith(festival: name, clearFestival: name == null, error: null);
     await loadNext();
   }
 

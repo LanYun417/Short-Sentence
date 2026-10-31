@@ -231,9 +231,13 @@ export class SentenceController {
   async backfillExplanations(
     @Body() dto: BackfillExplanationDto,
   ): Promise<ResponseEnvelope<{ scanned: number; updated: number; remaining: number }>> {
-    const result = await this.sentenceGen.backfillExplanations(dto.limit ?? 20);
+    const result = await this.sentenceGen.backfillExplanations(dto.limit ?? 20, dto.force ?? false);
     const message =
-      result.scanned === 0 ? '所有题目都已有解析' : `已补 ${result.updated} 条，剩余 ${result.remaining} 条待补`;
+      result.scanned === 0
+        ? dto.force
+          ? '所有题目都已是新格式解析'
+          : '所有题目都已有解析'
+        : `已补 ${result.updated} 条，剩余 ${result.remaining} 条待补`;
     return { __raw: true, data: result, message };
   }
 

@@ -108,6 +108,26 @@ class Question {
       };
 }
 
+/// 节日题库（用户端「专门刷题」入口）。
+class FestivalBank {
+  const FestivalBank({required this.name, required this.count, this.date});
+
+  /// 节日名（如「春节」）
+  final String name;
+
+  /// 当前题库的题目数（只算就绪且未退场）
+  final int count;
+
+  /// 该期节日的公历日期（YYYY-MM-DD）
+  final String? date;
+
+  factory FestivalBank.fromJson(Map<String, dynamic> json) => FestivalBank(
+        name: json['name'] as String? ?? '',
+        count: (json['count'] as num?)?.toInt() ?? 0,
+        date: json['date'] as String?,
+      );
+}
+
 /// 提交答案结果（含正确答案，用于翻卡背面）。
 class AnswerResult {
   const AnswerResult({

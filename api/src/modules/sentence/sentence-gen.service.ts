@@ -910,33 +910,51 @@ export class SentenceGenService {
   /**
    * 给存量题补解析（管理端手动触发，按批调用，可反复点到补完为止）。
    *
+   * 两种口径：
+   * - 默认（force=false）只补「还没有解析」的题，成本最低；
+   * - force=true 重新生成「不是新格式」的题（空值 + 旧的冗长解析），用 `语法：` 前缀识别，
+   *   补完即收敛，不会每轮重复烧 token。用于把历史长解析统一精简成固定三行格式。
+   *
    * 为什么做成「按批手动」而不是定时全自动：现存题量上千，全量补一遍要花不少 token，
    * 而这件事并不紧急——该花多少、什么时候花应当由运营决定。返回 remaining，
    * 运营可以看着数字一批批补到 0（响应里也带 scanned/updated，便于判断是否卡住）。
    */
-  async backfillExplanations(limit = 20): Promise<{
-    scanned: number;
-    updated: number;
-    remaining: number;
-  }> {
+  async backfillExplanations(
+    limit = 20,
+    force = false,
+  ): Promise<{ scanned: number; updated: number; remaining: number }> {
     if (!this.sentenceGen.enabled) {
       throw AppException.badRequest('生题能力未配置（AI_AGNES_API_KEY 缺失），无法补全解析');
     }
-    // 只补「已就绪但还没有解析」的题：pending_image 的题等生图完成后再补，避免重复劳动
-    const pendingWhere = {
-      status: 'ready',
-      OR: [{ explanation: null }, { explanation: '' }],
-    };
-    const rows = await this.prisma.sentence.findMany({
-      where: pendingWhere,
-      // 新题优先：新题最可能被用户抽到，先补它们的体验收益最大
-      orderBy: { id: 'desc' },
-      take: limit,
-      select: { id: true, sentenceEn: true, translationZh: true, difficulty: true },
-    });
-    if (rows.length === 0) {
+    // 先取 id（force 用原生 SQL 才能按「不以 语法： 开头」筛选，Prisma 不支持字符串长度/前缀过滤）
+    const ids: bigint[] = force
+      ? (
+          await this.prisma.$queryRaw<Array<{ id: bigint }>>`
+            SELECT id FROM sentence
+            WHERE status = 'ready'
+              AND (explanation IS NULL OR explanation = '' OR explanation NOT LIKE '语法：%')
+            ORDER BY id DESC
+            LIMIT ${limit}
+          `
+        ).map((row) => row.id)
+      : (
+          await this.prisma.sentence.findMany({
+            // 只补「已就绪但还没有解析」的题：pending_image 的题等生图完成后再补，避免重复劳动
+            where: { status: 'ready', OR: [{ explanation: null }, { explanation: '' }] },
+            // 新题优先：新题最可能被用户抽到，先补它们的体验收益最大
+            orderBy: { id: 'desc' },
+            take: limit,
+            select: { id: true },
+          })
+        ).map((row) => row.id);
+    if (ids.length === 0) {
       return { scanned: 0, updated: 0, remaining: 0 };
     }
+    const rows = await this.prisma.sentence.findMany({
+      where: { id: { in: ids } },
+      orderBy: { id: 'desc' },
+      select: { id: true, sentenceEn: true, translationZh: true, difficulty: true },
+    });
 
     let updated = 0;
     for (let start = 0; start < rows.length; start += SentenceGenService.EXPLAIN_BATCH_SIZE) {
@@ -973,7 +991,19 @@ export class SentenceGenService {
       }
     }
 
-    const remaining = await this.prisma.sentence.count({ where: pendingWhere });
+    const remaining = force
+      ? Number(
+          (
+            await this.prisma.$queryRaw<Array<{ c: bigint }>>`
+              SELECT COUNT(*) AS c FROM sentence
+              WHERE status = 'ready'
+                AND (explanation IS NULL OR explanation = '' OR explanation NOT LIKE '语法：%')
+            `
+          )[0]?.c ?? 0,
+        )
+      : await this.prisma.sentence.count({
+          where: { status: 'ready', OR: [{ explanation: null }, { explanation: '' }] },
+        });
     return { scanned: rows.length, updated, remaining };
   }
 

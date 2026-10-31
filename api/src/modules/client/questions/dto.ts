@@ -55,4 +55,13 @@ export class NextQuestionQueryDto {
   @Min(1, { message: '难度最小为 1' })
   @Max(3, { message: '难度最大为 3' })
   difficulty?: number;
+
+  /**
+   * 节日题库名（如「春节」）。
+   * 传了则只从该节日的**当前题库**抽题（专门刷题）；不传走日常混抽。
+   */
+  @IsOptional()
+  @IsString({ message: '节日名必须为字符串' })
+  @MaxLength(50, { message: '节日名过长' })
+  festival?: string;
 }

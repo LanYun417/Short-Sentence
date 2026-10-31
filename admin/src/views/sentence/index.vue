@@ -466,24 +466,27 @@ async function submitGenForm(): Promise<void> {
 /**
  * 补全存量题解析（按批，可反复点到补完）。
  *
+ * force=true 时连「旧的长解析」一起重新生成，统一成固定三行格式（语法/词形/易错）。
  * 走 `ElMessageBox.confirm` 而不是直接执行：这是要花 AI 配额的写操作，
  * 运营点一下就该知道「它会调模型、会产生费用」，而不是无感地批量烧钱。
  */
-async function handleBackfillExplanations(): Promise<void> {
+async function handleBackfillExplanations(force = false): Promise<void> {
   try {
     await ElMessageBox.confirm(
-      '将为「已就绪但没有解析」的题目调用 AI 生成语法解析（每批 20 条，会产生 AI 调用费用）。继续？',
-      '补全题目解析',
-      { type: 'warning', confirmButtonText: '开始补全', cancelButtonText: '取消' },
+      force
+        ? '将把「不是新三行格式」的题目解析重新生成（每批 20 条，会产生 AI 调用费用）。继续？'
+        : '将为「已就绪但没有解析」的题目调用 AI 生成语法解析（每批 20 条，会产生 AI 调用费用）。继续？',
+      force ? '精简旧解析' : '补全题目解析',
+      { type: 'warning', confirmButtonText: force ? '开始精简' : '开始补全', cancelButtonText: '取消' },
     );
   } catch {
     return;
   }
   backfilling.value = true;
   try {
-    const result = await backfillExplanationsApi(20);
+    const result = await backfillExplanationsApi(20, force);
     if (result.scanned === 0) {
-      ElMessage.success('所有题目都已有解析');
+      ElMessage.success(force ? '所有题目都已是新格式解析' : '所有题目都已有解析');
     } else {
       ElMessage.success(`本批补了 ${result.updated} 条，还剩 ${result.remaining} 条待补`);
       await getList();
@@ -664,8 +667,16 @@ onMounted(async () => {
             </span>
           </el-tooltip>
           <el-button v-permission="'sentence:gen'" type="warning" plain @click="handleTriggerGen">生成题库</el-button>
-          <el-button v-permission="'sentence:gen'" :loading="backfilling" plain @click="handleBackfillExplanations">
+          <el-button v-permission="'sentence:gen'" :loading="backfilling" plain @click="handleBackfillExplanations()">
             补全解析
+          </el-button>
+          <el-button
+            v-permission="'sentence:gen'"
+            :loading="backfilling"
+            plain
+            @click="handleBackfillExplanations(true)"
+          >
+            精简旧解析
           </el-button>
           <el-button :loading="exporting" @click="handleExport">
             <template #icon><i class="bi bi-download" /></template>
