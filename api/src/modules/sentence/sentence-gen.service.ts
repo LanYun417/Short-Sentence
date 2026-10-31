@@ -31,6 +31,7 @@ import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
 import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
+import { SENTENCE_STATUS } from './sentence.dto.js';
 
 /**
  * 单批生题的最大条数。
@@ -905,6 +906,26 @@ export class SentenceGenService {
         .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
         .webp({ quality: config.sentence.imageQuality })
         .toBuffer();
+
+      // 图像内容审核（把生图纳入审核链路）：生成后、入库前过一遍视觉审核，
+      // 不合规的不下发、落到 image_rejected 隔离，管理员可「重新生图」恢复。
+      // 复用 batch 的 retry 配置；视觉调用失败最终仍按不通过处理（fail-closed）。
+      const review = await withRetry(
+        () => this.sentenceGen.reviewImage(webp, { scenePrompt: sentence.scenePrompt }),
+        retry,
+      );
+      if (!review.pass) {
+        this.logger.warn(`[SentenceGen] 图像审核未通过（sentence ${sentence.id}）: ${review.reason}`);
+        await this.prisma.sentence.update({
+          where: { id: sentence.id },
+          data: { status: SENTENCE_STATUS.IMAGE_REJECTED },
+        });
+        if (taskId !== null) {
+          await this.heartbeat(taskId);
+        }
+        return false;
+      }
+
       const saved = await this.fileService.save(`${Number(sentence.id)}.webp`, 'image/webp', webp, null);
       await this.prisma.sentence.update({
         where: { id: sentence.id },

@@ -18,6 +18,8 @@ import { AiSettingsService } from './ai-settings.service.js';
 import {
   AiProviderError,
   type ExplainItem,
+  type ImageReviewContext,
+  type ImageReviewResult,
   type RejectedDraft,
   type SentenceCardTheme,
   type SentenceDraft,
@@ -36,6 +38,25 @@ function isUsableDraft(item: unknown): item is SentenceDraft {
 /** 从任意值安全取出字符串（非字符串按空串处理），trim 后截断到 max。 */
 function str(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+/**
+ * 从模型输出解析图像审核结论。fail-closed：只要不是明确的 `pass:true`，一律视为不通过。
+ * 模型用了 json_object 模式，正常应返回 `{"pass":bool,"reason":str}`；解析不出就按不通过处理。
+ */
+function parseReviewVerdict(content: string): { pass: boolean; reason: string } {
+  const match = content.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      const obj = JSON.parse(match[0]) as Record<string, unknown>;
+      const pass = obj.pass === true;
+      const reason = typeof obj.reason === 'string' ? (obj.reason as string).slice(0, 120) : '';
+      return { pass, reason: pass ? '' : reason || '图像审核未通过' };
+    } catch {
+      // 落到下面「无法解析」分支
+    }
+  }
+  return { pass: false, reason: '图像审核未返回明确结论（按不通过处理）' };
 }
 
 /**
@@ -228,6 +249,29 @@ const REVIEW_SYSTEM_PROMPT = [
   'Be strict: better to drop an item than to let a bad one through.',
   'Output JSON only: {"items":[{"index":0,"pass":true,"reason":""}]}',
   '(reason only when pass=false, max 15 words, English or Chinese)',
+].join('\n');
+
+/**
+ * 图像内容审核提示词（视觉模型看单张已生成配图）。
+ * 与文本审核同一套「fail-closed」心智：宁可不下发，也不放坏图进库。
+ */
+const IMAGE_REVIEW_SYSTEM_PROMPT = [
+  'You are the image content moderator for a language-learning app for all ages.',
+  'You will be shown ONE illustration (flat cartoon, two people talking) just generated for a sentence card.',
+  'The intended scene is described by the provided "scenePrompt".',
+  '',
+  'FAIL the image (pass=false) if ANY of the following is true:',
+  '1. Content not safe for all ages: nudity, sexual content, romantic/intimate touching beyond a light hug or',
+  '   hand-hold, violence, gore, blood, weapons, drugs, hate symbols, or anything disturbing.',
+  '2. A romantic couple / two people in a clearly romantic or intimate pose are the SAME gender',
+  '   (two men or two women). The platform convention is that such couples are a man and a woman — flag it.',
+  '3. The image is grossly off from the described scene (empty background with no people when people are',
+  '   required, text/letters as the main subject, or a scene contradicting the sentence).',
+  '4. Low quality / broken render that would look obviously wrong to a user.',
+  '',
+  'PASS only when the image is appropriate, depicts the intended everyday scene, and any couple is a man and a woman.',
+  'Be strict: when in doubt, fail it.',
+  'Output JSON only: {"pass":true,"reason":""} or {"pass":false,"reason":"short reason, max 20 words"}',
 ].join('\n');
 
 @Injectable()
@@ -448,6 +492,32 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   }
 
   /**
+   * 图像内容审核：把刚生成的配图送视觉模型，判断是否适龄、有无不当内容、
+   * 情侣场景是否为一男一女。fail-closed——明确 `pass:true` 才放行，其余一律不通过。
+   *
+   * 视觉调用走与文本审核同一套 `chat`（多模态），共享预算闸门与调用日志；
+   * 调用失败（接口/超时）由调用方 `withRetry` 兜底，最终仍失败则按不通过处理。
+   */
+  async reviewImage(image: Buffer, context: ImageReviewContext, bizId?: number): Promise<ImageReviewResult> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    const userPayload = JSON.stringify({
+      scenePrompt: context.scenePrompt,
+      sentenceEn: context.sentenceEn ?? '',
+    });
+    const content = await this.chat(
+      'image_review',
+      IMAGE_REVIEW_SYSTEM_PROMPT,
+      userPayload,
+      0.1,
+      { bizId },
+      image.toString('base64'),
+    );
+    return parseReviewVerdict(content);
+  }
+
+  /**
    * 补全题目解析（存量题回填）。
    *
    * 为什么单独一次调用而不是复用 polish：这一批题目已经入库（无需改句、无需重审场景），
@@ -489,6 +559,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     userContent: string,
     temperature: number,
     options: { bizId?: number; validate?: (content: string) => void } = {},
+    imageBase64?: string,
   ): Promise<string> {
     // 预算闸门放在 try 之前：超额时直接抛不可重试错误，**不写 ai_call_log**
     // （被拦下的调用不算「消费」，也不该污染失败率统计）。放在这里即覆盖所有文本调用
@@ -496,6 +567,19 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     await this.budget.assertWithinBudget();
     const startedAt = Date.now();
     try {
+      // 视觉审核走多模态：user 消息变成 [文本 + 图片] 数组；纯文本调用不传 imageBase64。
+      const userMessage: {
+        role: 'user';
+        content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      } = imageBase64
+        ? {
+            role: 'user',
+            content: [
+              { type: 'text', text: userContent },
+              { type: 'image_url', image_url: { url: `data:image/webp;base64,${imageBase64}` } },
+            ],
+          }
+        : { role: 'user', content: userContent };
       const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -504,10 +588,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         },
         body: JSON.stringify({
           model: this.aiSettings.current.textModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent },
-          ],
+          messages: [{ role: 'system', content: systemPrompt }, userMessage],
           temperature,
           response_format: { type: 'json_object' },
         }),

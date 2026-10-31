@@ -87,6 +87,19 @@ export interface SentenceGenProvider {
    * @param bizId 关联业务 id（便于核对调用来源）
    */
   explainBatch(items: ExplainItem[], bizId?: number): Promise<string[]>;
+
+  /**
+   * 图像内容审核（把生图纳入审核链路）。
+   *
+   * 对单张已生成的配图做视觉审核：适龄、无不当内容；情侣/浪漫场景的两人须为一男一女
+   * （平台插画惯例；生图提示词已强制，这里再兜底拦截模型偶发跑偏）。
+   * **fail-closed**：模型未给出明确通过结论即视为不通过，宁可不下发也不放坏图进库。
+   *
+   * @param image 已生成、转码后的图片字节（webp/png 均可，按 data URL 送视觉模型）
+   * @param context 预期场景（提示词 + 可选句子），帮助审核模型判断画面是否合理
+   * @param bizId 关联业务 id（批次 id），落 ai_call_log 便于按批次核对
+   */
+  reviewImage(image: Buffer, context: ImageReviewContext, bizId?: number): Promise<ImageReviewResult>;
 }
 
 /** 每日句签主题（AI 输出解析后的单条）。 */
@@ -110,6 +123,22 @@ export interface GeneratedImage {
   buffer: Buffer;
   /** 上游返回的 MIME（通常是 image/png） */
   mimeType: string;
+}
+
+/** 图像审核上下文（帮助审核模型理解这张图的预期场景）。 */
+export interface ImageReviewContext {
+  /** 生图提示词（预期场景描述） */
+  scenePrompt: string;
+  /** 对应英文句子（可选，辅助判断场景是否合理） */
+  sentenceEn?: string;
+}
+
+/** 图像审核结论。 */
+export interface ImageReviewResult {
+  /** 是否通过（false = 不发布，进入隔离态） */
+  pass: boolean;
+  /** 不通过原因（通过时为空串） */
+  reason: string;
 }
 
 /** 生图 Provider 接口。 */

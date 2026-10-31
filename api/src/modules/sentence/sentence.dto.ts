@@ -23,6 +23,8 @@ export const SENTENCE_STATUS = {
   PENDING_IMAGE: 'pending_image',
   READY: 'ready',
   OFFLINE: 'offline',
+  /** 图像内容审核未通过：已生成但被视觉审核拦截，隔离不下发，管理员可「重新生图」恢复。 */
+  IMAGE_REJECTED: 'image_rejected',
 } as const;
 
 /** 题目状态取值。 */
