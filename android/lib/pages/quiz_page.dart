@@ -372,6 +372,14 @@ class _QuizPageState extends ConsumerState<QuizPage>
           StaggeredEntrance(
             index: 2,
             child: _DifficultyBar(difficulty: state.difficulty, onTap: _pickDifficulty),
+          )
+        else
+          StaggeredEntrance(
+            index: 2,
+            child: _FestivalModeBar(
+              festival: state.festival!,
+              onExit: () => ref.read(quizControllerProvider.notifier).setFestival(null),
+            ),
           ),
         const SizedBox(height: 14),
         _StackedCards(
@@ -953,8 +961,11 @@ class _ClaimBanner extends StatelessWidget {
 
 /* ------------------------------ 节日题库入口 ------------------------------ */
 
-/// 节日题库入口：有可刷的节日时才出现；选中后只刷该节日题库。
-class _FestivalBar extends StatelessWidget {
+/// 节日题库入口：常驻可见，展开可看到全年所有节日；选中后只刷该节日题库。
+///
+/// 全年二十多个节日平铺会占掉小半屏、把题卡顶出首屏，所以默认收起成一个入口行：
+/// 入口常驻可见（随时可刷），但不去抢题卡的位置。
+class _FestivalBar extends StatefulWidget {
   const _FestivalBar({required this.festivals, required this.selected, required this.onTap});
 
   final List<FestivalBank> festivals;
@@ -962,34 +973,119 @@ class _FestivalBar extends StatelessWidget {
   final ValueChanged<String?> onTap;
 
   @override
+  State<_FestivalBar> createState() => _FestivalBarState();
+}
+
+class _FestivalBarState extends State<_FestivalBar> {
+  /// 面板是否展开（默认收起）。
+  bool _expanded = false;
+
+  @override
+  void didUpdateWidget(_FestivalBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 选中某个节日后自动收起：此时顶部换成「节日模式」提示条，把空间让给题卡。
+    if (widget.selected != null && widget.selected != oldWidget.selected) {
+      setState(() => _expanded = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              '节日题库',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkFaint),
-            ),
-            Text('可选专门刷题', style: TextStyle(fontSize: 12, color: colors.inkFaint)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            _FestivalChip(label: '全部', selected: selected == null, onTap: () => onTap(null)),
-            for (final item in festivals)
-              _FestivalChip(
-                label: '${item.name} ${item.count}',
-                selected: selected == item.name,
-                onTap: () => onTap(item.name),
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Text(
+                '节日题库',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkFaint),
               ),
-          ],
+              Row(
+                children: <Widget>[
+                  Text(
+                    '全年 ${widget.festivals.length} 个 · 随时可刷',
+                    style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                  ),
+                  Icon(
+                    _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: colors.inkFaint,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (_expanded) ...<Widget>[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              _FestivalChip(
+                label: '全部',
+                selected: widget.selected == null,
+                onTap: () => widget.onTap(null),
+              ),
+              for (final item in widget.festivals)
+                _FestivalChip(
+                  label: '${item.name} ${item.count}',
+                  selected: widget.selected == item.name,
+                  onTap: () => widget.onTap(item.name),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// 节日模式提示：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口）。
+class _FestivalModeBar extends StatelessWidget {
+  const _FestivalModeBar({required this.festival, required this.onExit});
+
+  final String festival;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      children: <Widget>[
+        Icon(Icons.auto_awesome_rounded, size: 15, color: colors.brand),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            '正在刷「$festival」节日题库',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.ink),
+          ),
+        ),
+        const SizedBox(width: 8),
+        PressScale(
+          onTap: onExit,
+          scale: 0.94,
+          child: Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 11),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.card,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: colors.line),
+            ),
+            child: Text(
+              '退出',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkSoft),
+            ),
+          ),
         ),
       ],
     );
