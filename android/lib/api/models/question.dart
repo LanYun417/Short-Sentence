@@ -110,7 +110,12 @@ class Question {
 
 /// 节日题库（用户端「专门刷题」入口）。
 class FestivalBank {
-  const FestivalBank({required this.name, required this.count, this.date});
+  const FestivalBank({
+    required this.name,
+    required this.count,
+    this.date,
+    this.coverUrl,
+  });
 
   /// 节日名（如「春节」）
   final String name;
@@ -121,10 +126,14 @@ class FestivalBank {
   /// 该期节日的公历日期（YYYY-MM-DD）
   final String? date;
 
+  /// 封面图 URL：取该节日题库一张已生成配图的题当封面；没有时为 null
+  final String? coverUrl;
+
   factory FestivalBank.fromJson(Map<String, dynamic> json) => FestivalBank(
         name: json['name'] as String? ?? '',
         count: (json['count'] as num?)?.toInt() ?? 0,
         date: json['date'] as String?,
+        coverUrl: json['coverUrl'] as String?,
       );
 }
 

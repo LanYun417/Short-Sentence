@@ -47,7 +47,9 @@ const {
   mode,
   festival,
   category,
+  festivals,
   loadNext,
+  loadFestivals,
   setDifficulty,
   setMode,
   setFestival,
@@ -249,6 +251,8 @@ onMounted(() => {
   if (!question.value) {
     void loadNext();
   }
+  // 拉取节日题库清单（含封面）：失败静默，仅用于专项模式提示条上的封面缩略图
+  void loadFestivals();
   // 刷新页面时若今日目标已完成，自动领取当日句签
   if (goalReached.value) {
     void claimSentenceCard();
@@ -295,6 +299,14 @@ const bankLabel = computed(() => {
 function onChangeBank(): void {
   void navigateTo('/library');
 }
+
+/** 当前专项节日题库的封面（用于提示条左侧缩略图；无封面时为空）。 */
+const activeFestivalCover = computed(() => {
+  if (!festival.value) {
+    return null;
+  }
+  return festivals.value.find((item) => item.name === festival.value)?.coverUrl ?? null;
+});
 
 /** 退出专项模式：回到日常混抽，并清掉地址栏上的题库参数（否则刷新又回到专项模式）。 */
 async function onExitBank(): Promise<void> {
@@ -377,7 +389,13 @@ async function onExitBank(): Promise<void> {
       :style="{ animationDelay: '40ms' }"
     >
       <div class="flex min-w-0 items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-        <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0" />
+        <img
+          v-if="activeFestivalCover"
+          :src="activeFestivalCover"
+          alt=""
+          class="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-amber-300/60 dark:ring-amber-200/30"
+        />
+        <UIcon v-else name="i-lucide-sparkles" class="h-4 w-4 shrink-0" />
         <span class="truncate">{{ bankLabel }}</span>
       </div>
       <div class="flex shrink-0 items-center gap-1">

@@ -63,6 +63,11 @@ export interface FestivalBank {
   count: number;
   /** 该期节日的公历日期（YYYY-MM-DD） */
   date: string | null;
+  /**
+   * 封面图 URL：取该节日题库里一张已生成配图的题当封面（贴合节日主题、免费复用已生成的插画）。
+   * 没有可用配图时为 null，前端回退到渐变底色。
+   */
+  coverUrl: string | null;
 }
 
 /** 提交答案结果（含正确答案，用于翻转面）。 */
@@ -337,18 +342,40 @@ export class QuestionsService {
       _count: { _all: true },
       _max: { festivalDate: true },
     });
-    return (
-      rows
-        .map((row) => ({
-          name: row.festivalName ?? '',
-          count: row._count._all,
-          date: row._max.festivalDate ?? null,
-        }))
-        .filter((row) => row.name.length > 0)
-        // 按节日日期**升序**（元旦 → 跨年夜）：用户端当时间轴看，
-        // 而不是从年底倒着排。同一节日跨年重新生成时日期会更新，顺序仍稳定。
-        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.name.localeCompare(b.name))
+    const banks = rows
+      .map((row) => ({
+        name: row.festivalName ?? '',
+        count: row._count._all,
+        date: row._max.festivalDate ?? null,
+        coverUrl: null as string | null,
+      }))
+      .filter((row) => row.name.length > 0)
+      // 按节日日期**升序**（元旦 → 跨年夜）：用户端当时间轴看，
+      // 而不是从年底倒着排。同一节日跨年重新生成时日期会更新，顺序仍稳定。
+      .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.name.localeCompare(b.name));
+
+    // 为每个节日挑一张已生成的配图当封面：取该节日里 imageFileId 最小的就绪题
+    // （确定性、稳定，避免每次刷新换图；所有节日插画都用同一节日 styleHint 生成，主题一致）。
+    // 并发解析，避免 21 个节日串行等 IO。
+    await Promise.all(
+      banks.map(async (bank) => {
+        const cover = await this.prisma.sentence.findFirst({
+          where: {
+            festivalName: bank.name,
+            status: 'ready',
+            retiredAt: null,
+            imageFileId: { gt: 0n },
+          },
+          orderBy: { id: 'asc' },
+          select: { imageFileId: true },
+        });
+        if (cover && cover.imageFileId > 0n) {
+          bank.coverUrl = await this.resolveImageUrl(Number(cover.imageFileId));
+        }
+      }),
     );
+
+    return banks;
   }
 
   /** 从指定节日题库随机抽一道（排除防重窗口内的题）。 */

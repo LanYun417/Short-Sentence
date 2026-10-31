@@ -49,7 +49,7 @@ onMounted(async () => {
 });
 
 /**
- * 节日卡片配色：按它在一年中的位置取色（12 色环均匀分布），
+ * 节日卡片底色：封面图加载失败时的回退渐变，按它在一年中的位置取色（12 色环均匀分布），
  * 让二十多个卡片一眼能分出季节，而不是一片同色。
  */
 function festivalHue(date: string | null): number {
@@ -130,15 +130,31 @@ function openFestival(name: string): void {
           v-for="item in festivals"
           :key="item.name"
           type="button"
-          class="flex h-20 flex-col justify-between rounded-2xl p-3 text-left text-white shadow-sm transition active:scale-95"
-          :style="{ backgroundColor: `hsl(${festivalHue(item.date)} 72% 46%)` }"
+          class="group relative flex h-24 flex-col justify-end overflow-hidden rounded-2xl p-3 text-left text-white shadow-sm transition active:scale-95"
+          :style="{
+            backgroundColor: `hsl(${festivalHue(item.date)} 72% 46%)`,
+          }"
           @click="openFestival(item.name)"
         >
-          <span class="flex items-start justify-between gap-1">
-            <span class="text-sm font-semibold">{{ item.name }}</span>
-            <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0 opacity-80" />
+          <!-- 封面：取该节日题库一张已生成插画当封面；加载失败/无封面时露出底色 -->
+          <img
+            v-if="item.coverUrl"
+            :src="item.coverUrl"
+            :alt="`${item.name}封面`"
+            class="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            loading="lazy"
+            @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')"
+          />
+          <!-- 底部渐变遮罩：保证名称/题数在任意封面上都清晰可读 -->
+          <span
+            class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent"
+            aria-hidden="true"
+          />
+          <span class="relative flex items-start justify-between gap-1">
+            <span class="text-sm font-semibold drop-shadow-sm">{{ item.name }}</span>
+            <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0 opacity-90 drop-shadow-sm" />
           </span>
-          <span class="text-[11px] opacity-85">{{ item.count }} 题</span>
+          <span class="relative text-[11px] opacity-90 drop-shadow-sm">{{ item.count }} 题</span>
         </button>
       </div>
       <p

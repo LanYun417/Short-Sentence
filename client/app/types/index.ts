@@ -60,6 +60,8 @@ export interface FestivalBank {
   count: number;
   /** 该期节日的公历日期（YYYY-MM-DD） */
   date: string | null;
+  /** 封面图 URL：取该节日题库一张已生成配图的题当封面；没有时为 null */
+  coverUrl: string | null;
 }
 
 /** 场景题库（题库页「按场景刷」入口；不含节日分类——那是 FestivalBank 的事）。 */

@@ -6,9 +6,11 @@ library;
 
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/auth_api.dart';
 import '../api/models/question.dart';
 import '../api/questions_api.dart';
 import '../state/quiz_controller.dart';
@@ -226,40 +228,75 @@ class _FestivalGrid extends StatelessWidget {
         final raw = item.date != null && item.date!.length >= 7 ? item.date!.substring(5, 7) : '01';
         final month = int.tryParse(raw) ?? 1;
         final color = HSLColor.fromAHSL(1, ((month - 1) / 12) * 360, 0.72, 0.46).toColor();
+        final cover = item.coverUrl;
         return PressScale(
           onTap: () => onPick(item.name),
           scale: 0.95,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              fit: StackFit.expand,
               children: <Widget>[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+                // 封面：取该节日题库一张已生成插画当封面；无封面/加载失败露出底色
+                if (cover != null && cover.isNotEmpty)
+                  Positioned.fill(
+                    child: CachedNetworkImage(
+                      imageUrl: staticUrl(cover),
+                      fit: BoxFit.cover,
+                      fadeInDuration: const Duration(milliseconds: 300),
+                      placeholder: (_, _) => Container(color: color),
+                      errorWidget: (_, _, _) => Container(color: color),
+                    ),
+                  )
+                else
+                  Positioned.fill(child: Container(color: color)),
+                // 双向渐变遮罩：上下压暗，保证节日名（顶部）与题数（底部）在任意封面上都清晰可读
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[
+                          Colors.black38,
+                          Colors.transparent,
+                          Colors.black54,
+                        ],
+                        stops: <double>[0, 0.5, 1],
                       ),
                     ),
-                    const Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white70),
-                  ],
+                  ),
                 ),
-                Text(
-                  '${item.count} 题',
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white70),
+                        ],
+                      ),
+                      Text(
+                        '${item.count} 题',
+                        style: const TextStyle(fontSize: 11, color: Colors.white70),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
