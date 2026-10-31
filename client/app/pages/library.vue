@@ -16,11 +16,21 @@ usePageSeo({
   description: '节日题库全年常驻，挑一个节日专门刷。',
 });
 
+/**
+ * 节日列表走 SSR 数据通道：首屏 HTML 直接带卡片，不等水合后才出现。
+ * useSsrApi 返回 null 表示「SSR 拿不到」（未登录 / Cookie 令牌过期），交客户端兜底。
+ */
+const { data: ssrFestivals } = await useSsrApi<FestivalBank[]>('ss:festivals', '/client/questions/festivals');
+
 /** 可刷的节日题库（只含有就绪题的节日；按日期升序）。 */
-const festivals = ref<FestivalBank[]>([]);
-const loading = ref(true);
+const festivals = ref<FestivalBank[]>(ssrFestivals.value ?? []);
+const loading = ref(ssrFestivals.value === null);
 
 onMounted(async () => {
+  if (festivals.value.length > 0) {
+    loading.value = false;
+    return;
+  }
   festivals.value = await apiFetch<FestivalBank[]>('/client/questions/festivals').catch(() => []);
   loading.value = false;
 });

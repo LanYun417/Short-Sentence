@@ -18,6 +18,19 @@ usePageSeo({
   description: '看图学地道英语：看中文写英文，提交后翻卡对照。每天 20 句，间隔重复记得住。',
 });
 
+const route = useRoute();
+
+/**
+ * 节日题库入口在**题库页**（/library）：刷题页不常驻任何节日入口——
+ * 二十多个节日平铺会把题卡顶出首屏，常驻一行入口也会让页面变长。
+ *
+ * 从题库页点某个节日过来时地址栏带 `?festival=元旦`，这里据此锁定该节日题库。
+ */
+const festivalParam = computed(() => {
+  const raw = route.query.festival;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+});
+
 const {
   question,
   result,
@@ -34,32 +47,14 @@ const {
   prefill,
   submit,
   toggleFavorite,
-} = useQuestionSession();
+} = useQuestionSession(festivalParam.value);
 
-const route = useRoute();
-
-/**
- * 节日题库入口在**题库页**（/library）：刷题页不常驻任何节日入口——
- * 二十多个节日平铺会把题卡顶出首屏，常驻一行入口也会让页面变长。
- *
- * 从题库页点某个节日过来时地址栏带 `?festival=元旦`，这里据此锁定该节日题库。
- */
-const festivalParam = computed(() => {
-  const raw = route.query.festival;
-  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+// 客户端路由改了 ?festival= 时跟着切（SSR 直达时初始值已经一致，不会重复抽题）
+watch(festivalParam, (name) => {
+  if (name && name !== festival.value) {
+    void setFestival(name);
+  }
 });
-
-// 只在客户端执行：SSR 阶段令牌还在 Cookie/localStorage 之外，
-// 此时发请求只会拿到 401；客户端 hydration 后再按参数重抽即可。
-watch(
-  festivalParam,
-  (name) => {
-    if (name && name !== festival.value) {
-      void setFestival(name);
-    }
-  },
-  { immediate: import.meta.client },
-);
 
 /**
  * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
@@ -67,6 +62,8 @@ watch(
  */
 const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
   difficulty: difficulty.value,
+  // 从题库页带 ?festival=元旦 直达时，服务端就按该节日抽题（首屏即是节日题，不先闪一张日常题）
+  festival: festivalParam.value ?? undefined,
 });
 if (ssrQuestion.value) {
   prefill(ssrQuestion.value);

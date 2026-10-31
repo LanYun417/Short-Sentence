@@ -79,7 +79,14 @@ function persistMode(cookieValue: Ref<string | null>, value: AnswerMode): void {
   }
 }
 
-export function useQuestionSession() {
+/**
+ * @param initialFestival 初始选中的节日题库（null = 日常混抽）。
+ *
+ * 从题库页带 `?festival=元旦` 直达时传入：让 SSR 与首屏状态一致——
+ * 否则服务端已按该节日抽好题，页面却还显示「日常混抽」的状态，
+ * 客户端还会因为状态对不上而白抽一次题（闪一下）。
+ */
+export function useQuestionSession(initialFestival: string | null = null) {
   // useCookie 必须在 setup/nuxt 上下文里创建（模块顶层没有实例会抛错）
   const difficultyCookie = useCookie<number | null>('ss_difficulty', {
     maxAge: 60 * 60 * 24 * 7,
@@ -105,7 +112,7 @@ export function useQuestionSession() {
   /** 作答模式（本地持久化；随 next 决定是否取词块，随 answer 上报用于经验计算） */
   const mode = ref<AnswerMode>(readMode(modeCookie.value));
   /** 当前选择的节日题库（null = 全部/日常混抽） */
-  const festival = ref<string | null>(null);
+  const festival = ref<string | null>(initialFestival);
   /** 可选的节日题库（只含有就绪题目的节日） */
   const festivals = ref<FestivalBank[]>([]);
 
