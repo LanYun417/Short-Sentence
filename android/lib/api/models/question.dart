@@ -128,6 +128,37 @@ class FestivalBank {
       );
 }
 
+/// 场景题库（题库页「按场景刷」入口；不含节日分类——那是 FestivalBank 的事）。
+class CategoryBank {
+  const CategoryBank({
+    required this.id,
+    required this.name,
+    required this.count,
+    this.nameEn,
+    this.icon,
+  });
+
+  /// 分类 id
+  final int id;
+
+  /// 分类名（如「咖啡店点单」）
+  final String name;
+
+  final String? nameEn;
+  final String? icon;
+
+  /// 就绪且未退场的题目数
+  final int count;
+
+  factory CategoryBank.fromJson(Map<String, dynamic> json) => CategoryBank(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: json['name'] as String? ?? '',
+        nameEn: json['nameEn'] as String?,
+        icon: json['icon'] as String?,
+        count: (json['count'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// 提交答案结果（含正确答案，用于翻卡背面）。
 class AnswerResult {
   const AnswerResult({

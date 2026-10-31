@@ -11,6 +11,8 @@
 /// - `answered`：拿到判分结果，**卡片已翻到背面**，等用户点「下一题」。
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_exception.dart';
@@ -46,6 +48,7 @@ class QuizState {
     this.difficulty = 2,
     this.festival,
     this.festivals = const <FestivalBank>[],
+    this.category,
   });
 
   /// 当前题目（null = 尚未抽到）
@@ -82,6 +85,9 @@ class QuizState {
   /// 可选的节日题库（只含有就绪题目的节日）
   final List<FestivalBank> festivals;
 
+  /// 当前选择的场景题库 id（null = 不限场景；与节日互斥，同时只锁一个范围）
+  final int? category;
+
   bool get isAnswered => phase == QuizPhase.answered;
 
   bool get isBusy => phase == QuizPhase.loading || phase == QuizPhase.submitting;
@@ -105,6 +111,8 @@ class QuizState {
     String? festival,
     bool clearFestival = false,
     List<FestivalBank>? festivals,
+    int? category,
+    bool clearCategory = false,
   }) {
     return QuizState(
       question: clearQuestion ? null : (question ?? this.question),
@@ -120,6 +128,7 @@ class QuizState {
       difficulty: difficulty ?? this.difficulty,
       festival: clearFestival ? null : (festival ?? this.festival),
       festivals: festivals ?? this.festivals,
+      category: clearCategory ? null : (category ?? this.category),
     );
   }
 }
@@ -173,7 +182,11 @@ class QuizController extends Notifier<QuizState> {
     );
     try {
       final question = await _api.next(
-        NextQuestionQuery(difficulty: difficulty ?? state.difficulty, festival: state.festival),
+        NextQuestionQuery(
+          difficulty: difficulty ?? state.difficulty,
+          festival: state.festival,
+          categoryId: state.category,
+        ),
       );
       state = state.copyWith(
         question: question,
@@ -216,13 +229,41 @@ class QuizController extends Notifier<QuizState> {
     }
   }
 
-  /// 切换节日题库（null = 全部）：立刻按新范围抽一题。
+  /// 切换节日题库（null = 全部）：清掉场景限定，立刻按新范围抽一题。
   Future<void> setFestival(String? name) async {
-    if (state.festival == name) {
+    if (state.festival == name && state.category == null) {
       return;
     }
-    state = state.copyWith(festival: name, clearFestival: name == null, error: null);
+    state = state.copyWith(
+      festival: name,
+      clearFestival: name == null,
+      clearCategory: true,
+      error: null,
+    );
     await loadNext();
+  }
+
+  /// 切换场景题库（null = 全部）：清掉节日限定，立刻按新范围抽一题。
+  Future<void> setCategory(int? id) async {
+    if (state.category == id) {
+      return;
+    }
+    state = state.copyWith(category: id, clearCategory: id == null, clearFestival: true, error: null);
+    await loadNext();
+  }
+
+  /// 退出专项模式（节日 / 场景都清掉）：回日常混抽。
+  Future<void> clearBank() async {
+    if (state.festival == null && state.category == null) {
+      return;
+    }
+    state = state.copyWith(clearFestival: true, clearCategory: true, error: null);
+    await loadNext();
+  }
+
+  /// 退出专项模式的同步入口（UI 回调用；内部异步抽题）。
+  void exitBank() {
+    unawaited(clearBank());
   }
 
   /// 提交答案（提交后服务端返回判分与完整答案）。

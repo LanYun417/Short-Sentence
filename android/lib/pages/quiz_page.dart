@@ -364,10 +364,12 @@ class _QuizPageState extends ConsumerState<QuizPage>
         else
           StaggeredEntrance(
             index: 2,
-            child: _FestivalModeBar(
-              festival: state.festival!,
+            child: _BankModeBar(
+              label: state.festival != null
+                  ? '正在刷「${state.festival}」节日题库'
+                  : '正在刷「${state.question?.categoryName ?? '该场景'}」场景题库',
               onChange: () => ref.read(shellControllerProvider.notifier).go(1),
-              onExit: () => ref.read(quizControllerProvider.notifier).setFestival(null),
+              onExit: () => ref.read(quizControllerProvider.notifier).exitBank(),
             ),
           ),
         const SizedBox(height: 14),
@@ -950,18 +952,19 @@ class _ClaimBanner extends StatelessWidget {
 
 /* ------------------------------ 节日模式提示 ------------------------------ */
 
-/// 节日模式提示：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口）。
+/// 专项模式提示：正在专门刷某个题库（节日 / 场景）。
 ///
-/// 节日题库的入口在「题库」Tab——刷题页不再常驻节日入口，避免二十多个节日把题卡顶出首屏。
-/// 所以这里给一个「换个节日」直接回题库页挑。
-class _FestivalModeBar extends StatelessWidget {
-  const _FestivalModeBar({
-    required this.festival,
+/// 题库入口在「题库」Tab——刷题页不常驻题库入口，避免几十个入口把题卡顶出首屏。
+/// 所以这里给一个「换个题库」直接回题库页挑。
+class _BankModeBar extends StatelessWidget {
+  const _BankModeBar({
+    required this.label,
     required this.onChange,
     required this.onExit,
   });
 
-  final String festival;
+  /// 完整提示文案（如「正在刷「元旦」节日题库」）。
+  final String label;
   final VoidCallback onChange;
   final VoidCallback onExit;
 
@@ -974,14 +977,14 @@ class _FestivalModeBar extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            '正在刷「$festival」节日题库',
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.ink),
           ),
         ),
         const SizedBox(width: 8),
-        _FestivalModeAction(label: '换个节日', onTap: onChange),
+        _FestivalModeAction(label: '换个题库', onTap: onChange),
         const SizedBox(width: 6),
         _FestivalModeAction(label: '退出', onTap: onExit),
       ],

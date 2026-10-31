@@ -19,7 +19,7 @@ import 'models/question.dart';
 ///
 /// 词块现随题**恒定下发**，故不再携带作答模式——切换模式沿用当前题即可（与 Web 端一致）。
 class NextQuestionQuery {
-  const NextQuestionQuery({this.difficulty, this.festival});
+  const NextQuestionQuery({this.difficulty, this.festival, this.categoryId});
 
   /// 目标难度（1/2/3；不传则不限）
   final int? difficulty;
@@ -27,9 +27,13 @@ class NextQuestionQuery {
   /// 节日题库名（传了则只从该节日的当前题库抽题）
   final String? festival;
 
+  /// 场景分类 id（传了则只从该场景的题库抽题；与 festival 互斥，festival 优先）
+  final int? categoryId;
+
   Map<String, dynamic> toQuery() => <String, dynamic>{
         if (difficulty != null) 'difficulty': difficulty,
         if (festival != null) 'festival': festival,
+        if (categoryId != null) 'categoryId': categoryId,
       };
 }
 
@@ -68,6 +72,27 @@ class QuestionsApi {
         }
       }
       return const <FestivalBank>[];
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 场景题库列表（题库页「按场景刷」入口；不含节日分类，附可刷题数）。
+  Future<List<CategoryBank>> listCategories() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/categories');
+      final body = response.data;
+      if (body is Map<String, dynamic>) {
+        final data = body['data'];
+        if (data is List) {
+          return data
+              .whereType<Map<String, dynamic>>()
+              .map(CategoryBank.fromJson)
+              .where((item) => item.name.isNotEmpty && item.id > 0)
+              .toList();
+        }
+      }
+      return const <CategoryBank>[];
     } on DioException catch (error) {
       throw _wrap(error);
     }
