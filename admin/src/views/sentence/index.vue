@@ -101,8 +101,14 @@ const { loading, list, total, query, search, reset, getList, changePage, changeP
       keyword: p.keyword?.trim() || undefined,
       status: p.status,
       difficulty: p.difficulty,
+      categoryId: p.categoryId,
     }),
-  { keyword: '', status: undefined as SentenceStatus | undefined, difficulty: undefined as number | undefined },
+  {
+    keyword: '',
+    status: undefined as SentenceStatus | undefined,
+    difficulty: undefined as number | undefined,
+    categoryId: undefined as number | undefined,
+  },
 );
 
 /* ------------------------------ 表单弹窗 ------------------------------ */
@@ -325,6 +331,7 @@ function handleExport(): void {
       keyword: query.keyword || undefined,
       status: query.status || undefined,
       difficulty: query.difficulty || undefined,
+      categoryId: query.categoryId || undefined,
     },
     name: '题库',
   });
@@ -619,10 +626,15 @@ onMounted(async () => {
 
 <template>
   <div class="sentence-page">
-    <!-- 查询表单：关键词 / 状态 / 难度 -->
+    <!-- 查询表单：关键词 / 分类 / 状态 / 难度 -->
     <SearchForm @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="英文句子 / 中文释义" clearable @keyup.enter="search" />
+      </el-form-item>
+      <el-form-item label="分类">
+        <el-select v-model="query.categoryId" placeholder="全部" clearable filterable style="width: 180px">
+          <el-option v-for="item in categories" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="query.status" placeholder="全部" clearable style="width: 140px">
