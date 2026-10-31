@@ -57,6 +57,26 @@ const IMAGE_STYLE_SUFFIX =
   'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
 
 /**
+ * 规范场景提示词里的人物性别。
+ *
+ * 生题模型写场景时只说「two people」，不给性别；生图模型遇到「牵手 / 共舞 /
+ * 浪漫氛围」这类暗示时人物性别完全随机——情人节题库出过「两个男性牵手」的图
+ * （2026-10-31 用户反馈）。插画惯例里两人互动默认一男一女最稳，这里在
+ * scenePrompt 含 "two people" 且没写明任何性别词时补上；已写明性别的不动。
+ */
+function normalizeSceneCharacters(scenePrompt: string): string {
+  const text = scenePrompt.toLowerCase();
+  if (!text.includes('two people')) {
+    return scenePrompt;
+  }
+  const hasGender = /\b(man|woman|men|women|boy|girl|male|female|guy|lady|she|he|his|her|him)\b/.test(text);
+  if (hasGender) {
+    return scenePrompt;
+  }
+  return `${scenePrompt}. The two people are a young man and a young woman`;
+}
+
+/**
  * 生图重试策略（批次生图与手工重新生图共用）。
  *
  * 生图上游（Agnes）限流恢复较慢：实测并发 6 会持续 429，退避必须比生题宽得多
@@ -875,7 +895,7 @@ export class SentenceGenService {
     try {
       const image = await withRetry(
         () =>
-          this.imageGen.generate(`${sentence.scenePrompt}, ${IMAGE_STYLE_SUFFIX}`, {
+          this.imageGen.generate(`${normalizeSceneCharacters(sentence.scenePrompt)}, ${IMAGE_STYLE_SUFFIX}`, {
             size: config.sentence.imageSize,
             ratio: config.sentence.imageRatio,
           }),
