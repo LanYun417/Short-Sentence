@@ -194,29 +194,81 @@ export const QINGMING_FESTIVAL: FestivalHit = {
  *
  * 补录方式：在对应年份下加一行即可，格式 `'MM-DD': 节日名`。
  */
+/* ------------------- 农历节日定义（各年只记日期，风格复用） ------------------- */
+
+/** 春节。 */
+const SPRING_FESTIVAL: FestivalHit = {
+  name: '春节',
+  nameEn: 'Chinese New Year',
+  kind: 'cn-traditional',
+  styleHint:
+    'reunion and red: lanterns, tangerines, a red envelope on a table, warm red and gold, family warmth without cliché',
+};
+
+/** 元宵节。 */
+const LANTERN_FESTIVAL: FestivalHit = {
+  name: '元宵节',
+  nameEn: 'Lantern Festival',
+  kind: 'cn-traditional',
+  styleHint:
+    'glowing lanterns at night, glutinous rice balls in a bowl, a riddle on paper, warm amber against deep blue',
+};
+
+/** 端午节。 */
+const DRAGON_BOAT_FESTIVAL: FestivalHit = {
+  name: '端午节',
+  nameEn: 'Dragon Boat Festival',
+  kind: 'cn-traditional',
+  styleHint:
+    'dragon boats on a river, zongzi wrapped in bamboo leaves, mugwort hung by the door, vivid green and warm red',
+};
+
+/** 中秋节。 */
+const MID_AUTUMN_FESTIVAL: FestivalHit = {
+  name: '中秋节',
+  nameEn: 'Mid-Autumn Festival',
+  kind: 'cn-traditional',
+  styleHint:
+    'a full moon over rooftops, mooncakes on a table, paper lanterns, family reunion, warm amber and deep blue',
+};
+
+/** 重阳节。 */
+const DOUBLE_NINTH_FESTIVAL: FestivalHit = {
+  name: '重阳节',
+  nameEn: 'Double Ninth Festival',
+  kind: 'cn-traditional',
+  styleHint: 'climbing high in autumn: chrysanthemums, a distant ridge, tea on a stone table, golden and deep green',
+};
+
+/**
+ * 农历节日的公历日期表（按年维护）。
+ *
+ * **数据可靠性说明**：农历节日无法用简单公式算出，必须依赖农历数据。
+ * 这里只收录经过交叉验证的日期（例如 2026 年重阳节 10-18 由多个来源
+ * 与当天实际日历播报确认）。表里缺失的年份会**自动回落随机风格**，
+ * 因此「漏录」只会少一次节日卡，不会生成错误日期的卡片。
+ *
+ * 已核对来源（2026-10-31）：
+ * - 2026 端午 6/19、中秋 9/25：国务院办公厅《关于 2026 年部分节假日安排的通知》；
+ * - 2027 春节 2/6、元宵 2/20、端午 6/9、中秋 9/15、重阳 10/8：香港特区政府宪报
+ *   2027 年公众假期 + 农历日历站交叉一致。
+ *
+ * 补录方式：在对应年份下加一行即可，格式 `'MM-DD': 节日常量`。
+ */
 const LUNAR_FESTIVALS: Readonly<Record<number, Readonly<Record<string, FestivalHit>>>> = {
   2026: {
-    '02-17': {
-      name: '春节',
-      nameEn: 'Chinese New Year',
-      kind: 'cn-traditional',
-      styleHint:
-        'reunion and red: lanterns, tangerines, a red envelope on a table, warm red and gold, family warmth without cliché',
-    },
-    '03-03': {
-      name: '元宵节',
-      nameEn: 'Lantern Festival',
-      kind: 'cn-traditional',
-      styleHint:
-        'glowing lanterns at night, glutinous rice balls in a bowl, a riddle on paper, warm amber against deep blue',
-    },
-    '10-18': {
-      name: '重阳节',
-      nameEn: 'Double Ninth Festival',
-      kind: 'cn-traditional',
-      styleHint:
-        'climbing high in autumn: chrysanthemums, a distant ridge, tea on a stone table, golden and deep green',
-    },
+    '02-17': SPRING_FESTIVAL,
+    '03-03': LANTERN_FESTIVAL,
+    '06-19': DRAGON_BOAT_FESTIVAL,
+    '09-25': MID_AUTUMN_FESTIVAL,
+    '10-18': DOUBLE_NINTH_FESTIVAL,
+  },
+  2027: {
+    '02-06': SPRING_FESTIVAL,
+    '02-20': LANTERN_FESTIVAL,
+    '06-09': DRAGON_BOAT_FESTIVAL,
+    '09-15': MID_AUTUMN_FESTIVAL,
+    '10-08': DOUBLE_NINTH_FESTIVAL,
   },
 };
 
