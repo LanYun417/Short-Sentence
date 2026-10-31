@@ -13,10 +13,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../state/shell_controller.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../widgets/app_tab_bar.dart';
 import 'ai_page.dart';
+import 'festival_bank_page.dart';
 import 'growth_page.dart';
 import 'library_page.dart';
 import 'profile_page.dart';
@@ -40,6 +42,11 @@ class _ShellPageState extends ConsumerState<ShellPage> {
       label: '刷题',
       icon: Icons.style_outlined,
       activeIcon: Icons.style_rounded,
+    ),
+    AppTabItem(
+      label: '题库',
+      icon: Icons.library_books_outlined,
+      activeIcon: Icons.library_books_rounded,
     ),
     AppTabItem(
       label: '语句库',
@@ -75,6 +82,16 @@ class _ShellPageState extends ConsumerState<ShellPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 子页面请求切 Tab（题库页挑完节日切回刷题页）：外壳的当前页在 State 里，
+    // 子页面够不到，只能通过这个共享索引驱动切换。
+    ref.listen<int>(shellControllerProvider, (previous, next) {
+      if (next != _index) {
+        setState(() {
+          _index = next;
+          _visited.add(next);
+        });
+      }
+    });
     // 键盘弹出时收起底栏：否则它会正好压在输入框与「确定」之间，
     // 既挡住内容又抢走点击（实测在刷题页输入时必现）。
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -99,9 +116,10 @@ class _ShellPageState extends ConsumerState<ShellPage> {
                         active: i == _index,
                         child: switch (i) {
                           0 => const QuizPage(),
-                          1 => const LibraryPage(),
-                          2 => const AiPage(),
-                          3 => const GrowthPage(),
+                          1 => const FestivalBankPage(),
+                          2 => const LibraryPage(),
+                          3 => const AiPage(),
+                          4 => const GrowthPage(),
                           _ => const ProfilePage(),
                         },
                       ),

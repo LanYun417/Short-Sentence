@@ -23,6 +23,7 @@ import '../api/models/question.dart';
 import '../state/card_controller.dart';
 import '../state/checkin_provider.dart';
 import '../state/quiz_controller.dart';
+import '../state/shell_controller.dart';
 import '../sheets/ai_sheet.dart';
 import '../sheets/claim_card.dart';
 import '../sheets/report_sheet.dart';
@@ -94,8 +95,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
     // 首屏自动抽题（延到首帧后：此刻才能安全读 Riverpod 状态）
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quizControllerProvider.notifier).loadNext();
-      // 节日题库入口（失败静默，不影响日常刷题）
-      ref.read(quizControllerProvider.notifier).loadFestivals();
       // 句签入口只需要「今天领没领」；句签册留给成长页去拉
       ref.read(cardControllerProvider.notifier).loadStatus();
     });
@@ -357,17 +356,6 @@ class _QuizPageState extends ConsumerState<QuizPage>
           ),
           const SizedBox(height: 12),
         ],
-        if (state.festivals.isNotEmpty) ...<Widget>[
-          StaggeredEntrance(
-            index: 2,
-            child: _FestivalBar(
-              festivals: state.festivals,
-              selected: state.festival,
-              onTap: (name) => ref.read(quizControllerProvider.notifier).setFestival(name),
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (state.festival == null)
           StaggeredEntrance(
             index: 2,
@@ -378,6 +366,7 @@ class _QuizPageState extends ConsumerState<QuizPage>
             index: 2,
             child: _FestivalModeBar(
               festival: state.festival!,
+              onChange: () => ref.read(shellControllerProvider.notifier).go(1),
               onExit: () => ref.read(quizControllerProvider.notifier).setFestival(null),
             ),
           ),
@@ -959,98 +948,21 @@ class _ClaimBanner extends StatelessWidget {
   }
 }
 
-/* ------------------------------ 节日题库入口 ------------------------------ */
-
-/// 节日题库入口：常驻可见，展开可看到全年所有节日；选中后只刷该节日题库。
-///
-/// 全年二十多个节日平铺会占掉小半屏、把题卡顶出首屏，所以默认收起成一个入口行：
-/// 入口常驻可见（随时可刷），但不去抢题卡的位置。
-class _FestivalBar extends StatefulWidget {
-  const _FestivalBar({required this.festivals, required this.selected, required this.onTap});
-
-  final List<FestivalBank> festivals;
-  final String? selected;
-  final ValueChanged<String?> onTap;
-
-  @override
-  State<_FestivalBar> createState() => _FestivalBarState();
-}
-
-class _FestivalBarState extends State<_FestivalBar> {
-  /// 面板是否展开（默认收起）。
-  bool _expanded = false;
-
-  @override
-  void didUpdateWidget(_FestivalBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 选中某个节日后自动收起：此时顶部换成「节日模式」提示条，把空间让给题卡。
-    if (widget.selected != null && widget.selected != oldWidget.selected) {
-      setState(() => _expanded = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        GestureDetector(
-          onTap: () => setState(() => _expanded = !_expanded),
-          behavior: HitTestBehavior.opaque,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Text(
-                '节日题库',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkFaint),
-              ),
-              Row(
-                children: <Widget>[
-                  Text(
-                    '全年 ${widget.festivals.length} 个 · 随时可刷',
-                    style: TextStyle(fontSize: 11, color: colors.inkFaint),
-                  ),
-                  Icon(
-                    _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    size: 16,
-                    color: colors.inkFaint,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (_expanded) ...<Widget>[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              _FestivalChip(
-                label: '全部',
-                selected: widget.selected == null,
-                onTap: () => widget.onTap(null),
-              ),
-              for (final item in widget.festivals)
-                _FestivalChip(
-                  label: '${item.name} ${item.count}',
-                  selected: widget.selected == item.name,
-                  onTap: () => widget.onTap(item.name),
-                ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
+/* ------------------------------ 节日模式提示 ------------------------------ */
 
 /// 节日模式提示：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口）。
+///
+/// 节日题库的入口在「题库」Tab——刷题页不再常驻节日入口，避免二十多个节日把题卡顶出首屏。
+/// 所以这里给一个「换个节日」直接回题库页挑。
 class _FestivalModeBar extends StatelessWidget {
-  const _FestivalModeBar({required this.festival, required this.onExit});
+  const _FestivalModeBar({
+    required this.festival,
+    required this.onChange,
+    required this.onExit,
+  });
 
   final String festival;
+  final VoidCallback onChange;
   final VoidCallback onExit;
 
   @override
@@ -1069,35 +981,19 @@ class _FestivalModeBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        PressScale(
-          onTap: onExit,
-          scale: 0.94,
-          child: Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 11),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.card,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: colors.line),
-            ),
-            child: Text(
-              '退出',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkSoft),
-            ),
-          ),
-        ),
+        _FestivalModeAction(label: '换个节日', onTap: onChange),
+        const SizedBox(width: 6),
+        _FestivalModeAction(label: '退出', onTap: onExit),
       ],
     );
   }
 }
 
-/// 单个节日胶囊。
-class _FestivalChip extends StatelessWidget {
-  const _FestivalChip({required this.label, required this.selected, required this.onTap});
+/// 提示条上的小按钮（换个节日 / 退出）。
+class _FestivalModeAction extends StatelessWidget {
+  const _FestivalModeAction({required this.label, required this.onTap});
 
   final String label;
-  final bool selected;
   final VoidCallback onTap;
 
   @override
@@ -1107,21 +1003,17 @@ class _FestivalChip extends StatelessWidget {
       onTap: onTap,
       scale: 0.94,
       child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? colors.brand : colors.card,
+          color: colors.card,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? colors.brand : colors.line),
+          border: Border.all(color: colors.line),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : colors.inkSoft,
-          ),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkSoft),
         ),
       ),
     );
