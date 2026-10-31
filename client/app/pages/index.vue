@@ -39,6 +39,22 @@ const {
 } = useQuestionSession();
 
 /**
+ * 节日题库面板是否展开。
+ *
+ * 全年二十多个节日平铺会占掉小半屏、把题卡顶出首屏，所以默认收起成一个入口行：
+ * 入口常驻可见（随时可刷），但不去抢题卡的位置。
+ */
+const festivalPanelOpen = ref(false);
+
+// 选中某个节日后自动收起面板：此时顶部换成「节日模式」提示条，把空间让给题卡；
+// 想换别的节日再点开入口即可。
+watch(festival, (value) => {
+  if (value) {
+    festivalPanelOpen.value = false;
+  }
+});
+
+/**
  * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
  * （拼词词块随题恒定下发）。预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
  */
@@ -304,13 +320,25 @@ function onFavorite(): void {
       </div>
     </section>
 
-    <!-- 节日题库：有可刷的节日时才出现；选中后只刷该节日题库 -->
+    <!-- 节日题库：常驻入口，有题就能专门刷；展开可看到全年所有节日 -->
     <div v-if="festivals.length" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
-      <div class="mb-1.5 flex items-center justify-between">
-        <span class="text-xs font-medium text-slate-400">节日题库</span>
-        <span class="text-xs text-slate-400">可选专门刷题</span>
-      </div>
-      <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="mb-1.5 flex w-full items-center justify-between text-xs font-medium text-slate-400 transition-colors hover:text-slate-500 dark:hover:text-slate-300"
+        :aria-expanded="festivalPanelOpen"
+        @click="festivalPanelOpen = !festivalPanelOpen"
+      >
+        <span>节日题库</span>
+        <span class="flex items-center gap-1.5">
+          <span class="text-[11px] font-normal opacity-80">全年 {{ festivals.length }} 个 · 随时可刷</span>
+          <UIcon
+            name="i-lucide-chevron-down"
+            class="h-3.5 w-3.5 transition-transform duration-200"
+            :class="{ 'rotate-180': festivalPanelOpen }"
+          />
+        </span>
+      </button>
+      <div v-show="festivalPanelOpen" class="flex flex-wrap gap-1.5">
         <UButton
           size="sm"
           :color="festival === null ? 'primary' : 'neutral'"
@@ -336,6 +364,19 @@ function onFavorite(): void {
     <!-- 难度选择：只在日常混抽时可用（节日题库是一套固定题，不按难度筛） -->
     <div v-if="!festival" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
+    </div>
+
+    <!-- 节日模式：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口） -->
+    <div
+      v-else
+      class="anim-in mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-400/30 dark:bg-amber-400/10"
+      :style="{ animationDelay: '40ms' }"
+    >
+      <div class="flex min-w-0 items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+        <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0" />
+        <span class="truncate">正在刷「{{ festival }}」节日题库</span>
+      </div>
+      <UButton size="xs" color="neutral" variant="soft" @click="setFestival(null)">退出</UButton>
     </div>
 
     <!-- 错误态 -->
