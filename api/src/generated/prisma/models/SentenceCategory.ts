@@ -28,12 +28,14 @@ export type AggregateSentenceCategory = {
 
 export type SentenceCategoryAvgAggregateOutputType = {
   id: number | null
+  coverFileId: number | null
   sort: number | null
   status: number | null
 }
 
 export type SentenceCategorySumAggregateOutputType = {
   id: bigint | null
+  coverFileId: bigint | null
   sort: number | null
   status: number | null
 }
@@ -43,6 +45,7 @@ export type SentenceCategoryMinAggregateOutputType = {
   name: string | null
   nameEn: string | null
   icon: string | null
+  coverFileId: bigint | null
   sort: number | null
   status: number | null
   createdAt: Date | null
@@ -53,6 +56,7 @@ export type SentenceCategoryMaxAggregateOutputType = {
   name: string | null
   nameEn: string | null
   icon: string | null
+  coverFileId: bigint | null
   sort: number | null
   status: number | null
   createdAt: Date | null
@@ -63,6 +67,7 @@ export type SentenceCategoryCountAggregateOutputType = {
   name: number
   nameEn: number
   icon: number
+  coverFileId: number
   sort: number
   status: number
   createdAt: number
@@ -72,12 +77,14 @@ export type SentenceCategoryCountAggregateOutputType = {
 
 export type SentenceCategoryAvgAggregateInputType = {
   id?: true
+  coverFileId?: true
   sort?: true
   status?: true
 }
 
 export type SentenceCategorySumAggregateInputType = {
   id?: true
+  coverFileId?: true
   sort?: true
   status?: true
 }
@@ -87,6 +94,7 @@ export type SentenceCategoryMinAggregateInputType = {
   name?: true
   nameEn?: true
   icon?: true
+  coverFileId?: true
   sort?: true
   status?: true
   createdAt?: true
@@ -97,6 +105,7 @@ export type SentenceCategoryMaxAggregateInputType = {
   name?: true
   nameEn?: true
   icon?: true
+  coverFileId?: true
   sort?: true
   status?: true
   createdAt?: true
@@ -107,6 +116,7 @@ export type SentenceCategoryCountAggregateInputType = {
   name?: true
   nameEn?: true
   icon?: true
+  coverFileId?: true
   sort?: true
   status?: true
   createdAt?: true
@@ -204,6 +214,7 @@ export type SentenceCategoryGroupByOutputType = {
   name: string
   nameEn: string | null
   icon: string | null
+  coverFileId: bigint
   sort: number
   status: number
   createdAt: Date
@@ -237,6 +248,7 @@ export type SentenceCategoryWhereInput = {
   name?: Prisma.StringFilter<"SentenceCategory"> | string
   nameEn?: Prisma.StringNullableFilter<"SentenceCategory"> | string | null
   icon?: Prisma.StringNullableFilter<"SentenceCategory"> | string | null
+  coverFileId?: Prisma.BigIntFilter<"SentenceCategory"> | bigint | number
   sort?: Prisma.IntFilter<"SentenceCategory"> | number
   status?: Prisma.IntFilter<"SentenceCategory"> | number
   createdAt?: Prisma.DateTimeFilter<"SentenceCategory"> | Date | string
@@ -248,6 +260,7 @@ export type SentenceCategoryOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   nameEn?: Prisma.SortOrderInput | Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -263,6 +276,7 @@ export type SentenceCategoryWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"SentenceCategory"> | string
   nameEn?: Prisma.StringNullableFilter<"SentenceCategory"> | string | null
   icon?: Prisma.StringNullableFilter<"SentenceCategory"> | string | null
+  coverFileId?: Prisma.BigIntFilter<"SentenceCategory"> | bigint | number
   sort?: Prisma.IntFilter<"SentenceCategory"> | number
   status?: Prisma.IntFilter<"SentenceCategory"> | number
   createdAt?: Prisma.DateTimeFilter<"SentenceCategory"> | Date | string
@@ -274,6 +288,7 @@ export type SentenceCategoryOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   nameEn?: Prisma.SortOrderInput | Prisma.SortOrder
   icon?: Prisma.SortOrderInput | Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -292,6 +307,7 @@ export type SentenceCategoryScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"SentenceCategory"> | string
   nameEn?: Prisma.StringNullableWithAggregatesFilter<"SentenceCategory"> | string | null
   icon?: Prisma.StringNullableWithAggregatesFilter<"SentenceCategory"> | string | null
+  coverFileId?: Prisma.BigIntWithAggregatesFilter<"SentenceCategory"> | bigint | number
   sort?: Prisma.IntWithAggregatesFilter<"SentenceCategory"> | number
   status?: Prisma.IntWithAggregatesFilter<"SentenceCategory"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SentenceCategory"> | Date | string
@@ -302,6 +318,7 @@ export type SentenceCategoryCreateInput = {
   name: string
   nameEn?: string | null
   icon?: string | null
+  coverFileId?: bigint | number
   sort?: number
   status?: number
   createdAt?: Date | string
@@ -313,6 +330,7 @@ export type SentenceCategoryUncheckedCreateInput = {
   name: string
   nameEn?: string | null
   icon?: string | null
+  coverFileId?: bigint | number
   sort?: number
   status?: number
   createdAt?: Date | string
@@ -324,6 +342,7 @@ export type SentenceCategoryUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -335,6 +354,7 @@ export type SentenceCategoryUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -346,6 +366,7 @@ export type SentenceCategoryCreateManyInput = {
   name: string
   nameEn?: string | null
   icon?: string | null
+  coverFileId?: bigint | number
   sort?: number
   status?: number
   createdAt?: Date | string
@@ -356,6 +377,7 @@ export type SentenceCategoryUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -366,6 +388,7 @@ export type SentenceCategoryUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -382,6 +405,7 @@ export type SentenceCategoryCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   nameEn?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -389,6 +413,7 @@ export type SentenceCategoryCountOrderByAggregateInput = {
 
 export type SentenceCategoryAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
@@ -398,6 +423,7 @@ export type SentenceCategoryMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   nameEn?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -408,6 +434,7 @@ export type SentenceCategoryMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   nameEn?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -415,6 +442,7 @@ export type SentenceCategoryMinOrderByAggregateInput = {
 
 export type SentenceCategorySumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  coverFileId?: Prisma.SortOrder
   sort?: Prisma.SortOrder
   status?: Prisma.SortOrder
 }
@@ -443,6 +471,7 @@ export type SentenceCategoryCreateWithoutSentencesInput = {
   name: string
   nameEn?: string | null
   icon?: string | null
+  coverFileId?: bigint | number
   sort?: number
   status?: number
   createdAt?: Date | string
@@ -453,6 +482,7 @@ export type SentenceCategoryUncheckedCreateWithoutSentencesInput = {
   name: string
   nameEn?: string | null
   icon?: string | null
+  coverFileId?: bigint | number
   sort?: number
   status?: number
   createdAt?: Date | string
@@ -479,6 +509,7 @@ export type SentenceCategoryUpdateWithoutSentencesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -489,6 +520,7 @@ export type SentenceCategoryUncheckedUpdateWithoutSentencesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   nameEn?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -530,6 +562,7 @@ export type SentenceCategorySelect<ExtArgs extends runtime.Types.Extensions.Inte
   name?: boolean
   nameEn?: boolean
   icon?: boolean
+  coverFileId?: boolean
   sort?: boolean
   status?: boolean
   createdAt?: boolean
@@ -544,12 +577,13 @@ export type SentenceCategorySelectScalar = {
   name?: boolean
   nameEn?: boolean
   icon?: boolean
+  coverFileId?: boolean
   sort?: boolean
   status?: boolean
   createdAt?: boolean
 }
 
-export type SentenceCategoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameEn" | "icon" | "sort" | "status" | "createdAt", ExtArgs["result"]["sentenceCategory"]>
+export type SentenceCategoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameEn" | "icon" | "coverFileId" | "sort" | "status" | "createdAt", ExtArgs["result"]["sentenceCategory"]>
 export type SentenceCategoryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sentences?: boolean | Prisma.SentenceCategory$sentencesArgs<ExtArgs>
   _count?: boolean | Prisma.SentenceCategoryCountOutputTypeDefaultArgs<ExtArgs>
@@ -577,6 +611,10 @@ export type $SentenceCategoryPayload<ExtArgs extends runtime.Types.Extensions.In
      * 图标（bootstrap-icons 类名）
      */
     icon: string | null
+    /**
+     * 节日题库封面图文件 id（0 = 无封面；仅节日分类使用，指向 sys_file）
+     */
+    coverFileId: bigint
     /**
      * 排序（升序）
      */
@@ -963,6 +1001,7 @@ export interface SentenceCategoryFieldRefs {
   readonly name: Prisma.FieldRef<"SentenceCategory", 'String'>
   readonly nameEn: Prisma.FieldRef<"SentenceCategory", 'String'>
   readonly icon: Prisma.FieldRef<"SentenceCategory", 'String'>
+  readonly coverFileId: Prisma.FieldRef<"SentenceCategory", 'BigInt'>
   readonly sort: Prisma.FieldRef<"SentenceCategory", 'Int'>
   readonly status: Prisma.FieldRef<"SentenceCategory", 'Int'>
   readonly createdAt: Prisma.FieldRef<"SentenceCategory", 'DateTime'>

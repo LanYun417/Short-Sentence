@@ -3157,6 +3157,7 @@ export const SentenceCategoryScalarFieldEnum = {
   name: 'name',
   nameEn: 'nameEn',
   icon: 'icon',
+  coverFileId: 'coverFileId',
   sort: 'sort',
   status: 'status',
   createdAt: 'createdAt'
