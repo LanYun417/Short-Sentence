@@ -545,6 +545,28 @@ async function onChangePassword(): Promise<void> {
       </div>
     </section>
 
+    <!-- 收藏与复习：低频的「回看 / 巩固」动作，收进「我的」做二级入口，
+         顶部导航只留核心四项（刷题 / 题库 / AI 拓展 / 我的）。 -->
+    <NuxtLink
+      to="/favorites"
+      class="anim-in mt-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 90ms"
+    >
+      <UIcon name="i-lucide-star" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">我的收藏</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
+    <NuxtLink
+      to="/review"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 95ms"
+    >
+      <UIcon name="i-lucide-refresh-cw" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">复习</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
     <!-- 消息中心入口：未读红点来自服务端口径（SSR 预取，首屏即带） -->
     <NuxtLink
       to="/notices"

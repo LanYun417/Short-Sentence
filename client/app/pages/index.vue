@@ -27,9 +27,7 @@ const {
   difficulty,
   mode,
   festival,
-  festivals,
   loadNext,
-  loadFestivals,
   setDifficulty,
   setMode,
   setFestival,
@@ -38,21 +36,30 @@ const {
   toggleFavorite,
 } = useQuestionSession();
 
-/**
- * 节日题库面板是否展开。
- *
- * 全年二十多个节日平铺会占掉小半屏、把题卡顶出首屏，所以默认收起成一个入口行：
- * 入口常驻可见（随时可刷），但不去抢题卡的位置。
- */
-const festivalPanelOpen = ref(false);
+const route = useRoute();
 
-// 选中某个节日后自动收起面板：此时顶部换成「节日模式」提示条，把空间让给题卡；
-// 想换别的节日再点开入口即可。
-watch(festival, (value) => {
-  if (value) {
-    festivalPanelOpen.value = false;
-  }
+/**
+ * 节日题库入口在**题库页**（/library）：刷题页不常驻任何节日入口——
+ * 二十多个节日平铺会把题卡顶出首屏，常驻一行入口也会让页面变长。
+ *
+ * 从题库页点某个节日过来时地址栏带 `?festival=元旦`，这里据此锁定该节日题库。
+ */
+const festivalParam = computed(() => {
+  const raw = route.query.festival;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
 });
+
+// 只在客户端执行：SSR 阶段令牌还在 Cookie/localStorage 之外，
+// 此时发请求只会拿到 401；客户端 hydration 后再按参数重抽即可。
+watch(
+  festivalParam,
+  (name) => {
+    if (name && name !== festival.value) {
+      void setFestival(name);
+    }
+  },
+  { immediate: import.meta.client },
+);
 
 /**
  * SSR 预抽题：服务端按 Cookie 令牌 + 难度偏好抽好卡，首屏 HTML 直接带题面
@@ -231,8 +238,6 @@ onMounted(() => {
   if (!question.value) {
     void loadNext();
   }
-  // 有节日题库时展示可选入口（失败静默，不影响日常刷题）
-  void loadFestivals();
   // 刷新页面时若今日目标已完成，自动领取当日句签
   if (goalReached.value) {
     void claimSentenceCard();
@@ -262,6 +267,19 @@ function onSkip(): void {
 /** 收藏 / 取消。 */
 function onFavorite(): void {
   void toggleFavorite();
+}
+
+/** 换个节日 → 回题库页挑一个（刷题页不再常驻节日入口）。 */
+function onChangeFestival(): void {
+  void navigateTo('/library');
+}
+
+/** 退出节日模式：回到日常混抽，并清掉地址栏上的节日参数（否则刷新又回到节日模式）。 */
+async function onExitFestival(): Promise<void> {
+  await setFestival(null);
+  if (route.query.festival) {
+    await navigateTo({ path: '/', query: {} }, { replace: true });
+  }
 }
 </script>
 
@@ -320,47 +338,6 @@ function onFavorite(): void {
       </div>
     </section>
 
-    <!-- 节日题库：常驻入口，有题就能专门刷；展开可看到全年所有节日 -->
-    <div v-if="festivals.length" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
-      <button
-        type="button"
-        class="mb-1.5 flex w-full items-center justify-between text-xs font-medium text-slate-400 transition-colors hover:text-slate-500 dark:hover:text-slate-300"
-        :aria-expanded="festivalPanelOpen"
-        @click="festivalPanelOpen = !festivalPanelOpen"
-      >
-        <span>节日题库</span>
-        <span class="flex items-center gap-1.5">
-          <span class="text-[11px] font-normal opacity-80">全年 {{ festivals.length }} 个 · 随时可刷</span>
-          <UIcon
-            name="i-lucide-chevron-down"
-            class="h-3.5 w-3.5 transition-transform duration-200"
-            :class="{ 'rotate-180': festivalPanelOpen }"
-          />
-        </span>
-      </button>
-      <div v-show="festivalPanelOpen" class="flex flex-wrap gap-1.5">
-        <UButton
-          size="sm"
-          :color="festival === null ? 'primary' : 'neutral'"
-          :variant="festival === null ? 'solid' : 'soft'"
-          @click="setFestival(null)"
-        >
-          全部
-        </UButton>
-        <UButton
-          v-for="item in festivals"
-          :key="item.name"
-          size="sm"
-          :color="festival === item.name ? 'primary' : 'neutral'"
-          :variant="festival === item.name ? 'solid' : 'soft'"
-          @click="setFestival(item.name)"
-        >
-          {{ item.name }}
-          <span class="ml-1 text-[11px] opacity-70">{{ item.count }}</span>
-        </UButton>
-      </div>
-    </div>
-
     <!-- 难度选择：只在日常混抽时可用（节日题库是一套固定题，不按难度筛） -->
     <div v-if="!festival" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
@@ -369,14 +346,17 @@ function onFavorite(): void {
     <!-- 节日模式：正在专门刷某个节日的题库（难度选择器此时隐藏，这里给出明确状态与退出入口） -->
     <div
       v-else
-      class="anim-in mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-400/30 dark:bg-amber-400/10"
+      class="anim-in mb-4 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-400/30 dark:bg-amber-400/10"
       :style="{ animationDelay: '40ms' }"
     >
       <div class="flex min-w-0 items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
         <UIcon name="i-lucide-sparkles" class="h-4 w-4 shrink-0" />
         <span class="truncate">正在刷「{{ festival }}」节日题库</span>
       </div>
-      <UButton size="xs" color="neutral" variant="soft" @click="setFestival(null)">退出</UButton>
+      <div class="flex shrink-0 items-center gap-1">
+        <UButton size="xs" color="neutral" variant="soft" @click="onChangeFestival">换个节日</UButton>
+        <UButton size="xs" color="neutral" variant="soft" @click="onExitFestival">退出</UButton>
+      </div>
     </div>
 
     <!-- 错误态 -->
