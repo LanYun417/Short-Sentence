@@ -22,6 +22,7 @@ import {
   resumeGenTaskApi,
   triggerGenApi,
   triggerAllFestivalsApi,
+  triggerFestivalCoversApi,
   backfillExplanationsApi,
   updateSentenceApi,
   type SentenceCategoryOption,
@@ -476,6 +477,41 @@ async function submitGenForm(): Promise<void> {
 /** 生成全部节日题库中（按钮 loading，避免连点烧配额）。 */
 const festivalGenSubmitting = ref(false);
 
+/** 生成节日封面中（按钮 loading）。 */
+const festivalCoverSubmitting = ref(false);
+
+/**
+ * 为全年所有节日生成专属封面图。
+ *
+ * 封面是每个节日单独画的一张主视觉（红灯笼 / 龙舟 / 圣诞树…）——比从题库里随手挑一张
+ * 更能一眼认出是哪个节日。已有封面的节日默认跳过；force=true 强制重画（换掉不贴合的封面）。
+ *
+ * 同样走 `ElMessageBox.confirm`：要调生图模型、会烧配额。
+ */
+async function handleTriggerFestivalCovers(force = false): Promise<void> {
+  if (festivalCoverSubmitting.value) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      force
+        ? '将重画全年所有节日的封面图（每节一张，共二十来张，会消耗 AI 生图配额）。确认继续？'
+        : '将为全年所有节日各生成一张专属封面图（已有封面的会跳过，会消耗 AI 生图配额）。生成在后台串行执行，完成后刷新题库页即可看到。确认继续？',
+      force ? '重画节日封面' : '生成节日封面',
+      { type: 'warning', confirmButtonText: '开始生成', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  festivalCoverSubmitting.value = true;
+  try {
+    await triggerFestivalCoversApi(force);
+    ElMessage.success('已启动：正在为各节日生成专属封面，稍后刷新题库页查看');
+  } finally {
+    festivalCoverSubmitting.value = false;
+  }
+}
+
 /**
  * 一次性生成全部节日题库。
  *
@@ -728,6 +764,30 @@ onMounted(async () => {
                 @click="handleTriggerAllFestivals"
               >
                 生成节日题库
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="为全年每个节日单独生成一张专属封面图（比从题库里挑一张更能体现节日）；已有封面的会跳过">
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                :loading="festivalCoverSubmitting"
+                plain
+                @click="handleTriggerFestivalCovers(false)"
+              >
+                生成节日封面
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="重画全部节日封面（用于替换不贴合的封面）">
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                :loading="festivalCoverSubmitting"
+                plain
+                @click="handleTriggerFestivalCovers(true)"
+              >
+                重画节日封面
               </el-button>
             </span>
           </el-tooltip>

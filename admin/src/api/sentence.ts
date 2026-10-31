@@ -117,6 +117,16 @@ export function triggerAllFestivalsApi(): Promise<{
   return post('/sentences/gen/festivals', {});
 }
 
+/**
+ * 为全年所有节日生成**专属封面图**（即发即忘：立即返回，后台串行生成）。
+ *
+ * 封面是每个节日单独画的一张主视觉（红灯笼 / 龙舟 / 圣诞树…），比从题库里挑一张
+ * 更能体现节日。已有封面的节日默认跳过；force=true 强制重画（换掉不贴合的封面）。
+ */
+export function triggerFestivalCoversApi(force = false): Promise<{ total: number; started: boolean }> {
+  return post('/sentences/gen/festival-covers', { force });
+}
+
 /** 补全存量题解析（按批；force = 连旧格式一起重新生成；返回扫描/更新/剩余条数）。 */
 export function backfillExplanationsApi(
   limit?: number,
