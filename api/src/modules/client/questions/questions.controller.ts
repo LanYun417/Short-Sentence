@@ -16,12 +16,12 @@ export class QuestionsController {
 
   /**
    * 下一张卡（8:2 新题/复习混抽；不含答案）。
-   * difficulty 仅作用于新题抽取；festival 传了则只从该节日题库抽（专门刷题）。
-   * 拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题。
+   * difficulty 仅作用于新题抽取；festival / categoryId 传了则只从对应题库抽（专门刷题，
+   * 两者互斥、festival 优先）。拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题。
    */
   @Get('next')
   next(@CurrentClientUser() user: ClientUserContext, @Query() query: NextQuestionQueryDto) {
-    return this.questions.next(user.userId, query.difficulty, query.festival);
+    return this.questions.next(user.userId, query.difficulty, query.festival, query.categoryId);
   }
 
   /** 可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）。 */

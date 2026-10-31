@@ -64,4 +64,14 @@ export class NextQuestionQueryDto {
   @IsString({ message: '节日名必须为字符串' })
   @MaxLength(50, { message: '节日名过长' })
   festival?: string;
+
+  /**
+   * 场景分类 id。
+   * 传了则只从该场景的题库抽题（专门刷题，与 festival 互斥、festival 优先）；不传走日常混抽。
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '分类 id 必须为整数' })
+  @Min(1, { message: '分类 id 最小为 1' })
+  categoryId?: number;
 }

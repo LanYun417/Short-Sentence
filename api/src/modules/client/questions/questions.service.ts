@@ -236,8 +236,10 @@ export class QuestionsService {
    *   复习题必须按间隔重复排期走，按难度过滤会打乱复习节奏。该难度无可用新题时回落到不限难度。
    * @param festival 节日题库名（如「春节」）。传了则只从该节日的**当前题库**抽题（专门刷题），
    *   不混入日常题与复习题；不传走日常混抽。
+   * @param categoryId 场景分类 id。传了则只从该场景的题库抽题（专门刷题）；
+   *   与 festival 互斥，festival 优先；两者都不传走日常混抽。
    */
-  async next(userId: number, difficulty?: number, festival?: string): Promise<NextQuestion> {
+  async next(userId: number, difficulty?: number, festival?: string, categoryId?: number): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
 
     // 节日题库：专门刷题——只在该节日当前（未退场）的题库里抽
@@ -248,6 +250,15 @@ export class QuestionsService {
         throw AppException.notFound(`「${festivalName}」题库暂无可用题目`);
       }
       return this.buildNextQuestion(userId, festivalSentenceId, 'new');
+    }
+
+    // 场景题库：专门刷题——只在该场景当前（未退场）的题库里抽
+    if (categoryId && categoryId > 0) {
+      const categorySentenceId = await this.pickCategorySentence(categoryId, recentIds);
+      if (categorySentenceId === null) {
+        throw AppException.notFound('该场景题库暂无可用题目');
+      }
+      return this.buildNextQuestion(userId, categorySentenceId, 'new');
     }
 
     const wantNew = Math.random() < config.sentence.newRatio;
@@ -342,21 +353,31 @@ export class QuestionsService {
 
   /** 从指定节日题库随机抽一道（排除防重窗口内的题）。 */
   private async pickFestivalSentence(festivalName: string, excludeIds: number[]): Promise<number | null> {
-    const where: Record<string, unknown> = {
-      status: 'ready',
-      retiredAt: null,
-      festivalName,
-    };
+    return this.pickBankSentence({ festivalName }, excludeIds);
+  }
+
+  /** 从指定场景题库随机抽一道（排除防重窗口内的题）。 */
+  private async pickCategorySentence(categoryId: number, excludeIds: number[]): Promise<number | null> {
+    return this.pickBankSentence({ categoryId }, excludeIds);
+  }
+
+  /**
+   * 从指定题库（where 描述的子集：节日 / 场景分类）随机抽一道。
+   * 随机用「count + 随机 offset」而不是把全部 id 拉进内存再挑：
+   * 题库可能几千行，只为掷一次骰子不值得全表搬一遍。
+   */
+  private async pickBankSentence(where: Record<string, unknown>, excludeIds: number[]): Promise<number | null> {
+    const conditions: Record<string, unknown> = { status: 'ready', retiredAt: null, ...where };
     if (excludeIds.length > 0) {
-      where.id = { notIn: excludeIds.map((id) => BigInt(id)) };
+      conditions.id = { notIn: excludeIds.map((id) => BigInt(id)) };
     }
-    const total = await this.prisma.sentence.count({ where });
+    const total = await this.prisma.sentence.count({ where: conditions });
     if (total === 0) {
       return null;
     }
     const offset = Math.floor(Math.random() * total);
     const rows = await this.prisma.sentence.findMany({
-      where,
+      where: conditions,
       orderBy: { id: 'asc' },
       skip: offset,
       take: 1,
