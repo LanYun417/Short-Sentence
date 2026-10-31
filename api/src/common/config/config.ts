@@ -384,7 +384,7 @@ export const config = {
     /** 防重窗口：最近 N 次答过的题不再出现（0 = 不启用） */
     antiRepeatWindow: Math.max(0, toNumber(process.env.SENTENCE_ANTI_REPEAT_WINDOW, 10)),
     /** 节日题库：命中节日当天的目标题数（普通日仍按 dailyTarget） */
-    festivalTarget: Math.max(1, toNumber(process.env.SENTENCE_FESTIVAL_TARGET, 30)),
+    festivalTarget: Math.max(1, toNumber(process.env.SENTENCE_FESTIVAL_TARGET, 100)),
     /** 是否启用节日题库（关闭后节日当天按普通批次生成，不做节日标记） */
     festivalEnabled: toBoolean(process.env.SENTENCE_FESTIVAL_ENABLED, true),
     /** 答题历史保留天数（0 = 不清理；默认 30 天，不论对错） */
