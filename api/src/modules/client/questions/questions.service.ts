@@ -326,14 +326,18 @@ export class QuestionsService {
       _count: { _all: true },
       _max: { festivalDate: true },
     });
-    return rows
-      .map((row) => ({
-        name: row.festivalName ?? '',
-        count: row._count._all,
-        date: row._max.festivalDate ?? null,
-      }))
-      .filter((row) => row.name.length > 0)
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || a.name.localeCompare(b.name));
+    return (
+      rows
+        .map((row) => ({
+          name: row.festivalName ?? '',
+          count: row._count._all,
+          date: row._max.festivalDate ?? null,
+        }))
+        .filter((row) => row.name.length > 0)
+        // 按节日日期**升序**（元旦 → 跨年夜）：用户端当时间轴看，
+        // 而不是从年底倒着排。同一节日跨年重新生成时日期会更新，顺序仍稳定。
+        .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '') || a.name.localeCompare(b.name))
+    );
   }
 
   /** 从指定节日题库随机抽一道（排除防重窗口内的题）。 */

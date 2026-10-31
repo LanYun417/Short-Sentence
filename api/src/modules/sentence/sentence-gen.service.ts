@@ -17,7 +17,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import { config } from '../../common/config/config.js';
 import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
-import { isFestivalName } from '../../common/calendar/festivals.js';
+import {
+  allFestivalsOf,
+  festivalEntryOf,
+  isFestivalName,
+  type FestivalEntry,
+} from '../../common/calendar/festivals.js';
 import { AppException } from '../../common/exception/app.exception.js';
 import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -109,8 +114,9 @@ export class SentenceGenService {
    * 定时触发入口（由 TaskModule 的 `sentence-gen` 任务调用）。
    * 与手动触发同一套心智模型，只是 triggerType 记 cron；今日已成功则直接跳过。
    *
-   * 节日题库：当天命中节日时，本批改为「该节日的题库」——题数取 festivalTarget、
-   * 题目全部打上 festivalName/festivalDate；生成成功后把同节日的旧题整体退场（见 execute）。
+   * 节日题库：**不**按天切换了。节日题库是常驻内容库——由「生成全部节日题库」
+   * 一次性铺满全年所有节日，用户端任何时候都能看到并专门刷题（见 triggerAllFestivals）。
+   * 本任务只负责日常题；当天那个节日若还是空的（运营忘了预生成），顺手兜底补一批。
    */
   async runScheduled(): Promise<void> {
     if (this.running) {
@@ -118,7 +124,6 @@ export class SentenceGenService {
       return;
     }
     const bizDate = this.today();
-    const festival = this.festivalOfToday();
     // 定时全量批次用 categoryId=0 的哨兵行；今天已有就复用它（复合唯一 bizDate+categoryId 保证）。
     const existing = await this.prisma.sentenceGenTask.findUnique({
       where: { bizDate_categoryId: { bizDate, categoryId: 0 } },
@@ -137,24 +142,27 @@ export class SentenceGenService {
       void this.execute(existing.id);
       return;
     }
+    // 节日当天的兜底：该节日题库一道题都没有时（运营还没预生成）顺手补一批。
+    // 正常路径是「生成全部节日题库」一次性铺满、常驻可刷，这里只保证当天那个节日不至于空着。
+    const festivalTaskId = await this.prepareFestivalFallback(bizDate);
+
     const task = await this.prisma.sentenceGenTask.create({
       data: {
         bizDate,
         categoryId: 0,
-        targetCount: festival ? config.sentence.festivalTarget : config.sentence.dailyTarget,
+        targetCount: config.sentence.dailyTarget,
         triggerType: 'cron',
         status: 'pending',
-        festivalName: festival?.name ?? null,
-        festivalDate: festival?.date ?? null,
       },
       select: { id: true },
     });
-    if (festival) {
-      this.logger.log(
-        `[SentenceGen] 今天是「${festival.name}」，本批按节日题库生成 ${config.sentence.festivalTarget} 条`,
-      );
-    }
-    void this.execute(task.id);
+    // 串行：节日兜底批次跑完再跑普通批次（进程内同一时刻只跑一批）
+    void (async () => {
+      if (festivalTaskId) {
+        await this.execute(festivalTaskId);
+      }
+      await this.execute(task.id);
+    })();
   }
 
   /**
@@ -219,8 +227,8 @@ export class SentenceGenService {
   /**
    * 手动触发「今天的节日题库」（运营补跑 / 测试用；非节日直接拒绝）。
    *
-   * 与定时任务共用今日批次行：已成功/已取消的批次不允许覆盖（与 triggerManual 同口径），
-   * 需要重建时先在「生成批次」里删除。
+   * 批次键用「该节日自己的场景分类 id」当 categoryId（复合唯一 bizDate+categoryId），
+   * 因此不会占用当天普通批次（categoryId=0）的位置，两者可并存。
    */
   async triggerFestival(): Promise<{ taskId: number; festivalName: string }> {
     if (this.running) {
@@ -230,43 +238,148 @@ export class SentenceGenService {
     if (!festival) {
       throw AppException.badRequest('今天不是节日，无法生成节日题库');
     }
+    const entry = festivalEntryOf(festival.name, new Date().getFullYear());
+    if (!entry) {
+      throw AppException.badRequest(`无法确定「${festival.name}」今年的公历日期`);
+    }
+    const taskId = await this.prepareFestivalTask(entry, config.sentence.festivalTarget, this.today());
+    void this.execute(taskId);
+    return { taskId: Number(taskId), festivalName: entry.name };
+  }
+
+  /**
+   * 手动触发「全部节日题库」的一次性生成（首次铺库 / 换年后补齐用）。
+   *
+   * 为什么是「一次生成所有节日」而不是「节日当天才生成那一批」：
+   * 节日题库是**常驻内容库**——用户端任何时候都要能看到所有节日并专门刷题。
+   * 若仍按天生成，一年里只有十几天能看到节日入口，其余时间形同虚设。
+   *
+   * 实现要点：
+   * - 每个节日用自己的场景分类 id 当批次的 categoryId，复合唯一 (bizDate, categoryId)
+   *   让二十多个节日批次并存互不冲突，也不占用当天普通批次（categoryId=0）的位置；
+   * - 只补**题量不足**的节日：已就绪的跳过——重生成会把该节日旧题整体退场，
+   *   等于把用户正在刷的题换掉；
+   * - **串行**执行：一次开二十多个批次会同时抢 AI 配额与生图并发。
+   */
+  async triggerAllFestivals(): Promise<{
+    total: number;
+    created: number;
+    skipped: number;
+    failed: number;
+    tasks: Array<{ festivalName: string; taskId: number }>;
+  }> {
+    if (this.running) {
+      throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
+    }
+    const year = new Date().getFullYear();
+    const festivals = allFestivalsOf(year);
+    const target = config.sentence.festivalTarget;
     const bizDate = this.today();
+
+    const tasks: Array<{ festivalName: string; taskId: number }> = [];
+    let skipped = 0;
+    let failed = 0;
+
+    for (const entry of festivals) {
+      const ready = await this.prisma.sentence.count({
+        where: { festivalName: entry.name, status: 'ready', retiredAt: null },
+      });
+      if (ready >= target) {
+        skipped += 1;
+        continue;
+      }
+      try {
+        const taskId = await this.prepareFestivalTask(entry, target, bizDate);
+        tasks.push({ festivalName: entry.name, taskId: Number(taskId) });
+      } catch (error) {
+        failed += 1;
+        this.logger.warn(`[SentenceGen] 「${entry.name}」批次准备失败：${this.errText(error)}`);
+      }
+    }
+
+    // 串行跑：逐个跑完上一个再开下一个（execute 内部有 running 互斥，串行最稳）
+    void (async () => {
+      for (const item of tasks) {
+        await this.execute(BigInt(item.taskId));
+      }
+    })();
+
+    this.logger.log(
+      `[SentenceGen] 全部节日题库：共 ${festivals.length} 个节日，新建 ${tasks.length} 批，跳过 ${skipped} 个`,
+    );
+    return { total: festivals.length, created: tasks.length, skipped, failed, tasks };
+  }
+
+  /**
+   * 为某个节日准备生成批次（幂等）：同一天同一节日复用已有批次行，返回批次 id。
+   *
+   * 批次键用「该节日自己的场景分类 id」当 categoryId —— 复合唯一 (bizDate, categoryId)
+   * 因此二十多个节日批次可以并存互不冲突，也不会占用当天普通批次（categoryId=0）的位置。
+   */
+  private async prepareFestivalTask(entry: FestivalEntry, target: number, bizDate: string): Promise<bigint> {
+    const categoryId = await this.ensureFestivalCategory(entry.name, entry.nameEn);
     const existing = await this.prisma.sentenceGenTask.findUnique({
-      where: { bizDate_categoryId: { bizDate, categoryId: 0 } },
+      where: { bizDate_categoryId: { bizDate, categoryId } },
       select: { id: true, status: true },
     });
-    if (existing?.status === 'success') {
-      throw AppException.conflict('今日批次已成功完成；如需重建节日题库，请先在「生成批次」里删除它');
-    }
     if (existing?.status === 'cancelled') {
-      throw AppException.conflict('今日批次已取消，请先在「生成批次」里删除它再重新生成');
+      throw AppException.conflict(`「${entry.name}」今日批次已取消，请先在「生成批次」里删除它再重新生成`);
     }
-    const target = config.sentence.festivalTarget;
-    const task = existing
-      ? await this.prisma.sentenceGenTask.update({
-          where: { id: existing.id },
-          data: {
-            targetCount: target,
-            triggerType: 'manual',
-            festivalName: festival.name,
-            festivalDate: festival.date,
-          },
-          select: { id: true },
-        })
-      : await this.prisma.sentenceGenTask.create({
-          data: {
-            bizDate,
-            categoryId: 0,
-            targetCount: target,
-            triggerType: 'manual',
-            status: 'pending',
-            festivalName: festival.name,
-            festivalDate: festival.date,
-          },
-          select: { id: true },
-        });
-    void this.execute(task.id);
-    return { taskId: Number(task.id), festivalName: festival.name };
+    if (existing?.status === 'success') {
+      throw AppException.conflict(`「${entry.name}」今日批次已成功完成；如需重建，请先在「生成批次」里删除它`);
+    }
+    if (existing) {
+      const updated = await this.prisma.sentenceGenTask.update({
+        where: { id: existing.id },
+        data: {
+          targetCount: target,
+          triggerType: 'manual',
+          festivalName: entry.name,
+          festivalDate: entry.date,
+        },
+        select: { id: true },
+      });
+      return updated.id;
+    }
+    const created = await this.prisma.sentenceGenTask.create({
+      data: {
+        bizDate,
+        categoryId,
+        targetCount: target,
+        triggerType: 'manual',
+        status: 'pending',
+        festivalName: entry.name,
+        festivalDate: entry.date,
+      },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
+  /**
+   * 节日当天的兜底批次：该节日题库为空时补一批，不需要则返回 null。
+   *
+   * 正常路径是「生成全部节日题库」一次性铺满、常驻可刷；这里只保证
+   * 「当天那个节日不至于完全空着」，且**只补空缺**——已有题就不动，
+   * 免得把用户正在刷的题退场换掉。
+   */
+  private async prepareFestivalFallback(bizDate: string): Promise<bigint | null> {
+    const festival = this.festivalOfToday();
+    if (!festival) {
+      return null;
+    }
+    const entry = festivalEntryOf(festival.name, new Date().getFullYear());
+    if (!entry) {
+      return null;
+    }
+    const ready = await this.prisma.sentence.count({
+      where: { festivalName: entry.name, status: 'ready', retiredAt: null },
+    });
+    if (ready > 0) {
+      return null;
+    }
+    this.logger.log(`[SentenceGen] 「${entry.name}」题库为空，今天补一批`);
+    return this.prepareFestivalTask(entry, config.sentence.festivalTarget, bizDate);
   }
 
   /* --------------------------- 运营控制：暂停 / 继续 / 取消 / 删除 --------------------------- */
@@ -453,18 +566,30 @@ export class SentenceGenService {
 
       // ---------- 1. 生题（分批 + 信号量 + 重试；每批入库后立即排入生图） ----------
       const theme = await this.currentTheme();
-      // 节日题库：主题用节日语境（名称 + 英文名 + 风格提示），生成器据此产出节日相关句子
+      // 节日题库：主题用节日语境（名称 + 英文名 + 风格提示），生成器据此产出节日相关句子。
+      // 优先取「该节日在当年的条目」——nameEn / styleHint 都准确；
+      // dayContextOf 对清明会退化成「节气」语义，风格提示不是节日的，只作兜底。
+      const festivalYear = task.festivalDate ? Number(task.festivalDate.slice(0, 4)) : new Date().getFullYear();
+      const festivalEntry = task.festivalName ? festivalEntryOf(task.festivalName, festivalYear) : null;
       const festivalCtx = task.festivalDate ? dayContextOf(parseDateKey(task.festivalDate)) : null;
-      const festivalTheme = festivalCtx
-        ? `${task.festivalName ?? festivalCtx.name}（${festivalCtx.nameEn}）：${festivalCtx.styleHint}`
-        : null;
+      const festivalTheme = festivalEntry
+        ? `${festivalEntry.name}（${festivalEntry.nameEn}）：${festivalEntry.styleHint}`
+        : festivalCtx
+          ? `${task.festivalName ?? festivalCtx.name}（${festivalCtx.nameEn}）：${festivalCtx.styleHint}`
+          : null;
       // 节日题库：所有题目强制归到「该节日」的分类（没有则新建），
       // 否则模型自报的节日分类名匹配不上，会全部落到第一个分类。
-      const festivalCategoryId =
-        festivalCtx && task.festivalName
-          ? await this.ensureFestivalCategory(task.festivalName, festivalCtx.nameEn)
-          : null;
-      const generationTheme = this.targetCategoryName ?? festivalTheme ?? theme;
+      const festivalCategoryId = task.festivalName
+        ? await this.ensureFestivalCategory(
+            task.festivalName,
+            festivalEntry?.nameEn ?? festivalCtx?.nameEn ?? task.festivalName,
+          )
+        : null;
+      // 主题优先级：节日主题 > 定向场景 > 当日主题。
+      // 节日批次的 categoryId 就是该节日的场景分类（execute 开头解析出的
+      // targetCategoryName 只是分类名「春节」四个字），所以节日主题必须排在前面，
+      // 否则会丢掉 styleHint，只剩一个干巴巴的分类名。
+      const generationTheme = festivalTheme ?? this.targetCategoryName ?? theme;
       const textSemaphore = new Semaphore(config.ai.textConcurrency);
       const retry = {
         maxAttempts: config.ai.maxAttempts,

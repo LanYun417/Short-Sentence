@@ -14,6 +14,8 @@
  * 可以永远可靠地算出来。
  */
 
+import { solarTermDate } from './solar-terms.js';
+
 /** 节日类别：决定文案与配图的风格走向。 */
 export type FestivalKind = 'cn-traditional' | 'cn-solar' | 'international';
 
@@ -362,4 +364,101 @@ export function festivalNameSet(): Set<string> {
 /** 该名称是否是节日（节日分类不进入日常生题主题）。 */
 export function isFestivalName(name: string): boolean {
   return festivalNameSet().has(name);
+}
+
+/* ------------------------------ 全部节日清单 ------------------------------ */
+
+/** 某年可用的节日条目（含该年的公历日期）。 */
+export interface FestivalEntry {
+  /** 节日中文名（如「春节」） */
+  name: string;
+  /** 节日英文名（进 prompt 用） */
+  nameEn: string;
+  /** 节日类别 */
+  kind: FestivalKind;
+  /** 风格提示（英文，进 prompt） */
+  styleHint: string;
+  /** 该节日在指定年份的公历日期（YYYY-MM-DD） */
+  date: string;
+}
+
+/** 清明在节气表里的下标（SOLAR_TERM_NAMES：0 小寒 … 6 清明）。 */
+const QINGMING_SOLAR_TERM_INDEX = 6;
+
+/** Date → YYYY-MM-DD（本地时区）。 */
+function formatDateKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * 计算「某月第 n 个周几」在指定年份的公历日期。
+ *
+ * 超出该月天数则返回 null（实际不会发生：5 月有 5 个周几，装得下第 2 个周日）。
+ */
+function floatingFestivalDate(year: number, item: FloatingFestival): Date | null {
+  const firstDayOfMonth = new Date(year, item.month - 1, 1);
+  // 1 号的星期几与目标星期几的差（0~6），即当月第一个目标星期几是几号
+  const offset = (item.weekday - firstDayOfMonth.getDay() + 7) % 7;
+  const day = 1 + offset + (item.ordinal - 1) * 7;
+  if (day > new Date(year, item.month, 0).getDate()) {
+    return null;
+  }
+  return new Date(year, item.month - 1, day);
+}
+
+/**
+ * 列出某一年的**全部**节日及其公历日期。
+ *
+ * 用途：节日题库**一次性预生成**——用户端随时能看到所有节日题库并专门刷题，
+ * 而不是只有「当天那个节日」才有题可选（那会让 95% 的日子看不到节日题库）。
+ *
+ * 覆盖范围：
+ * - 公历固定节日（月/日固定，永远可靠）；
+ * - 浮动公历节日（某月第 n 个周几，按规则正算）；
+ * - 农历节日（**仅当该年已补录**；缺表则跳过，宁缺勿错，不猜日期）；
+ * - 清明（日期由节气算法给出，语义按节日处理）。
+ *
+ * 结果按公历日期升序（元旦 → 跨年夜），前端按顺序展示即时间轴。
+ */
+export function allFestivalsOf(year: number): FestivalEntry[] {
+  const entries: FestivalEntry[] = [];
+
+  // 1) 公历固定节日：表里的 key 形如 'MM-DD'，直接补年份
+  for (const [key, hit] of Object.entries(FIXED_FESTIVALS)) {
+    entries.push({ ...hit, date: `${year}-${key}` });
+  }
+
+  // 2) 浮动公历节日：按「某月第 n 个周几」正算日期
+  for (const item of FLOATING_FESTIVALS) {
+    const date = floatingFestivalDate(year, item);
+    if (!date) {
+      continue;
+    }
+    entries.push({ ...item.hit, date: formatDateKey(date) });
+  }
+
+  // 3) 农历节日：该年未补录则整体跳过（不猜日期）
+  for (const [key, hit] of Object.entries(LUNAR_FESTIVALS[year] ?? {})) {
+    entries.push({ ...hit, date: `${year}-${key}` });
+  }
+
+  // 4) 清明：日期由节气算法给出（每年 4/4 或 4/5），语义按节日处理
+  entries.push({
+    ...QINGMING_FESTIVAL,
+    date: formatDateKey(solarTermDate(year, QINGMING_SOLAR_TERM_INDEX)),
+  });
+
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * 按节日名取指定年份的条目（找不到返回 null）。
+ *
+ * 生成流水线用它拿准确的 nameEn / styleHint：不能只靠 dayContextOf——
+ * 清明在 dayContextOf 里会退化成「节气」语义，风格提示不是节日的。
+ */
+export function festivalEntryOf(name: string, year: number): FestivalEntry | null {
+  return allFestivalsOf(year).find((entry) => entry.name === name) ?? null;
 }

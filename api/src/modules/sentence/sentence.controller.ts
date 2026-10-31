@@ -219,6 +219,33 @@ export class SentenceController {
   }
 
   /**
+   * 手动触发「全部节日题库」的一次性生成（首次铺库 / 换年后补齐）。
+   *
+   * 节日题库是**常驻内容库**：一次铺满全年所有节日，用户端随时都能看到
+   * 所有节日并专门刷题，而不是只有节日当天才有题可选。
+   * 只补题量不足的节日，已就绪的会跳过（不重生成，免得把用户正在刷的题换掉）。
+   */
+  @Post('gen/festivals')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '生成全部节日题库')
+  async triggerAllFestivals(): Promise<
+    ResponseEnvelope<{
+      total: number;
+      created: number;
+      skipped: number;
+      failed: number;
+      tasks: Array<{ festivalName: string; taskId: number }>;
+    }>
+  > {
+    const result = await this.sentenceGen.triggerAllFestivals();
+    return {
+      __raw: true,
+      data: result,
+      message: `节日题库生成已启动：共 ${result.total} 个节日，新建 ${result.created} 批，跳过 ${result.skipped} 个（已就绪）`,
+    };
+  }
+
+  /**
    * 补全存量题解析（管理端手动、按批）。
    *
    * 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token；
