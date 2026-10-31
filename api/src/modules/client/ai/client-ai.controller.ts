@@ -72,8 +72,6 @@ export class ClientAiController {
     const stream = await this.clientAi.analyzeStream({
       userId: user.userId,
       sentenceId: dto.sentenceId,
-      userAnswer: dto.userAnswer ?? '',
-      isCorrect: dto.isCorrect,
     });
     this.writeSse(res, stream);
   }

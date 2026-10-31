@@ -133,7 +133,7 @@ watch(
  * 1. **题目自带解析**（生题时由模型生成，随 `result.explanation` 下发）——直接展示，
  *    零延迟、零 AI 调用；
  * 2. 老题尚未回填（explanation 为空）时才回退到**流式 AI 实时生成**（`/client/ai/analyze`），
- *    保证任何题都能看到解析。
+ *    后端在流正常结束后会把结果**写回 `sentence.explanation`**，同一道题下次直接命中第 1 条。
  *
  * 换下一题（结果清空 / 进入加载）时中止并复位，避免串题与白烧额度。
  */
@@ -180,7 +180,7 @@ async function startAnalysis(): Promise<void> {
   analysisState.value = 'loading';
   const stream = await streamSse(
     '/client/ai/analyze',
-    { sentenceId: current.sentenceId, userAnswer: answer.value.trim(), isCorrect: current.isCorrect },
+    { sentenceId: current.sentenceId },
     {
       onChunk: (text) => {
         if (analysisFor !== current.sentenceId) {

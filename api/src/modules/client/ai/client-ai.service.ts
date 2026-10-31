@@ -9,7 +9,7 @@
  * - **留痕**：每次调用落 ai_call_log（含 usage，需上游 stream_options.include_usage）。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import { Observable, finalize, of, tap } from 'rxjs';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
@@ -76,46 +76,80 @@ export class ClientAiService {
   }
 
   /**
-   * 题目解析：答题后（无论对错）针对该题输出一段语法 / 词形解析。
+   * 题目解析：老题没有 `sentence.explanation` 时实时生成，**正常结束后写回库**。
    *
-   * 与 expand / word-root 的**单行紧凑 JSON** 不同——解析是给人读的讲解，允许换行：
-   * 提示词要求每点以「· 」开头分行输出；前端 useSse 逐帧拼接后原样渲染（whitespace-pre-wrap）。
-   * 句子正文以 id 从库里取（权威文本，客户端不可伪造）；判定结果由客户端上报，仅用于组织措辞。
+   * 设计取舍：
+   * - 提示词只喂「正确英文 + 中文」，**不带用户作答/判定**——解析要落库、全站共享，
+   *   带上某个人的答案会把「你写的是…」写进所有人的解析里；
+   * - 入库是**条件更新**（只写空值）+ 只在收到 done 帧后写：客户端切题/断连会走
+   *   AbortError→complete()，此时 `finished` 仍为 false，绝不把半截解析写进库；
+   * - 写库失败静默（不影响已经返回给用户的流）；超出列宽截断到 500。
+   *
+   * 效果：每道老题全站只多花一次 AI 调用，之后随 `answer` 直接下发。
    */
-  async analyzeStream(params: {
-    userId: number;
-    sentenceId: number;
-    userAnswer: string;
-    isCorrect: boolean;
-  }): Promise<Observable<SseFrame>> {
+  async analyzeStream(params: { userId: number; sentenceId: number }): Promise<Observable<SseFrame>> {
     const sentence = await this.prisma.sentence.findFirst({
       where: { id: BigInt(params.sentenceId), status: 'ready' },
-      select: { sentenceEn: true, translationZh: true },
+      select: { sentenceEn: true, translationZh: true, explanation: true },
     });
     if (!sentence) {
       throw AppException.notFound('题目不存在或未就绪');
     }
+    // 已有解析：不再调 AI，直接把库里的文本按同一帧格式下发
+    // （前端本来也不会请求；这里兜住「另一个用户刚生成完」的并发竞态，避免空解析块）
+    const baked = sentence.explanation?.trim();
+    if (baked) {
+      return of({ data: baked }, { event: 'done', data: '[DONE]' });
+    }
     const system = [
-      '你是英语老师。用户刚做了一道「看中文写英文」的题，请针对这道题给出简明解析。',
+      '你是英语老师。请针对下面这句英文给出简明解析，供学习者理解。',
       '要求：',
       '- 分点讲解，聚焦两件事：① 句子整体语法结构；② 句中关键词的形态（时态、过去式、第三人称单数、复数、比较级、非谓语等），逐个说明它在句中的形式与用法。',
-      '- 若用户答错，再点出他的答案与正确写法的关键差异。',
       '- 用中文讲解，英文原词与例句保留英文。',
       '- 3 到 6 个要点，总长 120 到 220 字；纯文本，每点以「· 」开头并换行；不要 markdown 代码块、标题或表情符号。',
     ].join('\n');
-    const user = [
-      `正确英文：${sentence.sentenceEn}`,
-      `中文：${sentence.translationZh}`,
-      `用户作答：${params.userAnswer.trim() || '（未作答）'}`,
-      `判定：${params.isCorrect ? '答对' : '答错'}`,
-    ].join('\n');
+    const user = [`正确英文：${sentence.sentenceEn}`, `中文：${sentence.translationZh}`].join('\n');
+
+    /** 流式累积的解析文本（只收内容帧，不收 done/error 帧的 data）。 */
+    let collected = '';
+    /** 是否收到正常结束帧（done）。中止/失败时为 false，不允许入库。 */
+    let finished = false;
+
     return this.streamChat({
       system,
       user,
       type: 'analysis',
       bizId: params.sentenceId,
       userId: params.userId,
-    });
+    }).pipe(
+      tap((frame) => {
+        if (frame.event === 'done') {
+          finished = true;
+          return;
+        }
+        if (!frame.event && frame.data) {
+          collected += frame.data;
+        }
+      }),
+      finalize(() => {
+        const text = collected.trim();
+        if (!finished || !text) {
+          return;
+        }
+        // 条件更新：只填空值，避免并发答题 / 后台回填的已有结果被覆盖
+        void this.prisma.sentence
+          .updateMany({
+            where: {
+              id: BigInt(params.sentenceId),
+              OR: [{ explanation: null }, { explanation: '' }],
+            },
+            data: { explanation: text.slice(0, 500) },
+          })
+          .catch(() => {
+            // 写库失败静默：解析已经流给用户了，不影响本次体验
+          });
+      }),
+    );
   }
 
   /** 通用流式转发（上游 OpenAI 兼容 SSE → 前端 SseFrame）。 */
