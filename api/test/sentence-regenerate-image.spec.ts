@@ -62,10 +62,34 @@ function fakePrismaMany(rows: Array<{ id: bigint; scenePrompt: string; status: s
   };
 }
 
-/** 装配被测服务（sentenceGen provider / 预算闸门与本次被测逻辑无关，传空对象即可）。 */
-function buildService(prisma: unknown, imageGen: unknown): SentenceGenService {
+/**
+ * 装配被测服务。
+ *
+ * `sentenceGen` 是**图像审核**的依赖：生图后、入库前会调 `reviewImage` 过一遍视觉审核
+ * （见 SentenceGenService.generateImage），所以这里必须给出一个实现了该方法的假 provider。
+ * 默认放行（pass=true）；需要测审核拦截时用 `review` 覆盖。
+ */
+function buildService(
+  prisma: unknown,
+  imageGen: unknown,
+  review?: { pass: boolean; reason: string } | (() => never),
+): SentenceGenService {
   const fileService = { save: async () => ({ file: { id: 7 } }) };
-  return new SentenceGenService(prisma as never, {} as never, imageGen as never, fileService as never, {} as never);
+  const sentenceGen = {
+    reviewImage:
+      typeof review === 'function'
+        ? async () => {
+            review();
+          }
+        : async () => ({ pass: review?.pass ?? true, reason: review?.reason ?? '' }),
+  };
+  return new SentenceGenService(
+    prisma as never,
+    sentenceGen as never,
+    imageGen as never,
+    fileService as never,
+    {} as never,
+  );
 }
 
 describe('SentenceGenService.regenerateImage', () => {
@@ -124,6 +148,54 @@ describe('SentenceGenService.regenerateImage', () => {
     // 依次：置待生成 → 写入新图（状态沿用 offline）
     expect(prisma.updates[0].status).toBe('pending_image');
     expect(prisma.updates.at(-1)).toMatchObject({ imageFileId: 7n, status: 'offline' });
+  });
+});
+
+/**
+ * 图像内容审核闸门（生图后、入库前）。
+ *
+ * 要守住的两条：
+ * 1. **审核不通过时坏图绝不落库**——`fileService.save` 在审核之后，所以一次
+ *    imageFileId 都不该写；否则「审核拦截」只是改了个状态，坏图照样被下发。
+ * 2. **审核调用异常时题目回到原状态**（而不是隔离）：限频/超时是暂时性故障，
+ *    应当留待重试；只有审核「明确不通过」才是内容问题，才隔离。
+ */
+describe('SentenceGenService 生图审核闸门', () => {
+  it('审核不通过：坏图不落库（不写 imageFileId），题目状态回到原值', async () => {
+    const prisma = fakePrisma({ id: 7n, scenePrompt: 'two people holding hands', status: 'ready' });
+    const service = buildService(
+      prisma.client,
+      { enabled: true, generate: async () => ({ buffer: await tinyPng(), mimeType: 'image/png' }) },
+      { pass: false, reason: '两个男性，违反平台约定' },
+    );
+
+    await service.regenerateImage(7);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // 一次 imageFileId 都没写：坏图没有进库
+    expect(prisma.updates.some((item) => item.imageFileId !== undefined)).toBe(false);
+    // 中间状态是隔离态，最终回到原状态（手工重生成失败保留原图原状态）
+    expect(prisma.updates.map((item) => item.status)).toContain('image_rejected');
+    expect(prisma.updates.at(-1)?.status).toBe('ready');
+  });
+
+  it('审核调用异常：不写 imageFileId，题目回到原状态留待重试（不是隔离）', async () => {
+    const prisma = fakePrisma({ id: 8n, scenePrompt: 'a cafe', status: 'ready' });
+    const service = buildService(
+      prisma.client,
+      { enabled: true, generate: async () => ({ buffer: await tinyPng(), mimeType: 'image/png' }) },
+      () => {
+        throw new Error('上游限频');
+      },
+    );
+
+    await service.regenerateImage(8);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(prisma.updates.some((item) => item.imageFileId !== undefined)).toBe(false);
+    // 暂时性故障不该把题判死：最终回到原状态，可再重试
+    expect(prisma.updates.at(-1)?.status).toBe('ready');
+    expect(prisma.updates.map((item) => item.status)).not.toContain('image_rejected');
   });
 });
 

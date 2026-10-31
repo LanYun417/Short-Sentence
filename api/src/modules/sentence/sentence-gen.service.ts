@@ -909,7 +909,10 @@ export class SentenceGenService {
 
       // 图像内容审核（把生图纳入审核链路）：生成后、入库前过一遍视觉审核，
       // 不合规的不下发、落到 image_rejected 隔离，管理员可「重新生图」恢复。
-      // 复用 batch 的 retry 配置；视觉调用失败最终仍按不通过处理（fail-closed）。
+      // 复用 batch 的 retry 配置。两种失败要分清：
+      // - 审核**明确不通过** → 置 image_rejected 隔离（坏图绝不落库，因为 save 在审核之后）；
+      // - 审核**调用异常**（限频/超时/预算）→ 抛出，由外层 catch 判为生图失败，
+      //   题目回滚原状态留待重试（不是隔离：那是暂时性故障，不该永久判死）。
       const review = await withRetry(
         () => this.sentenceGen.reviewImage(webp, { scenePrompt: sentence.scenePrompt }),
         retry,
