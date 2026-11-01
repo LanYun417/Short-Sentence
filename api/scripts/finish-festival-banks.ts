@@ -36,6 +36,11 @@ function msUntilNextHourBuffer(): number {
 async function main(): Promise<void> {
   const target = Number(process.env.SENTENCE_FESTIVAL_TARGET) || 100;
   const MAX_ATTEMPTS = Number(process.env.FINISH_MAX_ATTEMPTS) || 30;
+  // 允许残留的「真·审不过的图」数量（如日历文字可见、场景与提示不符）：这类重出多少次都会被
+  // fail-closed 审核拦下，属预期不下发，不该因此判定「没做完」而永远不生成封面。
+  const MISSING_TOLERANCE = Number(process.env.FINISH_MISSING_TOLERANCE) || 40;
+  // 可选：启动前先等待 N 分钟（用于当前正处于「配额受限窗口」时，避免开工就被 429 空转）。
+  const startDelayMin = Number(process.env.FINISH_START_DELAY_MIN) || 0;
   const app = await NestFactory.create(AppModule, new OkExpressAdapter());
   await app.init();
   const gen = app.get(SentenceGenService);
@@ -45,6 +50,12 @@ async function main(): Promise<void> {
 
   const deleted = await prisma.sentenceGenTask.deleteMany({ where: { festivalName: { not: null } } });
   console.log(`[finish-banks] 已清理历史节日批次 ${deleted.count} 条`);
+
+  if (startDelayMin > 0) {
+    console.log(`[finish-banks] 先等待 ${startDelayMin} 分钟再开工（避开当前配额受限窗口）…`);
+    await sleep(startDelayMin * 60_000);
+    console.log(`[finish-banks] 等待结束，开始工作（${new Date().toLocaleTimeString()}）。`);
+  }
 
   const missingCount = async (): Promise<number> => {
     const rows = await prisma.$queryRaw<Array<{ c: bigint }>>`
@@ -61,8 +72,7 @@ async function main(): Promise<void> {
     return prisma.sentence.count({ where: { categoryId: cat.id, retiredAt: null } });
   };
 
-  let done = false;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !done; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     console.log(`\n[finish-banks] ===== 第 ${attempt} 轮（${new Date().toLocaleTimeString()}）=====`);
 
     // ---- Phase A：文本补齐（逐节日，单节失败不影响其它）----
@@ -121,8 +131,7 @@ async function main(): Promise<void> {
     const missing = await missingCount();
     console.log(`[finish-banks] 第 ${attempt} 轮结束：文本${allTextOk ? '全部达标' : '仍有不足'}，缺图 ${missing} 题`);
 
-    if (allTextOk && missing === 0) {
-      done = true;
+    if (allTextOk && missing <= MISSING_TOLERANCE) {
       break;
     }
     const wait = msUntilNextHourBuffer();
@@ -130,16 +139,12 @@ async function main(): Promise<void> {
     await sleep(wait);
   }
 
-  if (!done) {
-    const missing = await missingCount();
-    console.log(`\n[finish-banks] 达到轮次上限仍未全部达标（多半是配额限制），当前仍缺图 ${missing} 题。`);
-    console.log('[finish-banks] 可稍后重跑本脚本继续补齐（幂等）。');
-    await app.close();
-    return;
-  }
-
-  // ---- Phase C：封面 ----
-  console.log('\n[finish-banks] 全部题目达标，生成全部节日封面…');
+  // 无论是否「完全达标」都生成封面：封面与单题配图独立，且残留缺图多半是真·审不过的图。
+  const finalMissing = await missingCount();
+  console.log(
+    `\n[finish-banks] 补图阶段结束：剩余缺图 ${finalMissing} 题（≤${MISSING_TOLERANCE} 视为可接受的审核残留）。`,
+  );
+  console.log('[finish-banks] 生成全部节日封面…');
   try {
     const covers = await gen.generateFestivalCovers();
     console.log('[finish-banks] 封面结果：', safe(covers));
