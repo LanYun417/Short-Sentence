@@ -605,8 +605,12 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
 
       if (!response.ok) {
         const detail = (await response.text().catch(() => '')).slice(0, 300);
+        // 429 分两种：真正「按小时/按窗口的用量上限」重试也没用（要等整点重置），
+        // 直接判不可重试快速失败，避免在受限窗口里每个任务白白退避几十秒空转；
+        // 普通限频 429 与 5xx 仍可重试。
+        const quotaExhausted = response.status === 429 && /用量上限|usage limit|quota/i.test(detail);
         throw new AiProviderError(`${callType} 接口返回 ${response.status}: ${detail}`, {
-          retryable: response.status === 429 || response.status >= 500,
+          retryable: (response.status === 429 && !quotaExhausted) || response.status >= 500,
           status: response.status,
         });
       }

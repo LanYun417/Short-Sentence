@@ -1,18 +1,18 @@
 /**
- * 节日题库收尾脚本：把「题目没满」的缺口补齐（运维用）。
+ * 节日题库收尾脚本：把「题目没满 / 配图缺失」的缺口补齐（运维用）。
  *
- * 设计：直接拉起 Nest 上下文，复用 SentenceGenService 的同步等待接口，分三阶段：
- *   Phase A  文本补齐：对「非退役题目数 < 目标」的节日调 generateFestivalByName，
- *           退役旧题并重铺到目标数量（含配图，已用修复后的图像审核）。已达标（>=目标）的
- *           节日（如元旦/情人节/妇女节等）跳过，保留其已有文本，避免无谓重跑。
- *   Phase B  配图补齐：全局扫所有「缺图」题目（pending_image / image_rejected / ready 无图），
- *           走 regenerateImages 重新生图（修复后的审核更宽容，家庭/朋友/儿童不再误杀），
- *           轮询直到 pending_image 清空；若仍有残留（限频 429 等暂时性故障）多跑几轮收敛。
- *   Phase C  封面：generateFestivalCovers 一次性生成全部节日专属封面。
+ * 背景：Agnes 接口有**按小时的用量上限**（超额返回 429「请在 xx:00 之后重试」），
+ * 一次跑不完 21 个节日 × 100 题（含配图与图像审核）。所以做成**自愈循环**：
+ * 每轮先补文本、再补配图；一轮没跑完就等到下一个整点后再来一轮，直到全部达标
+ * 或达到轮次上限。单个节日失败不终止整轮，下一轮继续。
  *
- * 用法（api/ 目录，须用 tsc 编译后 node 跑，禁止 tsx——tsx 不产出装饰器元数据）：
+ * 用法（api/ 目录，须用 tsc 编译后 node 跑，禁用 tsx——tsx 不产出装饰器元数据）：
  *   npx tsc -p tsconfig.scripts.json
  *   node --env-file=.env dist/scripts/finish-festival-banks.js
+ *
+ * 可选环境变量：
+ *   SENTENCE_FESTIVAL_TARGET  每节日目标题数（默认 100）
+ *   FINISH_MAX_ATTEMPTS       最大轮次（默认 30）
  */
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
@@ -25,81 +25,127 @@ import { allFestivalsOf } from '../src/common/calendar/festivals.js';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const safe = (v: unknown) => JSON.stringify(v, (_k, val) => (typeof val === 'bigint' ? val.toString() : val));
 
+/** 等到「下一个整点 + 2 分钟」，给按小时重置的用量配额留出余量。 */
+function msUntilNextHourBuffer(): number {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(now.getHours() + 1, 2, 0, 0);
+  return Math.max(60_000, next.getTime() - now.getTime());
+}
+
 async function main(): Promise<void> {
   const target = Number(process.env.SENTENCE_FESTIVAL_TARGET) || 100;
+  const MAX_ATTEMPTS = Number(process.env.FINISH_MAX_ATTEMPTS) || 30;
   const app = await NestFactory.create(AppModule, new OkExpressAdapter());
   await app.init();
   const gen = app.get(SentenceGenService);
   const prisma = app.get(PrismaService);
   const year = new Date().getFullYear();
+  const festivals = allFestivalsOf(year);
 
-  // 清掉历史节日批次，避免 prepareFestivalTask 因「当天已有 success 批次」而冲突
   const deleted = await prisma.sentenceGenTask.deleteMany({ where: { festivalName: { not: null } } });
   console.log(`[finish-banks] 已清理历史节日批次 ${deleted.count} 条`);
 
-  // ---- Phase A：文本补齐（低于目标的节日重铺）----
-  const festivals = allFestivalsOf(year);
-  console.log(`[finish-banks] Phase A：检查 ${festivals.length} 个节日的文本数量（目标 ${target}）`);
-  for (const f of festivals) {
-    const cat = await prisma.sentenceCategory.findFirst({ where: { name: f.name } });
-    const count = cat ? await prisma.sentence.count({ where: { categoryId: cat.id, retiredAt: null } }) : 0;
-    if (count >= target) {
-      console.log(`[finish-banks]   ${f.name} 已 ${count} 题，跳过文本补齐`);
-      continue;
-    }
-    console.log(`[finish-banks] >>> ${f.name} 仅 ${count} 题，重铺至 ${target}…`);
-    const res = await gen.generateFestivalByName(f.name);
-    console.log(`[finish-banks] <<< ${f.name} 完成（taskId=${res.taskId}）`);
-  }
+  const missingCount = async (): Promise<number> => {
+    const rows = await prisma.$queryRaw<Array<{ c: bigint }>>`
+      SELECT COUNT(*) AS c FROM sentence
+      WHERE retired_at IS NULL AND status <> 'offline'
+        AND (image_file_id IS NULL OR image_file_id = 0
+             OR status IN ('image_rejected','pending_image'))`;
+    return Number(rows[0]?.c ?? 0);
+  };
 
-  // ---- Phase B：配图补齐（全局轮询）----
-  console.log('\n[finish-banks] Phase B：补齐所有缺图题目');
-  const MAX_PASSES = 6;
-  for (let pass = 1; pass <= MAX_PASSES; pass++) {
-    // 先把卡在 pending_image 的（上次中断遗留）放行成 ready，让 regenerateImages 能接收
-    await prisma.sentence.updateMany({
-      where: { retiredAt: null, status: 'pending_image' },
-      data: { status: 'ready' },
-    });
+  const textCount = async (name: string): Promise<number> => {
+    const cat = await prisma.sentenceCategory.findFirst({ where: { name } });
+    if (!cat) return 0;
+    return prisma.sentence.count({ where: { categoryId: cat.id, retiredAt: null } });
+  };
+
+  let done = false;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !done; attempt++) {
+    console.log(`\n[finish-banks] ===== 第 ${attempt} 轮（${new Date().toLocaleTimeString()}）=====`);
+
+    // ---- Phase A：文本补齐（逐节日，单节失败不影响其它）----
+    for (const f of festivals) {
+      const count = await textCount(f.name);
+      if (count >= target) continue;
+      console.log(`[finish-banks] >>> ${f.name} 仅 ${count} 题，重铺至 ${target}…`);
+      try {
+        const res = await gen.generateFestivalByName(f.name);
+        console.log(`[finish-banks] <<< ${f.name} 完成（taskId=${res.taskId}）`);
+      } catch (e) {
+        console.log(`[finish-banks] !!! ${f.name} 生题失败（本轮跳过）：${(e as Error).message}`);
+      }
+    }
+
+    // ---- Phase B：配图补齐 ----
+    // 仅首轮把卡在 pending_image 的（被中断留下）放行成 ready；后续轮不要重置，
+    // 否则会把仍在队列里重试的任务状态打乱（导致重复入队）。
+    if (attempt === 1) {
+      await prisma.sentence.updateMany({
+        where: { retiredAt: null, status: 'pending_image' },
+        data: { status: 'ready' },
+      });
+    }
     const missingRows = await prisma.$queryRaw<Array<{ id: bigint }>>`
       SELECT id FROM sentence
       WHERE retired_at IS NULL AND status <> 'offline'
         AND (image_file_id IS NULL OR image_file_id = 0
              OR status IN ('image_rejected','pending_image'))`;
-    const missing = missingRows.map((r) => ({ id: r.id }));
-    if (missing.length === 0) {
-      console.log(`[finish-banks]   Pass ${pass}：无缺图题目，配图补齐完成`);
+    if (missingRows.length === 0) {
+      console.log('[finish-banks] 本轮无缺图题目');
+    } else {
+      console.log(`[finish-banks] 本轮缺图 ${missingRows.length} 题，重新生图…`);
+      const ids = missingRows.map((r) => Number(r.id));
+      const { accepted, skipped } = await gen.regenerateImages(ids);
+      console.log(`[finish-banks] 受理 ${accepted.length}，跳过 ${skipped.length}`);
+      // 轮询直到这批 pending_image 清空（单轮上限 150 分钟，够在一个新鲜配额窗口内补完）
+      const deadline = Date.now() + 150 * 60 * 1000;
+      while (Date.now() < deadline) {
+        const pending = await prisma.sentence.count({
+          where: { id: { in: missingRows.map((r) => r.id) }, status: 'pending_image' },
+        });
+        if (pending === 0) break;
+        await sleep(5000);
+      }
+    }
+
+    // ---- 收敛判定 ----
+    let allTextOk = true;
+    for (const f of festivals) {
+      if ((await textCount(f.name)) < target) {
+        allTextOk = false;
+        break;
+      }
+    }
+    const missing = await missingCount();
+    console.log(`[finish-banks] 第 ${attempt} 轮结束：文本${allTextOk ? '全部达标' : '仍有不足'}，缺图 ${missing} 题`);
+
+    if (allTextOk && missing === 0) {
+      done = true;
       break;
     }
-    console.log(`[finish-banks]   Pass ${pass}：缺图 ${missing.length} 题，重新生图…`);
-    const ids = missing.map((m) => Number(m.id));
-    const { accepted, skipped } = await gen.regenerateImages(ids);
-    console.log(`[finish-banks]   受理 ${accepted.length}，跳过 ${skipped.length}`);
+    const wait = msUntilNextHourBuffer();
+    console.log(`[finish-banks] 等待 ${Math.round(wait / 60000)} 分钟后重试（避开按小时配额上限）…`);
+    await sleep(wait);
+  }
 
-    // 轮询直到这批的 pending_image 清空
-    const deadline = Date.now() + 3 * 60 * 60 * 1000; // 单轮最多 3 小时
-    while (Date.now() < deadline) {
-      const pending = await prisma.sentence.count({
-        where: { id: { in: missing.map((m) => m.id) }, status: 'pending_image' },
-      });
-      if (pending === 0) break;
-      await sleep(5000);
-    }
-    const remainingRows = await prisma.$queryRaw<Array<{ c: bigint }>>`
-      SELECT COUNT(*) AS c FROM sentence
-      WHERE retired_at IS NULL AND status <> 'offline'
-        AND (image_file_id IS NULL OR image_file_id = 0
-             OR status IN ('image_rejected','pending_image'))`;
-    const remaining = Number(remainingRows[0]?.c ?? 0);
-    console.log(`[finish-banks]   Pass ${pass} 结束，仍缺图 ${remaining} 题`);
-    if (remaining === 0) break;
-    await sleep(2000);
+  if (!done) {
+    const missing = await missingCount();
+    console.log(`\n[finish-banks] 达到轮次上限仍未全部达标（多半是配额限制），当前仍缺图 ${missing} 题。`);
+    console.log('[finish-banks] 可稍后重跑本脚本继续补齐（幂等）。');
+    await app.close();
+    return;
   }
 
   // ---- Phase C：封面 ----
-  console.log('\n[finish-banks] Phase C：生成全部节日封面');
-  const covers = await gen.generateFestivalCovers();
-  console.log('[finish-banks] 封面结果：', safe(covers));
+  console.log('\n[finish-banks] 全部题目达标，生成全部节日封面…');
+  try {
+    const covers = await gen.generateFestivalCovers();
+    console.log('[finish-banks] 封面结果：', safe(covers));
+  } catch (e) {
+    console.log(`[finish-banks] 封面生成失败：${(e as Error).message}`);
+  }
 
   await app.close();
   console.log('\n[finish-banks] 全部完成。');
