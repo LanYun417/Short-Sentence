@@ -590,6 +590,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
           model: this.aiSettings.current.textModel,
           messages: [{ role: 'system', content: systemPrompt }, userMessage],
           temperature,
+          max_tokens: config.ai.maxOutputTokens,
           response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
@@ -886,8 +887,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
-    } catch {
-      this.logger.warn('[Sentence] 模型输出不是合法 JSON，已丢弃');
+    } catch (err) {
+      this.logger.warn(`[Sentence] 模型输出不是合法 JSON，已丢弃：${(err as Error).message}`);
       return [];
     }
     if (Array.isArray(parsed)) {

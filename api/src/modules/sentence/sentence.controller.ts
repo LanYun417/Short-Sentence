@@ -209,8 +209,10 @@ export class SentenceController {
   @Post('gen/festival')
   @RequirePermissions('sentence:gen')
   @OperationLog('题库管理', '触发节日题库')
-  async triggerFestival(): Promise<ResponseEnvelope<{ taskId: number; festivalName: string }>> {
-    const result = await this.sentenceGen.triggerFestival();
+  async triggerFestival(
+    @Body() body?: { festivalName?: string },
+  ): Promise<ResponseEnvelope<{ taskId: number; festivalName: string }>> {
+    const result = await this.sentenceGen.triggerFestival(body?.festivalName);
     return {
       __raw: true,
       data: result,

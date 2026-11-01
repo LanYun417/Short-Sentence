@@ -247,26 +247,60 @@ export class SentenceGenService {
   }
 
   /**
-   * 手动触发「今天的节日题库」（运营补跑 / 测试用；非节日直接拒绝）。
+   * 手动触发「节日题库」生成（即发即忘，后台串行执行）。
+   *
+   * - 不传 festivalName：只认「今天」的节日（运营补跑 / 测试用；非节日直接拒绝）。
+   * - 传 festivalName：定向触发指定节日（如「春节」），用于先把某个节日题库铺满做质量校验，
+   *   或换年后补某个特定节日。该节日必须能在当年解析出公历日期（农历节日需当年已补录）。
    *
    * 批次键用「该节日自己的场景分类 id」当 categoryId（复合唯一 bizDate+categoryId），
    * 因此不会占用当天普通批次（categoryId=0）的位置，两者可并存。
    */
-  async triggerFestival(): Promise<{ taskId: number; festivalName: string }> {
+  async triggerFestival(festivalName?: string): Promise<{ taskId: number; festivalName: string }> {
     if (this.running) {
       throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
     }
-    const festival = this.festivalOfToday();
-    if (!festival) {
-      throw AppException.badRequest('今天不是节日，无法生成节日题库');
-    }
-    const entry = festivalEntryOf(festival.name, new Date().getFullYear());
-    if (!entry) {
-      throw AppException.badRequest(`无法确定「${festival.name}」今年的公历日期`);
-    }
+    const entry = this.resolveFestivalEntry(festivalName);
     const taskId = await this.prepareFestivalTask(entry, config.sentence.festivalTarget, this.today());
     void this.execute(taskId);
     return { taskId: Number(taskId), festivalName: entry.name };
+  }
+
+  /**
+   * 定向生成指定节日题库并**等待整批完成**（脚本 / 校验用）。
+   *
+   * 与 triggerFestival 走同一条生成链路，只是它 await 到跑完再返回，
+   * 方便一次性脚本（如「先铺满春节、中秋节做质量校验」）同步拿到结果后再继续。
+   */
+  async generateFestivalByName(festivalName: string): Promise<{ taskId: number; festivalName: string }> {
+    if (this.running) {
+      throw AppException.conflict('生成任务正在进行中，请稍后查看批次进度');
+    }
+    const entry = this.resolveFestivalEntry(festivalName);
+    const taskId = await this.prepareFestivalTask(entry, config.sentence.festivalTarget, this.today());
+    await this.execute(taskId);
+    return { taskId: Number(taskId), festivalName: entry.name };
+  }
+
+  /** 解析目标节日条目：传名按名查，否则取今天节日；都拿不到则抛错。 */
+  private resolveFestivalEntry(festivalName?: string): FestivalEntry {
+    const year = new Date().getFullYear();
+    if (festivalName && festivalName.trim()) {
+      const entry = festivalEntryOf(festivalName.trim(), year);
+      if (!entry) {
+        throw AppException.badRequest(`未找到节日「${festivalName.trim()}」今年的条目（可能是该年农历节日尚未补录）`);
+      }
+      return entry;
+    }
+    const festival = this.festivalOfToday();
+    if (!festival) {
+      throw AppException.badRequest('今天不是节日，且未指定节日名，无法生成节日题库');
+    }
+    const entry = festivalEntryOf(festival.name, year);
+    if (!entry) {
+      throw AppException.badRequest(`无法确定「${festival.name}」今年的公历日期`);
+    }
+    return entry;
   }
 
   /**

@@ -327,6 +327,14 @@ export const config = {
     /** 单次 AI 请求超时（生图可能数十秒，官方建议 60s~360s） */
     requestTimeoutMs: Math.max(1000, toNumber(process.env.AI_REQUEST_TIMEOUT_MS, 180_000)),
     /**
+     * 单次生文最大输出 token。
+     * 不设（或设过小）时，agnes-2.5-flash 用默认上限，20 题一批约 5000+ token，
+     * 输出被截断 → JSON 不完整 → 整批「模型输出不是合法 JSON」被丢弃（已实测命中）。
+     * 实测 20 题一批约需 8000~16000 token，默认给 16000 留足余量；不同模型上限不同，
+     * 若仍截断可适当调大，或调小 TEXT_CHUNK。
+     */
+    maxOutputTokens: Math.max(1, toNumber(process.env.AI_MAX_OUTPUT_TOKENS, 16_000)),
+    /**
      * 客户端用户每日免费 AI 次数（按自然日、Asia/Shanghai 计）。
      * 实测单次约 450 token，50 次≈2.2 万 token/人/天（成本可忽略）；
      * 先按 50 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
