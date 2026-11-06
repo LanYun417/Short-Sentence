@@ -398,6 +398,36 @@ const MENU_TREE: MenuSeedNode[] = [
         ],
       },
       {
+        // IP 黑名单：防单 IP 批量注册 / 登录爆破的运维级安全页（对应前端 system/ip-ban/index）。
+        // 自动封禁由 IpBanService 依据阈值触发；本菜单提供人工封禁/解封与概览。
+        key: 'system:ip-ban',
+        menuName: 'IP 黑名单',
+        menuType: MenuType.MENU,
+        path: '/system/ip-ban',
+        component: 'system/ip-ban/index',
+        icon: 'shield-x',
+        permission: 'ip:ban:list',
+        sort: 11,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'system:ip-ban:add',
+            menuName: '封禁 IP',
+            menuType: MenuType.BUTTON,
+            permission: 'ip:ban:add',
+            sort: 1,
+          },
+          {
+            key: 'system:ip-ban:remove',
+            menuName: '解封 IP',
+            menuType: MenuType.BUTTON,
+            permission: 'ip:ban:remove',
+            sort: 2,
+          },
+        ],
+      },
+      {
         key: 'system:notice',
         menuName: '通知中心',
         menuType: MenuType.MENU,
@@ -1135,6 +1165,11 @@ const ROLE_SEEDS: RoleSeed[] = [
       // 接口文档（纯只读的查看类菜单，无按钮权限码）
       'docs',
       'profile',
+      // IP 黑名单：运维级安全动作，admin 可查看列表/统计并人工封禁/解封（与 system:task:run 同级）。
+      // 超管（menuKeys: 'ALL'）自动覆盖，无需在此列出。
+      'system:ip-ban',
+      'system:ip-ban:add',
+      'system:ip-ban:remove',
     ],
   },
   {
