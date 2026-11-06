@@ -112,10 +112,6 @@ const FEATURES = [
             <UIcon name="i-lucide-hourglass" class="h-5 w-5" />
             安装包即将上线
           </div>
-          <p class="flex items-center gap-1.5 text-xs text-white/75">
-            <UIcon name="i-lucide-android" class="h-3.5 w-3.5" />
-            当前提供 Android 安装包 · 免费
-          </p>
         </div>
       </div>
     </section>
