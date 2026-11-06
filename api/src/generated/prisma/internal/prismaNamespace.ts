@@ -408,6 +408,7 @@ export const ModelName = {
   ClientXpLog: 'ClientXpLog',
   Achievement: 'Achievement',
   UserAchievement: 'UserAchievement',
+  IpBan: 'IpBan',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -448,7 +449,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1175,6 +1176,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserAchievementCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserAchievementCountAggregateOutputType> | number
+        }
+      }
+    }
+    IpBan: {
+      payload: Prisma.$IpBanPayload<ExtArgs>
+      fields: Prisma.IpBanFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IpBanFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IpBanFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        findFirst: {
+          args: Prisma.IpBanFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IpBanFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        findMany: {
+          args: Prisma.IpBanFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>[]
+        }
+        create: {
+          args: Prisma.IpBanCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        createMany: {
+          args: Prisma.IpBanCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.IpBanDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        update: {
+          args: Prisma.IpBanUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        deleteMany: {
+          args: Prisma.IpBanDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IpBanUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.IpBanUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpBanPayload>
+        }
+        aggregate: {
+          args: Prisma.IpBanAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIpBan>
+        }
+        groupBy: {
+          args: Prisma.IpBanGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpBanGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IpBanCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpBanCountAggregateOutputType> | number
         }
       }
     }
@@ -3028,6 +3095,22 @@ export const UserAchievementScalarFieldEnum = {
 export type UserAchievementScalarFieldEnum = (typeof UserAchievementScalarFieldEnum)[keyof typeof UserAchievementScalarFieldEnum]
 
 
+export const IpBanScalarFieldEnum = {
+  id: 'id',
+  ip: 'ip',
+  reason: 'reason',
+  type: 'type',
+  scope: 'scope',
+  expiresAt: 'expiresAt',
+  unbannedAt: 'unbannedAt',
+  operator: 'operator',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IpBanScalarFieldEnum = (typeof IpBanScalarFieldEnum)[keyof typeof IpBanScalarFieldEnum]
+
+
 export const LoginLogScalarFieldEnum = {
   id: 'id',
   username: 'username',
@@ -3561,6 +3644,17 @@ export const UserAchievementOrderByRelevanceFieldEnum = {
 export type UserAchievementOrderByRelevanceFieldEnum = (typeof UserAchievementOrderByRelevanceFieldEnum)[keyof typeof UserAchievementOrderByRelevanceFieldEnum]
 
 
+export const IpBanOrderByRelevanceFieldEnum = {
+  ip: 'ip',
+  reason: 'reason',
+  type: 'type',
+  scope: 'scope',
+  operator: 'operator'
+} as const
+
+export type IpBanOrderByRelevanceFieldEnum = (typeof IpBanOrderByRelevanceFieldEnum)[keyof typeof IpBanOrderByRelevanceFieldEnum]
+
+
 export const LoginLogOrderByRelevanceFieldEnum = {
   username: 'username',
   ip: 'ip',
@@ -4010,6 +4104,7 @@ export type GlobalOmitConfig = {
   clientXpLog?: Prisma.ClientXpLogOmit
   achievement?: Prisma.AchievementOmit
   userAchievement?: Prisma.UserAchievementOmit
+  ipBan?: Prisma.IpBanOmit
   loginLog?: Prisma.LoginLogOmit
   operationLog?: Prisma.OperationLogOmit
   httpLog?: Prisma.HttpLogOmit

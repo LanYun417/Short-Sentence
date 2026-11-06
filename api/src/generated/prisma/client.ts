@@ -102,6 +102,11 @@ export type Achievement = Prisma.AchievementModel
  */
 export type UserAchievement = Prisma.UserAchievementModel
 /**
+ * Model IpBan
+ * IP 黑名单（封禁恶意 IP，兜底防批量注册与登录爆破）
+ */
+export type IpBan = Prisma.IpBanModel
+/**
  * Model LoginLog
  * 登录日志表
  */

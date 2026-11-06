@@ -24,6 +24,7 @@ import type { Express } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { FilesService } from '../../files/files.service.js';
 import { AccountLockService } from '../../../common/auth/account-lock.service.js';
+import { IpBanService } from '../../../common/security/ip-ban.service.js';
 import { EmailCodeService } from './email-code.service.js';
 import { CaptchaService } from '../../../common/auth/captcha.service.js';
 import type { CaptchaResult } from '../../../common/types.js';
@@ -66,6 +67,7 @@ export class ClientAuthUserService {
     private readonly filesService: FilesService,
     private readonly captchaService: CaptchaService,
     private readonly accountLock: AccountLockService,
+    private readonly ipBan: IpBanService,
     private readonly emailCode: EmailCodeService,
   ) {}
 
@@ -75,8 +77,16 @@ export class ClientAuthUserService {
   }
 
   /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。 */
-  async register(email: string, password: string, nickname?: string, emailCode?: string): Promise<ClientTokenPair> {
+  async register(
+    email: string,
+    password: string,
+    nickname?: string,
+    emailCode?: string,
+    clientIp?: string,
+  ): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
+    // 记录一次注册尝试（按 IP 自然日计数；超过阈值自动封禁该 IP）
+    await this.ipBan.recordRegisterAttempt(clientIp);
     // 注册必须先验证邮箱：这是「邮箱归属」的唯一凭证，也挡掉脚本批量注册
     if (!emailCode || !(await this.emailCode.verify(normalizedEmail, 'register', emailCode))) {
       throw AppException.badRequest('邮箱验证码错误或已过期');
@@ -102,10 +112,11 @@ export class ClientAuthUserService {
   }
 
   /** 登录（邮箱 + 密码）。 */
-  async login(email: string, password: string): Promise<ClientTokenPair> {
+  async login(email: string, password: string, clientIp?: string): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
-    // 登录不再要求验证码（产品决定：输入账号密码即可），防爆破靠两层：
-    // ① 按 IP 的登录限流（RateLimitMiddleware）；② 按账号的失败锁定（AccountLockService）
+    // 登录不再要求验证码（产品决定：输入账号密码即可），防爆破靠三层：
+    // ① 按 IP 的登录限流（RateLimitMiddleware）；② 按账号的失败锁定（AccountLockService）；
+    // ③ 按 IP 的失败计数（IpBanService，超阈值封 IP，兜底挡「换账号爆破」）。
     // 按账号维度的失败锁定（与按 IP 的限流互补；不透露账号是否存在）
     await this.accountLock.assertNotLocked('client', normalizedEmail);
 
@@ -113,6 +124,8 @@ export class ClientAuthUserService {
     // 统一文案：不区分「邮箱不存在」与「密码错误」，防账号枚举
     if (!user || !(await comparePassword(password, user.password))) {
       await this.accountLock.recordFailure('client', normalizedEmail);
+      // 攻击信号：单 IP 短时登录失败过多 → 自动封禁该 IP
+      await this.ipBan.recordAttack(clientIp, 'login');
       throw AppException.unauthorized('邮箱或密码错误');
     }
     if (user.status !== Status.ENABLED) {
@@ -121,6 +134,8 @@ export class ClientAuthUserService {
     // 登录成功即建立新会话：清掉旧登出标记（iat 秒级精度防误杀，同后台口径）
     await this.blacklist.clearLogout(Number(user.id), 'client');
     await this.accountLock.clear('client', normalizedEmail);
+    // 登录成功：清空该 IP 的登录失败计数，避免误伤共享 IP 的正常用户
+    await this.ipBan.clearAttack(clientIp, 'login');
     await this.prisma.clientUser.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },

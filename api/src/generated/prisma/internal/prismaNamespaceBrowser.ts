@@ -62,6 +62,7 @@ export const ModelName = {
   ClientXpLog: 'ClientXpLog',
   Achievement: 'Achievement',
   UserAchievement: 'UserAchievement',
+  IpBan: 'IpBan',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -264,6 +265,22 @@ export const UserAchievementScalarFieldEnum = {
 } as const
 
 export type UserAchievementScalarFieldEnum = (typeof UserAchievementScalarFieldEnum)[keyof typeof UserAchievementScalarFieldEnum]
+
+
+export const IpBanScalarFieldEnum = {
+  id: 'id',
+  ip: 'ip',
+  reason: 'reason',
+  type: 'type',
+  scope: 'scope',
+  expiresAt: 'expiresAt',
+  unbannedAt: 'unbannedAt',
+  operator: 'operator',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IpBanScalarFieldEnum = (typeof IpBanScalarFieldEnum)[keyof typeof IpBanScalarFieldEnum]
 
 
 export const LoginLogScalarFieldEnum = {
@@ -797,6 +814,17 @@ export const UserAchievementOrderByRelevanceFieldEnum = {
 } as const
 
 export type UserAchievementOrderByRelevanceFieldEnum = (typeof UserAchievementOrderByRelevanceFieldEnum)[keyof typeof UserAchievementOrderByRelevanceFieldEnum]
+
+
+export const IpBanOrderByRelevanceFieldEnum = {
+  ip: 'ip',
+  reason: 'reason',
+  type: 'type',
+  scope: 'scope',
+  operator: 'operator'
+} as const
+
+export type IpBanOrderByRelevanceFieldEnum = (typeof IpBanOrderByRelevanceFieldEnum)[keyof typeof IpBanOrderByRelevanceFieldEnum]
 
 
 export const LoginLogOrderByRelevanceFieldEnum = {

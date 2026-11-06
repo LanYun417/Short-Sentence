@@ -1,0 +1,31 @@
+// use prisma-next
+// ↑ 首行不可删：VS Code 的 Prisma 扩展**按文件**判定是否启用 Prisma 7 语言服务，
+//   缺失会回落到 v6 语义并误报 `Argument "url" is missing in data source block "db"`。
+//
+// IP 黑名单（自动封禁 / 人工封禁）。公共约定（snake_case 映射 / 注释落库）见 base.prisma。
+/// IP 黑名单（封禁恶意 IP，兜底防批量注册与登录爆破）
+model IpBan {
+  /// 主键
+  id         BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 被封禁 IP（IPv4 / IPv6，最长 64）
+  ip         String    @unique @db.VarChar(64)
+  /// 封禁原因
+  reason     String    @db.VarChar(255)
+  /// 封禁类型：auto 系统自动 / manual 人工
+  type       String    @db.VarChar(16)
+  /// 触发来源：register 注册超限 / login 登录爆破 / captcha 验证码绕过 / manual 人工
+  scope      String    @db.VarChar(24)
+  /// 解封时间（null 表示永久封禁）
+  expiresAt  DateTime? @map("expires_at")
+  /// 解封操作时间（非空即已解封）
+  unbannedAt DateTime? @map("unbanned_at")
+  /// 操作人（自动封禁为 system）
+  operator   String?   @db.VarChar(64)
+  /// 创建时间
+  createdAt  DateTime  @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([expiresAt])
+  @@map("sys_ip_ban")
+}

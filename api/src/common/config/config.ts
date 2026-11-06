@@ -285,6 +285,36 @@ export const config = {
     userMax: toNumber(process.env.RATE_LIMIT_USER_MAX, 150),
   },
   /**
+   * IP 黑名单（防「单 IP 批量注册」与「登录爆破」的兜底闸门）。
+   *
+   * 设计取舍（与安全相关的关键决策）：
+   * - **默认关闭**（`enabled=false`）：IP 维度误伤风险高（公司 / 学校 / 小区出口 NAT 共享 IP
+   *   下，正常用户共享同一地址），一旦默认开启可能误封一片人。必须由运维**显式开启**，
+   *   且阈值留足余量。
+   * - **降级放行（fail-open）**：Redis / 数据库异常时一律视为「未封禁」，绝不因安全增强故障
+   *   而导致全站不可访问——与 rate-limit / 令牌黑名单的降级口径一致。
+   * - **自动封禁只作为最后手段**：先有邮箱验证码 + 双维度限流 + 账号锁定三道防线，本功能只在
+   *   「单 IP 单日注册次数」或「单 IP 短时登录失败次数」明显越界时才兜底封 IP。
+   * - 阈值全部可配置，便于按实际流量调参；自动封禁带到期时间，到期自动解封，避免永久误伤。
+   */
+  ipBan: {
+    /** 总开关：默认关闭（绝不默认开启，避免误封正常用户）。 */
+    enabled: toBoolean(process.env.IP_BAN_ENABLED, false),
+    /**
+     * 单 IP 自然日内「注册接口调用次数」上限（含验证码失败；正常用户只注册 1 次）。
+     * 超过即自动封禁该 IP（覆盖「一个 IP 一天注册多个用户」与「脚本狂刷注册接口」两类场景）。
+     */
+    dailyRegisterLimit: Math.max(1, toNumber(process.env.IP_BAN_DAILY_REGISTER_LIMIT, 30)),
+    /** 自动封禁时长（小时，默认 24）；0 表示永久（仅建议调试/应急临时使用）。 */
+    autoBanHours: Math.max(0, toNumber(process.env.IP_BAN_AUTO_BAN_HOURS, 24)),
+    /** 单 IP 在攻击窗口内「登录失败次数」上限（检测爆破 / 账号枚举）。 */
+    loginFailLimit: Math.max(1, toNumber(process.env.IP_BAN_LOGIN_FAIL_LIMIT, 50)),
+    /** 单 IP 在攻击窗口内「验证码失败次数」上限（检测验证码绕过尝试）。 */
+    captchaFailLimit: Math.max(1, toNumber(process.env.IP_BAN_CAPTCHA_FAIL_LIMIT, 50)),
+    /** 攻击计数滑动窗口（ms，默认 60s，与限流窗口一致）。 */
+    attackWindowMs: Math.max(1000, toNumber(process.env.IP_BAN_ATTACK_WINDOW_MS, 60_000)),
+  },
+  /**
    * 口令策略（新增用户 / 重置密码 / 自助改密共用，见 common/auth/password-policy.ts）。
    * 只约束**新设置**的口令，不影响存量账号登录。
    */

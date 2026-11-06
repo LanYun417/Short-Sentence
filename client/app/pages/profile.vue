@@ -539,7 +539,7 @@ async function onChangePassword(): Promise<void> {
             class="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
           >
             <UIcon name="i-lucide-quote" class="mt-0.5 h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
-            <span class="min-w-0 break-words">{{ auth.user.signature }}</span>
+            <span class="min-w-0 wrap-break-word">{{ auth.user.signature }}</span>
           </p>
         </div>
       </div>
@@ -570,7 +570,7 @@ async function onChangePassword(): Promise<void> {
     <!-- 消息中心入口：未读红点来自服务端口径（SSR 预取，首屏即带） -->
     <NuxtLink
       to="/notices"
-      class="anim-in mt-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       style="animation-delay: 100ms"
     >
       <UIcon name="i-lucide-bell" class="h-5 w-5 shrink-0 text-sky-500" />

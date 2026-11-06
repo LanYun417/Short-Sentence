@@ -15,6 +15,7 @@ import { CaptchaService } from './auth/captcha.service.js';
 import { DataScopeService } from './auth/data-scope.service.js';
 import { LoginRateLimiterService } from './auth/login-rate-limit.service.js';
 import { AccountLockService } from './auth/account-lock.service.js';
+import { IpBanService } from './security/ip-ban.service.js';
 import { OperationLogService } from './log/operation-log.service.js';
 import { FileLoggerService } from './log/file-logger.service.js';
 import { HttpLogQueueService } from './log/http-log-queue.service.js';
@@ -45,6 +46,8 @@ import { MailService } from './mail/mail.service.js';
     LoginRateLimiterService,
     // 按账号维度的登录失败锁定（与按 IP 的 LoginRateLimiterService 互补）
     AccountLockService,
+    // IP 黑名单（防单 IP 批量注册 / 登录爆破的兜底闸门；默认关闭，fail-open）
+    IpBanService,
     OperationLogService,
     FileLoggerService,
     HttpLogQueueService,
@@ -79,6 +82,8 @@ import { MailService } from './mail/mail.service.js';
     LoginRateLimiterService,
     // 按账号维度的登录失败锁定（与按 IP 的 LoginRateLimiterService 互补）
     AccountLockService,
+    // IP 黑名单（防单 IP 批量注册 / 登录爆破的兜底闸门；默认关闭，fail-open）
+    IpBanService,
     OperationLogService,
     FileLoggerService,
     HttpLogQueueService,

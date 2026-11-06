@@ -3,10 +3,11 @@
  * 权限口径：全部接口或公开（登录/注册/刷新）或「登录即可」（资料/密码/登出），
  * 不使用后台 RBAC 权限码——客户端数据按 userId 天然隔离。
  */
-import { Body, Controller, Get, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Req, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import type { Express } from 'express';
+import type { Express, Request } from 'express';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
+import { getClientIp } from '../../../common/log/operation-log.interceptor.js';
 import { Public } from '../../../common/auth/auth.guard.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { AppException } from '../../../common/exception/app.exception.js';
@@ -57,8 +58,14 @@ export class ClientAuthController {
   /** 注册。 */
   @Public()
   @Post('register')
-  async register(@Body() dto: ClientRegisterDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.register(dto.email, dto.password, dto.nickname, dto.emailCode);
+  async register(@Body() dto: ClientRegisterDto, @Req() req: Request): Promise<ResponseEnvelope<ClientAuthResult>> {
+    const tokens = await this.clientAuth.register(
+      dto.email,
+      dto.password,
+      dto.nickname,
+      dto.emailCode,
+      getClientIp(req),
+    );
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
   }
@@ -66,8 +73,8 @@ export class ClientAuthController {
   /** 登录。 */
   @Public()
   @Post('login')
-  async login(@Body() dto: ClientLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.login(dto.email, dto.password);
+  async login(@Body() dto: ClientLoginDto, @Req() req: Request): Promise<ResponseEnvelope<ClientAuthResult>> {
+    const tokens = await this.clientAuth.login(dto.email, dto.password, getClientIp(req));
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }

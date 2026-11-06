@@ -14,6 +14,7 @@ import { CommonModule } from './common/common.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { HttpAccessLoggerMiddleware } from './common/log/http-access-log.middleware.js';
 import { RateLimitMiddleware } from './common/http/rate-limit.middleware.js';
+import { IpBanMiddleware } from './common/security/ip-ban.middleware.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { MenuModule } from './modules/menu/menu.module.js';
 import { UsersModule } from './modules/users/users.module.js';
@@ -41,6 +42,7 @@ import { MailModule } from './modules/mail/mail.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { ClientUsersModule } from './modules/client-users/client-users.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
+import { SecurityModule } from './modules/security/ip-ban.module.js';
 
 @Module({
   imports: [
@@ -83,6 +85,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     AiModule,
     ClientUsersModule,
     AnalyticsModule,
+    SecurityModule,
   ],
   providers: [
     // 守卫顺序：先鉴权（挂 req.user），再校验权限码
@@ -94,6 +97,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
     { provide: APP_INTERCEPTOR, useClass: OperationLogInterceptor },
     // 全局异常 → 统一错误响应
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // IP 黑名单中间件（class middleware，带 IpBanService 依赖；显式注册以保证 DI 解析）
+    IpBanMiddleware,
   ],
 })
 export class AppModule implements NestModule {
@@ -106,6 +111,9 @@ export class AppModule implements NestModule {
 
     // 接口限流：注册在访问日志之后 → 被限流的请求同样留下访问记录，便于排查刷量来源
     consumer.apply(RateLimitMiddleware).forRoutes('{*path}');
+
+    // IP 黑名单：置于限流**之前**——被封禁的 IP 连限流计数都不该再产生
+    consumer.apply(IpBanMiddleware).forRoutes('{*path}');
 
     // 静态资源链（鉴权 → 防盗链 → 图片缩放）不在这里挂：
     // consumer.apply 的路由会被全局前缀改写成 /api/static/...，永远匹配不到真实的 /static/...，
