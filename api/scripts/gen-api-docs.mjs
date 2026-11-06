@@ -89,6 +89,8 @@ const GROUP_BY_CONTROLLER_PATH = {
   'client/report': '题目举报',
   'client/feedback': '用户反馈',
   'client/notices': '客户端公告',
+  // 用户端 App 下载（最新版本 / 安装包下载），无 @OperationLog，按挂载路径显式映射中文
+  'client/app': '客户端应用',
 };
 
 /** 模块展示顺序（未列出的模块排在最后，按名称排序）。 */

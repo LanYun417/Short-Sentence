@@ -10,6 +10,7 @@
 - **DTO 必须可校验**：请求体/路径参数一律用 class-validator 装饰过的 DTO，无装饰器的 DTO 会被 `whitelist` 清空；
 - **统一响应**：成功恒 HTTP 200，响应体 `{ code, message, data }`；错误统一抛 `AppException`，不手写 `res.json()`；
 - **写操作留痕**：管理端写操作加 `@OperationLog('模块', '动作')`；
+- **接口文档模块名必须含汉字（不得回退为纯英文）**：`scripts/gen-api-docs.mjs` 按「挂载路径映射 `GROUP_BY_CONTROLLER_PATH` → 类名覆盖 `GROUP_OVERRIDES` → `@OperationLog` 模块名 → 类 JSDoc → 类名」顺序推导文档模块名；纯英文类名/模块名（如 `ClientApp`）视为不规范，须改为中文。新增用户端控制器须在 `GROUP_BY_CONTROLLER_PATH` 按挂载路径补一条中文映射；管理端模块名由 `@OperationLog` 首参给出，须含汉字（公认缩写如 `IP` 除外）。
 - **零运行时新增依赖**：变更 `dependencies` 必须 `npm run guard:deps -- --update` 并在评审说明。
 
 ## 2. 目录与模块骨架

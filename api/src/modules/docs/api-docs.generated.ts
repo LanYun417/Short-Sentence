@@ -4501,7 +4501,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/categories",
-        "summary": "启用中的分类（按 sort 升序）。游客可访问（首页展示用）",
+        "summary": "启用中的**日常场景**分类（按 sort 升序），附各分类的可刷题数。 游客可访问（首页展示用）。 - **排除节日分类**：节日有专属题库接口（/client/questions/festivals）， 混进来会在题库页出现两份「元旦」。 - 题数一次 groupBy 拿全量再内存合并：分类就两位数，不值得每行发一条 count",
         "permission": [],
         "isPublic": true,
         "action": "",
@@ -5740,6 +5740,69 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "客户端应用",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/app/download/:id",
+        "summary": "下载安装包（游客可访问；每次下载计一次数）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/app/download/1\"",
+          "pathParams": {
+            "id": "1"
+          },
+          "isRawResponse": true
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/app/latest",
+        "summary": "最新上架版本（游客可访问：下载页不需要登录）。空 = 尚未发布",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/app/latest?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "客户端用户",
     "endpoints": [
       {
@@ -6540,7 +6603,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/questions/next",
-        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival 传了则只从该节日题库抽（专门刷题）。 拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival / categoryId 传了则只从对应题库抽（专门刷题， 两者互斥、festival 优先）。拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -7265,6 +7328,32 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "题库管理 · 触发节日题库",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/festival\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/gen/festival-covers",
+        "summary": "为全年所有节日生成**专属封面图**。 与「生成节日题库」一样是**即发即忘**：二十来张图串行生成要十几分钟， 管理端 axios 超时只有 15 秒，同步返回必然超时。所以立即返回「已启动」， 进度通过题库页的封面出没来判断。 已有封面的节日默认跳过（不覆盖）；force=true 时强制重画（换掉不贴合的封面）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 生成节日封面",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/festival-covers\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/gen/festivals",
+        "summary": "手动触发「全部节日题库」的一次性生成（首次铺库 / 换年后补齐）。 节日题库是**常驻内容库**：一次铺满全年所有节日，用户端随时都能看到 所有节日并专门刷题，而不是只有节日当天才有题可选。 只补题量不足的节日，已就绪的会跳过（不重生成，免得把用户正在刷的题换掉）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 生成全部节日题库",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/gen/festivals\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       },
       {
@@ -8404,39 +8493,16 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
-    "group": "ClientApp",
+    "group": "IP黑名单",
     "endpoints": [
       {
         "method": "GET",
-        "path": "/api/client/app/download/:id",
-        "summary": "下载安装包（游客可访问；每次下载计一次数）",
-        "permission": [],
-        "isPublic": true,
-        "action": "",
-        "params": [
-          {
-            "name": "id",
-            "in": "path",
-            "type": "string",
-            "required": true,
-            "description": "",
-            "example": "1"
-          }
+        "path": "/api/ip-ban",
+        "summary": "封禁记录分页列表",
+        "permission": [
+          "ip:ban:list"
         ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/app/download/1\"",
-          "pathParams": {
-            "id": "1"
-          },
-          "isRawResponse": true
-        }
-      },
-      {
-        "method": "GET",
-        "path": "/api/client/app/latest",
-        "summary": "最新上架版本（游客可访问：下载页不需要登录）。空 = 尚未发布",
-        "permission": [],
-        "isPublic": true,
+        "isPublic": false,
         "action": "",
         "params": [
           {
@@ -8457,10 +8523,84 @@ export const API_DOCS: ApiDocGroup[] = [
           }
         ],
         "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/app/latest?page=1&pageSize=10\"",
+          "curl": "curl -X GET \"http://localhost:3000/api/ip-ban?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/ip-ban/stats",
+        "summary": "概览统计",
+        "permission": [
+          "ip:ban:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/ip-ban/stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/ip-ban",
+        "summary": "人工封禁 IP",
+        "permission": [
+          "ip:ban:add"
+        ],
+        "isPublic": false,
+        "action": "IP黑名单 · 人工封禁",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/ip-ban\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/ip-ban/:ip",
+        "summary": "解封 IP",
+        "permission": [
+          "ip:ban:remove"
+        ],
+        "isPublic": false,
+        "action": "IP黑名单 · 解封",
+        "params": [
+          {
+            "name": "ip",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/ip-ban/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "ip": "1"
           }
         }
       }

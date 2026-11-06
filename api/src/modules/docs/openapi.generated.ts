@@ -104,6 +104,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "客户端通知"
     },
     {
+      "name": "客户端应用"
+    },
+    {
       "name": "客户端用户"
     },
     {
@@ -140,7 +143,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "App 版本"
     },
     {
-      "name": "ClientApp"
+      "name": "IP黑名单"
     }
   ],
   "paths": {
@@ -7699,7 +7702,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "场景分类"
         ],
-        "summary": "启用中的分类（按 sort 升序）。游客可访问（首页展示用）",
+        "summary": "启用中的**日常场景**分类（按 sort 升序），附各分类的可刷题数。 游客可访问（首页展示用）。 - **排除节日分类**：节日有专属题库接口（/client/questions/festivals）， 混进来会在题库页出现两份「元旦」。 - 题数一次 groupBy 拿全量再内存合并：分类就两位数，不值得每行发一条 count",
         "operationId": "get__api_client_categories",
         "parameters": [
           {
@@ -10386,6 +10389,119 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/app/download/{id}": {
+      "get": {
+        "tags": [
+          "客户端应用"
+        ],
+        "summary": "下载安装包（游客可访问；每次下载计一次数）",
+        "operationId": "get__api_client_app_download__id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/client/app/latest": {
+      "get": {
+        "tags": [
+          "客户端应用"
+        ],
+        "summary": "最新上架版本（游客可访问：下载页不需要登录）。空 = 尚未发布",
+        "operationId": "get__api_client_app_latest",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/client-users": {
       "get": {
         "tags": [
@@ -12300,7 +12416,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "刷题"
         ],
-        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival 传了则只从该节日题库抽（专门刷题）。 拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
+        "summary": "下一张卡（8:2 新题/复习混抽；不含答案）。 difficulty 仅作用于新题抽取；festival / categoryId 传了则只从对应题库抽（专门刷题， 两者互斥、festival 优先）。拼词词块**恒定下发**，便于客户端切换作答模式时无需重抽题",
         "operationId": "get__api_client_questions_next",
         "parameters": [
           {
@@ -13685,6 +13801,92 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "手动触发「今天的节日题库」（运营补跑 / 测试用；非节日返回 400）。 与定时任务同一条链路：新一期生成成功后，同一节日的旧题整体退场",
         "operationId": "post__api_sentences_gen_festival",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/gen/festival-covers": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "为全年所有节日生成**专属封面图**。 与「生成节日题库」一样是**即发即忘**：二十来张图串行生成要十几分钟， 管理端 axios 超时只有 15 秒，同步返回必然超时。所以立即返回「已启动」， 进度通过题库页的封面出没来判断。 已有封面的节日默认跳过（不覆盖）；force=true 时强制重画（换掉不贴合的封面）",
+        "operationId": "post__api_sentences_gen_festival_covers",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/gen/festivals": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "手动触发「全部节日题库」的一次性生成（首次铺库 / 换年后补齐）。 节日题库是**常驻内容库**：一次铺满全年所有节日，用户端随时都能看到 所有节日并专门刷题，而不是只有节日当天才有题可选。 只补题量不足的节日，已就绪的会跳过（不重生成，免得把用户正在刷的题换掉）",
+        "operationId": "post__api_sentences_gen_festivals",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
@@ -15326,46 +15528,13 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
-    "/api/client/app/download/{id}": {
+    "/api/ip-ban": {
       "get": {
         "tags": [
-          "ClientApp"
+          "IP黑名单"
         ],
-        "summary": "下载安装包（游客可访问；每次下载计一次数）",
-        "operationId": "get__api_client_app_download__id",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "路径参数 id"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
-            "content": {
-              "application/octet-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/client/app/latest": {
-      "get": {
-        "tags": [
-          "ClientApp"
-        ],
-        "summary": "最新上架版本（游客可访问：下载页不需要登录）。空 = 尚未发布",
-        "operationId": "get__api_client_app_latest",
+        "summary": "封禁记录分页列表",
+        "operationId": "get__api_ip_ban",
         "parameters": [
           {
             "name": "page",
@@ -15436,7 +15605,192 @@ export const OPENAPI_DOC: Record<string, unknown> = {
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "IP黑名单"
+        ],
+        "summary": "人工封禁 IP",
+        "operationId": "post__api_ip_ban",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/ip-ban/stats": {
+      "get": {
+        "tags": [
+          "IP黑名单"
+        ],
+        "summary": "概览统计",
+        "operationId": "get__api_ip_ban_stats",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/ip-ban/{ip}": {
+      "delete": {
+        "tags": [
+          "IP黑名单"
+        ],
+        "summary": "解封 IP",
+        "operationId": "delete__api_ip_ban__ip",
+        "parameters": [
+          {
+            "name": "ip",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 ip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   },
