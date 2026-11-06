@@ -103,6 +103,9 @@ export class ClientAuthUserService {
         email: normalizedEmail,
         password: await hashPassword(password),
         nickname: nickname?.trim() || normalizedEmail.split('@')[0].slice(0, 50),
+        // 新用户默认开启「每日学习提醒（邮件）」；可在「我的 → 基本资料」随时关闭。
+        // 显式写入而非依赖列默认值：线上库的列默认仍是 0，靠服务层保证注册即开启。
+        emailReminder: 1,
       },
       select: { id: true },
     });
