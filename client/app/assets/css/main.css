@@ -178,6 +178,60 @@
   animation: ss-gradient-pan 9s ease-in-out infinite;
 }
 
+/* 呼吸光晕：柔光缓慢明暗（Logo 背后的光） */
+@keyframes ss-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.04);
+  }
+}
+
+.anim-breathe {
+  animation: ss-breathe 4.2s ease-in-out infinite;
+}
+
+/* 按钮流光：一道高光斜扫过（父级需 overflow-hidden） */
+@keyframes ss-shine {
+  0% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+
+  55%,
+  100% {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+
+.anim-shine {
+  animation: ss-shine 3.6s ease-in-out infinite;
+}
+
+/* 环境光斑漂移：幅度比 anim-drift 更大，让整页背景「活」起来 */
+@keyframes ss-blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(28px, -22px) scale(1.12);
+  }
+
+  66% {
+    transform: translate(-18px, 16px) scale(0.95);
+  }
+}
+
+.anim-blob {
+  animation: ss-blob 20s ease-in-out infinite;
+}
+
 /* ===== 今日进度 Hero：「液态流体 + 星光」=====
    液态主体由 HeroAurora 的 WebGL 着色器实时合成（域扭曲 FBM，翻卷 / 拉丝 / 光泽），
    纯 CSS 径向光斑无法做出这种液体结构。这里只保留 WebGL 不可用时的静态兜底渐变，
@@ -489,6 +543,9 @@
   .anim-float,
   .anim-drift,
   .anim-gradient,
+  .anim-breathe,
+  .anim-shine,
+  .anim-blob,
   .ss-star-flow,
   .ss-star,
   .anim-stagger,

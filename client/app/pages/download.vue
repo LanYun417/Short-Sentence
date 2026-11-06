@@ -73,20 +73,28 @@ const FEATURES = [
 <template>
   <div class="mx-auto max-w-2xl px-4 py-8 md:py-12">
     <!-- ============ Hero ============ -->
-    <section
-      class="anim-in relative overflow-hidden rounded-3xl bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 px-6 py-10 text-center md:px-10 md:py-14"
-    >
-      <!-- 装饰光斑（缓慢漂移，不死板） -->
+    <section class="anim-in relative overflow-hidden rounded-3xl px-6 py-10 text-center md:px-10 md:py-14">
+      <!-- 渐变底：单独一层做缓慢流动，避免与入场动画的 animation 互相覆盖 -->
       <div
-        class="anim-drift pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-white/20 blur-2xl"
+        class="anim-gradient absolute inset-0 bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 bg-size-[200%_200%]"
+        aria-hidden="true"
       />
+      <!-- 装饰光斑（缓慢漂移，不死板） -->
+      <div class="anim-blob pointer-events-none absolute -right-12 -top-16 size-44 rounded-full bg-white/20 blur-2xl" />
       <div
-        class="anim-drift pointer-events-none absolute -bottom-16 -left-8 size-40 rounded-full bg-sky-200/25 blur-2xl"
+        class="anim-blob pointer-events-none absolute -bottom-16 -left-8 size-40 rounded-full bg-sky-200/25 blur-2xl"
         style="animation-delay: -6s"
       />
 
       <div class="relative">
-        <AppLogo class="mx-auto h-20 w-20 drop-shadow-lg md:h-24 md:w-24" />
+        <!-- Logo：呼吸光晕 + 缓慢上下浮动 -->
+        <div class="relative mx-auto h-20 w-20 md:h-24 md:w-24">
+          <div
+            class="anim-breathe pointer-events-none absolute -inset-3 rounded-full bg-white/30 blur-2xl"
+            aria-hidden="true"
+          />
+          <AppLogo class="anim-float relative h-full w-full drop-shadow-lg" />
+        </div>
 
         <h1 class="mt-5 text-2xl font-bold text-white drop-shadow-sm md:text-3xl">把短句装进口袋</h1>
         <p class="mx-auto mt-2.5 max-w-sm text-sm text-white/85 md:text-base">
@@ -100,10 +108,15 @@ const FEATURES = [
             v-if="canDownload"
             :href="downloadUrl"
             download
-            class="hover-lift inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-base font-semibold text-sky-600 shadow-lg shadow-sky-900/20 transition hover:bg-sky-50"
+            class="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-7 py-3 text-base font-semibold text-sky-600 shadow-lg shadow-sky-900/20 transition duration-200 hover:scale-[1.03] hover:bg-sky-50 active:scale-95"
           >
-            <UIcon name="i-lucide-download" class="h-5 w-5" />
-            下载 Android 安装包
+            <!-- 流光：一道高光斜扫过按钮 -->
+            <span
+              class="anim-shine pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-linear-to-r from-transparent via-sky-300/60 to-transparent"
+              aria-hidden="true"
+            />
+            <UIcon name="i-lucide-download" class="relative h-5 w-5" />
+            <span class="relative">下载 Android 安装包</span>
           </a>
           <div
             v-else
@@ -118,7 +131,7 @@ const FEATURES = [
 
     <!-- ============ 最新版本 ============ -->
     <section
-      class="anim-in mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 md:p-6 dark:bg-slate-900 dark:ring-slate-800/80"
+      class="anim-in mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition-shadow hover:shadow-md hover:ring-sky-300/70 md:p-6 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       style="animation-delay: 60ms"
     >
       <div class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -153,7 +166,7 @@ const FEATURES = [
 
     <!-- ============ 安装指引（未知来源应用） ============ -->
     <section
-      class="anim-in mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 md:p-6 dark:bg-slate-900 dark:ring-slate-800/80"
+      class="anim-in mt-5 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition-shadow hover:shadow-md hover:ring-sky-300/70 md:p-6 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       style="animation-delay: 90ms"
     >
       <div class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -190,10 +203,10 @@ const FEATURES = [
       <div
         v-for="(f, i) in FEATURES"
         :key="f.title"
-        class="anim-in rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
+        class="anim-in group rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 transition-shadow hover:shadow-md hover:ring-sky-300/70 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
         :style="{ animationDelay: `${120 + i * 60}ms` }"
       >
-        <UIcon :name="f.icon" class="h-6 w-6 text-sky-500" />
+        <UIcon :name="f.icon" class="h-6 w-6 text-sky-500 transition-transform duration-300 group-hover:scale-110" />
         <p class="mt-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100">{{ f.title }}</p>
         <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ f.desc }}</p>
       </div>

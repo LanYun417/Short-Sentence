@@ -43,14 +43,14 @@ function toggleTheme(): void {
     -->
     <div class="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
       <div
-        class="anim-drift absolute -top-28 -left-24 size-[30rem] rounded-full bg-sky-300/40 blur-3xl dark:bg-sky-500/15"
+        class="anim-blob absolute -top-28 -left-24 size-[30rem] rounded-full bg-sky-300/40 blur-3xl dark:bg-sky-500/15"
       />
       <div
-        class="anim-drift absolute top-8 -right-32 size-[28rem] rounded-full bg-indigo-300/35 blur-3xl dark:bg-indigo-500/15"
+        class="anim-blob absolute top-8 -right-32 size-[28rem] rounded-full bg-indigo-300/35 blur-3xl dark:bg-indigo-500/15"
         style="animation-delay: -7s"
       />
       <div
-        class="anim-drift absolute -bottom-40 left-1/3 size-[32rem] rounded-full bg-violet-300/30 blur-3xl dark:bg-violet-500/12"
+        class="anim-blob absolute -bottom-40 left-1/3 size-[32rem] rounded-full bg-violet-300/30 blur-3xl dark:bg-violet-500/12"
         style="animation-delay: -12s"
       />
       <!-- 细点纹理：顶部渐隐，给纯色底一点质感（暗色下减淡） -->
@@ -59,7 +59,6 @@ function toggleTheme(): void {
         style="
           background-image: radial-gradient(circle at 1px 1px, rgb(100 116 139 / 22%) 1px, transparent 0);
           background-size: 22px 22px;
-          mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, #000 25%, transparent 78%);
           mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, #000 25%, transparent 78%);
         "
       />
