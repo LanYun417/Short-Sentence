@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      后台管理系统：禁止搜索引擎收录。
+      robots.txt 只是「建议」，真正的硬约束是页面 meta + 服务端 X-Robots-Tag 响应头
+      （见 deploy/nginx.conf 与 api/src/app.setup.ts），三层一起上才可靠。
+    -->
+    <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" href="/favicon.ico" />
     <title>蓝云后台管理系统</title>
     <!--

@@ -80,6 +80,8 @@ function mountPrecompressed(app: NestExpressApplication, root: string): void {
     res.setHeader('Content-Encoding', encoding);
     res.setHeader('Vary', 'Accept-Encoding');
     res.setHeader('Cache-Control', IMMUTABLE_CACHE);
+    // 后台管理系统产物：禁止搜索引擎收录（预压缩副本同样要带，否则会绕过静态中间件的头）
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.sendFile(file, { root: rootDir, dotfiles: 'deny' });
   });
 }
@@ -188,6 +190,8 @@ export function configureApp(app: NestExpressApplication, options: AppSetupOptio
       maxAge: '1y',
       immutable: true,
       setHeaders: (res, filePath) => {
+        // 后台管理系统产物：禁止搜索引擎收录（与 index.html 的 noindex meta 双保险）
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
         if (filePath.endsWith('index.html')) {
           res.setHeader('Cache-Control', 'no-cache');
           return;
@@ -210,6 +214,8 @@ export function configureApp(app: NestExpressApplication, options: AppSetupOptio
         next();
         return;
       }
+      // history 回退同样带 noindex（SPA 子路由都复用这份 index.html）
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
       res.sendFile('index.html', { root: webDistDir });
     });
     logger.log(`前端产物已托管: ${webDistDir}`);
