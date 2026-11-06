@@ -166,12 +166,14 @@
     overflow: hidden;
   }
 
-  /* 内容区不再整体滚动；滚动只发生在表格内部 */
-  .content-scrollbar:has(.table-page) .el-scrollbar__wrap {
+  /* 内容区不再整体滚动；滚动只发生在表格内部。
+     ⚠️ 必须是直接子选择器（>）：写成后代选择器会连 el-table / 分页器内部的
+     .el-scrollbar__wrap 一起设成 hidden，导致表格自己也滚不动（滚轮无反应）。 */
+  .content-scrollbar:has(.table-page) > .el-scrollbar__wrap {
     overflow: hidden;
   }
 
-  .content-scrollbar:has(.table-page) .el-scrollbar__view {
+  .content-scrollbar:has(.table-page) > .el-scrollbar__wrap > .el-scrollbar__view {
     height: 100%;
   }
 
