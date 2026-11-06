@@ -597,7 +597,7 @@ async function onChangePassword(): Promise<void> {
                   每日学习提醒（邮件）
                 </p>
                 <p class="mt-1 text-xs text-slate-400">
-                  每天傍晚（18:30 左右）一封邮件，当天还没完成目标时提醒你补上（发送到
+                  每天 18:00 一封邮件，当天还没完成目标时提醒你补上（发送到
                   {{ auth.user?.email }}）
                 </p>
               </div>

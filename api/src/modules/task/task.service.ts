@@ -25,7 +25,22 @@ import { DailyReminderService } from '../mail/daily-reminder.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
+import { ConfigService } from '../config/config.service.js';
 import { buildTaskRegistry, cronOf, type TaskContext, type TaskDefinition, type TaskDeps } from './task.registry.js';
+
+/** 每日提醒的可配置项（存 sys_config，后台「参数管理」可改）。 */
+const REMINDER_CONFIG_KEYS = {
+  enabled: 'sys.mail.reminderEnabled',
+  hour: 'sys.mail.reminderHour',
+  minute: 'sys.mail.reminderMinute',
+} as const;
+
+/** 每日提醒任务名（重排时按名查找）。 */
+const REMINDER_TASK_NAME = 'daily-reminder';
+
+/** 默认发送时间（配置缺失/非法时回退）。 */
+const DEFAULT_REMINDER_HOUR = 18;
+const DEFAULT_REMINDER_MINUTE = 0;
 
 /** 任务列表项（管理端展示）。 */
 export interface TaskItem {
@@ -115,6 +130,10 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
   private readonly running = new Set<string>();
   /** 任务依赖（延迟到 onModuleInit 组装，避免构造期注入顺序问题） */
   private deps: TaskDeps | null = null;
+  /** 参数变更订阅的取消函数（销毁时解除） */
+  private reminderUnsubscribe: (() => void) | null = null;
+  /** 重排串行链：连续改小时/分钟/开关时，避免并发删建同一个 cron job */
+  private rescheduleChain: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -126,6 +145,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly wordRoot: WordRootService,
     private readonly sentenceCard: SentenceCardService,
     private readonly dailyReminder: DailyReminderService,
+    private readonly configService: ConfigService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -146,7 +166,15 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       sendDailyReminders: () => this.dailyReminder.run(),
     };
 
+    // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值
+    const reminder = await this.readReminderSetting();
     const registry = buildTaskRegistry();
+    const reminderItem = registry.find((item) => item.name === REMINDER_TASK_NAME);
+    if (reminderItem) {
+      reminderItem.schedule = { kind: 'daily', hour: reminder.hour, minute: reminder.minute };
+      reminderItem.enabled = reminder.enabled;
+    }
+
     for (const item of registry) {
       const definition: TaskDefinition = {
         name: item.name,
@@ -158,33 +186,108 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
         handler: item.create(this.deps),
       };
       this.definitions.set(definition.name, definition);
-
-      if (!definition.enabled) {
-        this.logger.warn(`[Task] 任务「${definition.title}」已停用，不注册调度`);
-        continue;
-      }
-
-      // 动态注册：cron 表达式来自配置（运行时才知道），故不能用 @Cron 装饰器
-      const job = CronJob.from({
-        cronTime: definition.cron,
-        onTick: () => {
-          void this.runTask(definition.name, TaskTrigger.AUTO, null);
-        },
-        start: true,
-        name: definition.name,
-        // 任务执行完才允许下一次触发：慢任务（如大批量删日志）不会因时间点密集而叠加
-        waitForCompletion: true,
-      });
-      this.schedulerRegistry.addCronJob(definition.name, job);
-      this.logger.log(
-        `[Task] 已注册定时任务「${definition.title}」(cron: ${definition.cron})，下次执行 ${job.nextDate().toISO()}`,
-      );
+      this.registerJob(definition);
     }
+
+    // 参数保存后热更新：只关心提醒相关键，重排 cron（无需重启）
+    this.reminderUnsubscribe = this.configService.onConfigChanged((key) => {
+      if (key.startsWith('sys.mail.reminder')) {
+        this.queueRescheduleReminder();
+      }
+    });
 
     await this.catchUpMissedTasks();
   }
 
+  /**
+   * 按任务定义注册 cron（停用则只记日志、不注册）。
+   * 抽成方法：启动注册与参数变更后的重排共用同一段逻辑。
+   */
+  private registerJob(definition: TaskDefinition): void {
+    if (!definition.enabled) {
+      this.logger.warn(`[Task] 任务「${definition.title}」已停用，不注册调度`);
+      return;
+    }
+    // 动态注册：cron 表达式来自配置（运行时才知道），故不能用 @Cron 装饰器
+    const job = CronJob.from({
+      cronTime: definition.cron,
+      onTick: () => {
+        void this.runTask(definition.name, TaskTrigger.AUTO, null);
+      },
+      start: true,
+      name: definition.name,
+      // 任务执行完才允许下一次触发：慢任务（如大批量删日志）不会因时间点密集而叠加
+      waitForCompletion: true,
+    });
+    this.schedulerRegistry.addCronJob(definition.name, job);
+    this.logger.log(
+      `[Task] 已注册定时任务「${definition.title}」(cron: ${definition.cron})，下次执行 ${job.nextDate().toISO()}`,
+    );
+  }
+
+  /**
+   * 读取每日提醒配置。
+   * 值来自 sys_config（后台「参数管理」），缺失/非法一律回退默认（18:00 开启）。
+   */
+  private async readReminderSetting(): Promise<{ enabled: boolean; hour: number; minute: number }> {
+    const [enabledRow, hourRow, minuteRow] = await Promise.all([
+      this.configService.getConfigData(REMINDER_CONFIG_KEYS.enabled),
+      this.configService.getConfigData(REMINDER_CONFIG_KEYS.hour),
+      this.configService.getConfigData(REMINDER_CONFIG_KEYS.minute),
+    ]);
+    return {
+      enabled: enabledRow?.configValue.trim() !== '0',
+      hour: this.parseConfigInt(hourRow?.configValue, 0, 23, DEFAULT_REMINDER_HOUR),
+      minute: this.parseConfigInt(minuteRow?.configValue, 0, 59, DEFAULT_REMINDER_MINUTE),
+    };
+  }
+
+  /** 解析整数配置；空值 / 非整数 / 越界回退默认值。 */
+  private parseConfigInt(raw: string | undefined, min: number, max: number, fallback: number): number {
+    const text = raw?.trim() ?? '';
+    if (!text) {
+      return fallback;
+    }
+    const value = Number(text);
+    return Number.isInteger(value) && value >= min && value <= max ? value : fallback;
+  }
+
+  /** 串行排队重排（连续改多个参数时避免并发删建同一 job）。 */
+  private queueRescheduleReminder(): void {
+    this.rescheduleChain = this.rescheduleChain
+      .then(() => this.rescheduleReminder())
+      .catch((error: unknown) => {
+        this.logger.error(`[Task] 每日学习提醒邮件重排失败: ${error instanceof Error ? error.message : String(error)}`);
+      });
+  }
+
+  /**
+   * 按最新参数重排「每日学习提醒邮件」：先摘旧 job，再按新 cron 注册；
+   * 停用时只摘不注册。参数保存后即时生效，无需重启。
+   */
+  private async rescheduleReminder(): Promise<void> {
+    const definition = this.definitions.get(REMINDER_TASK_NAME);
+    if (!definition) {
+      return;
+    }
+    const setting = await this.readReminderSetting();
+    definition.schedule = { kind: 'daily', hour: setting.hour, minute: setting.minute };
+    definition.cron = cronOf(definition.schedule);
+    definition.enabled = setting.enabled;
+
+    if (this.schedulerRegistry.doesExist('cron', definition.name)) {
+      this.schedulerRegistry.deleteCronJob(definition.name);
+    }
+    this.registerJob(definition);
+
+    const time = `${setting.hour}:${String(setting.minute).padStart(2, '0')}`;
+    this.logger.log(`[Task] 每日学习提醒邮件已按参数重排：${setting.enabled ? `${time} 启用` : '已停用'}`);
+  }
+
   onModuleDestroy(): void {
+    // 解除参数变更订阅，避免实例销毁后仍被回调
+    this.reminderUnsubscribe?.();
+    this.reminderUnsubscribe = null;
     // 主动摘除自己注册的 cron 任务：SchedulerRegistry 的清理只覆盖 @Cron 装饰器注册的那批
     for (const name of this.definitions.keys()) {
       if (this.schedulerRegistry.doesExist('cron', name)) {

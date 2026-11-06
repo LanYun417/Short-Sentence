@@ -172,11 +172,12 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       name: 'daily-reminder',
       title: '每日学习提醒邮件',
       description:
-        '18:30 给「今天还没完成每日目标」且开启邮件提醒的用户发送学习提醒' +
+        '18:00 给「今天还没完成每日目标」且开启邮件提醒的用户发送学习提醒' +
         '（腾讯云 SES 模板 66223，变量 nickname）；已完成目标的人不发。' +
+        '发送时间与开关可在「参数管理」的 sys.mail.reminderHour / reminderMinute / reminderEnabled 调整，保存后自动重排。' +
         '仅在邮件服务已启用且配置齐全时执行；单次最多 500 封，串行发送避免上游限流。',
-      // 傍晚 18:30：这时没做完的人还有时间补，做完的人不打扰（早上群发等于发广告）
-      schedule: { kind: 'daily', hour: 18, minute: 30 },
+      // 默认傍晚 18:00（可在参数管理调整）：这时没做完的人还有时间补，做完的人不打扰（早上群发等于发广告）
+      schedule: { kind: 'daily', hour: 18, minute: 0 },
       enabled: true,
       create: (deps) => async () => {
         await deps.sendDailyReminders();

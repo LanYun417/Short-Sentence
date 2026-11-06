@@ -9,8 +9,11 @@
 import { Module } from '@nestjs/common';
 import { MailSettingsController } from './mail-settings.controller.js';
 import { DailyReminderService } from './daily-reminder.service.js';
+import { ConfigModule } from '../config/config.module.js';
 
 @Module({
+  // ConfigModule：读取每日提醒的发送小时（sys.mail.reminderHour），用于「到点才发」的闸门
+  imports: [ConfigModule],
   controllers: [MailSettingsController],
   providers: [DailyReminderService],
   exports: [DailyReminderService],

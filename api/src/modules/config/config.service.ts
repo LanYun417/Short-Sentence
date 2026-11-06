@@ -35,6 +35,9 @@ export interface ConfigData {
 
 @Injectable()
 export class ConfigService {
+  /** 参数变更监听器（业务侧据此热更新，如定时任务按新时间重排）。 */
+  private readonly changeListeners = new Set<(configKey: string) => void>();
+
   constructor(private readonly prisma: PrismaService) {}
 
   /** Prisma 参数记录 → SysConfigBrief DTO。 */
@@ -115,6 +118,28 @@ export class ConfigService {
     return { configKey: row.configKey, configValue: row.configValue };
   }
 
+  /**
+   * 订阅参数变更（返回取消订阅函数）。
+   * 监听方异常不影响参数保存：值已落库，热更新失败最多是旧值继续生效。
+   */
+  onConfigChanged(listener: (configKey: string) => void): () => void {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
+    };
+  }
+
+  /** 通知参数变更（逐个 try，避免一个监听方抛错影响其它监听方）。 */
+  private emitConfigChanged(configKey: string): void {
+    for (const listener of this.changeListeners) {
+      try {
+        listener(configKey);
+      } catch {
+        // 忽略：热更新失败不影响参数保存
+      }
+    }
+  }
+
   /** 新增参数。 */
   async createConfig(input: CreateConfigDto): Promise<SysConfigBrief> {
     const exists = await this.prisma.sysConfig.findUnique({ where: { configKey: input.configKey } });
@@ -130,7 +155,9 @@ export class ConfigService {
         remark: input.remark || null,
       },
     });
-    return this.toSysConfigBrief(row);
+    const brief = this.toSysConfigBrief(row);
+    this.emitConfigChanged(brief.configKey);
+    return brief;
   }
 
   /** 编辑参数（键名不可改，内置参数仅可改值与名称/备注）。 */
@@ -160,6 +187,8 @@ export class ConfigService {
       configValue: row.configValue,
       remark: row.remark,
     });
+    // 通知业务侧热更新（如提醒时间改动后重排定时任务）
+    this.emitConfigChanged(row.configKey);
     return this.toSysConfigBrief(row);
   }
 

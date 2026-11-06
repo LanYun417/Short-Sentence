@@ -5,7 +5,7 @@
  * 1. 今天没有打卡记录（一道题没做）→ 要发；
  * 2. doneCount < goalCount（做了没达标）→ 要发；
  * 3. doneCount >= goalCount（已完成）→ 不发；
- * 4. 18 点前（深夜补跑）一律不发；
+ * 4. 配置的发送小时（默认 18 点）前（深夜补跑）一律不发；
  * 5. 今天已经收到过提醒的人 → 不重复发（重启补跑也不重复）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +23,8 @@ function buildService(options: {
   checkins: Array<{ userId: bigint; doneCount: number; goalCount: number }>;
   /** 今天已发过提醒的用户 id（模拟重启后重跑） */
   alreadySent?: string[];
+  /** sys.mail.reminderHour 的配置值（默认 18 点） */
+  reminderHour?: string;
 }) {
   const sendDailyReminder = vi.fn(async () => undefined);
   const fakePrisma = {
@@ -38,8 +40,19 @@ function buildService(options: {
     sAdd: vi.fn(async () => true),
     expire: vi.fn(async () => true),
   };
-  const service = new DailyReminderService(fakePrisma as never, fakeMail as never, fakeRedis as never);
-  return { service, sendDailyReminder, fakeMail, fakeRedis };
+  // 后台「参数管理」可改发送小时：测试里按需返回，缺省 18 点
+  const fakeConfig = {
+    getConfigData: vi.fn(async (key: string) =>
+      key === 'sys.mail.reminderHour' ? { configKey: key, configValue: options.reminderHour ?? '18' } : null,
+    ),
+  };
+  const service = new DailyReminderService(
+    fakePrisma as never,
+    fakeMail as never,
+    fakeRedis as never,
+    fakeConfig as never,
+  );
+  return { service, sendDailyReminder, fakeMail, fakeRedis, fakeConfig };
 }
 
 describe('DailyReminderService', () => {
@@ -96,7 +109,7 @@ describe('DailyReminderService', () => {
     expect(sendDailyReminder).not.toHaveBeenCalled();
   });
 
-  it('18 点前（深夜补跑）不发', async () => {
+  it('配置的发送小时前（深夜补跑）不发', async () => {
     vi.setSystemTime(new Date(2026, 9, 30, 2, 0, 0));
     const { service, sendDailyReminder } = buildService({
       candidates: [{ id: 1n, email: 'late@example.com', nickname: '深夜' }],
@@ -106,6 +119,20 @@ describe('DailyReminderService', () => {
     await service.run();
 
     expect(sendDailyReminder).not.toHaveBeenCalled();
+  });
+
+  it('按后台配置的发送小时判断（改成 9 点后，上午也能发）', async () => {
+    vi.setSystemTime(new Date(2026, 9, 30, 10, 0, 0));
+    const { service, sendDailyReminder } = buildService({
+      candidates: [{ id: 1n, email: 'morning@example.com', nickname: '上午' }],
+      checkins: [],
+      reminderHour: '9',
+    });
+
+    await service.run();
+
+    expect(sendDailyReminder).toHaveBeenCalledTimes(1);
+    expect(sendDailyReminder).toHaveBeenCalledWith('morning@example.com', '上午');
   });
 
   it('今天已提醒过的人不再重复发（重启补跑幂等）', async () => {

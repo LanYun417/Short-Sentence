@@ -1,7 +1,8 @@
 /**
  * 每日学习提醒邮件（定时任务执行体）：**只提醒「今天还没完成目标」的人**。
  *
- * 触发时间：每天 18:30（见 task.registry）。
+ * 触发时间：默认每天 18:00（见 task.registry）；可在后台「参数管理」的
+ * sys.mail.reminderHour / reminderMinute 调整，保存后由 TaskService 自动重排。
  * 为什么是傍晚：早上群发等于给所有人发广告；傍晚才真正「有用」——这时还没做完的人
  * 还有时间补，已经做完的人不该再被打扰。
  *
@@ -10,7 +11,7 @@
  * - 有记录但 doneCount < goalCount → 未完成，要提醒；
  * - doneCount >= goalCount → 已完成，**跳过**。
  *
- * 只发给「我的 → 每日提醒」主动开启（`client_user.email_reminder=1`）且账号启用的用户。
+ * 只发给「我的 → 每日学习提醒（邮件）」主动开启（`client_user.email_reminder=1`）且账号启用的用户。
  *
  * 三个节流：
  * 1. 单次最多 500 封；
@@ -23,6 +24,7 @@ import { config } from '../../common/config/config.js';
 import { MailService } from '../../common/mail/mail.service.js';
 import { RedisService } from '../../common/redis/redis.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { ConfigService } from '../config/config.service.js';
 
 @Injectable()
 export class DailyReminderService {
@@ -33,13 +35,13 @@ export class DailyReminderService {
   /** 相邻两封的间隔（毫秒） */
   private static readonly GAP_MS = 200;
   /**
-   * 最早可发送的小时（18 点）。
+   * 默认发送小时（配置缺失/非法时回退 18 点）。
    *
-   * 为什么要有这个闸门：TaskService 对「本周期尚未成功」的任务会在启动时补跑，
-   * 若服务凌晨重启，补跑会在深夜给用户发提醒——那是打扰而不是提醒。
-   * 18 点前一律跳过（当天后续的补跑也不会再来，宁可不发）。
+   * 为什么要有「到点才发」的闸门：TaskService 对「本周期尚未成功」的任务会在启动时补跑，
+   * 若服务在计划时刻之前重启，补跑不该在深夜给用户发提醒——那是打扰而不是提醒。
+   * 实际小时以 sys.mail.reminderHour 为准（后台「参数管理」可改）。
    */
-  private static readonly EARLIEST_HOUR = 18;
+  private static readonly DEFAULT_HOUR = 18;
   /** 当天已发集合的保留时长（跨天后自然失效） */
   private static readonly SENT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -47,6 +49,7 @@ export class DailyReminderService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly redis: RedisService,
+    private readonly configService: ConfigService,
   ) {}
 
   /** 本地时区的今天（YYYY-MM-DD），与 CheckinService 同口径。 */
@@ -57,12 +60,24 @@ export class DailyReminderService {
     return `${now.getFullYear()}-${month}-${day}`;
   }
 
+  /** 读取配置的发送小时（0-23）；缺失/非法回退默认 18 点。 */
+  private async reminderHour(): Promise<number> {
+    const row = await this.configService.getConfigData('sys.mail.reminderHour');
+    const text = row?.configValue.trim() ?? '';
+    if (!text) {
+      return DailyReminderService.DEFAULT_HOUR;
+    }
+    const value = Number(text);
+    return Number.isInteger(value) && value >= 0 && value <= 23 ? value : DailyReminderService.DEFAULT_HOUR;
+  }
+
   /** 执行一次提醒群发。 */
   async run(): Promise<void> {
-    // 深夜补跑直接跳过（见 EARLIEST_HOUR 的说明）
+    // 未到配置的发送小时直接跳过（见 DEFAULT_HOUR 的说明）
     const hour = new Date().getHours();
-    if (hour < DailyReminderService.EARLIEST_HOUR) {
-      this.logger.log(`[DailyReminder] 当前 ${hour} 点不在发送时段（18 点后），本次跳过`);
+    const earliestHour = await this.reminderHour();
+    if (hour < earliestHour) {
+      this.logger.log(`[DailyReminder] 当前 ${hour} 点早于配置的发送时间（${earliestHour} 点），本次跳过`);
       return;
     }
 

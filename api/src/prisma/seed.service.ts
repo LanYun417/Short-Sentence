@@ -1488,6 +1488,24 @@ const CONFIG_SEEDS: ConfigSeed[] = [
     configValue: '15',
     remark: '登录锁定持续时间，超过后自动解除锁定',
   },
+  {
+    configName: '每日提醒发送小时',
+    configKey: 'sys.mail.reminderHour',
+    configValue: '18',
+    remark: '每日学习提醒邮件的发送小时（0-23，默认 18 点）；保存后自动重排定时任务，无需重启',
+  },
+  {
+    configName: '每日提醒发送分钟',
+    configKey: 'sys.mail.reminderMinute',
+    configValue: '0',
+    remark: '每日学习提醒邮件的发送分钟（0-59，默认 0 分）',
+  },
+  {
+    configName: '每日提醒开关',
+    configKey: 'sys.mail.reminderEnabled',
+    configValue: '1',
+    remark: '每日学习提醒邮件总开关（1 开启 / 0 停用）；停用后不注册调度',
+  },
 ];
 
 /** 写入内置系统参数（幂等：按 configKey 去重，已存在的键不覆盖现值，便于运维自行调参）。 */

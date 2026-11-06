@@ -14,6 +14,7 @@ import { SentenceModule } from '../sentence/sentence.module.js';
 import { WordRootModule } from '../client/word-root/word-root.module.js';
 import { SentenceCardModule } from '../client/sentence-card/sentence-card.module.js';
 import { MailModule } from '../mail/mail.module.js';
+import { ConfigModule } from '../config/config.module.js';
 
 @Module({
   // SentenceModule：把「短句题库生成」并入本模块的任务注册表，
@@ -21,7 +22,8 @@ import { MailModule } from '../mail/mail.module.js';
   // WordRootModule：词根词典每日入库
   // SentenceCardModule：每日句签 AI 生成
   // MailModule：每日学习提醒邮件（DailyReminderService.run）
-  imports: [SentenceModule, WordRootModule, SentenceCardModule, MailModule],
+  // ConfigModule：读取/热更新每日提醒的发送时间与开关（sys_config）
+  imports: [SentenceModule, WordRootModule, SentenceCardModule, MailModule, ConfigModule],
   controllers: [TaskController],
   providers: [TaskService],
 })
