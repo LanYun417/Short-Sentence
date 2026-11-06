@@ -61,24 +61,6 @@ function dateText(value: string): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-/** 「在手机上打开」：复制当前页面地址，方便桌面端发到手机。 */
-const pageUrl = ref('');
-const copied = ref(false);
-onMounted(() => {
-  pageUrl.value = window.location.href;
-});
-async function copyLink(): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(pageUrl.value || window.location.href);
-    copied.value = true;
-    setTimeout(() => {
-      copied.value = false;
-    }, 2000);
-  } catch {
-    copied.value = false;
-  }
-}
-
 /** 卖点。 */
 const FEATURES = [
   { icon: 'i-lucide-headphones', title: '通勤刷题', desc: '碎片时间，随时随地刷两题' },
@@ -218,51 +200,6 @@ const FEATURES = [
         <UIcon :name="f.icon" class="h-6 w-6 text-sky-500" />
         <p class="mt-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100">{{ f.title }}</p>
         <p class="mt-1 text-xs leading-relaxed text-slate-400">{{ f.desc }}</p>
-      </div>
-    </section>
-
-    <!-- ============ 在手机上打开 + 底部 CTA ============ -->
-    <section
-      class="anim-in mt-5 overflow-hidden rounded-3xl bg-linear-to-br from-sky-500 via-indigo-500 to-violet-500 p-6 text-center md:p-8"
-      style="animation-delay: 140ms"
-    >
-      <h2 class="text-lg font-bold text-white md:text-xl">在手机上打开本页</h2>
-      <p class="mx-auto mt-2 max-w-sm text-sm text-white/85">桌面端可复制下方链接，发到手机浏览器打开即可下载。</p>
-
-      <div class="mt-4 flex items-center gap-2">
-        <div
-          class="min-w-0 flex-1 truncate rounded-full bg-white/15 px-4 py-2.5 text-left text-xs text-white/90 ring-1 ring-white/20"
-        >
-          {{ pageUrl || '正在获取页面地址…' }}
-        </div>
-        <UButton
-          :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
-          :variant="copied ? 'solid' : 'outline'"
-          :color="copied ? 'success' : 'neutral'"
-          class="shrink-0"
-          @click="copyLink"
-        >
-          {{ copied ? '已复制' : '复制' }}
-        </UButton>
-      </div>
-
-      <div class="mt-6">
-        <a
-          v-if="canDownload"
-          :href="downloadUrl"
-          download
-          class="hover-lift inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-base font-semibold text-sky-600 shadow-lg shadow-sky-900/20 transition hover:bg-sky-50"
-        >
-          <UIcon name="i-lucide-download" class="h-5 w-5" />
-          立即下载
-        </a>
-        <div
-          v-else
-          class="inline-flex items-center gap-2 rounded-full bg-white/90 px-7 py-3 text-base font-semibold text-slate-400"
-        >
-          <UIcon name="i-lucide-hourglass" class="h-5 w-5" />
-          安装包即将上线
-        </div>
       </div>
     </section>
   </div>

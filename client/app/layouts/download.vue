@@ -8,7 +8,9 @@
  * 区别是这里保留了一根**极简**顶栏：品牌（点回首页）+ 主题切换——落地页仍需
  * 品牌识别与暗色切换，但不放刷题/题库/AI/我的这类应用内导航，也不放登录/头像。
  *
- * 不做 `overflow-hidden`：落地页比视口高，需要正常浏览器滚动。
+ * 滚动与 default 布局保持一致：外壳定高（h-dvh + overflow-hidden），内容交给
+ * `AppScrollArea` 内部滚动——它隐藏原生滚动条、自绘悬浮细滚动条，不占布局宽度，
+ * 与站内其它页面手感统一（原生滚动条会挤动布局且观感割裂）。
  */
 const colorMode = useColorMode();
 
@@ -33,11 +35,11 @@ function toggleTheme(): void {
 
 <template>
   <div
-    class="min-h-dvh bg-linear-to-b from-sky-50/60 via-slate-50 to-slate-50 text-slate-900 transition-colors dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 dark:text-slate-100"
+    class="flex h-dvh flex-col overflow-hidden bg-linear-to-b from-sky-50/60 via-slate-50 to-slate-50 text-slate-900 transition-colors dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 dark:text-slate-100"
   >
     <!-- 极简顶栏：品牌（回首页）+ 主题切换，无应用内导航 / 登录态 -->
     <header
-      class="anim-fade border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-slate-800/70 dark:bg-slate-900/80"
+      class="anim-fade shrink-0 border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-slate-800/70 dark:bg-slate-900/80"
     >
       <div class="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
         <NuxtLink to="/" class="group flex items-center gap-2">
@@ -61,6 +63,11 @@ function toggleTheme(): void {
       </div>
     </header>
 
-    <slot />
+    <!-- 内容区自己滚：与 default 布局同款自绘滚动条（隐藏原生滚动条、不占布局宽度） -->
+    <main class="min-h-0 flex-1">
+      <AppScrollArea>
+        <slot />
+      </AppScrollArea>
+    </main>
   </div>
 </template>
