@@ -38,6 +38,13 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 
 defineOptions({ name: 'SentenceList' });
 
+/**
+ * 宽屏启用「三段式撑满」布局：表格固定高度、内部滚动，分页常驻内容区底部。
+ * 窄屏(<768px)不传 height，退回整页滚动（筛选换行后固定高度会把表格压得过矮）。
+ */
+const isWideScreen = useMediaQuery('(min-width: 768px)');
+const sentenceTableHeight = computed<string | undefined>(() => (isWideScreen.value ? '100%' : undefined));
+
 /** 状态 → 标签样式与文案 */
 const STATUS_TAG: Record<SentenceStatus, { type: 'primary' | 'success' | 'info'; label: string }> = {
   pending_image: { type: 'info', label: '待生成' },
@@ -702,9 +709,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="sentence-page">
+  <div class="sentence-page table-page">
     <!-- 查询表单：关键词 / 分类 / 状态 / 难度 -->
-    <SearchForm @search="search" @reset="reset">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="英文句子 / 中文释义" clearable @keyup.enter="search" />
       </el-form-item>
@@ -729,8 +736,8 @@ onMounted(async () => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="table-page__toolbar flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span class="text-[15px] font-semibold text-ink">题库列表（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'sentence:add'" type="primary" @click="handleCreate">新增题目</el-button>
@@ -812,72 +819,82 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- 题目表 -->
-      <el-table v-loading="loading" :data="list" border row-key="id" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="45" :reserve-selection="true" />
-        <el-table-column label="配图" width="110">
-          <template #default="{ row }">
-            <el-image
-              v-if="row.imageUrl"
-              :src="`${row.imageUrl}?scale=200`"
-              :preview-src-list="[row.imageUrl]"
-              preview-teleported
-              fit="cover"
-              style="width: 88px; height: 50px; border-radius: 6px"
-            />
-            <span v-else class="text-gray-400">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sentenceEn" label="英文句子" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="translationZh" label="中文释义" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="ipa" label="音标" min-width="120" show-overflow-tooltip />
-        <el-table-column label="分类" width="100">
-          <template #default="{ row }">{{ row.categoryName ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="难度" width="80">
-          <template #default="{ row }">{{ DIFFICULTY_LABEL[row.difficulty] ?? row.difficulty }}</template>
-        </el-table-column>
-        <el-table-column label="来源" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.source === 'ai' ? 'success' : 'info'" size="small">
-              {{ row.source === 'ai' ? 'AI' : '手工' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="STATUS_TAG[row.status as SentenceStatus]?.type ?? 'info'" size="small">
-              {{ STATUS_TAG[row.status as SentenceStatus]?.label ?? row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
-              >编辑</el-button
-            >
-            <el-button
-              v-permission="'sentence:gen'"
-              link
-              type="warning"
-              :loading="regeneratingIds.has((row as SentenceItem).id)"
-              :disabled="regeneratingIds.has((row as SentenceItem).id)"
-              @click="handleOpenRegen(row as SentenceItem)"
-              >重新生图</el-button
-            >
-            <el-button v-permission="'sentence:remove'" link type="danger" @click="handleOffline(row as SentenceItem)"
-              >下架</el-button
-            >
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 题目表：宽屏固定高度、表体内部滚动，分页始终留在内容区底部 -->
+      <div class="table-page__table">
+        <el-table
+          v-loading="loading"
+          :data="list"
+          border
+          row-key="id"
+          :height="sentenceTableHeight"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="45" :reserve-selection="true" />
+          <el-table-column label="配图" width="110">
+            <template #default="{ row }">
+              <el-image
+                v-if="row.imageUrl"
+                :src="`${row.imageUrl}?scale=200`"
+                :preview-src-list="[row.imageUrl]"
+                preview-teleported
+                fit="cover"
+                style="width: 88px; height: 50px; border-radius: 6px"
+              />
+              <span v-else class="text-gray-400">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sentenceEn" label="英文句子" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="translationZh" label="中文释义" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="ipa" label="音标" min-width="120" show-overflow-tooltip />
+          <el-table-column label="分类" width="100">
+            <template #default="{ row }">{{ row.categoryName ?? '—' }}</template>
+          </el-table-column>
+          <el-table-column label="难度" width="80">
+            <template #default="{ row }">{{ DIFFICULTY_LABEL[row.difficulty] ?? row.difficulty }}</template>
+          </el-table-column>
+          <el-table-column label="来源" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.source === 'ai' ? 'success' : 'info'" size="small">
+                {{ row.source === 'ai' ? 'AI' : '手工' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="STATUS_TAG[row.status as SentenceStatus]?.type ?? 'info'" size="small">
+                {{ STATUS_TAG[row.status as SentenceStatus]?.label ?? row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
+                >编辑</el-button
+              >
+              <el-button
+                v-permission="'sentence:gen'"
+                link
+                type="warning"
+                :loading="regeneratingIds.has((row as SentenceItem).id)"
+                :disabled="regeneratingIds.has((row as SentenceItem).id)"
+                @click="handleOpenRegen(row as SentenceItem)"
+                >重新生图</el-button
+              >
+              <el-button v-permission="'sentence:remove'" link type="danger" @click="handleOffline(row as SentenceItem)"
+                >下架</el-button
+              >
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

@@ -136,6 +136,85 @@
   justify-content: center;
 }
 
+/* ============================================================
+ * 三段式列表页（筛选 + 表格 + 分页撑满内容区）
+ *
+ * 适用：结构简单、只有「筛选区 / 表格卡片 / 分页」的列表页。
+ * 页面根节点加 `table-page`，内部按下面四个类标记：
+ *   table-page__filter     —— 筛选表单（固定高度）
+ *   table-page__card       —— 表格所在的 el-card（吃掉剩余高度）
+ *   table-page__toolbar    —— 卡片内工具栏（固定高度）
+ *   table-page__table      —— 包住 el-table 的一层，el-table 传 height="100%"
+ *   table-page__pagination —— Pagination（固定高度，始终可见）
+ *
+ * 布局链：layout-content(定高) → content-scrollbar → app-main → 页面根节点。
+ * 用 :has() 做 opt-in：只有声明了 .table-page 的页面才把内容区滚动关掉，
+ * 其他页面（长表单、多卡片、图表页）保持原来的整页滚动，互不影响。
+ * el-table 的 height="100%" 会固定表头、让表体在自身内部滚动，
+ * 因此分页永远停在内容区底部，不必滑到页面最下方去点。
+ *
+ * 窄屏(<768px)不启用：筛选条件换行后高度不可控，固定布局会把表格压得过矮，
+ * 此时退回原来的整页滚动更稳妥。
+ * ========================================================== */
+@media (width >= 768px) {
+  /* 带 .layout-content 前缀：特异性压过 AppMain.vue 的 scoped 规则(.app-main[data-v-xxx]) */
+  .layout-content .app-main:has(> .table-page) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* 内容区不再整体滚动；滚动只发生在表格内部 */
+  .content-scrollbar:has(.table-page) .el-scrollbar__wrap {
+    overflow: hidden;
+  }
+
+  .content-scrollbar:has(.table-page) .el-scrollbar__view {
+    height: 100%;
+  }
+
+  .table-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .table-page__filter,
+  .table-page__toolbar,
+  .table-page__pagination {
+    flex: 0 0 auto;
+  }
+
+  .table-page__card {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .table-page__card > .el-card__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* absolute 让 el-table 的 height:100% 有确定的参照高度（父级是 flex 项） */
+  .table-page__table {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .table-page__table > .el-table {
+    position: absolute;
+    inset: 0;
+  }
+}
+
 /* 注：原 .text-ellipsis / .full-height 已移除——与 Tailwind 的 `truncate` / `h-full` 完全等价，
    统一改用 Tailwind 内置类，避免自定义工具类与框架重复。 */
 
