@@ -50,6 +50,12 @@ const inputRef = ref<{ inputRef?: HTMLInputElement } | null>(null);
 const flipped = computed(() => props.result !== null);
 
 /**
+ * 本次作答增加的经验（答题经验 + 每日达标奖励）。
+ * 0 不展示：重复提交命中幂等时后端返回 0，避免虚报；与 App 端 `totalXp` 同口径。
+ */
+const totalXp = computed(() => (props.result?.xpEarned ?? 0) + (props.result?.goalBonus ?? 0));
+
+/**
  * 是否走拼词作答。
  * 词块由后端随题下发；万一缺失（旧缓存、接口异常）自动回落到输入框，不至于卡住。
  */
@@ -488,15 +494,26 @@ async function onSubmitReport(): Promise<void> {
           >
             <UIcon :name="result?.isCorrect ? 'i-lucide-check-circle-2' : 'i-lucide-x-circle'" class="h-5 w-5" />
             <span class="font-semibold">{{ result?.isCorrect ? '答对了' : '再想想' }}</span>
-            <UButton
-              variant="ghost"
-              class="ml-auto transition-transform duration-200"
-              :class="[favPop && 'scale-125', result?.favorited && '[&_svg]:fill-current']"
-              :color="result?.favorited ? 'warning' : 'neutral'"
-              icon="i-lucide-star"
-              title="收藏"
-              @click="onFavorite"
-            />
+            <!-- 翻转后即时反馈本次增加的经验（答题 + 达标奖励）；0 不展示，与 App 端 totalXp 同口径 -->
+            <div class="ml-auto flex shrink-0 items-center gap-2">
+              <span
+                v-if="totalXp > 0"
+                data-testid="xp-earned"
+                class="anim-xp inline-flex items-center gap-0.5 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-bold tabular-nums text-amber-600 ring-1 ring-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
+              >
+                <UIcon name="i-lucide-zap" class="h-3.5 w-3.5" />
+                +{{ totalXp }} XP
+              </span>
+              <UButton
+                variant="ghost"
+                class="transition-transform duration-200"
+                :class="[favPop && 'scale-125', result?.favorited && '[&_svg]:fill-current']"
+                :color="result?.favorited ? 'warning' : 'neutral'"
+                icon="i-lucide-star"
+                title="收藏"
+                @click="onFavorite"
+              />
+            </div>
           </div>
 
           <!--

@@ -232,6 +232,23 @@
   animation: ss-blob 20s ease-in-out infinite;
 }
 
+/* 经验值徽标：从下方弹入（与 App 端 XpBadge 同手感） */
+@keyframes ss-xp-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.anim-xp {
+  animation: ss-xp-pop 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* ===== 今日进度 Hero：「液态流体 + 星光」=====
    液态主体由 HeroAurora 的 WebGL 着色器实时合成（域扭曲 FBM，翻卷 / 拉丝 / 光泽），
    纯 CSS 径向光斑无法做出这种液体结构。这里只保留 WebGL 不可用时的静态兜底渐变，
@@ -546,6 +563,7 @@
   .anim-breathe,
   .anim-shine,
   .anim-blob,
+  .anim-xp,
   .ss-star-flow,
   .ss-star,
   .anim-stagger,
