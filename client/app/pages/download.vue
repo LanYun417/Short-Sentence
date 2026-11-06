@@ -93,7 +93,7 @@ const FEATURES = [
             class="anim-breathe pointer-events-none absolute -inset-3 rounded-full bg-white/30 blur-2xl"
             aria-hidden="true"
           />
-          <AppLogo class="anim-float relative h-full w-full drop-shadow-lg" />
+          <AppLogo class="relative h-full w-full drop-shadow-lg" />
         </div>
 
         <h1 class="mt-5 text-2xl font-bold text-white drop-shadow-sm md:text-3xl">把短句装进口袋</h1>
