@@ -2,6 +2,8 @@
 /**
  * 独立「下载 App」落地页（替代原先 profile / 登录页里的弹窗式下载入口）。
  *
+ * - 用专属 `download` 布局，**脱离 default 应用外壳**（无顶栏导航、无移动端底部 Tab），
+ *   是真正独立的全屏落地页；布局只保留品牌 + 主题切换的极简顶栏。
  * - 版本信息走公开接口 /client/app/latest（无需登录），SSR 预取让首屏直出最新版本，
  *   服务端无令牌也能取（与需登录的业务接口不同，这里不依赖 ss_token）。
  * - 安装包下载走专用接口 /api/client/app/download/:id——绕过 /static 防盗链并统计下载量。
@@ -9,6 +11,8 @@
  */
 import type { ApiEnvelope, LatestAppVersion } from '~/types';
 import { apiFetch } from '~/composables/useApi';
+
+definePageMeta({ layout: 'download' });
 
 usePageSeo({
   title: '下载短句 App',
