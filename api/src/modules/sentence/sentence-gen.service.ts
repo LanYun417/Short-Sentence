@@ -747,8 +747,17 @@ export class SentenceGenService {
           this.logger.warn(`[SentenceGen] 审核剔除 ${reviewed.rejected.length} 条，样例：${sample}`);
         }
 
-        const inserted = await this.persistDrafts(
+        // ---------- 四阶段：逐词释义（选词模式的悬浮词义）----------
+        // 只对审核通过的题做，避免给被剔除的题白烧调用；失败降级为无释义，不阻断入库。
+        await this.heartbeat(taskId, 'annotating');
+        const annotated = await this.runStage(
+          '逐词释义',
+          () => this.sentenceGen.annotateBatch(reviewed.approved, Number(taskId)),
           reviewed.approved,
+        );
+
+        const inserted = await this.persistDrafts(
+          annotated,
           taskId,
           task.festivalName,
           task.festivalDate,
@@ -1263,6 +1272,11 @@ export class SentenceGenService {
           ipa: draft.ipa || null,
           // 解析允许缺失（模型漏输出时不阻断入库，用户端只是不显示解析块）
           explanation: draft.explanation?.trim() ? draft.explanation.trim().slice(0, 500) : null,
+          // 选词模式逐词释义：落 JSON 字符串（无释义时 null，用户端不显示悬浮提示）
+          wordMeanings:
+            draft.wordMeanings && Object.keys(draft.wordMeanings).length > 0
+              ? JSON.stringify(draft.wordMeanings).slice(0, 4000)
+              : null,
           scenePrompt: scenePrompt.slice(0, 500),
           source: 'ai',
           status: 'pending_image',

@@ -28,6 +28,7 @@ const TYPE_LABEL: Record<string, string> = {
   sentence_gen: '生题',
   sentence_polish: '优化',
   sentence_review: '审核',
+  word_meanings: '逐词释义',
   image_gen: '生图',
   expand: '造句',
   word_root: '词根',
@@ -46,6 +47,7 @@ const BIZ_HINT: Record<string, string> = {
   sentence_gen: '生成批次 id',
   sentence_polish: '生成批次 id',
   sentence_review: '生成批次 id',
+  word_meanings: '生成批次 id',
   sentence_card_gen: '句签业务日期',
   collectible_gen: '句签业务日期（旧命名）',
   image_gen: '无关联（恒 0）',
@@ -206,6 +208,7 @@ onMounted(async () => {
           <el-option label="生题" value="sentence_gen" />
           <el-option label="优化" value="sentence_polish" />
           <el-option label="审核" value="sentence_review" />
+          <el-option label="逐词释义" value="word_meanings" />
           <el-option label="生图" value="image_gen" />
           <el-option label="造句" value="expand" />
           <el-option label="词根" value="word_root" />

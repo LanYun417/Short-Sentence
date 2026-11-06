@@ -22,11 +22,58 @@ interface WordChip {
 const props = defineProps<{
   /** 打乱后的词块（后端下发） */
   words: string[];
+  /** 逐词中文释义（词 → 含义）；旧题/无数据为 null，不显示悬浮提示 */
+  wordMeanings?: Record<string, string> | null;
   /** 提交中：禁止继续点选 */
   disabled?: boolean;
 }>();
 
 const emit = defineEmits<{ (e: 'update:answer', value: string): void }>();
+
+/** 词块悬浮提示：当前显示的中文释义与锚点位置（null = 不显示）。 */
+interface WordTip {
+  text: string;
+  meaning: string;
+  /** 视口坐标（fixed 定位） */
+  x: number;
+  y: number;
+  /** 显示在词块上方还是下方（顶部空间不足时翻到下方） */
+  above: boolean;
+}
+const tip = ref<WordTip | null>(null);
+
+/** 取词块的中文释义（无数据返回 undefined，不显示提示）。 */
+function meaningOf(chip: WordChip): string | undefined {
+  return props.wordMeanings?.[chip.text];
+}
+
+/**
+ * 悬浮 / 聚焦词块时显示释义。
+ * 用 Teleport 到 body 的 fixed 定位，避免被已选区的横向滚动容器裁掉。
+ */
+function showTip(chip: WordChip, event: Event): void {
+  const meaning = meaningOf(chip);
+  const el = event.currentTarget as HTMLElement | null;
+  if (!meaning || !el) {
+    return;
+  }
+  const rect = el.getBoundingClientRect();
+  // 左右留 64px 余量，避免贴边词块的提示跑出视口
+  const margin = 64;
+  const above = rect.top > 56;
+  tip.value = {
+    text: chip.text,
+    meaning,
+    x: Math.min(Math.max(rect.left + rect.width / 2, margin), window.innerWidth - margin),
+    y: above ? rect.top - 8 : rect.bottom + 8,
+    above,
+  };
+}
+
+/** 隐藏词块释义。 */
+function hideTip(): void {
+  tip.value = null;
+}
 
 /**
  * 已选区横向滚动：
@@ -161,6 +208,12 @@ function unpick(chip: WordChip): void {
 onMounted(() => {
   updateScrollState();
   selectedRef.value?.addEventListener('scroll', updateScrollState, { passive: true });
+  // 任何滚动（含页面外层滚动）都会让 fixed 提示错位，直接收起
+  window.addEventListener('scroll', hideTip, true);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', hideTip, true);
 });
 </script>
 
@@ -194,6 +247,11 @@ onMounted(() => {
           type="button"
           :disabled="disabled"
           class="flex items-center justify-center rounded-lg bg-white px-2.5 py-1.5 text-[15px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:ring-rose-300 active:scale-95 disabled:opacity-60 dark:bg-slate-700 dark:text-slate-100 dark:ring-slate-600"
+          :aria-label="meaningOf(chip) ? `${chip.text}，${meaningOf(chip)}` : chip.text"
+          @mouseenter="showTip(chip, $event)"
+          @mouseleave="hideTip"
+          @focus="showTip(chip, $event)"
+          @blur="hideTip"
           @click="unpick(chip)"
         >
           {{ chip.text }}
@@ -244,11 +302,36 @@ onMounted(() => {
             ? 'cursor-default bg-slate-100 text-slate-300 ring-slate-200 dark:bg-slate-800/50 dark:text-slate-600 dark:ring-slate-700'
             : 'bg-white text-slate-700 shadow-sm ring-slate-200 hover:-translate-y-0.5 hover:ring-sky-300 active:scale-95 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600'
         "
+        :aria-label="meaningOf(chip) ? `${chip.text}，${meaningOf(chip)}` : chip.text"
+        @mouseenter="showTip(chip, $event)"
+        @mouseleave="hideTip"
+        @focus="showTip(chip, $event)"
+        @blur="hideTip"
         @click="pick(chip)"
       >
         {{ chip.text }}
       </button>
     </div>
+
+    <!-- 词义提示：Teleport 到 body + fixed 定位，避免被横向滚动容器裁剪 -->
+    <Teleport to="body">
+      <Transition name="tip">
+        <div
+          v-if="tip"
+          class="pointer-events-none fixed z-50 max-w-[16rem] rounded-lg bg-slate-900 px-2.5 py-1.5 text-center text-xs leading-snug font-medium text-white shadow-lg ring-1 ring-black/10 dark:bg-slate-100 dark:text-slate-900"
+          :style="{
+            left: `${tip.x}px`,
+            top: `${tip.y}px`,
+            transform: tip.above ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+          }"
+          role="tooltip"
+        >
+          <span class="text-white/55 dark:text-slate-500">{{ tip.text }}</span>
+          <span class="mx-1 text-white/30 dark:text-slate-300">·</span>
+          {{ tip.meaning }}
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -297,10 +380,23 @@ onMounted(() => {
   transition: transform 0.22s ease;
 }
 
+/* 词义提示：快速淡入淡出（位置随词块变化，不做位移过渡） */
+.tip-enter-active,
+.tip-leave-active {
+  transition: opacity 0.12s ease;
+}
+
+.tip-enter-from,
+.tip-leave-to {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chip-enter-active,
   .chip-leave-active,
-  .chip-move {
+  .chip-move,
+  .tip-enter-active,
+  .tip-leave-active {
     transition: none;
   }
 }

@@ -554,6 +554,107 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   }
 
   /**
+   * 四阶段（逐词释义）：为每句生成选词模式的逐词中文含义。
+   *
+   * 为什么单独一步而不是塞进生题提示词：生题一次要顾句式/释义/音标/难度/解析，
+   * 再让它逐词对齐容易漏项；单独一步输入只有句子，模型能专注做「语境词义」。
+   * 返回同数量、同顺序：漏掉/解析失败的条目保留原稿，不阻断入库。
+   */
+  async annotateBatch(drafts: SentenceDraft[], bizId?: number): Promise<SentenceDraft[]> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    if (drafts.length === 0) {
+      return [];
+    }
+
+    const systemPrompt = [
+      'You are an English-Chinese lexicographer helping learners read a sentence word by word.',
+      'For EACH sentence, give the Chinese meaning of EVERY word AS USED IN THAT SENTENCE (contextual sense, not a dictionary list).',
+      'Hard requirements:',
+      '1. Output JSON only, shaped as {"items":[{"index":0,"words":[{"word":"...","meaning":"..."}]}]}. No explanations.',
+      '2. Split the sentence by whitespace. Every token must appear exactly once, in the original order.',
+      '3. Keep punctuation attached to the token exactly as it appears (e.g. "minutes?", "I\'m", "don\'t").',
+      '4. meaning: 1-6 Chinese characters, the sense in THIS sentence. Never output English, pinyin, or multiple senses.',
+      '5. Function words get their grammatical meaning in context (e.g. "to" → "去/到（不定式）", "the" → "这个/那个").',
+      '6. Contractions get their full meaning (e.g. "I\'m" → "我是", "don\'t" → "不要").',
+      '7. Never skip a token, including "a", "the", "to", "and".',
+    ].join('\n');
+
+    const userContent =
+      'Sentences:\n' +
+      JSON.stringify(drafts.map((draft, index) => ({ index, sentenceEn: draft.sentenceEn }))) +
+      '\nOutput JSON with shape {"items":[{"index":0,"words":[{"word":"","meaning":""}]}]}.';
+
+    let annotated: SentenceDraft[] = drafts;
+    await this.chat('word_meanings', systemPrompt, userContent, 0.2, {
+      bizId,
+      validate: (content) => {
+        const map = this.parseWordMeanings(content, drafts);
+        if (map.size === 0) {
+          throw new AiProviderError('逐词释义接口未返回可用结果', { retryable: true });
+        }
+        annotated = drafts.map((draft, index) => ({
+          ...draft,
+          wordMeanings: map.get(index) ?? draft.wordMeanings,
+        }));
+      },
+    });
+    return annotated;
+  }
+
+  /**
+   * 解析逐词释义结果（index → { token: 中文含义 }）。
+   * 只保留「确实出现在该句 token 里」且含义含汉字的词条，避免模型臆造；
+   * 缺项不补——前端查不到就不显示提示，比显示错误词义好。
+   */
+  private parseWordMeanings(content: string, drafts: SentenceDraft[]): Map<number, Record<string, string>> {
+    const out = new Map<number, Record<string, string>>();
+    for (const item of this.extractItems(content)) {
+      if (typeof item !== 'object' || item === null) {
+        continue;
+      }
+      const raw = item as Record<string, unknown>;
+      const index = Number(raw.index);
+      if (!Number.isInteger(index) || index < 0 || index >= drafts.length) {
+        continue;
+      }
+      const tokenList = drafts[index].sentenceEn.trim().split(/\s+/).filter(Boolean);
+      const tokens = new Set(tokenList);
+      // 容错：模型可能把 token 的标点去掉（"minutes?" → "minutes"），按去标点的核心词回找原 token
+      const coreOf = (value: string): string => value.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g, '').toLowerCase();
+      const tokenByCore = new Map<string, string>();
+      for (const token of tokenList) {
+        const core = coreOf(token);
+        if (core && !tokenByCore.has(core)) {
+          tokenByCore.set(core, token);
+        }
+      }
+      const words = raw.words;
+      if (!Array.isArray(words)) {
+        continue;
+      }
+      const map: Record<string, string> = {};
+      for (const entry of words) {
+        if (typeof entry !== 'object' || entry === null) {
+          continue;
+        }
+        const word = str((entry as Record<string, unknown>).word, 60);
+        const meaning = str((entry as Record<string, unknown>).meaning, 30);
+        // 只收该句真实存在的 token，且含义必须含汉字（模型偶尔会回英文解释）
+        const key = tokens.has(word) ? word : (tokenByCore.get(coreOf(word)) ?? '');
+        if (key && meaning && /[\u4e00-\u9fa5]/.test(meaning)) {
+          map[key] = meaning;
+        }
+      }
+      if (Object.keys(map).length > 0) {
+        out.set(index, map);
+      }
+    }
+    return out;
+  }
+
+  /**
    * 统一的上游调用：请求 + 错误归一 + AI 调用日志（三阶段共用，避免各写一套日志口径）。
    * @param callType ai_call_log.type（sentence_gen / sentence_polish / sentence_review）
    * @param options bizId：关联批次 id（便于按批次核对三阶段是否都跑了）；

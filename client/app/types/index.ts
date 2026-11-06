@@ -50,6 +50,8 @@ export interface NextQuestion {
   source: 'new' | 'review';
   /** 拼词模式的候选词块（打乱）；输入模式为 null */
   words: string[] | null;
+  /** 选词模式的逐词中文释义（词 → 含义）；旧题 / 无数据为 null（不显示悬浮提示） */
+  wordMeanings: Record<string, string> | null;
 }
 
 /** 节日题库（用户端「专门刷题」入口）。 */

@@ -91,6 +91,9 @@ model Sentence {
   /// 题目解析（中文：语法点 / 时态语态 / 关键词形与搭配 / 易错点）。
   /// 答题后**无论对错都展示**，帮用户理解为什么这么写；运营手工创建的题可留空。
   explanation      String?  @db.VarChar(500)
+  /// 选词模式逐词释义（JSON 对象：词 → 该词在本句中的中文含义，如 {"coffee":"咖啡"}）。
+  /// 新题在生成流水线「逐词释义」阶段产出；旧题为 null（用户端不显示悬浮提示）。
+  wordMeanings     String?  @map("word_meanings") @db.Text
   /// 生图提示词（描述「两人对话场景」构图，供运营审核）
   scenePrompt      String   @map("scene_prompt") @db.VarChar(500)
   /// 配图文件 id（0 = 未生成，指向 sys_file；故不建外键）
@@ -145,7 +148,7 @@ model SentenceGenTask {
   failCount       Int       @default(0) @map("fail_count")
   /// 状态：pending 待处理 / running 进行中 / success 成功 / failed 失败
   status          String    @default("pending") @db.VarChar(20)
-  /// 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / imaging 生图 / done 收尾
+  /// 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / annotating 逐词释义 / imaging 生图 / done 收尾
   stage           String    @default("") @db.VarChar(20)
   /// 最近心跳（每完成一批题/一张图更新）：前端据此区分「还在跑」与「卡住了」
   lastHeartbeatAt DateTime? @map("last_heartbeat_at")
@@ -279,7 +282,7 @@ model UserCheckin {
 model AiCallLog {
   /// 主键
   id               BigInt   @id @default(autoincrement()) @db.BigInt
-  /// 调用类型：sentence_gen 生题 / sentence_polish 优化 / sentence_review 审核 / sentence_card_gen 句签 / image_gen 生图 / expand 造句 / word_root 词根
+  /// 调用类型：sentence_gen 生题 / sentence_polish 优化 / sentence_review 审核 / word_meanings 逐词释义 / sentence_card_gen 句签 / image_gen 生图 / expand 造句 / word_root 词根
   type             String   @db.VarChar(20)
   /// 提供方（如 nvidia / agnes-ai）
   provider         String   @db.VarChar(50)

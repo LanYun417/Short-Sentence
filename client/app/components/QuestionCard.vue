@@ -417,7 +417,12 @@ async function onSubmitReport(): Promise<void> {
         <!-- 作答区：拼词模式点词块，输入模式自己敲 -->
         <div class="mt-4">
           <template v-if="assembleMode">
-            <AssembleAnswer :words="question.words ?? []" :disabled="submitting" @update:answer="onAssembleAnswer" />
+            <AssembleAnswer
+              :words="question.words ?? []"
+              :word-meanings="question.wordMeanings"
+              :disabled="submitting"
+              @update:answer="onAssembleAnswer"
+            />
             <div class="mt-3 flex justify-end">
               <UButton
                 type="button"

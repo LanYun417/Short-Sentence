@@ -766,7 +766,7 @@ export type $SentenceGenTaskPayload<ExtArgs extends runtime.Types.Extensions.Int
      */
     status: string
     /**
-     * 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / imaging 生图 / done 收尾
+     * 当前阶段：generating 生题 / polishing 优化 / reviewing 审核 / annotating 逐词释义 / imaging 生图 / done 收尾
      */
     stage: string
     /**

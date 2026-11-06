@@ -63,6 +63,7 @@ const GEN_STAGE_LABEL: Record<string, string> = {
   generating: '生题',
   polishing: '优化',
   reviewing: '审核',
+  annotating: '逐词释义',
   imaging: '生图',
   done: '收尾',
 };

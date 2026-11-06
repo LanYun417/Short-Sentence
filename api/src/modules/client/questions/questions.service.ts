@@ -53,6 +53,11 @@ export interface NextQuestion {
    * 无需重抽（Web / App 一致）。词块为打乱顺序，不构成答案的直接泄露。
    */
   words: string[] | null;
+  /**
+   * 选词模式的逐词中文释义（词 → 该词在本句中的含义）。
+   * 与 `words` 一样恒定下发；旧题 / 生成失败时为 null（前端不显示悬浮提示）。
+   */
+  wordMeanings: Record<string, string> | null;
 }
 
 /** 节日题库（用户端「专门刷题」入口）。 */
@@ -309,6 +314,7 @@ export class QuestionsService {
         imageFileId: true,
         difficulty: true,
         festivalName: true,
+        wordMeanings: true,
         category: { select: { name: true } },
       },
     });
@@ -328,7 +334,33 @@ export class QuestionsService {
       todayGoal: config.sentence.dailyGoal,
       source,
       words: shuffleWords(sentence.sentenceEn),
+      wordMeanings: this.parseWordMeanings(sentence.wordMeanings),
     };
+  }
+
+  /**
+   * 解析逐词释义 JSON。
+   * 旧题 / 脏数据一律返回 null——前端据此不显示悬浮提示，绝不抛错影响抽题。
+   */
+  private parseWordMeanings(raw: string | null): Record<string, string> | null {
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return null;
+      }
+      const out: Record<string, string> = {};
+      for (const [word, meaning] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof meaning === 'string' && meaning.trim()) {
+          out[word] = meaning.trim().slice(0, 30);
+        }
+      }
+      return Object.keys(out).length > 0 ? out : null;
+    } catch {
+      return null;
+    }
   }
 
   /**

@@ -16,6 +16,11 @@ export interface SentenceDraft {
   ipa: string;
   /** 题目解析（中文：语法点 / 时态语态 / 关键词形与搭配 / 易错点；答题后无论对错都展示） */
   explanation?: string;
+  /**
+   * 选词模式逐词释义（词 → 该词在本句中的中文含义）。
+   * 生成流水线「逐词释义」阶段产出；键与 sentenceEn 按空白切分后的 token 完全一致（含标点）。
+   */
+  wordMeanings?: Record<string, string>;
   /** 生图提示词（两人对话场景构图） */
   scenePrompt: string;
   /** 难度：1 易 / 2 中 / 3 难 */
@@ -76,6 +81,17 @@ export interface SentenceGenProvider {
     drafts: SentenceDraft[],
     bizId?: number,
   ): Promise<{ approved: SentenceDraft[]; rejected: RejectedDraft[] }>;
+
+  /**
+   * 四阶段：为每句生成「选词模式」的逐词中文释义（结合本句语境的词义）。
+   *
+   * 返回**同数量、同顺序**的草稿：模型漏掉/解析失败的条目保留原稿，
+   * 不阻断入库（用户端只是少了悬浮提示）。
+   *
+   * @param drafts 审核通过的草稿
+   * @param bizId 关联业务 id（批次 id）
+   */
+  annotateBatch(drafts: SentenceDraft[], bizId?: number): Promise<SentenceDraft[]>;
 
   /**
    * 补全题目解析（**存量题回填**用；新题在生题阶段就已带上 explanation）。
