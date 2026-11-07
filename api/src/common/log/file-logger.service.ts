@@ -27,28 +27,24 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 export type LogKind = 'app' | 'error' | 'access' | 'db';
 
 /**
- * 拼 tar 归档参数。
+ * 拼 tar 归档参数（spawn 时以 workDir 为 cwd，参数全部用相对路径）。
  *
- * 为什么单独抽成纯函数：Windows 上 GNU tar 会把带盘符的绝对路径（C:\...）当成
- * 「主机:路径」解析，直接报 `tar (child): Cannot connect to C: resolve failed`
- * 并以退出码 2 结束——这个坑只有把参数摊开看才发现，必须由测试跨平台钉住
- * （真机打包测试只在 Windows 上能暴露）。Unix 上不加这个 GNU 专属选项（BSD/bsdtar 不认）。
+ * 为什么单独抽成纯函数并改用相对路径：Windows 上绝对路径（C:\...）对 tar 是双刃剑——
+ * GNU tar 会把盘符路径当成「主机:路径」解析（要加 --force-local 才不当远程主机），
+ * 而 node 进程 PATH 里命中的往往是 System32 自带的 bsdtar，根本不认 --force-local，
+ * 直接报 `Option --force-local is not supported` 退出码 1。
+ * 统一「cwd=workDir + 相对路径」之后，GNU tar 不会再当远程主机、bsdtar 也不需要
+ * --force-local，一套参数跨实现通用；相对路径形态由单测钉住。
  *
  * @param params 打包目标
- * @param params.tarPath 产物 .tar.gz 路径
- * @param params.workDir 变更目录（对应 -C）
+ * @param params.tarPath 产物 .tar.gz 路径（函数内转成相对 workDir 的形式）
+ * @param params.workDir 日志目录（spawn 的 cwd，names 相对它）
  * @param params.names 要打包的文件名（相对 workDir）
- * @param params.platform 运行平台，默认取 process.platform（测试注入用）
  * @returns tar 命令行参数数组
  */
-export function buildArchiveArgs(params: {
-  tarPath: string;
-  workDir: string;
-  names: string[];
-  platform?: string;
-}): string[] {
-  const localFlag = (params.platform ?? process.platform) === 'win32' ? ['--force-local'] : [];
-  return [...localFlag, '-czf', params.tarPath, '-C', params.workDir, ...params.names];
+export function buildArchiveArgs(params: { tarPath: string; workDir: string; names: string[] }): string[] {
+  const relTar = path.relative(params.workDir, params.tarPath).split(path.sep).join('/');
+  return ['-czf', relTar, ...params.names];
 }
 
 @Injectable()
@@ -181,6 +177,8 @@ export class FileLoggerService implements OnModuleInit, OnModuleDestroy {
           workDir: config.log.dir,
           names: targets.map((t) => path.basename(t)),
         }),
+        // cwd = 日志目录：参数全部是相对路径，GNU tar 不会把盘符路径当远程主机、bsdtar 也不需要 --force-local
+        { cwd: config.log.dir },
       );
       let stderr = '';
       child.stderr.on('data', (chunk: Buffer) => {

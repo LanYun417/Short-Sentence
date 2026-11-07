@@ -1,10 +1,10 @@
 /**
  * tar 归档参数构造单测（纯函数，无 IO）。
  *
- * 为什么要单测参数：Windows 上 GNU tar 把带盘符的绝对路径（C:\...）当成「主机:路径」
- * 解析，报 `tar (child): Cannot connect to C: resolve failed` 并以退出码 2 失败——
- * 这个坑只在 Windows 暴露，而 CI 跑在 Linux，靠「真机打包」测试钉不住。
- * 因此把参数构造抽成纯函数，用注入 platform 的方式跨平台断言。
+ * 归档统一走「spawn cwd=日志目录 + 相对路径」方案：绝对路径里的 Windows 盘符
+ * （C:\...）会被 GNU tar 当成远程主机（需 --force-local），而 node 进程 PATH 命中的
+ * 往往是 System32 自带 bsdtar，不认 --force-local 直接退出码 1——
+ * 相对路径对 GNU tar / bsdtar 都安全，这里钉住参数形态。
  */
 import { describe, expect, it } from 'vitest';
 import { buildArchiveArgs } from '../src/common/log/file-logger.service.js';
@@ -16,34 +16,27 @@ const base = {
 };
 
 describe('buildArchiveArgs', () => {
-  it('win32 下加 --force-local（否则盘符路径被当成远程主机解析）', () => {
-    expect(buildArchiveArgs({ ...base, platform: 'win32' })).toEqual([
-      '--force-local',
-      '-czf',
-      base.tarPath,
-      '-C',
-      base.workDir,
-      ...base.names,
-    ]);
+  it('产物路径转成相对 workDir 的路径，分隔符统一为 /', () => {
+    expect(buildArchiveArgs(base)).toEqual(['-czf', 'archive/2026-10-20/2026-10-20.tar.gz', ...base.names]);
   });
 
-  it('linux/mac 下不加 --force-local（BSD/bsdtar 不认这个 GNU 选项）', () => {
-    for (const platform of ['linux', 'darwin']) {
-      const args = buildArchiveArgs({ ...base, platform });
-      expect(args).toEqual(['-czf', base.tarPath, '-C', base.workDir, ...base.names]);
-      expect(args).not.toContain('--force-local');
-    }
-  });
-
-  it('未传 platform 时回落到 process.platform', () => {
+  it('不含任何 -- 长选项，也不再用 -C（cwd 已由 spawn 指定）', () => {
     const args = buildArchiveArgs(base);
-    const expected = process.platform === 'win32' ? ['--force-local'] : [];
-    expect(args).toEqual([...expected, '-czf', base.tarPath, '-C', base.workDir, ...base.names]);
+    expect(args.some((a) => a.startsWith('--'))).toBe(false);
+    expect(args).not.toContain('-C');
   });
 
-  it('--force-local 必须排在 -czf 之前，否则 GNU tar 把它当成待打包文件', () => {
-    const args = buildArchiveArgs({ ...base, platform: 'win32' });
-    expect(args.indexOf('--force-local')).toBe(0);
-    expect(args.indexOf('-czf')).toBe(1);
+  it('names 原样追加在产物路径之后', () => {
+    expect(buildArchiveArgs(base).slice(2)).toEqual(base.names);
+  });
+
+  it('Unix 风格路径下同样产出相对路径', () => {
+    expect(
+      buildArchiveArgs({
+        tarPath: '/var/log/app/archive/2026-10-20/2026-10-20.tar.gz',
+        workDir: '/var/log/app',
+        names: ['app-2026-10-20.log'],
+      }),
+    ).toEqual(['-czf', 'archive/2026-10-20/2026-10-20.tar.gz', 'app-2026-10-20.log']);
   });
 });
