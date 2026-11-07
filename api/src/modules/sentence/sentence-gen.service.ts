@@ -30,6 +30,8 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { AgnesSentenceProvider } from '../../common/ai/agnes-sentence.provider.js';
 import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
 import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
+import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
+import { resolveTextChannel } from '../../common/ai/ai.config.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
 import { SENTENCE_STATUS } from './sentence.dto.js';
@@ -147,6 +149,7 @@ export class SentenceGenService {
     private readonly imageGen: AgnesImageProvider,
     private readonly fileService: FileService,
     private readonly budget: AiBudgetService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   /** 取生图闸门（懒加载：首次用到时才按配置建）。 */
@@ -1384,6 +1387,9 @@ export class SentenceGenService {
     const byName = new Map(categories.map((category) => [category.name, category.id]));
 
     const seen = new Set<string>();
+    // 本批入库时实际生效的文本通道与模型（随 genChannel 开关切换），落到每道题上，
+    // 后台题库详情里可点开查看该题用的是 Agnes 还是英伟达 NIM、具体什么模型
+    const textChannel = resolveTextChannel(this.aiSettings.current);
     const rows = drafts
       // 英文为空 / 中文释义为空都直接丢弃：
       // 过去中文缺失时用 `draft.translationZh || draft.sentenceEn` 兜底，
@@ -1418,6 +1424,8 @@ export class SentenceGenService {
               : null,
           scenePrompt: scenePrompt.slice(0, 500),
           source: 'ai',
+          aiChannel: textChannel.channel,
+          aiModel: textChannel.model,
           status: 'pending_image',
           genTaskId: taskId,
           // 节日题库标记：普通批次为 null（Prisma 会忽略 null 字段，等价于不写）

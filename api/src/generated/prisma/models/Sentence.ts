@@ -55,6 +55,8 @@ export type SentenceMinAggregateOutputType = {
   scenePrompt: string | null
   imageFileId: bigint | null
   source: string | null
+  aiChannel: string | null
+  aiModel: string | null
   status: string | null
   genTaskId: bigint | null
   festivalName: string | null
@@ -77,6 +79,8 @@ export type SentenceMaxAggregateOutputType = {
   scenePrompt: string | null
   imageFileId: bigint | null
   source: string | null
+  aiChannel: string | null
+  aiModel: string | null
   status: string | null
   genTaskId: bigint | null
   festivalName: string | null
@@ -99,6 +103,8 @@ export type SentenceCountAggregateOutputType = {
   scenePrompt: number
   imageFileId: number
   source: number
+  aiChannel: number
+  aiModel: number
   status: number
   genTaskId: number
   festivalName: number
@@ -139,6 +145,8 @@ export type SentenceMinAggregateInputType = {
   scenePrompt?: true
   imageFileId?: true
   source?: true
+  aiChannel?: true
+  aiModel?: true
   status?: true
   genTaskId?: true
   festivalName?: true
@@ -161,6 +169,8 @@ export type SentenceMaxAggregateInputType = {
   scenePrompt?: true
   imageFileId?: true
   source?: true
+  aiChannel?: true
+  aiModel?: true
   status?: true
   genTaskId?: true
   festivalName?: true
@@ -183,6 +193,8 @@ export type SentenceCountAggregateInputType = {
   scenePrompt?: true
   imageFileId?: true
   source?: true
+  aiChannel?: true
+  aiModel?: true
   status?: true
   genTaskId?: true
   festivalName?: true
@@ -292,6 +304,8 @@ export type SentenceGroupByOutputType = {
   scenePrompt: string
   imageFileId: bigint
   source: string
+  aiChannel: string | null
+  aiModel: string | null
   status: string
   genTaskId: bigint
   festivalName: string | null
@@ -337,6 +351,8 @@ export type SentenceWhereInput = {
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
+  aiChannel?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  aiModel?: Prisma.StringNullableFilter<"Sentence"> | string | null
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
@@ -363,6 +379,8 @@ export type SentenceOrderByWithRelationInput = {
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  aiChannel?: Prisma.SortOrderInput | Prisma.SortOrder
+  aiModel?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
   festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -393,6 +411,8 @@ export type SentenceWhereUniqueInput = Prisma.AtLeast<{
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
+  aiChannel?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  aiModel?: Prisma.StringNullableFilter<"Sentence"> | string | null
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
@@ -419,6 +439,8 @@ export type SentenceOrderByWithAggregationInput = {
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  aiChannel?: Prisma.SortOrderInput | Prisma.SortOrder
+  aiModel?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
   festivalName?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -449,6 +471,8 @@ export type SentenceScalarWhereWithAggregatesInput = {
   scenePrompt?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntWithAggregatesFilter<"Sentence"> | bigint | number
   source?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
+  aiChannel?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
+  aiModel?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntWithAggregatesFilter<"Sentence"> | bigint | number
   festivalName?: Prisma.StringNullableWithAggregatesFilter<"Sentence"> | string | null
@@ -470,6 +494,8 @@ export type SentenceCreateInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -496,6 +522,8 @@ export type SentenceUncheckedCreateInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -520,6 +548,8 @@ export type SentenceUpdateInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -546,6 +576,8 @@ export type SentenceUncheckedUpdateInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -571,6 +603,8 @@ export type SentenceCreateManyInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -592,6 +626,8 @@ export type SentenceUpdateManyMutationInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -614,6 +650,8 @@ export type SentenceUncheckedUpdateManyInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -652,6 +690,8 @@ export type SentenceCountOrderByAggregateInput = {
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  aiChannel?: Prisma.SortOrder
+  aiModel?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
   festivalName?: Prisma.SortOrder
@@ -682,6 +722,8 @@ export type SentenceMaxOrderByAggregateInput = {
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  aiChannel?: Prisma.SortOrder
+  aiModel?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
   festivalName?: Prisma.SortOrder
@@ -704,6 +746,8 @@ export type SentenceMinOrderByAggregateInput = {
   scenePrompt?: Prisma.SortOrder
   imageFileId?: Prisma.SortOrder
   source?: Prisma.SortOrder
+  aiChannel?: Prisma.SortOrder
+  aiModel?: Prisma.SortOrder
   status?: Prisma.SortOrder
   genTaskId?: Prisma.SortOrder
   festivalName?: Prisma.SortOrder
@@ -822,6 +866,8 @@ export type SentenceCreateWithoutCategoryInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -846,6 +892,8 @@ export type SentenceUncheckedCreateWithoutCategoryInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -900,6 +948,8 @@ export type SentenceScalarWhereInput = {
   scenePrompt?: Prisma.StringFilter<"Sentence"> | string
   imageFileId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   source?: Prisma.StringFilter<"Sentence"> | string
+  aiChannel?: Prisma.StringNullableFilter<"Sentence"> | string | null
+  aiModel?: Prisma.StringNullableFilter<"Sentence"> | string | null
   status?: Prisma.StringFilter<"Sentence"> | string
   genTaskId?: Prisma.BigIntFilter<"Sentence"> | bigint | number
   festivalName?: Prisma.StringNullableFilter<"Sentence"> | string | null
@@ -921,6 +971,8 @@ export type SentenceCreateWithoutRecordsInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -946,6 +998,8 @@ export type SentenceUncheckedCreateWithoutRecordsInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -985,6 +1039,8 @@ export type SentenceUpdateWithoutRecordsInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1010,6 +1066,8 @@ export type SentenceUncheckedUpdateWithoutRecordsInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1033,6 +1091,8 @@ export type SentenceCreateWithoutFavoritesInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -1058,6 +1118,8 @@ export type SentenceUncheckedCreateWithoutFavoritesInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -1097,6 +1159,8 @@ export type SentenceUpdateWithoutFavoritesInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1122,6 +1186,8 @@ export type SentenceUncheckedUpdateWithoutFavoritesInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1145,6 +1211,8 @@ export type SentenceCreateWithoutReportsInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -1170,6 +1238,8 @@ export type SentenceUncheckedCreateWithoutReportsInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -1209,6 +1279,8 @@ export type SentenceUpdateWithoutReportsInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1234,6 +1306,8 @@ export type SentenceUncheckedUpdateWithoutReportsInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1257,6 +1331,8 @@ export type SentenceCreateManyCategoryInput = {
   scenePrompt: string
   imageFileId?: bigint | number
   source?: string
+  aiChannel?: string | null
+  aiModel?: string | null
   status?: string
   genTaskId?: bigint | number
   festivalName?: string | null
@@ -1278,6 +1354,8 @@ export type SentenceUpdateWithoutCategoryInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1302,6 +1380,8 @@ export type SentenceUncheckedUpdateWithoutCategoryInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1326,6 +1406,8 @@ export type SentenceUncheckedUpdateManyWithoutCategoryInput = {
   scenePrompt?: Prisma.StringFieldUpdateOperationsInput | string
   imageFileId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   source?: Prisma.StringFieldUpdateOperationsInput | string
+  aiChannel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  aiModel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   genTaskId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   festivalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1397,6 +1479,8 @@ export type SentenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   scenePrompt?: boolean
   imageFileId?: boolean
   source?: boolean
+  aiChannel?: boolean
+  aiModel?: boolean
   status?: boolean
   genTaskId?: boolean
   festivalName?: boolean
@@ -1426,6 +1510,8 @@ export type SentenceSelectScalar = {
   scenePrompt?: boolean
   imageFileId?: boolean
   source?: boolean
+  aiChannel?: boolean
+  aiModel?: boolean
   status?: boolean
   genTaskId?: boolean
   festivalName?: boolean
@@ -1435,7 +1521,7 @@ export type SentenceSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "explanation" | "wordMeanings" | "scenePrompt" | "imageFileId" | "source" | "status" | "genTaskId" | "festivalName" | "festivalDate" | "retiredAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
+export type SentenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "categoryId" | "difficulty" | "sentenceEn" | "alternateAnswers" | "translationZh" | "ipa" | "explanation" | "wordMeanings" | "scenePrompt" | "imageFileId" | "source" | "aiChannel" | "aiModel" | "status" | "genTaskId" | "festivalName" | "festivalDate" | "retiredAt" | "createdAt" | "updatedAt", ExtArgs["result"]["sentence"]>
 export type SentenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   category?: boolean | Prisma.SentenceCategoryDefaultArgs<ExtArgs>
   records?: boolean | Prisma.Sentence$recordsArgs<ExtArgs>
@@ -1503,6 +1589,14 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      * 来源：ai 生成 / manual 运营手工
      */
     source: string
+    /**
+     * AI 生成时实际使用的文本通道：agnes / nim（null = 旧数据或手工题，不展示）
+     */
+    aiChannel: string | null
+    /**
+     * AI 生成时实际使用的文本模型名（如 agnes-2.5-flash / deepseek-v4.1-flash；null 同上）
+     */
+    aiModel: string | null
     /**
      * 状态：pending_image 待生成 / ready 就绪 / offline 下架
      */
@@ -1916,6 +2010,8 @@ export interface SentenceFieldRefs {
   readonly scenePrompt: Prisma.FieldRef<"Sentence", 'String'>
   readonly imageFileId: Prisma.FieldRef<"Sentence", 'BigInt'>
   readonly source: Prisma.FieldRef<"Sentence", 'String'>
+  readonly aiChannel: Prisma.FieldRef<"Sentence", 'String'>
+  readonly aiModel: Prisma.FieldRef<"Sentence", 'String'>
   readonly status: Prisma.FieldRef<"Sentence", 'String'>
   readonly genTaskId: Prisma.FieldRef<"Sentence", 'BigInt'>
   readonly festivalName: Prisma.FieldRef<"Sentence", 'String'>

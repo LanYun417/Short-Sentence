@@ -923,6 +923,10 @@ export interface SentenceItem {
   imageFileId: number;
   imageUrl: string | null;
   source: string;
+  /** AI 生成时实际使用的文本通道：agnes / nim（手工题与旧数据为 null） */
+  aiChannel: string | null;
+  /** AI 生成时实际使用的文本模型名（同上） */
+  aiModel: string | null;
   status: SentenceStatus;
   genTaskId: number;
   createdAt: string;

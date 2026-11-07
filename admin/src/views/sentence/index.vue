@@ -968,9 +968,19 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="来源" width="80">
             <template #default="{ row }">
-              <el-tag :type="row.source === 'ai' ? 'success' : 'info'" size="small">
-                {{ row.source === 'ai' ? 'AI' : '手工' }}
+              <!-- AI 生成的题目：点击 tag 打开详情，查看该题实际使用的 AI 通道（Agnes/NIM）与模型 -->
+              <el-tag
+                v-if="row.source === 'ai'"
+                v-permission="'sentence:query'"
+                type="success"
+                size="small"
+                class="cursor-pointer"
+                title="点击查看使用的 AI 通道与模型"
+                @click="handleDetail(row as SentenceItem)"
+              >
+                AI
               </el-tag>
+              <el-tag v-else type="info" size="small">手工</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="90">
@@ -1109,7 +1119,21 @@ onMounted(async () => {
               {{ STATUS_TAG[detailRow.status]?.label ?? detailRow.status }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="来源">{{ detailRow.source }}</el-descriptions-item>
+          <el-descriptions-item label="来源">{{ detailRow.source === 'ai' ? 'AI 生成' : '手工' }}</el-descriptions-item>
+          <template v-if="detailRow.source === 'ai'">
+            <el-descriptions-item label="AI 通道">
+              <el-tag size="small" :type="detailRow.aiChannel === 'nim' ? 'warning' : 'success'">
+                {{
+                  detailRow.aiChannel === 'nim'
+                    ? '英伟达 NIM'
+                    : detailRow.aiChannel === 'agnes'
+                      ? 'Agnes'
+                      : '未记录（旧数据）'
+                }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="AI 模型">{{ detailRow.aiModel || '未记录（旧数据）' }}</el-descriptions-item>
+          </template>
           <el-descriptions-item label="节日">
             {{
               detailRow.festivalName

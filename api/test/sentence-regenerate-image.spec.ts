@@ -83,12 +83,26 @@ function buildService(
           }
         : async () => ({ pass: review?.pass ?? true, reason: review?.reason ?? '' }),
   };
+  // 入库时会读它拿当前文本通道（aiChannel/aiModel 落题）；本文件只测生图，给个 Agnes 通道的假快照即可
+  const aiSettings = {
+    current: {
+      apiKey: 'k',
+      baseUrl: 'https://example.com/v1',
+      textModel: 'agnes-2.5-flash',
+      imageModel: 'agnes-image',
+      nimBaseUrl: '',
+      nimApiKey: '',
+      nimModel: '',
+      genChannel: 'agnes',
+    },
+  } as never;
   return new SentenceGenService(
     prisma as never,
     sentenceGen as never,
     imageGen as never,
     fileService as never,
     {} as never,
+    aiSettings,
   );
 }
 

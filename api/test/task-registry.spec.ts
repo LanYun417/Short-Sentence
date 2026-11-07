@@ -48,10 +48,14 @@ describe('resolveTextChannel 决定说明里的文本模型', () => {
   };
 
   it('默认 Agnes 通道时文本模型为 textModel', () => {
-    expect(resolveTextChannel(base).model).toBe('agnes-2.5-flash');
+    const channel = resolveTextChannel(base);
+    expect(channel.model).toBe('agnes-2.5-flash');
+    expect(channel.channel).toBe('agnes');
   });
 
   it('切到 NIM 通道时文本模型为 nimModel', () => {
-    expect(resolveTextChannel({ ...base, genChannel: 'nim' }).model).toBe('deepseek-v4-flash');
+    const channel = resolveTextChannel({ ...base, genChannel: 'nim' });
+    expect(channel.model).toBe('deepseek-v4-flash');
+    expect(channel.channel).toBe('nim');
   });
 });

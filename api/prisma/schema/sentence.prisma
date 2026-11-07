@@ -100,6 +100,10 @@ model Sentence {
   imageFileId      BigInt   @default(0) @map("image_file_id") @db.BigInt
   /// 来源：ai 生成 / manual 运营手工
   source           String   @default("ai") @db.VarChar(20)
+  /// AI 生成时实际使用的文本通道：agnes / nim（null = 旧数据或手工题，不展示）
+  aiChannel        String?  @map("ai_channel") @db.VarChar(20)
+  /// AI 生成时实际使用的文本模型名（如 agnes-2.5-flash / deepseek-v4.1-flash；null 同上）
+  aiModel          String?  @map("ai_model") @db.VarChar(100)
   /// 状态：pending_image 待生成 / ready 就绪 / offline 下架
   status           String   @default("pending_image") @db.VarChar(20)
   /// 所属生成批次 id（0 = 手工创建）

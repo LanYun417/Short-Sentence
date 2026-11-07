@@ -350,7 +350,7 @@ export class WordRootService {
     const content = payload.choices?.[0]?.message?.content ?? '';
     await this.aiCallLog.record({
       type: 'word_root',
-      provider: 'agnes',
+      provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
       model: ch.model,
       // 带 userId 便于按用户归集 AI 用量（做会员分档与运营报表的依据）
       bizId: userId ?? 0,

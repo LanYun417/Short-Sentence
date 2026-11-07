@@ -111,13 +111,19 @@ export function maskSecret(secret: string): string {
  * 句签文案、客户端造句 / 词根）。**图像生成（imageModel）与图像审核不受此影响**，始终走全局
  * baseUrl / apiKey——纯文本 NIM 模型不支持视觉输入，图像侧必须保持 Agnes。
  */
-export function resolveTextChannel(s: AiSettings): { baseUrl: string; apiKey: string; model: string } {
+export function resolveTextChannel(s: AiSettings): {
+  channel: 'agnes' | 'nim';
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+} {
   if (s.genChannel === 'nim' && s.nimModel) {
     return {
+      channel: 'nim',
       baseUrl: s.nimBaseUrl || s.baseUrl,
       apiKey: s.nimApiKey || s.apiKey,
       model: s.nimModel,
     };
   }
-  return { baseUrl: s.baseUrl, apiKey: s.apiKey, model: s.textModel };
+  return { channel: 'agnes', baseUrl: s.baseUrl, apiKey: s.apiKey, model: s.textModel };
 }

@@ -215,7 +215,7 @@ export class ClientAiService {
           subscriber.complete();
           await this.aiCallLog.record({
             type: params.type,
-            provider: 'agnes',
+            provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
             model: ch.model,
             bizId: params.bizId,
             promptTokens,
@@ -236,7 +236,7 @@ export class ClientAiService {
           await this.aiQuota.refund(params.userId);
           await this.aiCallLog.record({
             type: params.type,
-            provider: 'agnes',
+            provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
             model: ch.model,
             bizId: params.bizId,
             latencyMs: Date.now() - startedAt,

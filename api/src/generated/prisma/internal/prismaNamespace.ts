@@ -3262,6 +3262,8 @@ export const SentenceScalarFieldEnum = {
   scenePrompt: 'scenePrompt',
   imageFileId: 'imageFileId',
   source: 'source',
+  aiChannel: 'aiChannel',
+  aiModel: 'aiModel',
   status: 'status',
   genTaskId: 'genTaskId',
   festivalName: 'festivalName',
@@ -3768,6 +3770,8 @@ export const SentenceOrderByRelevanceFieldEnum = {
   wordMeanings: 'wordMeanings',
   scenePrompt: 'scenePrompt',
   source: 'source',
+  aiChannel: 'aiChannel',
+  aiModel: 'aiModel',
   status: 'status',
   festivalName: 'festivalName',
   festivalDate: 'festivalDate'

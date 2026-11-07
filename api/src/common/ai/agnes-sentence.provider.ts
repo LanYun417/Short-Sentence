@@ -685,7 +685,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     // 定义在 try 之外，catch 里的失败日志也要记实际使用的模型。
     const settings = this.aiSettings.current;
     const channel = imageBase64
-      ? { baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.textModel }
+      ? { channel: 'agnes' as const, baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.textModel }
       : resolveTextChannel(settings);
     const endpoint = `${channel.baseUrl}/chat/completions`;
     const authKey = channel.apiKey;
@@ -753,7 +753,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
 
       await this.aiCallLog.record({
         type: callType,
-        provider: 'agnes',
+        // 走 NIM 通道时记 nvidia，否则 agnes——与实际请求的上游一致，便于按 provider 分组统计
+        provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
         model: activeModel,
         bizId: options.bizId ?? 0,
         promptTokens: body.usage?.prompt_tokens ?? 0,
@@ -765,7 +766,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     } catch (error) {
       await this.aiCallLog.record({
         type: callType,
-        provider: 'agnes',
+        provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
         model: activeModel,
         bizId: options.bizId ?? 0,
         latencyMs: Date.now() - startedAt,

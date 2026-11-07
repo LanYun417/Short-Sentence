@@ -58,6 +58,7 @@ async function main(): Promise<void> {
     new AgnesImageProvider(aiCallLog, budget, aiSettings),
     new FileService(prisma),
     budget,
+    aiSettings,
   );
 
   try {
