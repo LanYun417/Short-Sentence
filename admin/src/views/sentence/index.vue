@@ -81,6 +81,15 @@ const GEN_STAGE_LABEL: Record<string, string> = {
 /** 心跳停滞阈值：运行中且超过这么久没有心跳，大概率卡住了。 */
 const HEARTBEAT_STALE_MS = 120_000;
 
+/**
+ * 进度文案：题目分子是**实际入库数**（模型可能多返回，入库后即计入，故可能超目标），
+ * 故标注「目标 N」避免 35/30 这种看不懂的写法；图片分母是入库题数（每题一图）。
+ */
+function genProgressText(row: GenTaskItem): string {
+  const image = row.textDone > 0 ? `${row.imageDone}/${row.textDone}` : `${row.imageDone}`;
+  return `题目 ${row.textDone}（目标 ${row.targetCount}） · 图片 ${image}`;
+}
+
 /** 心跳是否已停滞。 */
 function heartbeatStale(row: GenTaskItem): boolean {
   if (row.status !== 'running' || !row.lastHeartbeatAt) {
@@ -1275,9 +1284,9 @@ onMounted(async () => {
       <el-table v-loading="genLoading" :data="genList" border max-height="420">
         <el-table-column prop="id" label="批次" width="70" />
         <el-table-column prop="bizDate" label="业务日期" width="120" />
-        <el-table-column label="进度" width="200">
+        <el-table-column label="进度" width="220">
           <template #default="{ row }">
-            题目 {{ row.textDone }}/{{ row.targetCount }} · 图片 {{ row.imageDone }}
+            {{ genProgressText(row as GenTaskItem) }}
             <el-tag v-if="row.failCount > 0" type="danger" size="small" class="ml-1">失败 {{ row.failCount }}</el-tag>
           </template>
         </el-table-column>
