@@ -8,8 +8,10 @@ import type {
   ClientUserDetail,
   ClientUserGrowth,
   ClientUserItem,
+  ClientUserMissingSentenceCards,
   ClientUserQuery,
   ClientUserSentenceCard,
+  GrantSentenceCardResult,
   PageResult,
 } from '@/types/api';
 
@@ -56,6 +58,16 @@ export function getClientUserSentenceCardsApi(id: number): Promise<ClientUserSen
 /** 补发过往漏领的句签（幂等） */
 export function backfillClientUserSentenceCardsApi(id: number): Promise<BackfillSentenceCardsResult> {
   return post<BackfillSentenceCardsResult>(`/client-users/${id}/sentence-cards/backfill`);
+}
+
+/** 未拥有的句签（total + 最近一批，按业务日期倒序） */
+export function getClientUserMissingSentenceCardsApi(id: number): Promise<ClientUserMissingSentenceCards> {
+  return get<ClientUserMissingSentenceCards>(`/client-users/${id}/sentence-cards/missing`);
+}
+
+/** 一键解锁指定句签（幂等；重复解锁返回 alreadyOwned=true） */
+export function grantClientUserSentenceCardApi(id: number, cardId: number): Promise<GrantSentenceCardResult> {
+  return post<GrantSentenceCardResult>(`/client-users/${id}/sentence-cards/grant`, { cardId });
 }
 
 /** 启用 / 禁用 */

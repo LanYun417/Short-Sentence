@@ -15,7 +15,9 @@ import {
   getClientUserDetailApi,
   getClientUserGrowthApi,
   getClientUserListApi,
+  getClientUserMissingSentenceCardsApi,
   getClientUserSentenceCardsApi,
+  grantClientUserSentenceCardApi,
   resetClientUserPasswordApi,
   setClientUserStatusApi,
 } from '@/api/client-user';
@@ -31,6 +33,7 @@ import type {
   ClientUserGrowth,
   ClientUserItem,
   ClientUserSentenceCard,
+  GrantSentenceCardResult,
 } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
@@ -82,6 +85,17 @@ const cards = ref<ClientUserSentenceCard[]>([]);
 const cardsLoading = ref(false);
 const cardsError = ref('');
 
+/** 未拥有的句签（已就绪 − 已获得；list 为最近一批）。 */
+const missingCards = ref<ClientUserSentenceCard[]>([]);
+const missingTotal = ref(0);
+const missingLoading = ref(false);
+const missingError = ref('');
+/** 「未拥有」区是否展开（默认收起，避免详情弹窗被长列表撑爆）。 */
+const missingExpanded = ref(false);
+
+/** 正在一键解锁的句签 id（按钮 loading，防连点）。 */
+const grantingIds = ref<Set<number>>(new Set());
+
 /** 补发漏签中。 */
 const backfilling = ref(false);
 
@@ -108,6 +122,23 @@ async function loadCards(id: number): Promise<void> {
     cardsError.value = error instanceof Error ? error.message : '加载失败';
   } finally {
     cardsLoading.value = false;
+  }
+}
+
+/** 加载未拥有的句签（与已拥有解耦：失败不影响主区展示）。 */
+async function loadMissingCards(id: number): Promise<void> {
+  missingLoading.value = true;
+  missingError.value = '';
+  try {
+    const result = await getClientUserMissingSentenceCardsApi(id);
+    missingTotal.value = result.total;
+    missingCards.value = result.list;
+  } catch (error) {
+    missingTotal.value = 0;
+    missingCards.value = [];
+    missingError.value = error instanceof Error ? error.message : '加载失败';
+  } finally {
+    missingLoading.value = false;
   }
 }
 
@@ -139,15 +170,21 @@ async function handleDetail(row: ClientUserItem): Promise<void> {
   growthError.value = '';
   cards.value = [];
   cardsError.value = '';
+  missingCards.value = [];
+  missingTotal.value = 0;
+  missingError.value = '';
+  missingExpanded.value = false;
+  grantingIds.value = new Set();
   aiQuota.value = null;
   try {
     detail.value = await getClientUserDetailApi(row.id);
   } finally {
     detailLoading.value = false;
   }
-  // 成长 / 句签 / AI 额度与主详情解耦加载：任一侧失败都不影响另一侧展示
+  // 成长 / 句签 / 未拥有句签 / AI 额度与主详情解耦加载：任一侧失败都不影响另一侧展示
   void loadGrowth(row.id);
   void loadCards(row.id);
+  void loadMissingCards(row.id);
   void loadAiQuota(row.id);
 }
 
@@ -178,6 +215,40 @@ async function handleBackfill(): Promise<void> {
     }
   } finally {
     backfilling.value = false;
+  }
+}
+
+/* ------------------------------ 一键解锁指定句签 ------------------------------ */
+
+/** 给当前详情用户解锁某张未拥有的句签（幂等；写操作走二次确认 + 操作日志）。 */
+async function handleGrant(card: ClientUserSentenceCard): Promise<void> {
+  const target = detail.value;
+  if (!target || grantingIds.value.has(card.id)) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定为「${target.nickname}」解锁句签「${card.titleZh || card.title}」（${card.bizDate}）吗？`,
+      '解锁句签',
+      { type: 'warning', confirmButtonText: '解锁', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  grantingIds.value = new Set(grantingIds.value).add(card.id);
+  try {
+    const result: GrantSentenceCardResult = await grantClientUserSentenceCardApi(target.id, card.id);
+    if (result.alreadyOwned) {
+      ElMessage.info('该用户已拥有此句签');
+    } else {
+      ElMessage.success(`已解锁「${result.view.titleZh || result.view.title}」`);
+    }
+    // 已拥有 +1、未拥有 −1：两份列表都刷新，保持一致
+    await Promise.all([loadCards(target.id), loadMissingCards(target.id)]);
+  } finally {
+    const next = new Set(grantingIds.value);
+    next.delete(card.id);
+    grantingIds.value = next;
   }
 }
 
@@ -530,9 +601,17 @@ onMounted(() => {
           <div class="mt-5">
             <div class="mb-2 flex flex-wrap items-center justify-between gap-y-1">
               <p class="text-sm font-medium">句签（{{ cards.length }}）</p>
-              <el-button size="small" type="warning" :loading="backfilling" @click="handleBackfill">
-                解锁漏签句签
-              </el-button>
+              <div class="flex items-center gap-2">
+                <el-button size="small" plain @click="missingExpanded = !missingExpanded">
+                  未拥有（{{ missingTotal }}）
+                  <el-icon class="ml-0.5 transition-transform" :class="missingExpanded ? 'rotate-90' : ''">
+                    <i class="bi bi-chevron-right" />
+                  </el-icon>
+                </el-button>
+                <el-button size="small" type="warning" :loading="backfilling" @click="handleBackfill">
+                  解锁漏签句签
+                </el-button>
+              </div>
             </div>
 
             <div v-if="cardsLoading" class="py-6 text-center text-sm text-faint">加载中…</div>
@@ -566,6 +645,56 @@ onMounted(() => {
               </div>
             </template>
             <p v-else class="py-6 text-center text-sm text-faint">还没有句签，完成每日目标即可获得当日 AI 闪卡</p>
+
+            <!-- 未拥有的句签：展开后可逐张一键解锁 -->
+            <div v-if="missingExpanded" class="mt-3 border-t border-line-lighter pt-3">
+              <div v-if="missingLoading" class="py-4 text-center text-sm text-faint">加载中…</div>
+              <p v-else-if="missingError" class="py-3 text-center text-sm text-danger">
+                未拥有句签加载失败：{{ missingError }}
+              </p>
+              <template v-else-if="missingCards.length">
+                <p class="mb-2 text-xs text-faint">
+                  共 {{ missingTotal }} 张未拥有，此处显示最近 {{ missingCards.length }} 张（按日期倒序）
+                </p>
+                <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  <div
+                    v-for="card in missingCards"
+                    :key="card.id"
+                    class="overflow-hidden rounded-md border border-line-lighter bg-fill-light"
+                  >
+                    <div class="flex-center aspect-video bg-page text-muted">
+                      <img
+                        v-if="card.imageUrl"
+                        :src="card.imageUrl"
+                        :alt="card.titleZh"
+                        class="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span v-else class="text-[20px]">
+                        <el-icon aria-hidden="true"><i class="bi bi-file-earmark-image" /></el-icon>
+                      </span>
+                    </div>
+                    <div class="p-2">
+                      <p class="truncate text-xs font-medium" :title="card.titleZh">{{ card.titleZh }}</p>
+                      <p class="truncate text-xs text-faint">{{ card.bizDate }}</p>
+                      <el-button
+                        v-permission="'client:user:edit'"
+                        size="small"
+                        type="primary"
+                        plain
+                        class="mt-1.5 w-full"
+                        :loading="grantingIds.has(card.id)"
+                        :disabled="grantingIds.has(card.id)"
+                        @click="handleGrant(card)"
+                      >
+                        解锁
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <p v-else class="py-4 text-center text-sm text-faint">已拥有全部已就绪的句签</p>
+            </div>
           </div>
         </template>
       </el-scrollbar>

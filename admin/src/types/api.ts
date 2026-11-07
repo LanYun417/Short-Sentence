@@ -1186,6 +1186,19 @@ export interface BackfillSentenceCardsResult {
   bizDates: string[];
 }
 
+/** 用户未拥有的句签（total 为总数，list 是最近一批，按业务日期倒序） */
+export interface ClientUserMissingSentenceCards {
+  total: number;
+  list: ClientUserSentenceCard[];
+}
+
+/** 一键解锁句签结果 */
+export interface GrantSentenceCardResult {
+  view: ClientUserSentenceCard;
+  /** 该用户之前是否已拥有（幂等：重复解锁为 true） */
+  alreadyOwned: boolean;
+}
+
 /* ------------------------------ 数据分析 ------------------------------ */
 
 /** 运营总览 */
