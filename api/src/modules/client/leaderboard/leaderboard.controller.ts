@@ -13,14 +13,14 @@ export class LeaderboardController {
   constructor(private readonly leaderboard: LeaderboardService) {}
 
   /**
-   * 今日排行榜：type=today_answered 今日答题数前100 / today_correct 今日答对数前100。
+   * 排行榜：type=today_answered/today_correct（今日答题/答对前100）、checkin_total（累计打卡天数前100）。
    * 响应附带当前用户名次 me（未上榜为 null）。
    */
   @Get()
-  async today(
+  async fetch(
     @CurrentClientUser() user: ClientUserContext,
     @Query() query: LeaderboardQueryDto,
   ): Promise<LeaderboardResult> {
-    return this.leaderboard.today(query.type, user.userId);
+    return this.leaderboard.fetch(query.type, user.userId);
   }
 }

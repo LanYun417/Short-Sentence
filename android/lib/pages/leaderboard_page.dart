@@ -47,9 +47,10 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
               subtitle: result?.date.isNotEmpty == true ? '今日 · ${result!.date}' : '今日榜单',
             ),
             SegmentedControl<LeaderboardType>(
-              segments: const <Segment<LeaderboardType>>[
+              segments: <Segment<LeaderboardType>>[
                 Segment(value: LeaderboardType.todayAnswered, label: '答题榜', icon: Icons.format_list_numbered_rounded),
                 Segment(value: LeaderboardType.todayCorrect, label: '答对榜', icon: Icons.emoji_events_outlined),
+                Segment(value: LeaderboardType.checkinTotal, label: '打卡榜', icon: Icons.calendar_month_outlined),
               ],
               value: _type,
               onChanged: (LeaderboardType v) => setState(() => _type = v),
@@ -66,15 +67,15 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                 child: Text('加载失败：$e', style: TextStyle(color: colors.danger)),
               ),
               data: (LeaderboardResult r) => r.top.isEmpty
-                  ? const EmptyState(
-                      title: '今天还没有人上榜',
-                      message: '答完第一题，你就是今天的榜一',
+                  ? EmptyState(
+                      title: _type == LeaderboardType.checkinTotal ? '还没有人打卡' : '今天还没有人上榜',
+                      message: _type == LeaderboardType.checkinTotal ? '完成今日目标，你就是打卡第一人' : '答完第一题，你就是今天的榜一',
                       icon: Icons.emoji_events_outlined,
                     )
                   : Column(
                       children: <Widget>[
                         for (final LeaderboardRow row in r.top)
-                          _LeaderboardRow(row: row, isMe: row.userId == myId),
+                          _LeaderboardRow(row: row, isMe: row.userId == myId, unit: _type.unit),
                       ],
                     ),
             ),
@@ -104,7 +105,9 @@ class _MyRankBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              me != null ? '你今天${type.unit}第 ${me.rank} 名 · ${me.count} 题' : '今天还没上榜，去刷几题吧',
+              me != null
+                  ? type.meText(me.rank, me.count)
+                  : (type == LeaderboardType.checkinTotal ? '还没打过卡，去完成今日目标吧' : '今天还没上榜，去刷几题吧'),
               style: TextStyle(color: colors.ink, fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
@@ -116,10 +119,11 @@ class _MyRankBanner extends StatelessWidget {
 
 /// 榜单一行。 */
 class _LeaderboardRow extends StatelessWidget {
-  const _LeaderboardRow({required this.row, required this.isMe});
+  const _LeaderboardRow({required this.row, required this.isMe, required this.unit});
 
   final LeaderboardRow row;
   final bool isMe;
+  final String unit;
 
   Color _rankColor(AppColors colors) {
     if (row.rank == 1) return colors.gold;
@@ -183,7 +187,7 @@ class _LeaderboardRow extends StatelessWidget {
                 child: Text('我', style: TextStyle(color: colors.brand, fontWeight: FontWeight.bold, fontSize: 11)),
               ),
             Text(
-              '${row.count} 题',
+              '${row.count} $unit',
               style: TextStyle(fontWeight: FontWeight.bold, color: colors.ink, fontSize: 13),
             ),
           ],

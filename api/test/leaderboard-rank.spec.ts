@@ -71,4 +71,16 @@ describe('computeLeaderboard', () => {
     expect(res.top).toEqual([]);
     expect(res.me).toBeNull();
   });
+
+  it('checkin_total 用 countAll 计、单位为天', () => {
+    const data = [agg(1, 30, 0), agg(3, 12, 0), agg(2, 12, 0)];
+    const res = computeLeaderboard(data, users, files, 'checkin_total', 3, 100);
+    expect(res.unit).toBe('天');
+    expect(res.top.map((r) => [r.userId, r.count, r.rank])).toEqual([
+      [1, 30, 1],
+      [2, 12, 2],
+      [3, 12, 2], // 同分同名次
+    ]);
+    expect(res.me).toEqual({ rank: 2, count: 12 });
+  });
 });

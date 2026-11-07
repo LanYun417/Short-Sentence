@@ -11,7 +11,7 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import type { LeaderboardType } from './leaderboard.dto.js';
+import { leaderboardUnit, type LeaderboardType } from './leaderboard.dto.js';
 
 export interface LeaderboardRow {
   rank: number;
@@ -23,10 +23,12 @@ export interface LeaderboardRow {
 
 export interface LeaderboardResult {
   type: LeaderboardType;
-  /** 榜单所属自然日 YYYY-MM-DD（服务器本地日） */
+  /** 榜单展示单位：题 / 天 */
+  unit: string;
+  /** 榜单所属自然日 YYYY-MM-DD（服务器本地日；打卡榜为统计截止日） */
   date: string;
   top: LeaderboardRow[];
-  /** 当前用户名次；今天没产生有效答题（或 0 答对）时为 null */
+  /** 当前用户名次；未上榜为 null */
   me: { rank: number; count: number } | null;
 }
 
@@ -93,6 +95,7 @@ export function computeLeaderboard(
   const meRow = ranked.find((r) => r.userId === myUserId);
   return {
     type,
+    unit: leaderboardUnit(type),
     date,
     top,
     me: meRow ? { rank: meRow.rank, count: meRow.count } : null,
@@ -105,19 +108,37 @@ export class LeaderboardService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** 今日榜（答题数 / 答对数）。 */
-  async today(type: LeaderboardType, myUserId: number): Promise<LeaderboardResult> {
-    const start = dayjs().startOf('day').toDate();
-    const end = dayjs().endOf('day').toDate();
+  /** 取榜：today_* 走今日答题记录；checkin_total 走累计打卡（user_checkin 不受保留期清理）。 */
+  async fetch(type: LeaderboardType, myUserId: number): Promise<LeaderboardResult> {
+    const date = dayjs().format('YYYY-MM-DD');
 
-    const agg = await this.prisma.sentenceRecord.groupBy({
-      by: ['userId'],
-      where: { createdAt: { gte: start, lte: end } },
-      _count: { _all: true },
-      _sum: { isCorrect: true },
-    });
+    let agg: AggRow[];
+    if (type === 'checkin_total') {
+      // 累计打卡天数：全历史聚合（无日期过滤）
+      const rows = await this.prisma.userCheckin.groupBy({
+        by: ['userId'],
+        _count: { _all: true },
+      });
+      agg = rows.map((r) => ({ userId: r.userId, countAll: r._count._all, sumCorrect: 0 }));
+    } else {
+      // 今日答题/答对：按服务器本地日切分
+      const start = dayjs().startOf('day').toDate();
+      const end = dayjs().endOf('day').toDate();
+      const rows = await this.prisma.sentenceRecord.groupBy({
+        by: ['userId'],
+        where: { createdAt: { gte: start, lte: end } },
+        _count: { _all: true },
+        _sum: { isCorrect: true },
+      });
+      agg = rows.map((r) => ({
+        userId: r.userId,
+        countAll: r._count._all,
+        sumCorrect: r._sum.isCorrect ?? 0,
+      }));
+    }
+
     if (agg.length === 0) {
-      return { type, date: dayjs().format('YYYY-MM-DD'), top: [], me: null };
+      return { type, unit: leaderboardUnit(type), date, top: [], me: null };
     }
 
     const users = await this.prisma.clientUser.findMany({
@@ -133,17 +154,6 @@ export class LeaderboardService {
       : [];
     const fileMap = new Map<bigint, string>(files.map((f) => [f.id, f.fileUrl]));
 
-    return computeLeaderboard(
-      agg.map((r) => ({
-        userId: r.userId,
-        countAll: r._count._all,
-        sumCorrect: r._sum.isCorrect ?? 0,
-      })),
-      userMap,
-      fileMap,
-      type,
-      myUserId,
-      LeaderboardService.TOP_N,
-    );
+    return computeLeaderboard(agg, userMap, fileMap, type, myUserId, LeaderboardService.TOP_N);
   }
 }

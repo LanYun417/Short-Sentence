@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * 今日排行榜（路由 /leaderboard）：答题数前 100 / 答对数前 100。
+ * 排行榜（路由 /leaderboard）：今日答题数 / 今日答对数 / 累计打卡天数，各前 100。
  *
- * 数据来自 GET /client/leaderboard?type=today_answered|today_correct（需登录）。
+ * 数据来自 GET /client/leaderboard?type=today_answered|today_correct|checkin_total（需登录）。
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除）。
  */
 import { apiFetch } from '~/composables/useApi';
@@ -12,30 +12,35 @@ definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: '排行榜',
-  description: '今日答题数与答对数排行榜，看看今天谁最卷。',
+  description: '今日答题、答对与累计打卡排行榜，看看谁最卷、谁最坚持。',
 });
 
 const auth = useAuthStore();
 const myId = computed(() => auth.user?.id ?? null);
 
-type Tab = 'answered' | 'correct';
+type Tab = 'answered' | 'correct' | 'checkin';
 const active = ref<Tab>('answered');
 
 const TABS: { key: Tab; label: string; type: LeaderboardType; icon: string }[] = [
   { key: 'answered', label: '答题榜', type: 'today_answered', icon: 'i-lucide-list-checks' },
   { key: 'correct', label: '答对榜', type: 'today_correct', icon: 'i-lucide-badge-check' },
+  { key: 'checkin', label: '打卡榜', type: 'checkin_total', icon: 'i-lucide-calendar-check-2' },
 ];
 
-/** 首屏 SSR 预取两个榜（未登录/令牌过期为 null，由 onMounted 客户端兜底重拉）。 */
+/** 首屏 SSR 预取三个榜（未登录/令牌过期为 null，由 onMounted 客户端兜底重拉）。 */
 const { data: ssrAnswered } = await useSsrApi<LeaderboardResult>('ss:lb-answered', '/client/leaderboard', {
   type: 'today_answered',
 });
 const { data: ssrCorrect } = await useSsrApi<LeaderboardResult>('ss:lb-correct', '/client/leaderboard', {
   type: 'today_correct',
 });
+const { data: ssrCheckin } = await useSsrApi<LeaderboardResult>('ss:lb-checkin', '/client/leaderboard', {
+  type: 'checkin_total',
+});
 const dataMap = ref<Record<Tab, LeaderboardResult | null>>({
   answered: ssrAnswered.value,
   correct: ssrCorrect.value,
+  checkin: ssrCheckin.value,
 });
 const loading = ref(false);
 
@@ -43,16 +48,17 @@ const current = computed(() => dataMap.value[active.value]);
 const rows = computed<LeaderboardRow[]>(() => current.value?.top ?? []);
 const me = computed(() => current.value?.me ?? null);
 const dateText = computed(() => current.value?.date ?? '');
-const currentUnit = computed(() => (active.value === 'answered' ? '答了' : '答对'));
+const unit = computed(() => current.value?.unit ?? '题');
 
 async function reload(): Promise<void> {
   loading.value = true;
   try {
-    const [a, c] = await Promise.all([
+    const [a, c, k] = await Promise.all([
       apiFetch<LeaderboardResult>('/client/leaderboard', { query: { type: 'today_answered' } }),
       apiFetch<LeaderboardResult>('/client/leaderboard', { query: { type: 'today_correct' } }),
+      apiFetch<LeaderboardResult>('/client/leaderboard', { query: { type: 'checkin_total' } }),
     ]);
-    dataMap.value = { answered: a, correct: c };
+    dataMap.value = { answered: a, correct: c, checkin: k };
   } catch {
     // 401 由 useApi 统一跳登录；其它错误保留当前数据
   } finally {
@@ -101,19 +107,26 @@ function initialOf(name: string): string {
     >
       <UIcon name="i-lucide-trophy" class="h-5 w-5 shrink-0 text-amber-500" />
       <p v-if="me" class="text-sm text-slate-700 dark:text-slate-200">
-        你今天{{ currentUnit }} <b class="font-bold text-sky-600 dark:text-sky-400">第 {{ me.rank }} 名</b> ·
-        {{ me.count }} 题
+        <template v-if="active === 'checkin'">
+          你累计打卡 <b class="font-bold text-sky-600 dark:text-sky-400">第 {{ me.rank }} 名</b> · {{ me.count }} 天
+        </template>
+        <template v-else>
+          你今天{{ active === 'answered' ? '答题' : '答对' }}
+          <b class="font-bold text-sky-600 dark:text-sky-400">第 {{ me.rank }} 名</b> · {{ me.count }} {{ unit }}
+        </template>
       </p>
-      <p v-else class="text-sm text-slate-500 dark:text-slate-400">今天还没上榜，去刷几题吧</p>
+      <p v-else class="text-sm text-slate-500 dark:text-slate-400">
+        {{ active === 'checkin' ? '还没打过卡，去完成今日目标吧' : '今天还没上榜，去刷几题吧' }}
+      </p>
     </div>
 
-    <!-- 双榜切换 -->
-    <div class="mb-4 inline-flex rounded-full bg-slate-100 p-1 dark:bg-slate-800">
+    <!-- 榜单切换 -->
+    <div class="mb-4 flex flex-wrap gap-1 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
       <button
         v-for="t in TABS"
         :key="t.key"
         type="button"
-        class="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition"
+        class="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-sm font-medium transition"
         :class="
           active === t.key
             ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-900 dark:text-slate-100'
@@ -159,7 +172,7 @@ function initialOf(name: string): string {
         </span>
         <UTag v-if="row.userId === myId" color="primary" variant="subtle" size="sm">我</UTag>
         <span class="shrink-0 text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {{ row.count }}<span class="ml-0.5 text-xs font-normal text-slate-400">题</span>
+          {{ row.count }}<span class="ml-0.5 text-xs font-normal text-slate-400">{{ unit }}</span>
         </span>
       </li>
     </ul>
@@ -169,8 +182,10 @@ function initialOf(name: string): string {
       class="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
     >
       <UIcon name="i-lucide-trophy" class="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-      <p class="mt-3 text-sm text-slate-400">今天还没有人上榜</p>
-      <p class="mt-1 text-xs text-slate-400">答完第一题，你就是今天的榜一</p>
+      <p class="mt-3 text-sm text-slate-400">{{ active === 'checkin' ? '还没有人打卡' : '今天还没有人上榜' }}</p>
+      <p class="mt-1 text-xs text-slate-400">
+        {{ active === 'checkin' ? '完成今日目标，你就是打卡第一人' : '答完第一题，你就是今天的榜一' }}
+      </p>
     </div>
   </div>
 </template>

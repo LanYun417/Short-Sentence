@@ -5,24 +5,34 @@
 library;
 
 /// 榜单类型。
-enum LeaderboardType { todayAnswered, todayCorrect }
+enum LeaderboardType { todayAnswered, todayCorrect, checkinTotal }
 
 extension LeaderboardTypeX on LeaderboardType {
   /// 传给后端的 query 值。
   String get apiValue => switch (this) {
         LeaderboardType.todayAnswered => 'today_answered',
         LeaderboardType.todayCorrect => 'today_correct',
+        LeaderboardType.checkinTotal => 'checkin_total',
       };
 
   /// 界面文案。
   String get label => switch (this) {
         LeaderboardType.todayAnswered => '答题榜',
         LeaderboardType.todayCorrect => '答对榜',
+        LeaderboardType.checkinTotal => '打卡榜',
       };
 
+  /// 计数单位：题 / 天。
   String get unit => switch (this) {
-        LeaderboardType.todayAnswered => '答了',
-        LeaderboardType.todayCorrect => '答对',
+        LeaderboardType.checkinTotal => '天',
+        _ => '题',
+      };
+
+  /// 我的名次文案（打卡榜为累计口径）。
+  String meText(int rank, int count) => switch (this) {
+        LeaderboardType.checkinTotal => '你累计打卡第 $rank 名 · $count 天',
+        LeaderboardType.todayAnswered => '你今天答题第 $rank 名 · $count 题',
+        LeaderboardType.todayCorrect => '你今天答对第 $rank 名 · $count 题',
       };
 }
 
