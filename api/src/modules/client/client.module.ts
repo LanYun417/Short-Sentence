@@ -26,6 +26,8 @@ import { ClientAiService } from './ai/client-ai.service.js';
 import { CategoriesController } from './categories/categories.controller.js';
 import { ClientNoticeController } from './notice/client-notice.controller.js';
 import { ClientNoticeService } from './notice/client-notice.service.js';
+import { LeaderboardController } from './leaderboard/leaderboard.controller.js';
+import { LeaderboardService } from './leaderboard/leaderboard.service.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -45,6 +47,8 @@ import { ClientNoticeService } from './notice/client-notice.service.js';
     CategoriesController,
     // 客户端公告读取（广播表 client_notice；后台发布在 NoticeModule）
     ClientNoticeController,
+    // 今日排行榜（答题数 / 答对数前 100）
+    LeaderboardController,
   ],
   providers: [
     ClientAuthUserService,
@@ -56,6 +60,7 @@ import { ClientNoticeService } from './notice/client-notice.service.js';
     FeedbackService,
     ClientAiService,
     ClientNoticeService,
+    LeaderboardService,
   ],
 })
 export class ClientModule {}

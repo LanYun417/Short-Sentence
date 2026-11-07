@@ -1,0 +1,11 @@
+feat(leaderboard): 今日答题/答对排行榜前 100（API + Web + Android）
+
+- 后端：GET /api/client/leaderboard?type=today_answered|today_correct
+  按服务器本地日聚合 sentence_record，返回前 100（标准竞赛排名、同分同名次）
+  + 当前用户名次 me；仅统计启用用户，头像取 sys_file.file_url。
+  纯排名逻辑抽成 computeLeaderboard，配 5 个单测（test/leaderboard-rank.spec.ts）。
+- Web：新增 /leaderboard 页（答题榜/答对榜双 tab、我的名次横幅、前三名奖牌色、
+  自己行高亮），个人中心加「排行榜」入口；私有页已加入 robots/sitemap 排除。
+- Android：新增 LeaderboardPage + /leaderboard 路由 + 「我的」菜单入口，
+  leaderboard_api/model 复用 SegmentedControl/AppCard 等自绘组件；
+  flutter analyze 无问题、87 个 widget/unit 测试全过。

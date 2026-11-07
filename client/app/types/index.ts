@@ -326,3 +326,27 @@ export interface MyFeedbackItem {
   handledAt: string | null;
   createdAt: string;
 }
+
+/* ------------------------------ 排行榜 ------------------------------ */
+
+/** 排行榜类型：today_answered 今日答题数 / today_correct 今日答对数 */
+export type LeaderboardType = 'today_answered' | 'today_correct';
+
+/** 排行榜一行 */
+export interface LeaderboardRow {
+  rank: number;
+  userId: number;
+  nickname: string;
+  avatarUrl: string | null;
+  count: number;
+}
+
+/** 今日排行榜响应 */
+export interface LeaderboardResult {
+  type: LeaderboardType;
+  /** 榜单所属自然日 YYYY-MM-DD */
+  date: string;
+  top: LeaderboardRow[];
+  /** 当前用户名次；未上榜为 null */
+  me: { rank: number; count: number } | null;
+}

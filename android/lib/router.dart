@@ -11,6 +11,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'pages/leaderboard_page.dart';
 import 'pages/login_page.dart';
 import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
@@ -41,6 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
+      GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
     ],
   );
 });

@@ -182,6 +182,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               child: Column(
                 children: <Widget>[
                   _MenuRow(
+                    icon: Icons.emoji_events_outlined,
+                    label: '排行榜',
+                    hint: '今日答题 / 答对前 100',
+                    onTap: () => context.push('/leaderboard'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.campaign_outlined,
                     label: '消息中心',
                     hint: '运营公告与活动通知',
