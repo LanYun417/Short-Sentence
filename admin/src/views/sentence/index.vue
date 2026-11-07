@@ -32,7 +32,13 @@ import { useTable } from '@/composables/useTable';
 import { useTablePage } from '@/composables/useTablePage';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime } from '@/utils/format';
-import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } from '@/types/api';
+import type {
+  BackfillWordMeaningsResult,
+  GenTaskItem,
+  SentenceItem,
+  SentenceSavePayload,
+  SentenceStatus,
+} from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
@@ -479,6 +485,9 @@ const genSubmitting = ref(false);
 const backfilling = ref(false);
 /** 逐词释义回填进行中（按钮 loading，避免连点烧配额） */
 const backfillingMeanings = ref(false);
+/** 补全/重生成词义完成后的结果弹窗（告诉运营本次补了哪些题、每题结果） */
+const backfillResultVisible = ref(false);
+const backfillResult = ref<BackfillWordMeaningsResult | null>(null);
 const genForm = ref<{ count: number; difficulty?: number; categoryName?: string }>({
   count: 30,
   difficulty: undefined,
@@ -652,6 +661,9 @@ async function handleBackfillWordMeanings(force = false): Promise<void> {
       ElMessage.success(force ? '所有题目都还没有词义，没有可重生成的' : '所有题目都已有词义');
     } else {
       ElMessage.success(`本批补了 ${result.updated} 条，还缺 ${result.remaining} 条词义待补`);
+      // 弹窗展示本次处理的每一题及结果（成功/跳过/失败 + 词义）
+      backfillResult.value = result;
+      backfillResultVisible.value = true;
       await getList();
     }
   } finally {
@@ -1118,6 +1130,57 @@ onMounted(async () => {
           <el-descriptions-item label="创建时间">{{ formatDateTime(detailRow.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="更新时间">{{ formatDateTime(detailRow.updatedAt) }}</el-descriptions-item>
         </el-descriptions>
+      </template>
+    </BasicDialog>
+
+    <!-- 补全/重生成词义结果明细（本次处理了哪些题、每题成功/跳过/失败及原因） -->
+    <BasicDialog
+      v-model="backfillResultVisible"
+      :title="`词义回填结果${backfillResult ? ` · 扫描 ${backfillResult.scanned} 条 / 成功 ${backfillResult.updated} 条` : ''}`"
+      width="920px"
+      :show-footer="false"
+    >
+      <template v-if="backfillResult">
+        <div class="mb-3 flex flex-wrap items-center gap-2">
+          <el-tag type="primary" size="small">扫描 {{ backfillResult.scanned }} 条</el-tag>
+          <el-tag type="success" size="small">成功 {{ backfillResult.updated }} 条</el-tag>
+          <el-tag type="warning" size="small">还缺词义 {{ backfillResult.remaining }} 条</el-tag>
+        </div>
+        <el-scrollbar max-height="60vh">
+          <div
+            v-for="item in backfillResult.items"
+            :key="item.id"
+            class="mb-3 rounded-md border border-solid border-gray-200 p-3"
+          >
+            <div class="mb-1 flex flex-wrap items-center gap-2">
+              <el-tag size="small" type="info">#{{ item.id }}</el-tag>
+              <span class="font-medium text-ink">{{ item.sentenceEn }}</span>
+              <el-tag
+                size="small"
+                :type="item.status === 'updated' ? 'success' : item.status === 'skipped' ? 'warning' : 'danger'"
+              >
+                {{ item.status === 'updated' ? '已写入' : item.status === 'skipped' ? '跳过' : '失败' }}
+              </el-tag>
+            </div>
+            <div class="mb-1 text-xs text-gray-500">{{ item.translationZh }}</div>
+            <div v-if="item.status !== 'updated' && item.reason" class="mb-1 text-xs text-red-500">
+              {{ item.reason }}
+            </div>
+            <div v-if="item.wordMeanings && Object.keys(item.wordMeanings).length > 0" class="flex flex-wrap gap-1">
+              <el-tag
+                v-for="(meaning, word) in item.wordMeanings"
+                :key="word"
+                size="small"
+                type="info"
+                class="mr-1 mb-1"
+              >
+                {{ word }}：{{ meaning }}
+              </el-tag>
+            </div>
+            <div v-else class="text-xs text-muted">无词义</div>
+          </div>
+          <el-empty v-if="backfillResult.items.length === 0" description="本次没有处理任何题目" />
+        </el-scrollbar>
       </template>
     </BasicDialog>
 

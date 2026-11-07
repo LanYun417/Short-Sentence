@@ -90,6 +90,29 @@ const IMAGE_RETRY = {
   maxDelayMs: 120_000,
 };
 
+/** 逐词释义回填单题结果明细（管理端完成后弹窗展示用）。 */
+export interface BackfillWordMeaningsItem {
+  /** 题目 ID */
+  id: number;
+  sentenceEn: string;
+  translationZh: string;
+  /** updated=本次写入成功；skipped=模型漏答未写入；failed=所在批次调用失败 */
+  status: 'updated' | 'skipped' | 'failed';
+  /** skipped / failed 的原因 */
+  reason?: string;
+  /** 词义：updated 为新写入的，其余为该题原有词义（可能为空） */
+  wordMeanings?: Record<string, string>;
+}
+
+/** 逐词释义回填一批的汇总 + 每题明细。 */
+export interface BackfillWordMeaningsResult {
+  scanned: number;
+  updated: number;
+  /** 恒为「缺词义」的题数（两种 force 口径都能收敛） */
+  remaining: number;
+  items: BackfillWordMeaningsItem[];
+}
+
 @Injectable()
 export class SentenceGenService {
   private readonly logger = new Logger(SentenceGenService.name);
@@ -1237,11 +1260,11 @@ export class SentenceGenService {
    * 默认（force=false）只补「已就绪但还没有词义」的题；force=true 改为重生成「已有词义」的题
    * （模型升级后统一刷新口径）。词义没有类似解析的「格式前缀」可判断收敛，
    * 所以 force 口径下 remaining 仍按「缺词义」统计，不会出现反复重烧无法收敛的情况。
+   *
+   * 除统计外还返回 items 明细（每题 id/句子/状态/原因/词义），
+   * 前端完成后弹窗告诉运营「本次补了哪些题、每题结果如何」。
    */
-  async backfillWordMeanings(
-    limit = 20,
-    force = false,
-  ): Promise<{ scanned: number; updated: number; remaining: number }> {
+  async backfillWordMeanings(limit = 20, force = false): Promise<BackfillWordMeaningsResult> {
     if (!this.sentenceGen.enabled) {
       throw AppException.badRequest('生题能力未配置（AI_AGNES_API_KEY 缺失），无法补全逐词释义');
     }
@@ -1260,14 +1283,37 @@ export class SentenceGenService {
       })
     ).map((row) => row.id);
     if (ids.length === 0) {
-      return { scanned: 0, updated: 0, remaining: 0 };
+      return { scanned: 0, updated: 0, remaining: 0, items: [] };
     }
 
     const rows = await this.prisma.sentence.findMany({
       where: { id: { in: ids } },
       orderBy: { id: 'desc' },
-      select: { id: true, sentenceEn: true },
+      select: { id: true, sentenceEn: true, translationZh: true, wordMeanings: true },
     });
+
+    /** wordMeanings 存的是 JSON 文本；解析失败（脏数据）按无词义处理，绝不让回填炸掉。 */
+    const parseJson = (raw: string | null): Record<string, string> | undefined => {
+      if (!raw) {
+        return undefined;
+      }
+      try {
+        const obj: unknown = JSON.parse(raw);
+        return obj && typeof obj === 'object' && !Array.isArray(obj) ? (obj as Record<string, string>) : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+
+    /** 每题的回填结果明细（顺序与 rows 一致），随处理进度原地更新。 */
+    const items: BackfillWordMeaningsItem[] = rows.map((row) => ({
+      id: Number(row.id),
+      sentenceEn: row.sentenceEn,
+      translationZh: row.translationZh,
+      status: 'skipped' as const,
+      reason: '未处理',
+      wordMeanings: parseJson(row.wordMeanings),
+    }));
 
     let updated = 0;
     for (let start = 0; start < rows.length; start += SentenceGenService.WORD_MEANINGS_BATCH_SIZE) {
@@ -1287,17 +1333,18 @@ export class SentenceGenService {
         );
       } catch (error) {
         // 单批失败不阻断整轮：已完成的部分保留，剩下的下次再补（与生题批次同一取舍）
-        this.logger.warn(
-          `[SentenceGen] 逐词释义回填批次失败（第 ${start + 1}~${start + batch.length} 条）：${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+        const reason = `批次调用失败：${error instanceof Error ? error.message : String(error)}`;
+        this.logger.warn(`[SentenceGen] 逐词释义回填批次失败（第 ${start + 1}~${start + batch.length} 条）：${reason}`);
+        for (let i = 0; i < batch.length; i += 1) {
+          items[start + i] = { ...items[start + i], status: 'failed', reason };
+        }
         continue;
       }
       for (const [index, row] of batch.entries()) {
         const meanings = annotated[index]?.wordMeanings;
         // 模型漏掉的条目保持原样（绝不用空对象覆盖，否则下一轮还会重复补）
         if (!meanings || Object.keys(meanings).length === 0) {
+          items[start + index] = { ...items[start + index], status: 'skipped', reason: '模型未返回该句词义' };
           continue;
         }
         await this.prisma.sentence.update({
@@ -1305,11 +1352,17 @@ export class SentenceGenService {
           data: { wordMeanings: JSON.stringify(meanings).slice(0, 4000) },
         });
         updated += 1;
+        items[start + index] = {
+          ...items[start + index],
+          status: 'updated',
+          reason: undefined,
+          wordMeanings: meanings,
+        };
       }
     }
 
     const remaining = await this.prisma.sentence.count({ where: missingWhere });
-    return { scanned: rows.length, updated, remaining };
+    return { scanned: rows.length, updated, remaining, items };
   }
 
   private async persistDrafts(

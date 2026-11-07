@@ -12,7 +12,7 @@ import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { SentenceService } from './sentence.service.js';
-import { SentenceGenService } from './sentence-gen.service.js';
+import { SentenceGenService, type BackfillWordMeaningsResult } from './sentence-gen.service.js';
 import {
   SaveCategoryDto,
   SaveSentenceDto,
@@ -308,7 +308,7 @@ export class SentenceController {
   @OperationLog('题库管理', '逐词释义回填')
   async backfillWordMeanings(
     @Body() dto: BackfillWordMeaningsDto,
-  ): Promise<ResponseEnvelope<{ scanned: number; updated: number; remaining: number }>> {
+  ): Promise<ResponseEnvelope<BackfillWordMeaningsResult>> {
     const result = await this.sentenceGen.backfillWordMeanings(dto.limit ?? 20, dto.force ?? false);
     const message =
       result.scanned === 0

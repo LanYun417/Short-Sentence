@@ -3,6 +3,7 @@
  */
 import { del, get, post, put, request } from './request';
 import type {
+  BackfillWordMeaningsResult,
   GenTaskItem,
   GenTaskQuery,
   PageResult,
@@ -142,16 +143,9 @@ export function backfillExplanationsApi(
   });
 }
 
-/** 补全存量题逐词释义（按批；force = 重生成已有词义的题；返回扫描/更新/缺词义剩余条数）。 */
-export function backfillWordMeaningsApi(
-  limit?: number,
-  force?: boolean,
-): Promise<{
-  scanned: number;
-  updated: number;
-  remaining: number;
-}> {
-  return post<{ scanned: number; updated: number; remaining: number }>('/sentences/word-meanings/backfill', {
+/** 补全存量题逐词释义（按批；force = 重生成已有词义的题；返回汇总 + 每题明细 items）。 */
+export function backfillWordMeaningsApi(limit?: number, force?: boolean): Promise<BackfillWordMeaningsResult> {
+  return post<BackfillWordMeaningsResult>('/sentences/word-meanings/backfill', {
     limit,
     force,
   });

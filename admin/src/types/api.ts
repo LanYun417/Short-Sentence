@@ -886,6 +886,29 @@ export interface TaskRunResult {
 export type SentenceStatus = 'pending_image' | 'ready' | 'offline';
 
 /** 题库列表条目 */
+/** 逐词释义回填单题结果明细（后台「补全词义」完成后弹窗展示） */
+export interface BackfillWordMeaningsItem {
+  /** 题目 ID */
+  id: number;
+  sentenceEn: string;
+  translationZh: string;
+  /** updated=本次写入成功；skipped=模型漏答未写入；failed=所在批次调用失败 */
+  status: 'updated' | 'skipped' | 'failed';
+  /** skipped / failed 的原因 */
+  reason?: string;
+  /** 词义：updated 为新写入的，其余为该题原有词义（可能为空） */
+  wordMeanings?: Record<string, string>;
+}
+
+/** 逐词释义回填一批的汇总 + 每题明细 */
+export interface BackfillWordMeaningsResult {
+  scanned: number;
+  updated: number;
+  /** 恒为「缺词义」的题数 */
+  remaining: number;
+  items: BackfillWordMeaningsItem[];
+}
+
 export interface SentenceItem {
   id: number;
   categoryId: number;
