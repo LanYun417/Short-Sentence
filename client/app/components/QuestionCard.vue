@@ -527,11 +527,12 @@ async function onSubmitReport(): Promise<void> {
           -->
           <div class="flex flex-1 flex-col py-0.5">
             <div class="flex items-start justify-between gap-2">
-              <p class="text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
+              <!-- min-w-0 + flex-1：答案过长时在剩余宽度内换行，而不是用 min-width:auto 把右侧朗读按钮挤压变形 -->
+              <p class="min-w-0 flex-1 text-xl font-semibold leading-snug text-slate-800 dark:text-slate-100">
                 {{ result?.sentenceEn }}
               </p>
-              <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis） -->
-              <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" />
+              <!-- 翻转看答案后，可点读正确答案英文（零依赖 speechSynthesis）；shrink-0 保证按钮不被长答案挤压 -->
+              <TtsButton v-if="result" :text="result.sentenceEn" lang="en-US" class="shrink-0" />
             </div>
             <p v-if="result?.ipa" class="mt-1 font-mono text-sm text-sky-600 dark:text-sky-400">
               {{ result.ipa }}
