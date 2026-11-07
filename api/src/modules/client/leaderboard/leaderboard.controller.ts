@@ -17,11 +17,12 @@ export class LeaderboardController {
   ) {}
 
   /**
-   * 排行榜：type=today_answered/today_correct（今日答题/答对前100）、checkin_total（累计打卡天数前100）。
-   * 响应附带当前用户名次 me（未上榜为 null）。
+   * 排行榜：type=today_* / week_* / month_*（今日、近 7 天、近 30 天答题/答对前 100）、
+   * checkin_total（累计打卡天数前 100）。响应附带当前用户名次 me（未上榜为 null）。
    *
-   * 名次型成就（三甲之列 / 榜首加冕）在这里旁路解锁：名次只有查榜单时才算得出来，
-   * 答题路径不做全表聚合；仅前三才触发成就检查，避免每次看榜都白跑一遍。
+   * 名次型成就（榜上有名 / 十强之列 / 三甲之列 / 榜首加冕）在这里旁路解锁：名次只有查榜单
+   * 时才算得出来，答题路径不做全表聚合；仅进入前 100 才触发，且由 GamifyService 在勋章
+   * 集齐后短路，避免每次看榜都白跑一遍。
    */
   @Get()
   async fetch(
@@ -30,9 +31,9 @@ export class LeaderboardController {
   ): Promise<LeaderboardResult> {
     const result = await this.leaderboard.fetch(query.type, user.userId);
     const rank = result.me?.rank;
-    if (rank && rank <= 3) {
+    if (rank && rank <= 100) {
       try {
-        await this.gamify.checkAchievements(user.userId, rank);
+        await this.gamify.checkRankAchievements(user.userId, rank);
       } catch {
         // 成就解锁是旁路：失败不影响榜单响应（下次进入榜单或答题会重试）
       }

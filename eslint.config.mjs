@@ -38,6 +38,8 @@ export default [
       'api/uploads/**',
       'api/logs/**',
       'api/cache/**',
+      // WorkBuddy 会话数据与一次性验证脚本（非项目源码，格式由工具决定，不参与 lint）
+      '.workbuddy/**',
     ],
   },
 

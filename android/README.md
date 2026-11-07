@@ -103,8 +103,10 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
 ```
 
 > ⚠️ **明文 HTTP**：开发期地址是 http，Android 9+ 默认禁止明文流量。
-> 已在 `android/app/src/main/res/xml/network_security_config.xml`
-> 对 `10.0.2.2` / `localhost` / 私网段放行（**仅此配置，release 不放行**）。
+> `android/app/src/main/res/xml/network_security_config.xml` 只对
+> `10.0.2.2` / `localhost` / `127.0.0.1` 这类**字面 IP**放行；Android 不解析 CIDR 网段，
+> 文件里 `192.168.0.0` / `192.168.1.0` / `172.16.0.0` 只是占位，局域网真机要把**实际 IP**
+> 单独写成一条 `<domain>`。生产一律走 HTTPS 域名，不要放开 `base-config`。
 
 > 💡 **看动效与截图建议用 `--release`**：debug 包在模拟器上首帧会掉 100+ 帧，
 > 容易被系统判 ANR，也不代表真实流畅度。`flutter run --release` 走 AOT，接近真机。
@@ -119,16 +121,47 @@ flutter test
 > **Widget 测试必须把 `Motion.loopAnimations` 置为 false**（见 `quiz_page_test.dart`）：
 > 极光与骨架微光是无限循环动画，会让 `pumpAndSettle` 永远等不到静止。
 
-## 构建
+## 构建与发布
 
 ```bash
-flutter build apk --release        # Android
-flutter build appbundle --release  # 上架 Google Play 用 AAB
+flutter build apk --release        # 产物 build/app/outputs/flutter-apk/app-release.apk
+flutter build appbundle --release  # 上架应用商店用 AAB
 flutter build ipa --release        # iOS（需 macOS + Xcode）
 ```
 
-签名配置不入库：`android/key.properties` 与 `*.jks` 均已在 `.gitignore` 中排除；
-当前 release 仍复用 debug 签名（模板默认），正式发版前需替换。
+### 正式签名
+
+`android/android/key.properties`（不入库）四个字段：
+
+```properties
+storePassword=<keystore 口令>
+keyPassword=<key 口令>
+keyAlias=short-sentence
+storeFile=release-keystore.jks
+```
+
+keystore 放 `android/android/release-keystore.jks`，`*.jks` 与 `key.properties`
+均在 `android/android/.gitignore` 中排除。生成：
+
+```bash
+keytool -genkeypair -v -keystore android/android/release-keystore.jks \
+  -alias short-sentence -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Short Sentence, OU=Mobile, O=Short Sentence, L=Shenzhen, ST=Guangdong, C=CN"
+```
+
+`android/app/build.gradle.kts` 检测到 `key.properties` 就用正式签名，否则回退 debug
+签名——CI / 新克隆的机器没有密钥也能打 release 包，不会因缺文件构建失败。
+
+### 登记发布记录
+
+1. 版本号来自 `pubspec.yaml` 的 `version: 1.0.0+1`（versionName + versionCode），发新版先 bump。
+2. **对外分发前必须用生产地址重新构建**：
+   `flutter build apk --release --dart-define=API_BASE_URL=https://<域名>/api`。
+   默认 `10.0.2.2` 只适用于模拟器，直接分发会让所有接口连不上。
+3. 后台「系统管理 → App 版本」上传 APK；等价接口是先 `POST /api/app-versions/upload`
+   （multipart 字段 `file`）拿 `fileId`，再 `POST /api/app-versions` 提交
+   `version` / `versionCode` / `fileId` / `changelog`，`status=1` 即上架。
+   游客侧 `GET /api/client/app/latest` 与 Web 下载页只认 `status=1` 且 versionCode 最大的记录。
 
 ## 相关文档
 

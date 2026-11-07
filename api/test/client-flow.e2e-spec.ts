@@ -43,6 +43,8 @@ interface NextQuestion {
   imageUrl: string | null;
   categoryName: string | null;
   difficulty: number;
+  festivalName: string | null;
+  wordMeanings: Record<string, string> | null;
   todayDone: number;
   todayGoal: number;
   source: 'new' | 'review';
@@ -173,12 +175,14 @@ describe('用户端主链路 (e2e)', () => {
       [
         'categoryName',
         'difficulty',
+        'festivalName',
         'imageUrl',
         'sentenceId',
         'source',
         'todayDone',
         'todayGoal',
         'translationZh',
+        'wordMeanings',
         'words',
       ].sort(),
     );
@@ -282,6 +286,54 @@ describe('用户端主链路 (e2e)', () => {
     const data = res.body.data as { list: Array<{ sentenceId: number; sentenceEn: string }>; total: number };
     expect(Array.isArray(data.list)).toBe(true);
     expect(data.list.some((item) => item.sentenceId === Number(testSentenceId))).toBe(true);
+  });
+
+  it('GET /client/leaderboard：七个榜（今日/周/月 × 答题/答对 + 打卡）口径一致', async () => {
+    const types = [
+      'today_answered',
+      'today_correct',
+      'week_answered',
+      'week_correct',
+      'month_answered',
+      'month_correct',
+      'checkin_total',
+    ] as const;
+    for (const type of types) {
+      const res = await authGet(`/client/leaderboard?type=${type}`).expect(200);
+      const data = res.body.data as {
+        type: string;
+        unit: string;
+        date: string;
+        top: unknown[];
+        me: { rank: number; count: number } | null;
+      };
+      expect(data.type).toBe(type);
+      expect(data.unit).toBe(type === 'checkin_total' ? '天' : '题');
+      expect(data.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Array.isArray(data.top)).toBe(true);
+      expect(data.top.length).toBeLessThanOrEqual(100);
+      // 本轮已经作答，答题/答对类四个维度的窗口都必含这条记录
+      if (type !== 'checkin_total') {
+        expect(data.me, `${type} 应有我的名次`).toBeTruthy();
+        expect(data.me!.count).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('GET /client/leaderboard：非法 type 返回 400', async () => {
+    await authGet('/client/leaderboard?type=not_a_board').expect(400);
+  });
+
+  it('查榜会旁路解锁首次上榜成就（名次型成就只在榜单链路点亮）', async () => {
+    const res = await authGet('/client/leaderboard?type=today_answered').expect(200);
+    const me = (res.body.data as { me: { rank: number } | null }).me;
+    expect(me).toBeTruthy();
+    expect(me!.rank).toBeLessThanOrEqual(100);
+
+    const overview = await authGet('/client/gamify/overview').expect(200);
+    const achievements = (overview.body.data as { achievements: Array<{ code: string; unlocked: boolean }> })
+      .achievements;
+    expect(achievements.find((item) => item.code === 'rank_top100')?.unlocked).toBe(true);
   });
 
   it('未携带令牌访问受保护接口返回 401（用户端同样不可裸奔）', async () => {

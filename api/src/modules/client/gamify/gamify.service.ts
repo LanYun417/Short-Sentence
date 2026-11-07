@@ -128,7 +128,7 @@ interface AchievementContext {
   /**
    * 本次检查所知的最好名次（1 = 榜首）。
    * 名次只有查询排行榜时才算得出来，答题/打卡路径不额外全表聚合，故默认 Infinity；
-   * 由 LeaderboardService 在进入榜单且名次 ≤3 时把 rank 传进来。
+   * 由 LeaderboardController 在用户进入榜单前 100 时把 rank 传进来。
    */
   bestRank: number;
 }
@@ -167,7 +167,7 @@ export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) =>
   explorer_all: (ctx) => ctx.totalCategories > 0 && ctx.unlockedCategories >= ctx.totalCategories,
   level_b1: (ctx) => ctx.xp >= levelMin('B1'),
   level_b2: (ctx) => ctx.xp >= levelMin('B2'),
-  // ---- 排行榜配套成就（维度与 /client/leaderboard 的三个榜一一对应） ----
+  // ---- 排行榜配套成就（维度与 /client/leaderboard 的榜单一一对应） ----
   today_answer_20: (ctx) => ctx.todayAnswerCount >= 20,
   today_answer_50: (ctx) => ctx.todayAnswerCount >= 50,
   today_correct_15: (ctx) => ctx.todayCorrectCount >= 15,
@@ -175,9 +175,15 @@ export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) =>
   checkin_total_30: (ctx) => ctx.checkinTotal >= 30,
   checkin_total_100: (ctx) => ctx.checkinTotal >= 100,
   // 名次型：只在「查榜单」时被 bestRank 点亮；答题路径不额外做全表聚合
+  // 首次上榜（前 100）→ 十强 → 三甲 → 榜首，逐级递进
+  rank_top100: (ctx) => ctx.bestRank <= 100,
+  rank_top10: (ctx) => ctx.bestRank <= 10,
   rank_top3: (ctx) => ctx.bestRank <= 3,
   rank_first: (ctx) => ctx.bestRank === 1,
 };
+
+/** 名次型成就 code 全集：用于「已经集齐就不必再跑全量成就检查」的短路判断。 */
+export const RANK_ACHIEVEMENT_CODES = ['rank_top100', 'rank_top10', 'rank_top3', 'rank_first'] as const;
 
 /** 唯一键冲突（Prisma P2002）判定。 */
 function isUniqueViolation(error: unknown): boolean {
@@ -318,6 +324,22 @@ export class GamifyService {
       }
     }
     return newly;
+  }
+
+  /**
+   * 榜单旁路：用户进入任一榜前 100 时检查名次型成就（首次上榜 / 十强 / 三甲 / 榜首）。
+   *
+   * checkAchievements 会做十余条聚合查询，不适合每次看榜都跑一遍；这里先用一次带索引的
+   * findMany 判断是否已集齐名次勋章，集齐即短路，未集齐才走完整检查。
+   */
+  async checkRankAchievements(userId: number, rank: number): Promise<Array<{ code: string; name: string }>> {
+    if (!Number.isFinite(rank) || rank < 1 || rank > 100) return [];
+    const owned = await this.prisma.userAchievement.findMany({
+      where: { userId: BigInt(userId), achievementCode: { in: [...RANK_ACHIEVEMENT_CODES] } },
+      select: { achievementCode: true },
+    });
+    if (owned.length >= RANK_ACHIEVEMENT_CODES.length) return [];
+    return this.checkAchievements(userId, rank);
   }
 
   /** 成长概览（XP / 等级 / 成就 / 场景地图）。 */

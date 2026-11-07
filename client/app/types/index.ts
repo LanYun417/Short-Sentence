@@ -329,8 +329,18 @@ export interface MyFeedbackItem {
 
 /* ------------------------------ 排行榜 ------------------------------ */
 
-/** 排行榜类型：today_answered 今日答题数 / today_correct 今日答对数 / checkin_total 累计打卡天数 */
-export type LeaderboardType = 'today_answered' | 'today_correct' | 'checkin_total';
+/**
+ * 排行榜类型：今日 / 近 7 天 / 近 30 天的答题数、答对数，以及累计打卡天数。
+ * 周/月榜是「最近 N 个自然日」的滚动窗口（与答题记录 30 天保留期对齐）。
+ */
+export type LeaderboardType =
+  | 'today_answered'
+  | 'today_correct'
+  | 'week_answered'
+  | 'week_correct'
+  | 'month_answered'
+  | 'month_correct'
+  | 'checkin_total';
 
 /** 排行榜一行 */
 export interface LeaderboardRow {
@@ -341,7 +351,7 @@ export interface LeaderboardRow {
   count: number;
 }
 
-/** 今日排行榜响应 */
+/** 排行榜响应 */
 export interface LeaderboardResult {
   type: LeaderboardType;
   /** 榜单展示单位：题 / 天 */

@@ -1951,13 +1951,31 @@ export const ACHIEVEMENT_SEEDS: Array<{
     sort: 24,
   },
   {
+    code: 'rank_top100',
+    name: '榜上有名',
+    description: '首次登上任一排行榜前 100 名',
+    icon: 'flag',
+    category: 'behavior',
+    rewardXp: 30,
+    sort: 25,
+  },
+  {
+    code: 'rank_top10',
+    name: '十强之列',
+    description: '登上任一排行榜前 10 名',
+    icon: 'chevrons-up',
+    category: 'behavior',
+    rewardXp: 80,
+    sort: 26,
+  },
+  {
     code: 'rank_top3',
     name: '三甲之列',
     description: '登上任一排行榜前三名',
     icon: 'trophy',
     category: 'persist',
     rewardXp: 100,
-    sort: 25,
+    sort: 27,
   },
   {
     code: 'rank_first',
@@ -1966,7 +1984,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     icon: 'crown',
     category: 'persist',
     rewardXp: 200,
-    sort: 26,
+    sort: 28,
   },
 ];
 

@@ -1,9 +1,9 @@
-/// 排行榜页回归测试（Web / Android 三端共用同一套榜单口径）。
+/// 排行榜页回归测试（Web / Android 共用同一套榜单口径）。
 ///
 /// 守四件事：
-/// 1. 三个 tab 都在（答题榜 / 答对榜 / 打卡榜）——加第三个榜时最容易漏；
-/// 2. 切换 tab 会重新取数，且「打卡榜」的单位是天、名次文案是累计口径；
-/// 3. 今日两榜的单位是题、名次文案是今日口径；
+/// 1. 「周期 × 指标」两段都在，7 个榜都能选到（新增周/月榜时最容易漏）；
+/// 2. 切换会按新 type 重新取数，文案口径随周期/指标变化；
+/// 3. 打卡榜单位是天、文案是累计口径，且隐藏指标段；
 /// 4. 空榜显示空态而不是空白页。
 ///
 /// 网络用假 API 顶掉，不碰真实后端；Motion.loopAnimations 必须关，
@@ -67,27 +67,65 @@ void main() {
   setUp(() => Motion.loopAnimations = false);
   tearDown(() => Motion.loopAnimations = true);
 
-  testWidgets('三个榜单都在，切到打卡榜后单位与名次文案变成累计口径', (tester) async {
+  test('周期 × 指标覆盖 7 个后端榜单类型', () {
+    expect(
+      <LeaderboardType>[
+        leaderboardTypeOf(LeaderboardPeriod.today, LeaderboardMetric.answered),
+        leaderboardTypeOf(LeaderboardPeriod.today, LeaderboardMetric.correct),
+        leaderboardTypeOf(LeaderboardPeriod.week, LeaderboardMetric.answered),
+        leaderboardTypeOf(LeaderboardPeriod.week, LeaderboardMetric.correct),
+        leaderboardTypeOf(LeaderboardPeriod.month, LeaderboardMetric.answered),
+        leaderboardTypeOf(LeaderboardPeriod.month, LeaderboardMetric.correct),
+        leaderboardTypeOf(LeaderboardPeriod.checkin, LeaderboardMetric.answered),
+      ],
+      <LeaderboardType>[
+        LeaderboardType.todayAnswered,
+        LeaderboardType.todayCorrect,
+        LeaderboardType.weekAnswered,
+        LeaderboardType.weekCorrect,
+        LeaderboardType.monthAnswered,
+        LeaderboardType.monthCorrect,
+        LeaderboardType.checkinTotal,
+      ],
+    );
+    expect(<String>{
+      for (final LeaderboardType type in LeaderboardType.values) type.apiValue,
+    }.length, 7);
+    expect(LeaderboardType.checkinTotal.unit, '天');
+    expect(LeaderboardType.monthCorrect.unit, '题');
+  });
+
+  testWidgets('二维切换会按新 type 取数，打卡榜为累计口径且隐藏指标段', (tester) async {
     final api = _FakeLeaderboardApi();
     await _pumpPage(tester, api);
 
     expect(find.text('排行榜'), findsWidgets);
-    expect(find.text('答题榜'), findsOneWidget);
-    expect(find.text('答对榜'), findsOneWidget);
-    expect(find.text('打卡榜'), findsOneWidget);
+    for (final String label in <String>['今日榜', '周榜', '月榜', '打卡榜', '答题数', '答对数']) {
+      expect(find.text(label), findsOneWidget);
+    }
     expect(find.text('你今天答题第 1 名 · 22 题'), findsOneWidget);
     expect(find.text('22 题'), findsOneWidget);
     expect(find.text('刷题达人'), findsOneWidget);
 
+    await tester.tap(find.text('答对数'));
+    await tester.pumpAndSettle();
+    expect(find.text('你今天答对第 1 名 · 22 题'), findsOneWidget);
+
+    await tester.tap(find.text('月榜'));
+    await tester.pumpAndSettle();
+    expect(find.text('你近 30 天答对第 1 名 · 22 题'), findsOneWidget);
+
     await tester.tap(find.text('打卡榜'));
     await tester.pumpAndSettle();
-
     expect(find.text('你累计打卡第 1 名 · 12 天'), findsOneWidget);
     expect(find.text('12 天'), findsOneWidget);
     expect(find.text('打卡达人'), findsOneWidget);
     expect(find.text('22 题'), findsNothing);
+    expect(find.text('答对数'), findsNothing); // 打卡周期只有一个口径
     expect(api.calls, <LeaderboardType>[
       LeaderboardType.todayAnswered,
+      LeaderboardType.todayCorrect,
+      LeaderboardType.monthCorrect,
       LeaderboardType.checkinTotal,
     ]);
   });
@@ -98,6 +136,10 @@ void main() {
 
     expect(find.text('今天还没有人上榜'), findsOneWidget);
     expect(find.text('今天还没上榜，去刷几题吧'), findsOneWidget);
+
+    await tester.tap(find.text('周榜'));
+    await tester.pumpAndSettle();
+    expect(find.text('近 7 天还没有人上榜'), findsOneWidget);
 
     await tester.tap(find.text('打卡榜'));
     await tester.pumpAndSettle();

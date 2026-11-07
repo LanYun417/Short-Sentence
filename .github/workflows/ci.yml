@@ -110,6 +110,12 @@ jobs:
       - name: 应用迁移（同时验证迁移文件可执行）
         working-directory: api
         run: npm run migrate:deploy
+      # 结构门禁：上面是在全新库重放全部迁移，此处对比「库结构」与「schema 目录」。
+      # 改了 schema 却漏写 migration.sql → 库里没有新列 → diff 非空 → --exit-code 直接让 CI 失败。
+      # （本周已三起因漏迁移导致线上接口 500，靠人工自查文档拦不住，故固化为门禁。）
+      - name: Schema / 迁移一致性（migrate diff）
+        working-directory: api
+        run: npm run prisma:diff:check
       # 必须先应用再检查：Prisma 生成的 migration.sql **不含 COMMENT 语句**
       # （注释由 scripts/prisma-comments.ts 单独维护），全新库里一条注释都没有，
       # 直接 check 必然报差异 —— 这一步等价于"部署后补齐注释"。

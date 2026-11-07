@@ -1,6 +1,7 @@
-/// 排行榜页（路由 /leaderboard）：今日答题数 / 今日答对数 / 累计打卡天数，各前 100。
+/// 排行榜页（路由 /leaderboard）：今日 / 近 7 天 / 近 30 天的答题数与答对数，
+/// 以及累计打卡天数，各前 100。
 ///
-/// 数据来自 GET /client/leaderboard?type=today_answered|today_correct|checkin_total（需登录），
+/// 数据来自 GET /client/leaderboard?type=...（需登录），页面按「周期 × 指标」二维选择，
 /// 对应后端 `modules/client/leaderboard/leaderboard.controller.ts`。
 library;
 
@@ -27,7 +28,10 @@ class LeaderboardPage extends ConsumerStatefulWidget {
 }
 
 class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
-  LeaderboardType _type = LeaderboardType.todayAnswered;
+  LeaderboardPeriod _period = LeaderboardPeriod.today;
+  LeaderboardMetric _metric = LeaderboardMetric.answered;
+
+  LeaderboardType get _type => leaderboardTypeOf(_period, _metric);
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +40,11 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     final resultAsync = ref.watch(leaderboardProvider(_type));
     final result = resultAsync.valueOrNull;
 
-    // 前三名会在后端旁路解锁「三甲之列 / 榜首加冕」。若成长页此前已加载过概览，
-    // 这里主动刷一次，用户切回成长页就能立刻看到新勋章（不必下拉刷新）。
+    // 进入前 100 会在后端旁路解锁名次型成就（榜上有名 / 十强 / 三甲 / 榜首）。
+    // 若成长页此前已加载过概览，这里主动刷一次，用户切回成长页就能立刻看到新勋章。
     ref.listen<AsyncValue<LeaderboardResult>>(leaderboardProvider(_type), (previous, next) {
       final rank = next.valueOrNull?.me?.rank;
-      if (rank != null && rank <= 3 && ref.read(growthControllerProvider).loaded) {
+      if (rank != null && rank <= 100 && ref.read(growthControllerProvider).loaded) {
         ref.read(growthControllerProvider.notifier).refresh();
       }
     });
@@ -54,17 +58,29 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
           children: <Widget>[
             PageHeader(
               title: '排行榜',
-              subtitle: result?.date.isNotEmpty == true ? '今日 · ${result!.date}' : '今日榜单',
+              subtitle: result?.date.isNotEmpty == true ? '${_type.periodTitle} · ${result!.date}' : _type.periodTitle,
             ),
-            SegmentedControl<LeaderboardType>(
-              segments: <Segment<LeaderboardType>>[
-                Segment(value: LeaderboardType.todayAnswered, label: '答题榜', icon: Icons.format_list_numbered_rounded),
-                Segment(value: LeaderboardType.todayCorrect, label: '答对榜', icon: Icons.emoji_events_outlined),
-                Segment(value: LeaderboardType.checkinTotal, label: '打卡榜', icon: Icons.calendar_month_outlined),
+            SegmentedControl<LeaderboardPeriod>(
+              segments: const <Segment<LeaderboardPeriod>>[
+                Segment(value: LeaderboardPeriod.today, label: '今日榜'),
+                Segment(value: LeaderboardPeriod.week, label: '周榜'),
+                Segment(value: LeaderboardPeriod.month, label: '月榜'),
+                Segment(value: LeaderboardPeriod.checkin, label: '打卡榜'),
               ],
-              value: _type,
-              onChanged: (LeaderboardType v) => setState(() => _type = v),
+              value: _period,
+              onChanged: (LeaderboardPeriod v) => setState(() => _period = v),
             ),
+            if (_period != LeaderboardPeriod.checkin) ...<Widget>[
+              const SizedBox(height: 8),
+              SegmentedControl<LeaderboardMetric>(
+                segments: const <Segment<LeaderboardMetric>>[
+                  Segment(value: LeaderboardMetric.answered, label: '答题数', icon: Icons.format_list_numbered_rounded),
+                  Segment(value: LeaderboardMetric.correct, label: '答对数', icon: Icons.emoji_events_outlined),
+                ],
+                value: _metric,
+                onChanged: (LeaderboardMetric v) => setState(() => _metric = v),
+              ),
+            ],
             const SizedBox(height: 12),
             _MyRankBanner(result: result, type: _type),
             const SizedBox(height: 12),
@@ -78,8 +94,8 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
               ),
               data: (LeaderboardResult r) => r.top.isEmpty
                   ? EmptyState(
-                      title: _type == LeaderboardType.checkinTotal ? '还没有人打卡' : '今天还没有人上榜',
-                      message: _type == LeaderboardType.checkinTotal ? '完成今日目标，你就是打卡第一人' : '答完第一题，你就是今天的榜一',
+                      title: _type.emptyTitle,
+                      message: _type.emptyMessage,
                       icon: Icons.emoji_events_outlined,
                     )
                   : Column(
@@ -115,9 +131,7 @@ class _MyRankBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              me != null
-                  ? type.meText(me.rank, me.count)
-                  : (type == LeaderboardType.checkinTotal ? '还没打过卡，去完成今日目标吧' : '今天还没上榜，去刷几题吧'),
+              me != null ? type.meText(me.rank, me.count) : type.bannerEmpty,
               style: TextStyle(color: colors.ink, fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),

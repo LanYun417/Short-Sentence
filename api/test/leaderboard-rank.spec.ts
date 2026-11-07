@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { computeLeaderboard, type AggRow } from '../src/modules/client/leaderboard/leaderboard.service.js';
+import {
+  LEADERBOARD_TYPES,
+  leaderboardDays,
+  leaderboardUnit,
+} from '../src/modules/client/leaderboard/leaderboard.dto.js';
+import {
+  computeLeaderboard,
+  rankLeaderboard,
+  type AggRow,
+} from '../src/modules/client/leaderboard/leaderboard.service.js';
 
 /**
  * 排行榜纯排名逻辑（computeLeaderboard）单测。
@@ -82,5 +91,36 @@ describe('computeLeaderboard', () => {
       [3, 12, 2], // 同分同名次
     ]);
     expect(res.me).toEqual({ rank: 2, count: 12 });
+  });
+
+  it('周榜 / 月榜按答对数口径排名，单位仍是题', () => {
+    const data = [agg(1, 100, 40), agg(2, 60, 40), agg(3, 30, 9)];
+    for (const type of ['week_correct', 'month_correct'] as const) {
+      const res = computeLeaderboard(data, users, files, type, 3, 100);
+      expect(res.type).toBe(type);
+      expect(res.unit).toBe('题');
+      expect(res.top.map((r) => [r.userId, r.count, r.rank])).toEqual([
+        [1, 40, 1],
+        [2, 40, 1],
+        [3, 9, 3],
+      ]);
+    }
+    expect(computeLeaderboard(data, users, files, 'month_answered', 1, 100).top[0].count).toBe(100);
+  });
+
+  it('可缓存快照保留全量精简名次，任意用户都能从中取 me', () => {
+    const data = Array.from({ length: 120 }, (_, i) => agg(i + 1, 200 - i, 200 - i));
+    const bigUsers = new Map(users);
+    data.forEach((r) => bigUsers.set(r.userId, { nickname: `u${r.userId}`, avatarFileId: 0n }));
+    const board = rankLeaderboard(data, bigUsers, files, 'week_answered', 100);
+    expect(board.top).toHaveLength(100);
+    expect(board.ranks).toHaveLength(120); // top 之外的用户也能算名次
+    expect(board.ranks.find((r) => r.u === 101)).toEqual({ u: 101, r: 101, c: 100 });
+  });
+
+  it('7 个榜的窗口天数与单位配置正确', () => {
+    expect(LEADERBOARD_TYPES).toHaveLength(7);
+    expect(LEADERBOARD_TYPES.map((t) => leaderboardDays(t))).toEqual([1, 1, 7, 7, 30, 30, 0]);
+    expect(LEADERBOARD_TYPES.map((t) => leaderboardUnit(t))).toEqual(['题', '题', '题', '题', '题', '题', '天']);
   });
 });

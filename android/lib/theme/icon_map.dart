@@ -54,6 +54,8 @@ IconData appIcon(String? name) {
     'list-ordered' => Icons.format_list_numbered_rounded,
     'badge-check' => Icons.verified_rounded,
     'calendar-days' => Icons.calendar_month_rounded,
+    'flag' => Icons.flag_rounded,
+    'chevrons-up' => Icons.keyboard_double_arrow_up_rounded,
     _ => Icons.auto_awesome_rounded,
   };
 }

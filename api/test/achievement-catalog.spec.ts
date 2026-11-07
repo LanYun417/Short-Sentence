@@ -83,6 +83,8 @@ describe('成就目录', () => {
       'today_correct_30',
       'checkin_total_30',
       'checkin_total_100',
+      'rank_top100',
+      'rank_top10',
       'rank_top3',
       'rank_first',
     ];
@@ -97,9 +99,24 @@ describe('成就目录', () => {
     expect(ACHIEVEMENT_CONDITIONS.today_correct_30(onBoard)).toBe(true);
     expect(ACHIEVEMENT_CONDITIONS.checkin_total_30(onBoard)).toBe(true);
     expect(ACHIEVEMENT_CONDITIONS.checkin_total_100(onBoard)).toBe(false);
+    expect(ACHIEVEMENT_CONDITIONS.rank_top100(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.rank_top10(onBoard)).toBe(true);
     expect(ACHIEVEMENT_CONDITIONS.rank_top3(onBoard)).toBe(true);
     expect(ACHIEVEMENT_CONDITIONS.rank_first(onBoard)).toBe(false);
     expect(ACHIEVEMENT_CONDITIONS.rank_first({ ...onBoard, bestRank: 1 })).toBe(true);
+  });
+
+  it('首次上榜 / 十强按名次逐级点亮，百名外不点亮', () => {
+    const rankCodes = ['rank_top100', 'rank_top10', 'rank_top3', 'rank_first'];
+    const lit = (bestRank: number): string[] =>
+      rankCodes.filter((code) => ACHIEVEMENT_CONDITIONS[code]({ ...EMPTY_CONTEXT, bestRank }));
+    expect(lit(Number.POSITIVE_INFINITY)).toEqual([]);
+    expect(lit(101)).toEqual([]);
+    expect(lit(100)).toEqual(['rank_top100']);
+    expect(lit(50)).toEqual(['rank_top100']);
+    expect(lit(10)).toEqual(['rank_top100', 'rank_top10']);
+    expect(lit(3)).toEqual(['rank_top100', 'rank_top10', 'rank_top3']);
+    expect(lit(1)).toEqual(rankCodes);
   });
 
   it('奖励经验与图标名都填了（空值会让勋章墙空白）', () => {

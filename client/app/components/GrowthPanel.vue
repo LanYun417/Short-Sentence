@@ -44,6 +44,9 @@ const ICON_MAP: Record<string, string> = {
   star: 'i-lucide-star',
   'calendar-days': 'i-lucide-calendar-days',
   sparkles: 'i-lucide-sparkles',
+  // 首次上榜 / 十强（名次型成就）
+  flag: 'i-lucide-flag',
+  'chevrons-up': 'i-lucide-chevrons-up',
 };
 
 /** 成就图标名（未知回退到奖章）。 */
