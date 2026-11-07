@@ -914,6 +914,8 @@ export interface SentenceItem {
 
 /** 题库查询参数 */
 export interface SentenceQuery extends PageQuery {
+  /** 题目 ID 精确匹配 */
+  id?: number;
   status?: SentenceStatus;
   categoryId?: number;
   difficulty?: number;

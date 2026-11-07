@@ -105,12 +105,14 @@ const { loading, list, total, query, search, reset, getList, changePage, changeP
     getSentenceListApi({
       page: p.page,
       pageSize: p.pageSize,
+      id: p.id || undefined,
       keyword: p.keyword?.trim() || undefined,
       status: p.status,
       difficulty: p.difficulty,
       categoryId: p.categoryId,
     }),
   {
+    id: undefined as number | undefined,
     keyword: '',
     status: undefined as SentenceStatus | undefined,
     difficulty: undefined as number | undefined,
@@ -372,6 +374,7 @@ function handleExport(): void {
   void exportCsv({
     api: exportSentencesApi,
     params: {
+      id: query.id || undefined,
       keyword: query.keyword || undefined,
       status: query.status || undefined,
       difficulty: query.difficulty || undefined,
@@ -781,6 +784,9 @@ onMounted(async () => {
   <div class="sentence-page table-page">
     <!-- 查询表单：关键词 / 分类 / 状态 / 难度 -->
     <SearchForm class="table-page__filter" @search="search" @reset="reset">
+      <el-form-item label="ID">
+        <el-input-number v-model="query.id" :min="1" placeholder="题目 ID" clearable style="width: 140px" />
+      </el-form-item>
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="英文句子 / 中文释义" clearable @keyup.enter="search" />
       </el-form-item>
@@ -925,6 +931,7 @@ onMounted(async () => {
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="45" :reserve-selection="true" />
+          <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="配图" width="110">
             <template #default="{ row }">
               <el-image
