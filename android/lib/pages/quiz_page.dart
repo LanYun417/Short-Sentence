@@ -2071,7 +2071,7 @@ class _WordChip extends StatelessWidget {
     if (meaning != null && meaning.isNotEmpty) {
       body = GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onLongPress: () => _showMeaning(context, text, meaning),
+        onLongPress: () => _showMeaning(context, meaning),
         child: body,
       );
     }
@@ -2097,21 +2097,21 @@ class _WordChip extends StatelessWidget {
     );
   }
 
-  /// 长按词块：底部弹层显示「词 → 本句含义」（无释义的词块不会走到这里）。
-  static void _showMeaning(BuildContext context, String word, String meaning) {
+  /// 长按词块：底部弹层显示该词在本句中的含义（无释义的词块不会走到这里）。
+  static void _showMeaning(BuildContext context, String meaning) {
     HapticFeedback.selectionClick();
     showModalBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => _WordMeaningSheet(word: word, meaning: meaning),
+      builder: (sheetContext) => _WordMeaningSheet(meaning: meaning),
     );
   }
 }
 
 /// 词块释义弹层（拼词模式长按查看；与 Web 端悬浮 tooltip 同一份数据 wordMeanings）。
+/// 只显示释义本身——长按的词块就在眼前，不重复显示单词。
 class _WordMeaningSheet extends StatelessWidget {
-  const _WordMeaningSheet({required this.word, required this.meaning});
+  const _WordMeaningSheet({required this.meaning});
 
-  final String word;
   final String meaning;
 
   @override
@@ -2132,7 +2132,7 @@ class _WordMeaningSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
             decoration: BoxDecoration(
               color: colors.cardMuted,
               borderRadius: BorderRadius.circular(16),
@@ -2143,23 +2143,13 @@ class _WordMeaningSheet extends StatelessWidget {
                 Icon(Icons.translate_rounded, size: 19, color: colors.brand),
                 const SizedBox(width: 11),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        word,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          color: colors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        meaning,
-                        style: TextStyle(fontSize: 13, color: colors.inkSoft),
-                      ),
-                    ],
+                  child: Text(
+                    meaning,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: colors.ink,
+                    ),
                   ),
                 ),
               ],
