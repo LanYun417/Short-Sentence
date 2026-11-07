@@ -348,15 +348,20 @@ export const config = {
       /** 文本模型（生题 / 造句 / 词根解析 / 句签文案；OpenAI 兼容 chat/completions） */
       textModel: process.env.AI_AGNES_TEXT_MODEL ?? 'agnes-2.5-flash',
       /**
-       * 英伟达 NIM 生题通道（可选）。OpenAI 兼容，baseUrl 默认 NVIDIA NIM 入口。
-       * 三者任一为空 = 不启用，生题内容生成回落到上方 textModel（Agnes）。
-       * 启用时仅生题**内容生成**走 NIM（生成 / 优化 / 逐词释义 / 句签文案）；
-       * 审核（含图像）、题目解析、客户端 AI 仍走全局 Agnes——守住 fail-closed 审核质量，
-       * 并避开纯文本 NIM 模型不支持视觉输入的限制。
+       * 英伟达 NIM 文本通道（可选，由 genChannel 选择是否启用）。OpenAI 兼容，baseUrl 默认 NVIDIA NIM 入口。
+       * genChannel='nim' 时所有**纯文本**对话调用走 NIM（生题/优化/审核/解析/逐词释义/句签/客户端 AI）；
+       * 图像生成与图像审核始终走全局 Agnes——纯文本 NIM 模型不支持视觉输入。
        */
       nimBaseUrl: process.env.AI_AGNES_NIM_BASE_URL ?? '',
       nimApiKey: process.env.AI_AGNES_NIM_API_KEY ?? '',
       nimModel: process.env.AI_AGNES_NIM_MODEL ?? '',
+      /**
+       * 生题内容生成通道选择：'agnes'（默认）或 'nim'。
+       * 选 'nim' 时才走 NIM（且要求 nimBaseUrl/nimApiKey/nimModel 齐备）；
+       * 选 'agnes' 时即使配了 NIM 也不用——两套配置可共存、随时切换。
+       * 非法值一律回落 'agnes'。
+       */
+      genChannel: process.env.AI_AGNES_GEN_CHANNEL === 'nim' ? 'nim' : 'agnes',
     },
     /** 生题并发上限（Agnes 限流未知，保守取 2） */
     textConcurrency: Math.max(1, toNumber(process.env.AI_TEXT_CONCURRENCY, 2)),

@@ -14,6 +14,7 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
+import { resolveTextChannel } from '../../../common/ai/ai.config.js';
 import { AiProviderError } from '../../../common/ai/ai.types.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -164,22 +165,24 @@ export class ClientAiService {
     return new Observable<SseFrame>((subscriber) => {
       const controller = new AbortController();
       const startedAt = Date.now();
+      // 文本通道：genChannel 选了 nim 时客户端 AI 也走 NIM，否则走全局 Agnes
+      const ch = resolveTextChannel(this.aiSettings.current);
       let promptTokens = 0;
       let completionTokens = 0;
 
       void (async () => {
         try {
-          if (this.aiSettings.current.apiKey.trim().length === 0) {
+          if (ch.apiKey.trim().length === 0) {
             throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
           }
-          const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
+          const response = await fetch(`${ch.baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
+              Authorization: `Bearer ${ch.apiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: this.aiSettings.current.textModel,
+              model: ch.model,
               messages: [
                 { role: 'system', content: params.system },
                 { role: 'user', content: params.user },
@@ -213,7 +216,7 @@ export class ClientAiService {
           await this.aiCallLog.record({
             type: params.type,
             provider: 'agnes',
-            model: this.aiSettings.current.textModel,
+            model: ch.model,
             bizId: params.bizId,
             promptTokens,
             completionTokens,
@@ -234,7 +237,7 @@ export class ClientAiService {
           await this.aiCallLog.record({
             type: params.type,
             provider: 'agnes',
-            model: this.aiSettings.current.textModel,
+            model: ch.model,
             bizId: params.bizId,
             latencyMs: Date.now() - startedAt,
             status: 'failed',

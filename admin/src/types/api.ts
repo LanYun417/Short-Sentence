@@ -987,6 +987,8 @@ export interface AiSettings {
   nimApiKeyMasked: string;
   /** NIM 生题模型（空 = 不启用通道） */
   nimModel: string;
+  /** 文本 AI 通道选择：'agnes'（默认）或 'nim' */
+  genChannel: 'agnes' | 'nim';
 }
 
 /** 保存 AI 设置入参（apiKey / nimApiKey 留空 = 不修改） */
@@ -1001,6 +1003,8 @@ export interface SaveAiSettingsPayload {
   nimApiKey?: string;
   /** 英伟达 NIM 生题通道 - 模型名（留空 = 不修改） */
   nimModel?: string;
+  /** 文本 AI 通道选择：'agnes'（默认）或 'nim'（选 nim 时 NIM 三项必填，所有文本 AI 走 NIM） */
+  genChannel?: 'agnes' | 'nim';
 }
 
 /** AI 连通性测试结果 */

@@ -39,6 +39,8 @@ export interface AiSettingsView {
   nimApiKeyMasked: string;
   /** NIM 生题模型（空 = 不启用通道） */
   nimModel: string;
+  /** 生题内容生成通道选择：'agnes'（默认）或 'nim' */
+  genChannel: string;
 }
 
 @Controller('ai-settings')
@@ -64,6 +66,7 @@ export class AiSettingsController {
       nimApiKeyConfigured: settings.nimApiKey.length > 0,
       nimApiKeyMasked: maskSecret(settings.nimApiKey),
       nimModel: settings.nimModel,
+      genChannel: settings.genChannel,
     };
   }
 
@@ -96,21 +99,25 @@ export class AiSettingsController {
         dto.imageModel,
       );
     }
-    // 组合校验：启用 NIM 通道（nimModel 非空）时，地址与密钥必须一起配备，
-    // 否则生题请求会打到错误 endpoint / 用错密钥（NVIDIA 模型必须在 NVIDIA 入口）。
-    // 基于「本次变更后的合并值」判断，避免「只改模型名、密钥已存在」被误拦截。
+    // 组合校验：以「生题通道选择」为准——选 nim 才要求 NIM 三件套齐备；
+    // 选 agnes 时即使配了 NIM 也不用（两套配置可共存、随时切换）。
+    // 基于「本次变更后的合并值」判断，避免只改某一项、其余已存在被误拦截。
     const current = this.aiSettings.current;
-    const mergedNim = {
+    const mergedGen = {
+      channel: dto.genChannel !== undefined ? dto.genChannel : current.genChannel,
       baseUrl: dto.nimBaseUrl !== undefined ? dto.nimBaseUrl : current.nimBaseUrl,
       apiKey: dto.nimApiKey !== undefined ? dto.nimApiKey : current.nimApiKey,
       model: dto.nimModel !== undefined ? dto.nimModel : current.nimModel,
     };
-    if (mergedNim.model && mergedNim.model.trim()) {
-      if (!mergedNim.baseUrl || !mergedNim.baseUrl.trim()) {
-        throw AppException.badRequest('启用 NIM 生题通道需同时填写 NIM 上游地址');
+    if (mergedGen.channel === 'nim') {
+      if (!mergedGen.model || !mergedGen.model.trim()) {
+        throw AppException.badRequest('已选择 NIM 通道，请填写 NIM 生题模型');
       }
-      if (!mergedNim.apiKey || !mergedNim.apiKey.trim()) {
-        throw AppException.badRequest('启用 NIM 生题通道需同时填写 NIM API Key');
+      if (!mergedGen.baseUrl || !mergedGen.baseUrl.trim()) {
+        throw AppException.badRequest('已选择 NIM 通道，请填写 NIM 上游地址');
+      }
+      if (!mergedGen.apiKey || !mergedGen.apiKey.trim()) {
+        throw AppException.badRequest('已选择 NIM 通道，请填写 NIM API Key');
       }
     }
     if (dto.nimBaseUrl !== undefined) {
@@ -132,6 +139,14 @@ export class AiSettingsController {
     }
     if (dto.nimModel !== undefined) {
       await saveAiSetting(this.prisma, AI_CONFIG_KEYS.nimModel, AI_CONFIG_NAMES[AI_CONFIG_KEYS.nimModel], dto.nimModel);
+    }
+    if (dto.genChannel !== undefined) {
+      await saveAiSetting(
+        this.prisma,
+        AI_CONFIG_KEYS.genChannel,
+        AI_CONFIG_NAMES[AI_CONFIG_KEYS.genChannel],
+        dto.genChannel,
+      );
     }
     // 刷新运行时快照：下一次 AI 调用即用新配置（无需重启）
     await this.aiSettings.reload();

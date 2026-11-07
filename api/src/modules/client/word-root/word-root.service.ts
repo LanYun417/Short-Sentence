@@ -12,6 +12,7 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
+import { resolveTextChannel } from '../../../common/ai/ai.config.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
 /** 词根构件。 */
@@ -314,18 +315,20 @@ export class WordRootService {
 
   /** 调上游做一次词根解析（非流式）。 */
   private async analyze(word: string, userId?: number): Promise<WordRootAnalysis> {
-    if (this.aiSettings.current.apiKey.trim().length === 0) {
+    // 文本通道：genChannel 选了 nim 时词根解析也走 NIM，否则走全局 Agnes
+    const ch = resolveTextChannel(this.aiSettings.current);
+    if (ch.apiKey.trim().length === 0) {
       throw new Error('AI 能力未配置（AI_AGNES_API_KEY 缺失）');
     }
     const startedAt = Date.now();
-    const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
+    const response = await fetch(`${ch.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
+        Authorization: `Bearer ${ch.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: this.aiSettings.current.textModel,
+        model: ch.model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `单词：${word}` },
@@ -348,7 +351,7 @@ export class WordRootService {
     await this.aiCallLog.record({
       type: 'word_root',
       provider: 'agnes',
-      model: this.aiSettings.current.textModel,
+      model: ch.model,
       // 带 userId 便于按用户归集 AI 用量（做会员分档与运营报表的依据）
       bizId: userId ?? 0,
       promptTokens: payload.usage?.prompt_tokens ?? 0,

@@ -33,6 +33,8 @@ const form = ref({
   nimApiKey: '',
   nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
   nimModel: '',
+  // 文本 AI 通道选择：agnes（默认）/ nim；选 nim 时所有文本 AI 走 NIM，仅图像保持 Agnes
+  genChannel: 'agnes' as 'agnes' | 'nim',
 });
 
 /** 读取设置（密钥输入框保持空白，placeholder 显示已配置的掩码）。 */
@@ -49,6 +51,7 @@ async function load(): Promise<void> {
       nimApiKey: '',
       nimBaseUrl: data.nimBaseUrl || 'https://integrate.api.nvidia.com/v1',
       nimModel: data.nimModel || '',
+      genChannel: data.genChannel === 'nim' ? 'nim' : 'agnes',
     };
   } finally {
     loading.value = false;
@@ -65,6 +68,7 @@ async function save(): Promise<void> {
       imageModel: form.value.imageModel.trim(),
       nimBaseUrl: form.value.nimBaseUrl.trim(),
       nimModel: form.value.nimModel.trim(),
+      genChannel: form.value.genChannel,
     };
     // 留空 = 不修改：绝不把掩码值提交上去
     if (form.value.apiKey.trim()) {
@@ -162,38 +166,51 @@ onMounted(() => {
           <span class="ml-2 text-xs text-gray-400">题目配图（16:9）</span>
         </el-form-item>
 
-        <el-divider content-position="left">英伟达 NIM 生题通道（可选）</el-divider>
-        <el-alert
-          type="info"
-          :closable="false"
-          show-icon
-          class="mb-4"
-          title="生题专用免费模型通道（OpenAI 兼容）"
-          description="留空 = 不启用，生题内容生成（生成 / 优化 / 逐词释义 / 句签文案）仍走上方 Agnes 生文模型。启用时三项一起填：在 NVIDIA NIM 目录任选免费模型（如 deepseek-ai/deepseek-v4.1-flash、meta/llama-3.1-8b-instruct）。审核、题目解析、客户端 AI 与图像生成仍走 Agnes，以守住审核质量并避开纯文本模型不支持视觉的限制。"
-        />
+        <el-form-item label="生题内容通道">
+          <el-radio-group v-model="form.genChannel">
+            <el-radio value="agnes">Agnes（默认，走上方生文模型）</el-radio>
+            <el-radio value="nim">英伟达 NIM（免费模型，见下方）</el-radio>
+          </el-radio-group>
+          <span class="ml-2 text-xs text-gray-400"
+            >选 NIM 后所有文本
+            AI（生题/优化/审核/解析/逐词释义/句签/客户端拓展与词根）都走该通道；仅图像生成与图像审核保持 Agnes</span
+          >
+        </el-form-item>
 
-        <el-form-item label="NIM API Key">
-          <el-input
-            v-model="form.nimApiKey"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            :placeholder="
-              settings?.nimApiKeyConfigured
-                ? `已配置 ${settings.nimApiKeyMasked}（留空不修改）`
-                : 'NVIDIA NIM API Key（只存服务端，接口不回显明文）'
-            "
+        <template v-if="form.genChannel === 'nim'">
+          <el-divider content-position="left">英伟达 NIM 通道配置（必填 · 所有文本 AI 走这里）</el-divider>
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            class="mb-4"
+            title="英伟达 NIM 免费模型通道（OpenAI 兼容）"
+            description="选择「英伟达 NIM」后，所有文本 AI 调用（生题/优化/审核/解析/逐词释义/句签/客户端 AI 拓展与词根）都改走这里的地址与模型；仅图像生成和图像审核保持 Agnes（纯文本 NIM 模型不支持视觉输入）。三项一起填，模型在 NVIDIA NIM 目录任选（如 deepseek-ai/deepseek-v4.1-flash、meta/llama-3.1-8b-instruct）。"
           />
-        </el-form-item>
 
-        <el-form-item label="NIM 上游地址">
-          <el-input v-model="form.nimBaseUrl" placeholder="https://integrate.api.nvidia.com/v1" />
-        </el-form-item>
+          <el-form-item label="NIM API Key">
+            <el-input
+              v-model="form.nimApiKey"
+              type="password"
+              show-password
+              autocomplete="new-password"
+              :placeholder="
+                settings?.nimApiKeyConfigured
+                  ? `已配置 ${settings.nimApiKeyMasked}（留空不修改）`
+                  : 'NVIDIA NIM API Key（只存服务端，接口不回显明文）'
+              "
+            />
+          </el-form-item>
 
-        <el-form-item label="NIM 生题模型">
-          <el-input v-model="form.nimModel" placeholder="如 deepseek-ai/deepseek-v4.1-flash" />
-          <span class="ml-2 text-xs text-gray-400">仅生题内容生成；留空则关闭通道</span>
-        </el-form-item>
+          <el-form-item label="NIM 上游地址">
+            <el-input v-model="form.nimBaseUrl" placeholder="https://integrate.api.nvidia.com/v1" />
+          </el-form-item>
+
+          <el-form-item label="NIM 生题模型">
+            <el-input v-model="form.nimModel" placeholder="如 deepseek-ai/deepseek-v4.1-flash" />
+            <span class="ml-2 text-xs text-gray-400">NIM 目录任选免费模型；选 Agnes 通道时本配置不启用</span>
+          </el-form-item>
+        </template>
 
         <el-form-item>
           <el-button v-permission="'system:ai:edit'" type="primary" :loading="saving" @click="save">保存设置</el-button>

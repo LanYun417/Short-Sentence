@@ -30,6 +30,8 @@ export interface AiSettings {
   nimApiKey: string;
   /** 英伟达 NIM 生题通道 - 模型名（空 = 不启用通道，生题回落 textModel） */
   nimModel: string;
+  /** 生题内容生成通道选择：'agnes'（默认）或 'nim'；'nim' 时生题内容生成走 NIM */
+  genChannel: string;
 }
 
 /** 去掉末尾斜杠，避免拼出 `//chat/completions`（后台手填地址时很常见）。 */
@@ -61,6 +63,8 @@ export async function loadAiSettings(prisma: PrismaService): Promise<AiSettings>
     nimBaseUrl: normalizeBaseUrl(value(AI_CONFIG_KEYS.nimBaseUrl, config.ai.agnes.nimBaseUrl)),
     nimApiKey: value(AI_CONFIG_KEYS.nimApiKey, config.ai.agnes.nimApiKey),
     nimModel: value(AI_CONFIG_KEYS.nimModel, config.ai.agnes.nimModel),
+    // 非法值一律回落 'agnes'，避免脏数据把生题通道切到不存在的分支
+    genChannel: value(AI_CONFIG_KEYS.genChannel, config.ai.agnes.genChannel) === 'nim' ? 'nim' : 'agnes',
   };
 }
 
@@ -95,4 +99,25 @@ export function maskSecret(secret: string): string {
     return '';
   }
   return secret.length <= 4 ? '****' : `****${secret.slice(-4)}`;
+}
+
+/**
+ * 解析「文本对话调用」实际使用的通道（baseUrl / apiKey / model）。
+ *
+ * `genChannel === 'nim'` 且配了 nimModel 时走 NIM 三件套（单个字段缺配时回落全局 Agnes，防御脏数据），
+ * 否则走全局 Agnes 的 baseUrl / apiKey / textModel。
+ *
+ * 适用范围：所有走 chat/completions 的**纯文本**调用（生题流水线、文本审核、解析、逐词释义、
+ * 句签文案、客户端造句 / 词根）。**图像生成（imageModel）与图像审核不受此影响**，始终走全局
+ * baseUrl / apiKey——纯文本 NIM 模型不支持视觉输入，图像侧必须保持 Agnes。
+ */
+export function resolveTextChannel(s: AiSettings): { baseUrl: string; apiKey: string; model: string } {
+  if (s.genChannel === 'nim' && s.nimModel) {
+    return {
+      baseUrl: s.nimBaseUrl || s.baseUrl,
+      apiKey: s.nimApiKey || s.apiKey,
+      model: s.nimModel,
+    };
+  }
+  return { baseUrl: s.baseUrl, apiKey: s.apiKey, model: s.textModel };
 }

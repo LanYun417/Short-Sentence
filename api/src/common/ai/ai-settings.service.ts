@@ -25,6 +25,7 @@ export class AiSettingsService implements OnApplicationBootstrap {
     nimBaseUrl: config.ai.agnes.nimBaseUrl.replace(/\/+$/, ''),
     nimApiKey: config.ai.agnes.nimApiKey,
     nimModel: config.ai.agnes.nimModel,
+    genChannel: config.ai.agnes.genChannel,
   };
 
   constructor(private readonly prisma: PrismaService) {}

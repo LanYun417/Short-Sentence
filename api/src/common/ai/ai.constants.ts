@@ -19,6 +19,8 @@ export const AI_CONFIG_KEYS = {
   nimApiKey: 'ai.agnes.nimApiKey',
   /** 英伟达 NIM 生题通道 - 模型名（可选；留空 = 不启用通道） */
   nimModel: 'ai.agnes.nimModel',
+  /** 生题内容生成通道选择：'agnes'（默认）或 'nim'（选 nim 时才走 NIM） */
+  genChannel: 'ai.agnes.genChannel',
 } as const;
 
 /** 配置项的中文名（写库时作为 config_name）。 */
@@ -30,4 +32,5 @@ export const AI_CONFIG_NAMES: Record<string, string> = {
   [AI_CONFIG_KEYS.nimBaseUrl]: 'NIM 上游地址',
   [AI_CONFIG_KEYS.nimApiKey]: 'NIM API Key',
   [AI_CONFIG_KEYS.nimModel]: 'NIM 生题模型',
+  [AI_CONFIG_KEYS.genChannel]: '生题通道选择',
 };

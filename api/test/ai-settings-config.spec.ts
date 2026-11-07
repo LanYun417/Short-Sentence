@@ -68,4 +68,13 @@ describe('loadAiSettings', () => {
     expect(settings.nimBaseUrl).toBe(config.ai.agnes.nimBaseUrl);
     expect(settings.nimModel).toBe(config.ai.agnes.nimModel);
   });
+
+  it('生题通道选择：默认 agnes；DB 仅 nim 生效；非法值回落 agnes', async () => {
+    const def = await loadAiSettings(fakePrisma([]));
+    expect(def.genChannel).toBe('agnes');
+    const nim = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.genChannel, configValue: 'nim' }]));
+    expect(nim.genChannel).toBe('nim');
+    const bad = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.genChannel, configValue: 'xxx' }]));
+    expect(bad.genChannel).toBe('agnes');
+  });
 });

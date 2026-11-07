@@ -5,7 +5,7 @@
  * 传掩码值回填会把真 key 覆盖成 `****abcd`，所以这里只接受「新值或空」。
  */
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /** 去除首尾空白。 */
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
@@ -63,4 +63,12 @@ export class UpdateAiSettingsDto {
   @Transform(trim)
   @MaxLength(100, { message: 'NIM 模型名过长' })
   nimModel?: string;
+
+  /**
+   * 生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。
+   * 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。
+   */
+  @IsOptional()
+  @IsIn(['agnes', 'nim'], { message: '生题通道只能是 agnes 或 nim' })
+  genChannel?: 'agnes' | 'nim';
 }
