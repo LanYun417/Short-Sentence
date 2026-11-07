@@ -30,9 +30,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'update:answer', value: string): void }>();
 
-/** 词块悬浮提示：当前显示的中文释义与锚点位置（null = 不显示）。 */
+/** 词块悬浮提示：当前显示的中文释义（该词在本句中的意思）与锚点位置（null = 不显示）。 */
 interface WordTip {
-  text: string;
   meaning: string;
   /** 视口坐标（fixed 定位） */
   x: number;
@@ -62,7 +61,6 @@ function showTip(chip: WordChip, event: Event): void {
   const margin = 64;
   const above = rect.top > 56;
   tip.value = {
-    text: chip.text,
     meaning,
     x: Math.min(Math.max(rect.left + rect.width / 2, margin), window.innerWidth - margin),
     y: above ? rect.top - 8 : rect.bottom + 8,
@@ -326,8 +324,6 @@ onBeforeUnmount(() => {
           }"
           role="tooltip"
         >
-          <span class="text-white/55 dark:text-slate-500">{{ tip.text }}</span>
-          <span class="mx-1 text-white/30 dark:text-slate-300">·</span>
           {{ tip.meaning }}
         </div>
       </Transition>
