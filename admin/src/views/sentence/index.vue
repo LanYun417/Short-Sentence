@@ -24,6 +24,7 @@ import {
   triggerAllFestivalsApi,
   triggerFestivalCoversApi,
   backfillExplanationsApi,
+  backfillWordMeaningsApi,
   updateSentenceApi,
   type SentenceCategoryOption,
 } from '@/api/sentence';
@@ -436,6 +437,8 @@ const genFormVisible = ref(false);
 const genSubmitting = ref(false);
 /** 解析回填进行中（按钮 loading，避免连点烧配额） */
 const backfilling = ref(false);
+/** 逐词释义回填进行中（按钮 loading，避免连点烧配额） */
+const backfillingMeanings = ref(false);
 const genForm = ref<{ count: number; difficulty?: number; categoryName?: string }>({
   count: 30,
   difficulty: undefined,
@@ -580,6 +583,39 @@ async function handleBackfillExplanations(force = false): Promise<void> {
     }
   } finally {
     backfilling.value = false;
+  }
+}
+
+/**
+ * 补全存量题逐词释义（按批，可反复点到补完；拼词模式悬浮词义用）。
+ *
+ * force=true 时重生成「已有词义」的题（模型升级后统一刷新口径）。
+ * 走 `ElMessageBox.confirm` 而不是直接执行：这是要花 AI 配额的写操作，
+ * 运营点一下就该知道「它会调模型、会产生费用」，而不是无感地批量烧钱。
+ */
+async function handleBackfillWordMeanings(force = false): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      force
+        ? '将把「已有词义」的题目逐词释义重新生成（每批 20 条，会产生 AI 调用费用）。继续？'
+        : '将为「已就绪但没有词义」的题目调用 AI 生成逐词释义（每批 20 条，会产生 AI 调用费用）。继续？',
+      force ? '重生成词义' : '补全题目词义',
+      { type: 'warning', confirmButtonText: force ? '开始重生成' : '开始补全', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  backfillingMeanings.value = true;
+  try {
+    const result = await backfillWordMeaningsApi(20, force);
+    if (result.scanned === 0) {
+      ElMessage.success(force ? '所有题目都还没有词义，没有可重生成的' : '所有题目都已有词义');
+    } else {
+      ElMessage.success(`本批补了 ${result.updated} 条，还缺 ${result.remaining} 条词义待补`);
+      await getList();
+    }
+  } finally {
+    backfillingMeanings.value = false;
   }
 }
 
@@ -806,6 +842,32 @@ onMounted(async () => {
           >
             精简旧解析
           </el-button>
+          <el-tooltip
+            content="为没有逐词释义的题目调用 AI 补全（拼词模式长按/悬浮显示词义用；每批 20 条，可反复点到补完）"
+          >
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                :loading="backfillingMeanings"
+                plain
+                @click="handleBackfillWordMeanings()"
+              >
+                补全词义
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="把已有词义的题目全部重新生成（模型升级后统一刷新口径；每批 20 条）">
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                :loading="backfillingMeanings"
+                plain
+                @click="handleBackfillWordMeanings(true)"
+              >
+                重生成词义
+              </el-button>
+            </span>
+          </el-tooltip>
           <el-button :loading="exporting" @click="handleExport">
             <template #icon><i class="bi bi-download" /></template>
             导出
