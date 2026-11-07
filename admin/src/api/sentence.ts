@@ -171,9 +171,13 @@ export function cancelGenTaskApi(id: number): Promise<null> {
   return post<null>(`/sentences/gen-tasks/${id}/cancel`);
 }
 
-/** 删除批次（保留已配图题目，只清理未配图的） */
-export function deleteGenTaskApi(id: number): Promise<{ removedSentences: number }> {
-  return del<{ removedSentences: number }>(`/sentences/gen-tasks/${id}`);
+/** 删除批次（保留已配图题目，只清理未配图的；wasRunning 表示删除时任务仍在跑，将在批次边界停下） */
+export interface RemoveGenTaskResult {
+  removedSentences: number;
+  wasRunning: boolean;
+}
+export function deleteGenTaskApi(id: number): Promise<RemoveGenTaskResult> {
+  return del<RemoveGenTaskResult>(`/sentences/gen-tasks/${id}`);
 }
 
 /** 场景分类（用于筛选与表单下拉） */

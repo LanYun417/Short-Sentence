@@ -160,16 +160,21 @@ export class SentenceController {
     return { __raw: true, data: null, message: '已请求取消，将在当前批次完成后停止' };
   }
 
-  /** 删除批次（保留已配图题目，只清理未生成配图的题目）。 */
+  /** 删除批次（保留已配图题目，只清理未生成配图的题目；运行中的批次会在当前批次边界停下）。 */
   @Delete('gen-tasks/:id')
   @RequirePermissions('sentence:gen')
   @OperationLog('题库管理', '删除批次')
-  async removeGenTask(@Param() params: IdParamDto): Promise<ResponseEnvelope<{ removedSentences: number }>> {
+  async removeGenTask(
+    @Param() params: IdParamDto,
+  ): Promise<ResponseEnvelope<{ removedSentences: number; wasRunning: boolean }>> {
     const result = await this.sentenceGen.remove(params.id);
+    const cleaned = result.removedSentences > 0 ? `，清理未配图题目 ${result.removedSentences} 条` : '';
     return {
       __raw: true,
       data: result,
-      message: result.removedSentences > 0 ? `已删除（清理未配图题目 ${result.removedSentences} 条）` : '已删除',
+      message: result.wasRunning
+        ? `已删除${cleaned}；运行中的任务将在当前批次完成后停止（约 1~2 分钟），届时可重新触发生成`
+        : `已删除${cleaned}`,
     };
   }
 

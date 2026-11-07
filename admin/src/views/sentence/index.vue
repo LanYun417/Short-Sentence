@@ -779,11 +779,15 @@ async function handleCancelGen(row: GenTaskItem): Promise<void> {
   await loadGenTasks();
 }
 
-/** 删除：只清理「还没生成配图」的题目，已配图的保留。 */
+/** 删除：只清理「还没生成配图」的题目，已配图的保留；运行中的批次会在当前批次边界停下，之后可立即重新触发生成。 */
 async function handleRemoveGen(row: GenTaskItem): Promise<void> {
+  const running = row.status === 'running' || row.status === 'pending';
   try {
     await ElMessageBox.confirm(
-      '删除批次不会删除「已配图」的题目（它们仍是可用内容）；只会清理还没生成配图的题目。确认删除？',
+      running
+        ? '删除后任务会在当前批次跑完后停止（最长约 1~2 分钟），届时可立即重新触发生成。' +
+            '不会删除「已配图」的题目，只清理还没生成配图的题目。确认删除？'
+        : '删除批次不会删除「已配图」的题目（它们仍是可用内容）；只会清理还没生成配图的题目。确认删除？',
       '删除批次',
       { type: 'warning', confirmButtonText: '确认删除', confirmButtonClass: 'el-button--danger' },
     );
@@ -791,7 +795,10 @@ async function handleRemoveGen(row: GenTaskItem): Promise<void> {
     return;
   }
   const result = await deleteGenTaskApi(row.id);
-  ElMessage.success(result.removedSentences > 0 ? `已删除，清理未配图题目 ${result.removedSentences} 条` : '已删除');
+  const cleaned = result.removedSentences > 0 ? `，清理未配图题目 ${result.removedSentences} 条` : '';
+  ElMessage.success(
+    result.wasRunning ? `已删除${cleaned}；任务将在当前批次完成后停止（约 1~2 分钟）` : `已删除${cleaned}`,
+  );
   await loadGenTasks();
 }
 
@@ -1324,11 +1331,13 @@ onMounted(async () => {
         <el-table-column label="完成时间" width="170">
           <template #default="{ row }">{{ row.finishedAt ? formatDateTime(row.finishedAt) : '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <template v-if="row.status === 'running' || row.status === 'pending'">
               <el-button link type="warning" @click="handlePauseGen(row as GenTaskItem)">暂停</el-button>
               <el-button link type="danger" @click="handleCancelGen(row as GenTaskItem)">取消</el-button>
+              <!-- 运行中也可直接删除：后端会让任务在当前批次边界停下，删完即可重新触发生成 -->
+              <el-button link type="danger" @click="handleRemoveGen(row as GenTaskItem)">删除</el-button>
             </template>
             <template v-else-if="row.status === 'paused' || row.status === 'failed'">
               <el-button link type="primary" @click="handleResumeGen(row as GenTaskItem)">继续</el-button>

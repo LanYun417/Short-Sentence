@@ -540,19 +540,21 @@ export class SentenceGenService {
    * 语义（按产品口径）：**不删已配图的题目**——它们是可用内容，只是不再挂在这条批次上；
    * 只清理「还没生成配图」的 pending_image 题（没有可用产出，留着只会变成无人处理的孤儿）。
    *
-   * 只允许删终态批次（含已暂停）：运行中的批次循环还在 update 它，删了会报 record not found。
+   * 运行中的批次也可以直接删：删行后控制点 controlOf 查不到行会返回 cancel，
+   * execute 会在**当前批次边界**停下并释放 running（正在飞的模型请求不打断，否则白烧配额），
+   * 停下后即可立即重新触发生成。返回的 wasRunning=true 表示走的是这条路径。
    */
-  async remove(id: number): Promise<{ removedSentences: number }> {
+  async remove(id: number): Promise<{ removedSentences: number; wasRunning: boolean }> {
     const task = await this.requireTask(id);
-    if (!['success', 'failed', 'cancelled', 'paused'].includes(task.status)) {
-      throw AppException.badRequest('批次正在执行，请先暂停或取消再删除');
-    }
+    const wasRunning = task.status === 'running' || task.status === 'pending';
     const [pending] = await this.prisma.$transaction([
       this.prisma.sentence.deleteMany({ where: { genTaskId: BigInt(id), status: 'pending_image' } }),
       this.prisma.sentenceGenTask.delete({ where: { id: BigInt(id) } }),
     ]);
-    this.logger.log(`[SentenceGen] 批次 ${id} 已删除，清理未配图题目 ${pending.count} 条`);
-    return { removedSentences: pending.count };
+    this.logger.log(
+      `[SentenceGen] 批次 ${id} 已删除${wasRunning ? '（运行中，将在当前批次边界停止）' : ''}，清理未配图题目 ${pending.count} 条`,
+    );
+    return { removedSentences: pending.count, wasRunning };
   }
 
   /** 取批次（不存在则 404）。 */
@@ -791,10 +793,7 @@ export class SentenceGenService {
         );
         textDone += inserted;
         // 计数器与心跳一起更新：前端每 3s 轮询，看到心跳就不再判断「卡住」
-        await this.prisma.sentenceGenTask.update({
-          where: { id: taskId },
-          data: { textDone, lastHeartbeatAt: new Date() },
-        });
+        await this.updateTask(taskId, { textDone, lastHeartbeatAt: new Date() });
         // 入库即排产：让生图与生题重叠
         await enqueuePendingImages();
         if (inserted === 0) {
@@ -815,17 +814,14 @@ export class SentenceGenService {
       // ---------- 3. 终态 ----------
       // 暂停 / 取消：保留已有产出（已入库的题与已生成的图都不回滚），状态如实落库
       if (control !== 'run') {
-        await this.prisma.sentenceGenTask.update({
-          where: { id: taskId },
-          data: {
-            status: control === 'pause' ? 'paused' : 'cancelled',
-            stage: 'done',
-            lastHeartbeatAt: new Date(),
-            textDone,
-            imageDone,
-            failCount: failCount + rejectedCount,
-            finishedAt: new Date(),
-          },
+        await this.updateTask(taskId, {
+          status: control === 'pause' ? 'paused' : 'cancelled',
+          stage: 'done',
+          lastHeartbeatAt: new Date(),
+          textDone,
+          imageDone,
+          failCount: failCount + rejectedCount,
+          finishedAt: new Date(),
         });
         this.logger.log(
           `[SentenceGen] 批次 ${taskId} 已${control === 'pause' ? '暂停' : '取消'}：题目 ${textDone}，图片 ${imageDone}`,
@@ -835,23 +831,20 @@ export class SentenceGenService {
 
       // 有净增题目或图片即算成功（部分失败进 failCount，供运营按补跑按钮处理）
       const ok = textDone > 0 || imageDone > 0;
-      await this.prisma.sentenceGenTask.update({
-        where: { id: taskId },
-        data: {
-          status: ok ? 'success' : 'failed',
-          stage: 'done',
-          lastHeartbeatAt: new Date(),
-          textDone,
-          imageDone,
-          // failCount 记「未入库条数」：调用失败 + 审核剔除（运营只看这个数字判断要不要补跑）
-          failCount: failCount + rejectedCount,
-          errorMessage: budgetHit
-            ? '已达每日 AI 预算上限，本批提前结束（明天 0 点恢复）'
-            : ok
-              ? null
-              : '本轮未产出任何题目（详见服务日志）',
-          finishedAt: new Date(),
-        },
+      await this.updateTask(taskId, {
+        status: ok ? 'success' : 'failed',
+        stage: 'done',
+        lastHeartbeatAt: new Date(),
+        textDone,
+        imageDone,
+        // failCount 记「未入库条数」：调用失败 + 审核剔除（运营只看这个数字判断要不要补跑）
+        failCount: failCount + rejectedCount,
+        errorMessage: budgetHit
+          ? '已达每日 AI 预算上限，本批提前结束（明天 0 点恢复）'
+          : ok
+            ? null
+            : '本轮未产出任何题目（详见服务日志）',
+        finishedAt: new Date(),
       });
       // 节日题库「全面更新」：新一期产出足够多时，把同一节日的旧题整体退场。
       // 用 genTaskId（而非 festivalDate）区分批次：同一天重跑的新批次也要替换掉上一批。
@@ -928,6 +921,21 @@ export class SentenceGenService {
     } catch (error) {
       this.logger.error(`[SentenceGen] ${name}阶段失败，已降级（本批按未处理继续）：${this.errText(error)}`);
       return fallback;
+    }
+  }
+
+  /**
+   * 运行期间更新批次行（计数器 / 终态）。
+   *
+   * 批次被删除后行不存在，update 会抛 record not found——这里吞掉并告警即可：
+   * 控制点 controlOf 查不到行会返回 cancel，execute 会在批次边界停下并释放 running，
+   * 不影响流程收尾。
+   */
+  private async updateTask(taskId: bigint, data: Record<string, unknown>): Promise<void> {
+    try {
+      await this.prisma.sentenceGenTask.update({ where: { id: taskId }, data });
+    } catch (error) {
+      this.logger.warn(`[SentenceGen] 批次 ${taskId} 状态更新失败（可能已被删除）: ${this.errText(error)}`);
     }
   }
 
