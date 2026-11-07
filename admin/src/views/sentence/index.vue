@@ -1068,6 +1068,15 @@ onMounted(async () => {
       :show-footer="false"
     >
       <template v-if="detailRow">
+        <div v-if="detailRow.imageUrl" class="mb-4">
+          <el-image
+            :src="`${detailRow.imageUrl}?scale=800`"
+            :preview-src-list="[detailRow.imageUrl]"
+            preview-teleported
+            fit="cover"
+            style="width: 100%; max-height: 260px; border-radius: 8px"
+          />
+        </div>
         <el-descriptions v-loading="detailLoading" :column="2" border size="small">
           <el-descriptions-item label="英文句子" :span="2">{{ detailRow.sentenceEn }}</el-descriptions-item>
           <el-descriptions-item label="中文释义" :span="2">{{ detailRow.translationZh }}</el-descriptions-item>
@@ -1102,16 +1111,6 @@ onMounted(async () => {
           <el-descriptions-item label="创建时间">{{ formatDateTime(detailRow.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="更新时间">{{ formatDateTime(detailRow.updatedAt) }}</el-descriptions-item>
         </el-descriptions>
-        <div v-if="detailRow.imageUrl" class="mt-4">
-          <div class="mb-1 text-xs text-muted">配图</div>
-          <el-image
-            :src="`${detailRow.imageUrl}?scale=800`"
-            :preview-src-list="[detailRow.imageUrl]"
-            preview-teleported
-            fit="cover"
-            style="width: 100%; max-height: 260px; border-radius: 8px"
-          />
-        </div>
       </template>
     </BasicDialog>
 
