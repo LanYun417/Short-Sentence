@@ -36,7 +36,7 @@ import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } f
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 defineOptions({ name: 'SentenceList' });
 
@@ -133,6 +133,43 @@ const form = ref<SentenceSavePayload>({
   difficulty: 2,
   status: 'ready',
 });
+
+/* ------------------------------ 详情弹窗 ------------------------------ */
+
+const detailVisible = ref(false);
+const detailLoading = ref(false);
+const detailRow = ref<SentenceItem | null>(null);
+
+/** 详情里的逐词释义（库里存的是 JSON 字符串；解析失败/为空返回空数组，弹窗显示「—」）。 */
+const detailMeanings = computed<Array<[string, string]>>(() => {
+  const raw = detailRow.value?.wordMeanings;
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return [];
+    }
+    return Object.entries(parsed as Record<string, unknown>)
+      .filter(([, value]) => typeof value === 'string' && value.trim())
+      .map(([word, value]) => [word, (value as string).trim()] as [string, string]);
+  } catch {
+    return [];
+  }
+});
+
+/** 打开详情（先拿列表行兜底，再调详情接口补齐词义/节日等列表不返回的字段）。 */
+async function handleDetail(row: SentenceItem): Promise<void> {
+  detailRow.value = row;
+  detailVisible.value = true;
+  detailLoading.value = true;
+  try {
+    detailRow.value = await getSentenceDetailApi(row.id);
+  } finally {
+    detailLoading.value = false;
+  }
+}
 
 /** 打开新增。 */
 function handleCreate(): void {
@@ -927,8 +964,11 @@ onMounted(async () => {
           <el-table-column label="创建时间" width="170">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="220" fixed="right">
+          <el-table-column label="操作" width="290" fixed="right">
             <template #default="{ row }">
+              <el-button v-permission="'sentence:query'" link type="primary" @click="handleDetail(row as SentenceItem)"
+                >详情</el-button
+              >
               <el-button v-permission="'sentence:edit'" link type="primary" @click="handleEdit(row as SentenceItem)"
                 >编辑</el-button
               >
@@ -1017,6 +1057,61 @@ onMounted(async () => {
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="dialogSaving" @click="handleSave">保存</el-button>
+      </template>
+    </BasicDialog>
+
+    <!-- 题目详情（只读；含逐词释义/节日等列表接口不返回的字段） -->
+    <BasicDialog
+      v-model="detailVisible"
+      :title="detailRow ? `题目详情 · #${detailRow.id}` : '题目详情'"
+      width="720px"
+      :show-footer="false"
+    >
+      <template v-if="detailRow">
+        <el-descriptions v-loading="detailLoading" :column="2" border size="small">
+          <el-descriptions-item label="英文句子" :span="2">{{ detailRow.sentenceEn }}</el-descriptions-item>
+          <el-descriptions-item label="中文释义" :span="2">{{ detailRow.translationZh }}</el-descriptions-item>
+          <el-descriptions-item label="音标">{{ detailRow.ipa || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="难度">
+            {{ DIFFICULTY_LABEL[detailRow.difficulty] ?? detailRow.difficulty }}
+          </el-descriptions-item>
+          <el-descriptions-item label="分类">{{ detailRow.categoryName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="STATUS_TAG[detailRow.status]?.type ?? 'info'" size="small">
+              {{ STATUS_TAG[detailRow.status]?.label ?? detailRow.status }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="来源">{{ detailRow.source }}</el-descriptions-item>
+          <el-descriptions-item label="节日">
+            {{
+              detailRow.festivalName
+                ? `${detailRow.festivalName}${detailRow.festivalDate ? `（${detailRow.festivalDate}）` : ''}`
+                : '-'
+            }}
+          </el-descriptions-item>
+          <el-descriptions-item label="生图提示词" :span="2">{{ detailRow.scenePrompt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="题目解析" :span="2">{{ detailRow.explanation || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="逐词释义" :span="2">
+            <template v-if="detailMeanings.length">
+              <el-tag v-for="[word, meaning] in detailMeanings" :key="word" size="small" type="info" class="mr-1 mb-1">
+                {{ word }}：{{ meaning }}
+              </el-tag>
+            </template>
+            <span v-else class="text-muted">—</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(detailRow.createdAt) }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间">{{ formatDateTime(detailRow.updatedAt) }}</el-descriptions-item>
+        </el-descriptions>
+        <div v-if="detailRow.imageUrl" class="mt-4">
+          <div class="mb-1 text-xs text-muted">配图</div>
+          <el-image
+            :src="`${detailRow.imageUrl}?scale=800`"
+            :preview-src-list="[detailRow.imageUrl]"
+            preview-teleported
+            fit="cover"
+            style="width: 100%; max-height: 260px; border-radius: 8px"
+          />
+        </div>
       </template>
     </BasicDialog>
 

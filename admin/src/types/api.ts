@@ -904,6 +904,12 @@ export interface SentenceItem {
   genTaskId: number;
   createdAt: string;
   updatedAt: string;
+  /** 逐词释义（JSON 字符串，词 → 本句含义；仅详情接口返回） */
+  wordMeanings?: string | null;
+  /** 节日题库所属节日名（仅详情接口返回） */
+  festivalName?: string | null;
+  /** 节日公历日期 YYYY-MM-DD（仅详情接口返回） */
+  festivalDate?: string | null;
 }
 
 /** 题库查询参数 */
