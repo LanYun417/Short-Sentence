@@ -47,6 +47,7 @@ class Question {
     required this.source,
     this.festivalName,
     this.words,
+    this.wordMeanings,
   });
 
   final int sentenceId;
@@ -76,8 +77,12 @@ class Question {
   /// 拼词模式候选词块（仅 assemble 下发；input 恒 null）
   final List<String>? words;
 
+  /// 拼词模式逐词中文释义（词 → 该词在本句中的含义；旧题/无数据为 null，长按词块不弹提示）
+  final Map<String, String>? wordMeanings;
+
   factory Question.fromJson(Map<String, dynamic> json) {
     final words = json['words'];
+    final meanings = json['wordMeanings'];
     return Question(
       sentenceId: (json['sentenceId'] as num?)?.toInt() ?? 0,
       translationZh: json['translationZh'] as String? ?? '',
@@ -89,6 +94,9 @@ class Question {
       todayGoal: (json['todayGoal'] as num?)?.toInt() ?? 0,
       source: QuestionSource.fromValue(json['source'] as String?),
       words: words is List ? words.whereType<String>().toList() : null,
+      wordMeanings: meanings is Map
+          ? meanings.map((key, value) => MapEntry(key.toString(), value.toString()))
+          : null,
     );
   }
 

@@ -1523,6 +1523,7 @@ class _FrontFace extends StatelessWidget {
           if (assemble)
             _AssembleArea(
               words: question.words!,
+              wordMeanings: question.wordMeanings,
               picked: picked,
               onPick: onPick,
               onUndoPick: onUndoPick,
@@ -1613,10 +1614,15 @@ class _AssembleArea extends StatefulWidget {
     required this.onRemovePick,
     required this.onSubmit,
     required this.busy,
+    this.wordMeanings,
     this.refreshing = false,
   });
 
   final List<String> words;
+
+  /// 逐词中文释义（词 → 含义；旧题/无数据为 null，长按词块不弹提示）
+  final Map<String, String>? wordMeanings;
+
   final List<String> picked;
   final ValueChanged<String> onPick;
   final VoidCallback onUndoPick;
@@ -1779,6 +1785,7 @@ class _AssembleAreaState extends State<_AssembleArea> {
 
     // 用局部别名，避免 widget 化后整段都要写 widget.xxx
     final words = widget.words;
+    final wordMeanings = widget.wordMeanings;
     final picked = widget.picked;
     final busy = widget.busy;
     final onPick = widget.onPick;
@@ -1866,6 +1873,7 @@ class _AssembleAreaState extends State<_AssembleArea> {
                                   key: ValueKey<String>(_keyOfPicked(i)),
                                   text: picked[i],
                                   picked: true,
+                                  meaning: wordMeanings?[picked[i]],
                                   // 点哪一个就退哪一个：拼错位置时不必从末尾一路撤
                                   onTap: busy ? null : () => onRemovePick(i),
                                   appear: true,
@@ -1919,6 +1927,7 @@ class _AssembleAreaState extends State<_AssembleArea> {
                 text: words[i],
                 picked: false,
                 used: consumed[i],
+                meaning: wordMeanings?[words[i]],
                 onTap: busy || consumed[i] ? null : () => onPick(words[i]),
               ),
           ],
@@ -1986,6 +1995,7 @@ class _WordChip extends StatelessWidget {
     required this.onTap,
     this.used = false,
     this.appear = false,
+    this.meaning,
     super.key,
   });
 
@@ -1995,6 +2005,9 @@ class _WordChip extends StatelessWidget {
   /// 候选区里的「已取走」占位态：原地变灰，保留空间、不可点。
   /// 用于拼词固定位置——选过的词不消失、不重排，只在此格标记已用。
   final bool used;
+
+  /// 该词在本句中的中文释义（后端 wordMeanings）；有值时长按词块弹层查看，无值不响应。
+  final String? meaning;
 
   final VoidCallback? onTap;
 
@@ -2051,12 +2064,24 @@ class _WordChip extends StatelessWidget {
       ),
     );
 
-    // 已用态：不可点，原位保留占位（不包 PressScale、不弹入）。
-    if (used) {
-      return chip;
+    // 有释义的词块：长按弹出词义（三种形态都允许查看；与 Web 端悬浮提示对齐）。
+    // 用外层 GestureDetector 只挂 onLongPress，不影响内层 PressScale 的 onTap。
+    Widget body = chip;
+    final meaning = this.meaning;
+    if (meaning != null && meaning.isNotEmpty) {
+      body = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: () => _showMeaning(context, text, meaning),
+        child: body,
+      );
     }
 
-    final interactive = PressScale(onTap: onTap, scale: 0.92, child: chip);
+    // 已用态：不可点，原位保留占位（不包 PressScale、不弹入）。
+    if (used) {
+      return body;
+    }
+
+    final interactive = PressScale(onTap: onTap, scale: 0.92, child: body);
     if (!appear) {
       return interactive;
     }
@@ -2069,6 +2094,79 @@ class _WordChip extends StatelessWidget {
         child: Transform.scale(scale: value, child: child),
       ),
       child: interactive,
+    );
+  }
+
+  /// 长按词块：底部弹层显示「词 → 本句含义」（无释义的词块不会走到这里）。
+  static void _showMeaning(BuildContext context, String word, String meaning) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => _WordMeaningSheet(word: word, meaning: meaning),
+    );
+  }
+}
+
+/// 词块释义弹层（拼词模式长按查看；与 Web 端悬浮 tooltip 同一份数据 wordMeanings）。
+class _WordMeaningSheet extends StatelessWidget {
+  const _WordMeaningSheet({required this.word, required this.meaning});
+
+  final String word;
+  final String meaning;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text('词义', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            '该词在本句中的含义',
+            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: colors.cardMuted,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colors.line),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.translate_rounded, size: 19, color: colors.brand),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        word,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: colors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        meaning,
+                        style: TextStyle(fontSize: 13, color: colors.inkSoft),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
