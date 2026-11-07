@@ -39,4 +39,28 @@ export class UpdateAiSettingsDto {
   @Transform(trim)
   @MaxLength(100, { message: '生图模型名过长' })
   imageModel?: string;
+
+  /**
+   * 英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。
+   * 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。
+   */
+  @IsOptional()
+  @IsString({ message: 'NIM 上游地址必须为字符串' })
+  @Transform(trim)
+  @MaxLength(500, { message: 'NIM 上游地址过长' })
+  nimBaseUrl?: string;
+
+  /** 英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效） */
+  @IsOptional()
+  @IsString({ message: 'NIM API Key 必须为字符串' })
+  @Transform(trim)
+  @MaxLength(500, { message: 'NIM API Key 过长' })
+  nimApiKey?: string;
+
+  /** 英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM） */
+  @IsOptional()
+  @IsString({ message: 'NIM 模型名必须为字符串' })
+  @Transform(trim)
+  @MaxLength(100, { message: 'NIM 模型名过长' })
+  nimModel?: string;
 }

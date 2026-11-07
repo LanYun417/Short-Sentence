@@ -13,6 +13,12 @@ export const AI_CONFIG_KEYS = {
   textModel: 'ai.agnes.textModel',
   /** 生图模型 */
   imageModel: 'ai.agnes.imageModel',
+  /** 英伟达 NIM 生题通道 - 上游地址（可选；留空回落 Agnes） */
+  nimBaseUrl: 'ai.agnes.nimBaseUrl',
+  /** 英伟达 NIM 生题通道 - API Key（可选；留空回落 Agnes） */
+  nimApiKey: 'ai.agnes.nimApiKey',
+  /** 英伟达 NIM 生题通道 - 模型名（可选；留空 = 不启用通道） */
+  nimModel: 'ai.agnes.nimModel',
 } as const;
 
 /** 配置项的中文名（写库时作为 config_name）。 */
@@ -21,4 +27,7 @@ export const AI_CONFIG_NAMES: Record<string, string> = {
   [AI_CONFIG_KEYS.baseUrl]: 'Agnes API 地址',
   [AI_CONFIG_KEYS.textModel]: 'Agnes 生文模型',
   [AI_CONFIG_KEYS.imageModel]: 'Agnes 生图模型',
+  [AI_CONFIG_KEYS.nimBaseUrl]: 'NIM 上游地址',
+  [AI_CONFIG_KEYS.nimApiKey]: 'NIM API Key',
+  [AI_CONFIG_KEYS.nimModel]: 'NIM 生题模型',
 };

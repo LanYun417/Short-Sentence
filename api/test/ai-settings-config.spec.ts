@@ -51,4 +51,21 @@ describe('loadAiSettings', () => {
     expect(settings.textModel).toBe(config.ai.agnes.textModel);
     expect(settings.imageModel).toBe(config.ai.agnes.imageModel);
   });
+
+  it('NIM 通道：DB 有值时优先于环境变量', async () => {
+    const settings = await loadAiSettings(
+      fakePrisma([
+        { configKey: AI_CONFIG_KEYS.nimBaseUrl, configValue: 'https://nim.example.com/v1' },
+        { configKey: AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
+      ]),
+    );
+    expect(settings.nimBaseUrl).toBe('https://nim.example.com/v1');
+    expect(settings.nimModel).toBe('nim-model');
+  });
+
+  it('NIM 通道：DB 空值回落环境变量', async () => {
+    const settings = await loadAiSettings(fakePrisma([]));
+    expect(settings.nimBaseUrl).toBe(config.ai.agnes.nimBaseUrl);
+    expect(settings.nimModel).toBe(config.ai.agnes.nimModel);
+  });
 });

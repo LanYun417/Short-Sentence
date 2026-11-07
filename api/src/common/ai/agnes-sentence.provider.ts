@@ -375,6 +375,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       0.8,
       {
         bizId,
+        nimChannel: this.nimChannel,
         validate: (content) => {
           drafts = this.parseDrafts(content);
           if (drafts.length === 0) {
@@ -406,7 +407,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       POLISH_SYSTEM_PROMPT,
       `Theme: ${theme}\nDraft items:\n${JSON.stringify(payload)}`,
       0.3,
-      { bizId },
+      { bizId, nimChannel: this.nimChannel },
     );
 
     const polished = new Map<number, SentenceDraft>();
@@ -593,6 +594,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     let annotated: SentenceDraft[] = drafts;
     await this.chat('word_meanings', systemPrompt, userContent, 0.2, {
       bizId,
+      nimChannel: this.nimChannel,
       validate: (content) => {
         const map = this.parseWordMeanings(content, drafts);
         if (map.size === 0) {
@@ -660,6 +662,17 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   }
 
   /**
+   * 生题专用 NIM 通道：仅当后台配置了 nimModel 时返回 {baseUrl, apiKey, model}，否则 undefined。
+   * 生题**内容生成**（生成 / 优化 / 逐词释义 / 句签文案）调用传入；审核、解析、图像仍走 Agnes，
+   * 以守住 fail-closed 审核质量，并避开纯文本 NIM 模型不支持视觉输入的限制。
+   */
+  private get nimChannel(): { baseUrl: string; apiKey: string; model: string } | undefined {
+    // 可选链：单元测试用 Object.create(prototype) 构造时没有注入 aiSettings，避免崩
+    const s = this.aiSettings?.current;
+    return s?.nimModel ? { baseUrl: s.nimBaseUrl, apiKey: s.nimApiKey, model: s.nimModel } : undefined;
+  }
+
+  /**
    * 统一的上游调用：请求 + 错误归一 + AI 调用日志（三阶段共用，避免各写一套日志口径）。
    * @param callType ai_call_log.type（sentence_gen / sentence_polish / sentence_review）
    * @param options bizId：关联批次 id（便于按批次核对三阶段是否都跑了）；
@@ -671,7 +684,12 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     systemPrompt: string,
     userContent: string,
     temperature: number,
-    options: { bizId?: number; validate?: (content: string) => void } = {},
+    options: {
+      bizId?: number;
+      validate?: (content: string) => void;
+      /** 生题专用 NIM 通道；传入时本次请求走 NIM 的 baseUrl/key/model，否则回落全局 Agnes */
+      nimChannel?: { baseUrl: string; apiKey: string; model: string };
+    } = {},
     imageBase64?: string,
   ): Promise<string> {
     // 预算闸门放在 try 之前：超额时直接抛不可重试错误，**不写 ai_call_log**
@@ -679,6 +697,13 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     // （生题/优化/审核/句签/词根/造句）。
     await this.budget.assertWithinBudget();
     const startedAt = Date.now();
+    // NIM 生题通道：调用方传入 nimChannel 时（仅生题内容生成），用 NIM 的 baseUrl/key/model；
+    // 否则回落全局 Agnes。baseUrl/apiKey 同样回落，任一通道配置缺失也不致崩（最多请求失败可重试）。
+    // 注意：定义在 try 之外，catch 里的失败日志也要记实际使用的模型。
+    const channel = options.nimChannel;
+    const endpoint = `${channel?.baseUrl || this.aiSettings.current.baseUrl}/chat/completions`;
+    const authKey = channel?.apiKey || this.aiSettings.current.apiKey;
+    const activeModel = channel?.model || this.aiSettings.current.textModel;
     try {
       // 视觉审核走多模态：user 消息变成 [文本 + 图片] 数组；纯文本调用不传 imageBase64。
       const userMessage: {
@@ -693,14 +718,14 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
             ],
           }
         : { role: 'user', content: userContent };
-      const response = await fetch(`${this.aiSettings.current.baseUrl}/chat/completions`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
+          Authorization: `Bearer ${authKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: this.aiSettings.current.textModel,
+          model: activeModel,
           messages: [{ role: 'system', content: systemPrompt }, userMessage],
           temperature,
           max_tokens: config.ai.maxOutputTokens,
@@ -743,7 +768,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       await this.aiCallLog.record({
         type: callType,
         provider: 'agnes',
-        model: this.aiSettings.current.textModel,
+        model: activeModel,
         bizId: options.bizId ?? 0,
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
@@ -755,7 +780,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       await this.aiCallLog.record({
         type: callType,
         provider: 'agnes',
-        model: this.aiSettings.current.textModel,
+        model: activeModel,
         bizId: options.bizId ?? 0,
         latencyMs: Date.now() - startedAt,
         status: 'failed',
@@ -897,7 +922,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         attempt === 1
           ? ''
           : `\n\nIMPORTANT: your previous answer duplicated an existing card. Produce a clearly different subject, setting and palette.`;
-      const content = await this.chat('sentence_card_gen', systemPrompt, `${userContent}${retryHint}`, 1.0);
+      const content = await this.chat('sentence_card_gen', systemPrompt, `${userContent}${retryHint}`, 1.0, {
+        nimChannel: this.nimChannel,
+      });
       const theme = this.parseSentenceCardTheme(content);
       if (!theme) {
         throw new AiProviderError('句签主题输出不可用', { retryable: true });

@@ -16,9 +16,12 @@ defineOptions({ name: 'SystemAi' });
 const loading = ref(false);
 const saving = ref(false);
 const testing = ref(false);
+const testingNim = ref(false);
 const settings = ref<AiSettings | null>(null);
 /** 最近一次连通性测试结果（成功时展示耗时） */
 const testResult = ref('');
+/** 最近一次 NIM 连通性测试结果 */
+const testNimResult = ref('');
 
 const form = ref({
   // 只用于「输入新值」；空 = 不修改
@@ -26,6 +29,10 @@ const form = ref({
   baseUrl: 'https://api.agnes-ai.cn/v1',
   textModel: 'agnes-2.5-flash',
   imageModel: 'agnes-image-2.5-flash',
+  // NIM 生题通道（可选；nimApiKey 留空 = 不修改）
+  nimApiKey: '',
+  nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
+  nimModel: '',
 });
 
 /** 读取设置（密钥输入框保持空白，placeholder 显示已配置的掩码）。 */
@@ -39,6 +46,9 @@ async function load(): Promise<void> {
       baseUrl: data.baseUrl || 'https://api.agnes-ai.cn/v1',
       textModel: data.textModel || 'agnes-2.5-flash',
       imageModel: data.imageModel || 'agnes-image-2.5-flash',
+      nimApiKey: '',
+      nimBaseUrl: data.nimBaseUrl || 'https://integrate.api.nvidia.com/v1',
+      nimModel: data.nimModel || '',
     };
   } finally {
     loading.value = false;
@@ -53,10 +63,15 @@ async function save(): Promise<void> {
       baseUrl: form.value.baseUrl.trim(),
       textModel: form.value.textModel.trim(),
       imageModel: form.value.imageModel.trim(),
+      nimBaseUrl: form.value.nimBaseUrl.trim(),
+      nimModel: form.value.nimModel.trim(),
     };
     // 留空 = 不修改：绝不把掩码值提交上去
     if (form.value.apiKey.trim()) {
       payload.apiKey = form.value.apiKey.trim();
+    }
+    if (form.value.nimApiKey.trim()) {
+      payload.nimApiKey = form.value.nimApiKey.trim();
     }
     await saveAiSettingsApi(payload);
     ElMessage.success('已保存，配置立即生效');
@@ -76,6 +91,19 @@ async function runTest(): Promise<void> {
     ElMessage.success('连通正常');
   } finally {
     testing.value = false;
+  }
+}
+
+/** 测试 NIM 生题通道连通性（channel=nim，用 NIM 模型发极短请求）。 */
+async function runNimTest(): Promise<void> {
+  testingNim.value = true;
+  testNimResult.value = '';
+  try {
+    const data = await testAiApi('nim');
+    testNimResult.value = `NIM 连通正常 · ${data.model} · ${data.latencyMs}ms`;
+    ElMessage.success('NIM 连通正常');
+  } finally {
+    testingNim.value = false;
   }
 }
 
@@ -134,6 +162,39 @@ onMounted(() => {
           <span class="ml-2 text-xs text-gray-400">题目配图（16:9）</span>
         </el-form-item>
 
+        <el-divider content-position="left">英伟达 NIM 生题通道（可选）</el-divider>
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          class="mb-4"
+          title="生题专用免费模型通道（OpenAI 兼容）"
+          description="留空 = 不启用，生题内容生成（生成 / 优化 / 逐词释义 / 句签文案）仍走上方 Agnes 生文模型。启用时三项一起填：在 NVIDIA NIM 目录任选免费模型（如 deepseek-ai/deepseek-v4.1-flash、meta/llama-3.1-8b-instruct）。审核、题目解析、客户端 AI 与图像生成仍走 Agnes，以守住审核质量并避开纯文本模型不支持视觉的限制。"
+        />
+
+        <el-form-item label="NIM API Key">
+          <el-input
+            v-model="form.nimApiKey"
+            type="password"
+            show-password
+            autocomplete="new-password"
+            :placeholder="
+              settings?.nimApiKeyConfigured
+                ? `已配置 ${settings.nimApiKeyMasked}（留空不修改）`
+                : 'NVIDIA NIM API Key（只存服务端，接口不回显明文）'
+            "
+          />
+        </el-form-item>
+
+        <el-form-item label="NIM 上游地址">
+          <el-input v-model="form.nimBaseUrl" placeholder="https://integrate.api.nvidia.com/v1" />
+        </el-form-item>
+
+        <el-form-item label="NIM 生题模型">
+          <el-input v-model="form.nimModel" placeholder="如 deepseek-ai/deepseek-v4.1-flash" />
+          <span class="ml-2 text-xs text-gray-400">仅生题内容生成；留空则关闭通道</span>
+        </el-form-item>
+
         <el-form-item>
           <el-button v-permission="'system:ai:edit'" type="primary" :loading="saving" @click="save">保存设置</el-button>
           <span class="ml-3 text-xs text-gray-400">存于「参数管理」，空值回落环境变量；保存即生效</span>
@@ -147,9 +208,11 @@ onMounted(() => {
         <span class="text-[15px] font-semibold text-ink">连通性测试</span>
       </template>
       <div class="flex flex-wrap items-center gap-2">
-        <el-button v-permission="'system:ai:edit'" :loading="testing" @click="runTest">测试连通</el-button>
+        <el-button v-permission="'system:ai:edit'" :loading="testing" @click="runTest">测试 Agnes 连通</el-button>
+        <el-button v-permission="'system:ai:edit'" :loading="testingNim" @click="runNimTest">测试 NIM 连通</el-button>
         <span v-if="testResult" class="text-sm text-emerald-600">{{ testResult }}</span>
-        <span v-else class="text-xs text-gray-400">
+        <span v-if="testNimResult" class="text-sm text-emerald-600">{{ testNimResult }}</span>
+        <span v-else-if="!testResult && !testNimResult" class="text-xs text-gray-400">
           用「生文模型」发一个极短请求，验证 Key、上游地址与模型是否都对
         </span>
       </div>

@@ -24,6 +24,12 @@ export interface AiSettings {
   baseUrl: string;
   textModel: string;
   imageModel: string;
+  /** 英伟达 NIM 生题通道 - 上游地址（空 = 不启用通道） */
+  nimBaseUrl: string;
+  /** 英伟达 NIM 生题通道 - API Key（空 = 回落 Agnes 密钥） */
+  nimApiKey: string;
+  /** 英伟达 NIM 生题通道 - 模型名（空 = 不启用通道，生题回落 textModel） */
+  nimModel: string;
 }
 
 /** 去掉末尾斜杠，避免拼出 `//chat/completions`（后台手填地址时很常见）。 */
@@ -52,6 +58,9 @@ export async function loadAiSettings(prisma: PrismaService): Promise<AiSettings>
     baseUrl: normalizeBaseUrl(value(AI_CONFIG_KEYS.baseUrl, config.ai.agnes.baseUrl)),
     textModel: value(AI_CONFIG_KEYS.textModel, config.ai.agnes.textModel),
     imageModel: value(AI_CONFIG_KEYS.imageModel, config.ai.agnes.imageModel),
+    nimBaseUrl: normalizeBaseUrl(value(AI_CONFIG_KEYS.nimBaseUrl, config.ai.agnes.nimBaseUrl)),
+    nimApiKey: value(AI_CONFIG_KEYS.nimApiKey, config.ai.agnes.nimApiKey),
+    nimModel: value(AI_CONFIG_KEYS.nimModel, config.ai.agnes.nimModel),
   };
 }
 

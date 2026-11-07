@@ -979,14 +979,28 @@ export interface AiSettings {
   imageModel: string;
   /** 是否可用（等价于 apiKeyConfigured） */
   enabled: boolean;
+  /** NIM 上游地址 */
+  nimBaseUrl: string;
+  /** NIM API Key 是否已配置 */
+  nimApiKeyConfigured: boolean;
+  /** 掩码后的 NIM API Key（末 4 位可见） */
+  nimApiKeyMasked: string;
+  /** NIM 生题模型（空 = 不启用通道） */
+  nimModel: string;
 }
 
-/** 保存 AI 设置入参（apiKey 留空 = 不修改） */
+/** 保存 AI 设置入参（apiKey / nimApiKey 留空 = 不修改） */
 export interface SaveAiSettingsPayload {
   apiKey?: string;
   baseUrl?: string;
   textModel?: string;
   imageModel?: string;
+  /** 英伟达 NIM 生题通道 - 上游地址（留空 = 不修改） */
+  nimBaseUrl?: string;
+  /** 英伟达 NIM 生题通道 - API Key（留空 = 不修改） */
+  nimApiKey?: string;
+  /** 英伟达 NIM 生题通道 - 模型名（留空 = 不修改） */
+  nimModel?: string;
 }
 
 /** AI 连通性测试结果 */
