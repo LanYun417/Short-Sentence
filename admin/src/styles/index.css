@@ -222,9 +222,16 @@
 /* 注：原 .text-ellipsis / .full-height 已移除——与 Tailwind 的 `truncate` / `h-full` 完全等价，
    统一改用 Tailwind 内置类，避免自定义工具类与框架重复。 */
 
-/* NProgress 顶部进度条颜色跟随主题 */
+/* NProgress 顶部进度条：蓝绿渐变（不再跟随主题色） */
 #nprogress .bar {
-  background: var(--el-color-primary) !important;
+  background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%) !important;
+}
+
+/* 进度条前端光影与渐变末端的绿色保持一致 */
+#nprogress .peg {
+  box-shadow:
+    0 0 10px #10b981,
+    0 0 5px #10b981 !important;
 }
 
 /* ============================================================
