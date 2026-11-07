@@ -71,6 +71,12 @@ export interface SentenceItem {
   genTaskId: number;
   createdAt: Date;
   updatedAt: Date;
+  /** 逐词释义（JSON 字符串，词 → 本句含义；仅详情接口返回，列表不带以控制体积） */
+  wordMeanings?: string | null;
+  /** 节日题库所属节日名（仅详情接口返回） */
+  festivalName?: string | null;
+  /** 节日公历日期 YYYY-MM-DD（仅详情接口返回） */
+  festivalDate?: string | null;
 }
 
 /** 场景分类条目（含题目数）。 */
@@ -186,6 +192,9 @@ export class SentenceService {
       genTaskId: Number(row.genTaskId),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      wordMeanings: row.wordMeanings,
+      festivalName: row.festivalName,
+      festivalDate: row.festivalDate,
     };
   }
 
