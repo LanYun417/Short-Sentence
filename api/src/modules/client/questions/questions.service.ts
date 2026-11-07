@@ -30,6 +30,13 @@ const REVIEW_INTERVAL_DAYS = [1, 3, 7, 15, 30];
 /** 复习池候选批大小（在此范围内随机取，兼顾「到期优先」与「不总是同一题」）。 */
 const REVIEW_POOL_BATCH = 50;
 
+/** 某用户某题的「累计答对」聚合（抽题时由 sentence_record 实时 groupBy 得到，不另建表）。 */
+interface MasteryEntry {
+  sentenceId: number;
+  correctCount: number;
+  lastCorrectAt: Date;
+}
+
 /** 下一张卡（不含答案字段）。 */
 export interface NextQuestion {
   sentenceId: number;
@@ -251,11 +258,14 @@ export class QuestionsService {
    */
   async next(userId: number, difficulty?: number, festival?: string, categoryId?: number): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
+    // 「累计答对」母题权重：答对次数越多，被随机抽中的概率越低；达到阈值后若干天内禁抽
+    const mastery = await this.groupMastery(userId);
+    const suppressedIds = this.suppressedSentenceIds(mastery);
 
     // 节日题库：专门刷题——只在该节日当前（未退场）的题库里抽
     const festivalName = festival?.trim();
     if (festivalName) {
-      const festivalSentenceId = await this.pickFestivalSentence(festivalName, recentIds);
+      const festivalSentenceId = await this.pickFestivalSentence(festivalName, recentIds, mastery, suppressedIds);
       if (festivalSentenceId === null) {
         throw AppException.notFound(`「${festivalName}」题库暂无可用题目`);
       }
@@ -264,7 +274,7 @@ export class QuestionsService {
 
     // 场景题库：专门刷题——只在该场景当前（未退场）的题库里抽
     if (categoryId && categoryId > 0) {
-      const categorySentenceId = await this.pickCategorySentence(categoryId, recentIds);
+      const categorySentenceId = await this.pickCategorySentence(categoryId, recentIds, mastery, suppressedIds);
       if (categorySentenceId === null) {
         throw AppException.notFound('该场景题库暂无可用题目');
       }
@@ -276,24 +286,24 @@ export class QuestionsService {
     let sentenceId: number | null;
     let source: 'new' | 'review';
     if (wantNew) {
-      sentenceId = await this.pickReadySentence(recentIds, difficulty);
+      sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery, suppressedIds);
       source = 'new';
       // 指定难度下没有可用新题：回落到不限难度，避免用户被卡住
       if (sentenceId === null && difficulty) {
-        sentenceId = await this.pickReadySentence(recentIds);
+        sentenceId = await this.pickReadySentence(recentIds, undefined, mastery, suppressedIds);
       }
       if (sentenceId === null) {
-        sentenceId = await this.pickDueReviewSentence(userId, recentIds);
+        sentenceId = await this.pickDueReviewSentence(userId, recentIds, suppressedIds);
         source = 'review';
       }
     } else {
-      sentenceId = await this.pickDueReviewSentence(userId, recentIds);
+      sentenceId = await this.pickDueReviewSentence(userId, recentIds, suppressedIds);
       source = 'review';
       if (sentenceId === null) {
-        sentenceId = await this.pickReadySentence(recentIds, difficulty);
+        sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery, suppressedIds);
         source = 'new';
         if (sentenceId === null && difficulty) {
-          sentenceId = await this.pickReadySentence(recentIds);
+          sentenceId = await this.pickReadySentence(recentIds, undefined, mastery, suppressedIds);
         }
       }
     }
@@ -433,39 +443,39 @@ export class QuestionsService {
     return banks;
   }
 
-  /** 从指定节日题库随机抽一道（排除防重窗口内的题）。 */
-  private async pickFestivalSentence(festivalName: string, excludeIds: number[]): Promise<number | null> {
-    return this.pickBankSentence({ festivalName }, excludeIds);
+  /** 从指定节日题库随机抽一道（排除防重窗口与禁抽题，并按累计答对数降权）。 */
+  private async pickFestivalSentence(
+    festivalName: string,
+    excludeIds: number[],
+    mastery: MasteryEntry[],
+    suppressedIds: number[],
+  ): Promise<number | null> {
+    return this.pickBankSentence({ festivalName }, excludeIds, mastery, suppressedIds);
   }
 
-  /** 从指定场景题库随机抽一道（排除防重窗口内的题）。 */
-  private async pickCategorySentence(categoryId: number, excludeIds: number[]): Promise<number | null> {
-    return this.pickBankSentence({ categoryId }, excludeIds);
+  /** 从指定场景题库随机抽一道（同上）。 */
+  private async pickCategorySentence(
+    categoryId: number,
+    excludeIds: number[],
+    mastery: MasteryEntry[],
+    suppressedIds: number[],
+  ): Promise<number | null> {
+    return this.pickBankSentence({ categoryId: BigInt(categoryId) }, excludeIds, mastery, suppressedIds);
   }
 
   /**
    * 从指定题库（where 描述的子集：节日 / 场景分类）随机抽一道。
-   * 随机用「count + 随机 offset」而不是把全部 id 拉进内存再挑：
-   * 题库可能几千行，只为掷一次骰子不值得全表搬一遍。
+   * 在「count + 随机 offset」均匀随机之上叠加「累计答对」权重（见 pickWeightedSentence）。
    */
-  private async pickBankSentence(where: Record<string, unknown>, excludeIds: number[]): Promise<number | null> {
-    const conditions: Record<string, unknown> = { status: 'ready', retiredAt: null, ...where };
-    if (excludeIds.length > 0) {
-      conditions.id = { notIn: excludeIds.map((id) => BigInt(id)) };
-    }
-    const total = await this.prisma.sentence.count({ where: conditions });
-    if (total === 0) {
-      return null;
-    }
-    const offset = Math.floor(Math.random() * total);
-    const rows = await this.prisma.sentence.findMany({
-      where: conditions,
-      orderBy: { id: 'asc' },
-      skip: offset,
-      take: 1,
-      select: { id: true },
-    });
-    return rows[0] ? Number(rows[0].id) : null;
+  private async pickBankSentence(
+    where: Record<string, unknown>,
+    excludeIds: number[],
+    mastery: MasteryEntry[],
+    suppressedIds: number[],
+  ): Promise<number | null> {
+    const baseWhere: Record<string, unknown> = { status: 'ready', retiredAt: null, ...where };
+    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds, suppressedIds);
+    return this.pickWeightedSentence(baseWhere, excludeIds, entries, suppressedIds);
   }
 
   /**
@@ -886,32 +896,27 @@ export class QuestionsService {
    *
    * @param difficulty 难度筛选（1/2/3）；不传则不限难度。
    */
-  private async pickReadySentence(excludeIds: number[], difficulty?: number): Promise<number | null> {
+  private async pickReadySentence(
+    excludeIds: number[],
+    difficulty?: number,
+    mastery: MasteryEntry[] = [],
+    suppressedIds: number[] = [],
+  ): Promise<number | null> {
     // retiredAt 非空 = 已退场的旧节日题：不再进入练习流（收藏/历史仍可见）
-    const where: Record<string, unknown> = { status: 'ready', retiredAt: null };
+    const baseWhere: Record<string, unknown> = { status: 'ready', retiredAt: null };
     if (difficulty) {
-      where.difficulty = difficulty;
+      baseWhere.difficulty = difficulty;
     }
-    if (excludeIds.length > 0) {
-      where.id = { notIn: excludeIds.map((id) => BigInt(id)) };
-    }
-    const total = await this.prisma.sentence.count({ where });
-    if (total === 0) {
-      return null;
-    }
-    const offset = Math.floor(Math.random() * total);
-    const rows = await this.prisma.sentence.findMany({
-      where,
-      orderBy: { id: 'asc' },
-      skip: offset,
-      take: 1,
-      select: { id: true },
-    });
-    return rows[0] ? Number(rows[0].id) : null;
+    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds, suppressedIds);
+    return this.pickWeightedSentence(baseWhere, excludeIds, entries, suppressedIds);
   }
 
   /** 取一道到期复习题（到期最早的优先，候选批内随机打散避免「永远同一题」）。 */
-  private async pickDueReviewSentence(userId: number, excludeIds: number[]): Promise<number | null> {
+  private async pickDueReviewSentence(
+    userId: number,
+    excludeIds: number[],
+    suppressedIds: number[] = [],
+  ): Promise<number | null> {
     const where: Record<string, unknown> = {
       userId: BigInt(userId),
       isCorrect: 0,
@@ -919,8 +924,10 @@ export class QuestionsService {
       // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
       sentence: { status: 'ready', retiredAt: null },
     };
-    if (excludeIds.length > 0) {
-      where.sentenceId = { notIn: excludeIds.map((id) => BigInt(id)) };
+    // 累计答对达到阈值且仍在禁抽期内的题，复习池同样不抽
+    const notIn = [...excludeIds, ...suppressedIds];
+    if (notIn.length > 0) {
+      where.sentenceId = { notIn: notIn.map((id) => BigInt(id)) };
     }
     const rows = await this.prisma.sentenceRecord.findMany({
       where,
@@ -933,6 +940,157 @@ export class QuestionsService {
     }
     const picked = rows[Math.floor(Math.random() * rows.length)];
     return Number(picked.sentenceId);
+  }
+
+  /**
+   * 聚合某用户「累计答对次数 >= 阶梯步长」的题目（答对才计数，答错不清零）。
+   * 用 groupBy 走索引，只返回达到降权门槛的少量记录，避免全量拉取。
+   */
+  private async groupMastery(userId: number): Promise<MasteryEntry[]> {
+    const step = config.sentence.masteryStep;
+    const rows = await this.prisma.sentenceRecord.groupBy({
+      by: ['sentenceId'],
+      where: { userId: BigInt(userId), isCorrect: 1 },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+    return rows
+      .filter((row) => row._count._all >= step)
+      .map((row) => ({
+        sentenceId: Number(row.sentenceId),
+        correctCount: row._count._all,
+        lastCorrectAt: row._max.createdAt ?? new Date(0),
+      }));
+  }
+
+  /** 累计答对达到阈值且仍在禁抽期内的题（禁抽期内新题池与复习池都不抽）。 */
+  private suppressedSentenceIds(mastery: MasteryEntry[], now = Date.now()): number[] {
+    const at = config.sentence.masterySuppressAt;
+    const cutoff = now - config.sentence.masterySuppressDays * 24 * 60 * 60 * 1000;
+    return mastery.filter((m) => m.correctCount >= at && m.lastCorrectAt.getTime() >= cutoff).map((m) => m.sentenceId);
+  }
+
+  /** 累计答对权重：每 masteryStep 次答对，权重 × masteryStepFactor（默认每 5 次减半）。 */
+  private masteryWeight(correctCount: number): number {
+    const step = config.sentence.masteryStep;
+    return Math.pow(config.sentence.masteryStepFactor, Math.floor(correctCount / step));
+  }
+
+  /**
+   * 把全局 mastery 聚合按题库条件（难度/节日/场景）过滤，并剔除防重窗口与禁抽题，
+   * 得到「本次候选池内」的高答对题列表（其 sentence 必然满足 baseWhere）。
+   */
+  private async filterMasteryBySentence(
+    mastery: MasteryEntry[],
+    baseWhere: Record<string, unknown>,
+    excludeIds: number[],
+    suppressedIds: number[],
+  ): Promise<MasteryEntry[]> {
+    if (mastery.length === 0) {
+      return [];
+    }
+    const excluded = new Set([...excludeIds, ...suppressedIds]);
+    const candidates = mastery.filter((m) => !excluded.has(m.sentenceId));
+    if (candidates.length === 0) {
+      return [];
+    }
+    const sentences = await this.prisma.sentence.findMany({
+      where: { id: { in: candidates.map((m) => BigInt(m.sentenceId)) } },
+      select: { id: true, status: true, retiredAt: true, difficulty: true, festivalName: true, categoryId: true },
+    });
+    const byId = new Map(sentences.map((s) => [Number(s.id), s]));
+    const wantDifficulty = baseWhere.difficulty as number | undefined;
+    const wantFestival = baseWhere.festivalName as string | undefined;
+    const wantCategory = baseWhere.categoryId as bigint | number | undefined;
+    return candidates.filter((m) => {
+      const s = byId.get(m.sentenceId);
+      if (!s || s.status !== 'ready' || s.retiredAt !== null) {
+        return false;
+      }
+      if (wantDifficulty !== undefined && s.difficulty !== wantDifficulty) {
+        return false;
+      }
+      if (wantFestival !== undefined && s.festivalName !== wantFestival) {
+        return false;
+      }
+      if (wantCategory !== undefined && Number(s.categoryId) !== Number(wantCategory)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /** 按权重从高答对题列表里随机选一道。 */
+  private pickByWeight(weighted: Array<{ id: number; w: number }>, r?: number): number | null {
+    if (weighted.length === 0) {
+      return null;
+    }
+    const sum = weighted.reduce((acc, e) => acc + e.w, 0);
+    if (sum <= 0) {
+      return weighted[weighted.length - 1].id;
+    }
+    let x = r ?? Math.random() * sum;
+    for (const e of weighted) {
+      if (x < e.w) {
+        return e.id;
+      }
+      x -= e.w;
+    }
+    return weighted[weighted.length - 1].id;
+  }
+
+  /**
+   * 加权随机抽一道：候选池 = baseWhere 且不在防重窗口/禁抽表内。
+   * 池内大部分题无答对记录（权重 1）；少量高答对题按 masteryWeight 降权。
+   * 先按总权重掷点决定落在「普通池」还是「高答对池」，再在对应池内选题，
+   * 只需 count + 一次 limit 查询，不把全量 id 拉进内存。
+   */
+  private async pickWeightedSentence(
+    baseWhere: Record<string, unknown>,
+    excludeIds: number[],
+    entries: MasteryEntry[],
+    suppressedIds: number[],
+  ): Promise<number | null> {
+    const notInBase = [...excludeIds, ...suppressedIds];
+    const candidateWhere: Record<string, unknown> = { ...baseWhere };
+    if (notInBase.length > 0) {
+      candidateWhere.id = { notIn: notInBase.map((id) => BigInt(id)) };
+    }
+    const total = await this.prisma.sentence.count({ where: candidateWhere });
+    if (total === 0) {
+      return null;
+    }
+    // entries 已过滤为候选池内（匹配 baseWhere、非防重、非禁抽），故必然 ⊆ 候选池
+    const weighted = entries.map((e) => ({ id: e.sentenceId, w: this.masteryWeight(e.correctCount) }));
+    const normalCount = total - entries.length;
+    const totalWeight = normalCount + weighted.reduce((acc, e) => acc + e.w, 0);
+    if (totalWeight <= 0) {
+      return null;
+    }
+    let r = Math.random() * totalWeight;
+    if (r < normalCount && normalCount > 0) {
+      // 落在普通池：均匀随机（count + 随机 offset）
+      const normalWhere: Record<string, unknown> = { ...candidateWhere };
+      const notIn = [...notInBase, ...entries.map((e) => e.sentenceId)];
+      normalWhere.id = { notIn: notIn.map((id) => BigInt(id)) };
+      const cnt = await this.prisma.sentence.count({ where: normalWhere });
+      if (cnt > 0) {
+        const offset = Math.floor(Math.random() * cnt);
+        const rows = await this.prisma.sentence.findMany({
+          where: normalWhere,
+          orderBy: { id: 'asc' },
+          skip: offset,
+          take: 1,
+          select: { id: true },
+        });
+        if (rows[0]) {
+          return Number(rows[0].id);
+        }
+      }
+      return this.pickByWeight(weighted);
+    }
+    r -= normalCount;
+    return this.pickByWeight(weighted, r);
   }
 
   /** 判断是否已收藏。 */

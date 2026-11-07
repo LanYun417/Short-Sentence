@@ -429,6 +429,17 @@ export const config = {
     recordRetentionDays: Math.max(0, toNumber(process.env.SENTENCE_RECORD_RETENTION_DAYS, 30)),
     /** 是否启用答题历史清理（关掉只停物理删除，历史列表仍按保留天数过滤） */
     recordRetentionEnabled: toBoolean(process.env.SENTENCE_RECORD_RETENTION_ENABLED, true),
+    /**
+     * 「累计答对」降权阶梯步长：每累计答对 N 次降低一档抽中权重（默认 5 次一档）。
+     * 累计口径（答对 +1，答错不清零），在抽题时由 sentence_record 实时聚合，不另建表。
+     */
+    masteryStep: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_STEP, 5)),
+    /** 每档权重衰减因子（0~1，默认 0.5 = 每档概率减半） */
+    masteryStepFactor: Math.min(1, Math.max(0, toNumber(process.env.SENTENCE_MASTERY_STEP_FACTOR, 0.5))),
+    /** 累计答对达到该次数后，开始 30 天内不再被抽到（默认 20 次） */
+    masterySuppressAt: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_SUPPRESS_AT, 20)),
+    /** 累计答对达到 masterySuppressAt 后的禁抽天数（默认 30 天） */
+    masterySuppressDays: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_SUPPRESS_DAYS, 30)),
   },
 } as const;
 
