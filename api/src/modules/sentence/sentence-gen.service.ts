@@ -1226,6 +1226,92 @@ export class SentenceGenService {
     return { scanned: rows.length, updated, remaining };
   }
 
+  /** 逐词释义回填每批送进模型的题数（与解析回填同档：20 条一批兼顾省 token 与超时）。 */
+  private static readonly WORD_MEANINGS_BATCH_SIZE = 20;
+
+  /**
+   * 给存量题补逐词释义（管理端手动触发，按批调用，可反复点到补完为止）。
+   *
+   * 与解析回填同一取舍：现存题量上千，全量补一遍要花不少 token，
+   * 该花多少、什么时候花应当由运营决定；返回 remaining 便于一批批补到 0。
+   * 默认（force=false）只补「已就绪但还没有词义」的题；force=true 改为重生成「已有词义」的题
+   * （模型升级后统一刷新口径）。词义没有类似解析的「格式前缀」可判断收敛，
+   * 所以 force 口径下 remaining 仍按「缺词义」统计，不会出现反复重烧无法收敛的情况。
+   */
+  async backfillWordMeanings(
+    limit = 20,
+    force = false,
+  ): Promise<{ scanned: number; updated: number; remaining: number }> {
+    if (!this.sentenceGen.enabled) {
+      throw AppException.badRequest('生题能力未配置（AI_AGNES_API_KEY 缺失），无法补全逐词释义');
+    }
+    const missingWhere = { status: 'ready' as const, OR: [{ wordMeanings: null }, { wordMeanings: '' }] };
+    const where = force
+      ? { status: 'ready' as const, wordMeanings: { not: null }, NOT: { wordMeanings: '' } }
+      : missingWhere;
+    const ids = (
+      await this.prisma.sentence.findMany({
+        // 只补「已就绪但还没有词义」的题：pending_image 的题等生图完成后再补，避免重复劳动
+        where,
+        // 新题优先：新题最可能被用户抽到，先补它们的体验收益最大
+        orderBy: { id: 'desc' },
+        take: limit,
+        select: { id: true },
+      })
+    ).map((row) => row.id);
+    if (ids.length === 0) {
+      return { scanned: 0, updated: 0, remaining: 0 };
+    }
+
+    const rows = await this.prisma.sentence.findMany({
+      where: { id: { in: ids } },
+      orderBy: { id: 'desc' },
+      select: { id: true, sentenceEn: true },
+    });
+
+    let updated = 0;
+    for (let start = 0; start < rows.length; start += SentenceGenService.WORD_MEANINGS_BATCH_SIZE) {
+      const batch = rows.slice(start, start + SentenceGenService.WORD_MEANINGS_BATCH_SIZE);
+      let annotated: SentenceDraft[];
+      try {
+        annotated = await this.sentenceGen.annotateBatch(
+          // annotateBatch 只读 sentenceEn；其余必填字段填空即可，不参与提示词
+          batch.map((row) => ({
+            sentenceEn: row.sentenceEn,
+            translationZh: '',
+            ipa: '',
+            scenePrompt: '',
+            difficulty: 2,
+            categoryName: '',
+          })),
+        );
+      } catch (error) {
+        // 单批失败不阻断整轮：已完成的部分保留，剩下的下次再补（与生题批次同一取舍）
+        this.logger.warn(
+          `[SentenceGen] 逐词释义回填批次失败（第 ${start + 1}~${start + batch.length} 条）：${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        continue;
+      }
+      for (const [index, row] of batch.entries()) {
+        const meanings = annotated[index]?.wordMeanings;
+        // 模型漏掉的条目保持原样（绝不用空对象覆盖，否则下一轮还会重复补）
+        if (!meanings || Object.keys(meanings).length === 0) {
+          continue;
+        }
+        await this.prisma.sentence.update({
+          where: { id: row.id },
+          data: { wordMeanings: JSON.stringify(meanings).slice(0, 4000) },
+        });
+        updated += 1;
+      }
+    }
+
+    const remaining = await this.prisma.sentence.count({ where: missingWhere });
+    return { scanned: rows.length, updated, remaining };
+  }
+
   private async persistDrafts(
     drafts: SentenceDraft[],
     taskId: bigint,

@@ -18,6 +18,7 @@ import {
   SaveSentenceDto,
   TriggerGenDto,
   BackfillExplanationDto,
+  BackfillWordMeaningsDto,
   SENTENCE_STATUS,
   BatchSentenceStatusDto,
   BatchRegenerateImageDto,
@@ -292,6 +293,29 @@ export class SentenceController {
           ? '所有题目都已是新格式解析'
           : '所有题目都已有解析'
         : `已补 ${result.updated} 条，剩余 ${result.remaining} 条待补`;
+    return { __raw: true, data: result, message };
+  }
+
+  /**
+   * 补全存量题逐词释义（管理端手动、按批；拼词模式悬浮词义用）。
+   *
+   * 与解析回填同一取舍：全量补一遍要花不少 token，由运营决定什么时候花、花多少。
+   * 默认补「还没有词义」的题；force=true 重生成「已有词义」的题（模型升级后刷新口径）。
+   * 每批返回 scanned/updated/remaining（remaining 恒为「缺词义」的题数，便于点到 0）。
+   */
+  @Post('word-meanings/backfill')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '逐词释义回填')
+  async backfillWordMeanings(
+    @Body() dto: BackfillWordMeaningsDto,
+  ): Promise<ResponseEnvelope<{ scanned: number; updated: number; remaining: number }>> {
+    const result = await this.sentenceGen.backfillWordMeanings(dto.limit ?? 20, dto.force ?? false);
+    const message =
+      result.scanned === 0
+        ? dto.force
+          ? '所有题目都还没有词义，没有可重生成的'
+          : '所有题目都已有词义'
+        : `已补 ${result.updated} 条，还缺 ${result.remaining} 条词义待补`;
     return { __raw: true, data: result, message };
   }
 

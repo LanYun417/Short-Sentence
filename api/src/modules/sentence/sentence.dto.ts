@@ -110,6 +110,30 @@ export class BackfillExplanationDto {
   force?: boolean;
 }
 
+/** 存量题逐词释义回填入参（管理端手动触发，按批补；拼词模式悬浮词义用）。 */
+export class BackfillWordMeaningsDto {
+  /**
+   * 本批补多少条（缺省 20，上限 100）。
+   * 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时，
+   * 分批点几次更可控，接口每次都返回剩余条数。
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '数量必须为整数' })
+  @Min(1, { message: '数量至少为 1' })
+  @Max(100, { message: '单批最多 100 条' })
+  limit?: number;
+
+  /**
+   * 是否重新生成已有词义（缺省 false）。
+   * true = 连已生成过释义的题一起重新生成（用于模型升级后统一刷新口径），
+   * 可反复点到 remaining=0。
+   */
+  @IsOptional()
+  @IsBoolean({ message: 'force 必须为布尔值' })
+  force?: boolean;
+}
+
 /** 手动触发批量生成入参。 */
 export class TriggerGenDto {
   /** 本次目标数量（缺省取配置 SENTENCE_DAILY_TARGET） */
