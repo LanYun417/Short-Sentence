@@ -1,6 +1,6 @@
-/// 今日排行榜页（路由 /leaderboard）：答题数前 100 / 答对数前 100。
+/// 排行榜页（路由 /leaderboard）：今日答题数 / 今日答对数 / 累计打卡天数，各前 100。
 ///
-/// 数据来自 GET /client/leaderboard?type=today_answered|today_correct（需登录），
+/// 数据来自 GET /client/leaderboard?type=today_answered|today_correct|checkin_total（需登录），
 /// 对应后端 `modules/client/leaderboard/leaderboard.controller.ts`。
 library;
 
@@ -12,6 +12,7 @@ import '../api/auth_api.dart' show staticUrl;
 import '../api/leaderboard_api.dart';
 import '../api/models/leaderboard.dart';
 import '../state/auth_controller.dart';
+import '../state/growth_controller.dart';
 import '../theme/palette.dart';
 import '../widgets/app_card.dart';
 import '../widgets/empty_state.dart';
@@ -34,6 +35,15 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     final myId = ref.watch(authControllerProvider).user?.id;
     final resultAsync = ref.watch(leaderboardProvider(_type));
     final result = resultAsync.valueOrNull;
+
+    // 前三名会在后端旁路解锁「三甲之列 / 榜首加冕」。若成长页此前已加载过概览，
+    // 这里主动刷一次，用户切回成长页就能立刻看到新勋章（不必下拉刷新）。
+    ref.listen<AsyncValue<LeaderboardResult>>(leaderboardProvider(_type), (previous, next) {
+      final rank = next.valueOrNull?.me?.rank;
+      if (rank != null && rank <= 3 && ref.read(growthControllerProvider).loaded) {
+        ref.read(growthControllerProvider.notifier).refresh();
+      }
+    });
 
     return Scaffold(
       backgroundColor: colors.canvas,

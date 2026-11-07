@@ -1,4 +1,4 @@
-/// 排行榜模型（今日答题数 / 答对数前 100）。
+/// 排行榜模型（今日答题数 / 今日答对数 / 累计打卡天数）。
 ///
 /// 与后端 `LeaderboardService.LeaderboardResult` 逐字段对应
 /// （见 api 的 `modules/client/leaderboard/leaderboard.service.ts`）。

@@ -1,4 +1,4 @@
-/// 客户端排行榜接口（今日答题数 / 答对数前 100）。
+/// 客户端排行榜接口（今日答题数 / 今日答对数 / 累计打卡天数，各前 100）。
 ///
 /// 路径对应后端 `@Controller('client/leaderboard')`（见 api 的
 /// `modules/client/leaderboard/leaderboard.controller.ts`）。

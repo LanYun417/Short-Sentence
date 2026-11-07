@@ -36,7 +36,10 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(growthControllerProvider.notifier).load();
+      // 强制刷新：「我的」页会先拉一次成长概览，而成就可能在之后才解锁
+      //（答题发放 / 排行榜名次型成就是旁路发放）。沿用缓存会显示「已解锁 0/N」，
+      // 所以进入成长页一律重拉一次，保证新勋章立刻可见。
+      ref.read(growthControllerProvider.notifier).refresh();
       ref.read(cardControllerProvider.notifier).load();
     });
   }

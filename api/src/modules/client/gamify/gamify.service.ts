@@ -14,6 +14,14 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 /** 东八区偏移（Asia/Shanghai 无夏令时，固定 +8 即可；与 AiQuotaService 同口径）。 */
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
+/** 服务器本地日（东八区）零点；XP 日上限与「今日」成就共用，避免两处口径漂移。 */
+function shanghaiDayStart(): Date {
+  const shanghaiNow = new Date(Date.now() + SHANGHAI_OFFSET_MS);
+  return new Date(
+    Date.UTC(shanghaiNow.getUTCFullYear(), shanghaiNow.getUTCMonth(), shanghaiNow.getUTCDate()) - SHANGHAI_OFFSET_MS,
+  );
+}
+
 /** XP 发放规则（服务端权威，客户端不参与）。 */
 export const XP_RULES = {
   /** 首次答对（该题此前无作答记录） */
@@ -111,6 +119,18 @@ interface AchievementContext {
   unlockedCategories: number;
   totalCategories: number;
   xp: number;
+  /** 今日作答数（排行榜「答题榜」同口径：东八区自然日的 sentence_record 行数）。 */
+  todayAnswerCount: number;
+  /** 今日答对数（排行榜「答对榜」同口径）。 */
+  todayCorrectCount: number;
+  /** 累计打卡天数（排行榜「打卡榜」同口径：user_checkin 行数，不受答题记录保留期清理）。 */
+  checkinTotal: number;
+  /**
+   * 本次检查所知的最好名次（1 = 榜首）。
+   * 名次只有查询排行榜时才算得出来，答题/打卡路径不额外全表聚合，故默认 Infinity；
+   * 由 LeaderboardService 在进入榜单且名次 ≤3 时把 rank 传进来。
+   */
+  bestRank: number;
 }
 
 /** 按等级 code 取 XP 阈值（与 LEVELS 同源，改等级表时成就判定不会悄悄跟丢）。 */
@@ -147,6 +167,16 @@ export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) =>
   explorer_all: (ctx) => ctx.totalCategories > 0 && ctx.unlockedCategories >= ctx.totalCategories,
   level_b1: (ctx) => ctx.xp >= levelMin('B1'),
   level_b2: (ctx) => ctx.xp >= levelMin('B2'),
+  // ---- 排行榜配套成就（维度与 /client/leaderboard 的三个榜一一对应） ----
+  today_answer_20: (ctx) => ctx.todayAnswerCount >= 20,
+  today_answer_50: (ctx) => ctx.todayAnswerCount >= 50,
+  today_correct_15: (ctx) => ctx.todayCorrectCount >= 15,
+  today_correct_30: (ctx) => ctx.todayCorrectCount >= 30,
+  checkin_total_30: (ctx) => ctx.checkinTotal >= 30,
+  checkin_total_100: (ctx) => ctx.checkinTotal >= 100,
+  // 名次型：只在「查榜单」时被 bestRank 点亮；答题路径不额外做全表聚合
+  rank_top3: (ctx) => ctx.bestRank <= 3,
+  rank_first: (ctx) => ctx.bestRank === 1,
 };
 
 /** 唯一键冲突（Prisma P2002）判定。 */
@@ -204,12 +234,8 @@ export class GamifyService {
     if (cap <= 0) {
       return false;
     }
-    const shanghaiNow = new Date(Date.now() + SHANGHAI_OFFSET_MS);
-    const dayStart = new Date(
-      Date.UTC(shanghaiNow.getUTCFullYear(), shanghaiNow.getUTCMonth(), shanghaiNow.getUTCDate()) - SHANGHAI_OFFSET_MS,
-    );
     const today = await this.prisma.clientXpLog.aggregate({
-      where: { userId: BigInt(userId), createdAt: { gte: dayStart } },
+      where: { userId: BigInt(userId), createdAt: { gte: shanghaiDayStart() } },
       _sum: { amount: true },
     });
     return (today._sum.amount ?? 0) + amount > cap;
@@ -251,8 +277,12 @@ export class GamifyService {
     };
   }
 
-  /** 检查并解锁成就（幂等）；返回本次新解锁的成就（code + 名称，便于客户端直接展示）。 */
-  async checkAchievements(userId: number): Promise<Array<{ code: string; name: string }>> {
+  /**
+   * 检查并解锁成就（幂等）；返回本次新解锁的成就（code + 名称，便于客户端直接展示）。
+   * @param rankHint 可选：调用方已知用户在某个排行榜上的名次（1 = 榜首）。
+   *   只有排行榜接口会传，答题/打卡路径不额外做全表聚合（bestRank 默认 Infinity）。
+   */
+  async checkAchievements(userId: number, rankHint?: number): Promise<Array<{ code: string; name: string }>> {
     const uid = BigInt(userId);
     const [achievements, unlocked] = await Promise.all([
       this.prisma.achievement.findMany({ orderBy: { sort: 'asc' } }),
@@ -262,7 +292,7 @@ export class GamifyService {
       return [];
     }
     const unlockedSet = new Set(unlocked.map((row) => row.achievementCode));
-    const ctx = await this.contextOf(userId);
+    const ctx = await this.contextOf(userId, rankHint);
     const newly: Array<{ code: string; name: string }> = [];
     for (const achievement of achievements) {
       if (unlockedSet.has(achievement.code)) {
@@ -356,26 +386,42 @@ export class GamifyService {
   }
 
   /** 组装成就判定上下文。 */
-  private async contextOf(userId: number): Promise<AchievementContext> {
+  private async contextOf(userId: number, rankHint?: number): Promise<AchievementContext> {
     const uid = BigInt(userId);
-    const [answerCount, correctCount, favoriteCount, latestCheckin, user, totalCategories, practiced] =
-      await Promise.all([
-        this.prisma.sentenceRecord.count({ where: { userId: uid } }),
-        this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1 } }),
-        this.prisma.sentenceFavorite.count({ where: { userId: uid } }),
-        this.prisma.userCheckin.findFirst({
-          where: { userId: uid },
-          orderBy: { checkinDate: 'desc' },
-          select: { streak: true },
-        }),
-        this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
-        this.prisma.sentenceCategory.count({ where: { status: 1 } }),
-        this.prisma.sentenceRecord.findMany({
-          where: { userId: uid },
-          select: { sentenceId: true, sentence: { select: { categoryId: true } } },
-          distinct: ['sentenceId'],
-        }),
-      ]);
+    const dayStart = shanghaiDayStart();
+    const [
+      answerCount,
+      correctCount,
+      favoriteCount,
+      latestCheckin,
+      user,
+      totalCategories,
+      practiced,
+      todayAnswerCount,
+      todayCorrectCount,
+      checkinTotal,
+    ] = await Promise.all([
+      this.prisma.sentenceRecord.count({ where: { userId: uid } }),
+      this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1 } }),
+      this.prisma.sentenceFavorite.count({ where: { userId: uid } }),
+      this.prisma.userCheckin.findFirst({
+        where: { userId: uid },
+        orderBy: { checkinDate: 'desc' },
+        select: { streak: true },
+      }),
+      this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
+      this.prisma.sentenceCategory.count({ where: { status: 1 } }),
+      this.prisma.sentenceRecord.findMany({
+        where: { userId: uid },
+        select: { sentenceId: true, sentence: { select: { categoryId: true } } },
+        distinct: ['sentenceId'],
+      }),
+      // 今日维度（与排行榜同口径：东八区自然日）
+      this.prisma.sentenceRecord.count({ where: { userId: uid, createdAt: { gte: dayStart } } }),
+      this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1, createdAt: { gte: dayStart } } }),
+      // 打卡榜维度：user_checkin 一天一行且不随答题记录清理，累计口径可靠
+      this.prisma.userCheckin.count({ where: { userId: uid } }),
+    ]);
 
     const categoryIds = new Set<string>();
     for (const row of practiced) {
@@ -392,6 +438,10 @@ export class GamifyService {
       unlockedCategories: categoryIds.size,
       totalCategories,
       xp: user?.xp ?? 0,
+      todayAnswerCount,
+      todayCorrectCount,
+      checkinTotal,
+      bestRank: rankHint && rankHint > 0 ? rankHint : Number.POSITIVE_INFINITY,
     };
   }
 }

@@ -37,6 +37,13 @@ const ICON_MAP: Record<string, string> = {
   map: 'i-lucide-map',
   globe: 'i-lucide-globe',
   'trending-up': 'i-lucide-trending-up',
+  // 排行榜配套成就图标（静态字面量，动态拼接不会被构建期打包）
+  'list-ordered': 'i-lucide-list-ordered',
+  zap: 'i-lucide-zap',
+  'badge-check': 'i-lucide-badge-check',
+  star: 'i-lucide-star',
+  'calendar-days': 'i-lucide-calendar-days',
+  sparkles: 'i-lucide-sparkles',
 };
 
 /** 成就图标名（未知回退到奖章）。 */

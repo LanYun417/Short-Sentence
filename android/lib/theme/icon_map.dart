@@ -50,6 +50,10 @@ IconData appIcon(String? name) {
     'sparkles' => Icons.auto_awesome_rounded,
     'star' => Icons.star_rounded,
     'zap' => Icons.bolt_rounded,
+    // ---------- 排行榜配套成就 ----------
+    'list-ordered' => Icons.format_list_numbered_rounded,
+    'badge-check' => Icons.verified_rounded,
+    'calendar-days' => Icons.calendar_month_rounded,
     _ => Icons.auto_awesome_rounded,
   };
 }

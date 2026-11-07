@@ -5,22 +5,38 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import type { ClientUserContext } from '../../../common/types.js';
+import { GamifyService } from '../gamify/gamify.service.js';
 import { LeaderboardQueryDto } from './leaderboard.dto.js';
 import { LeaderboardService, type LeaderboardResult } from './leaderboard.service.js';
 
 @Controller('client/leaderboard')
 export class LeaderboardController {
-  constructor(private readonly leaderboard: LeaderboardService) {}
+  constructor(
+    private readonly leaderboard: LeaderboardService,
+    private readonly gamify: GamifyService,
+  ) {}
 
   /**
    * 排行榜：type=today_answered/today_correct（今日答题/答对前100）、checkin_total（累计打卡天数前100）。
    * 响应附带当前用户名次 me（未上榜为 null）。
+   *
+   * 名次型成就（三甲之列 / 榜首加冕）在这里旁路解锁：名次只有查榜单时才算得出来，
+   * 答题路径不做全表聚合；仅前三才触发成就检查，避免每次看榜都白跑一遍。
    */
   @Get()
   async fetch(
     @CurrentClientUser() user: ClientUserContext,
     @Query() query: LeaderboardQueryDto,
   ): Promise<LeaderboardResult> {
-    return this.leaderboard.fetch(query.type, user.userId);
+    const result = await this.leaderboard.fetch(query.type, user.userId);
+    const rank = result.me?.rank;
+    if (rank && rank <= 3) {
+      try {
+        await this.gamify.checkAchievements(user.userId, rank);
+      } catch {
+        // 成就解锁是旁路：失败不影响榜单响应（下次进入榜单或答题会重试）
+      }
+    }
+    return result;
   }
 }

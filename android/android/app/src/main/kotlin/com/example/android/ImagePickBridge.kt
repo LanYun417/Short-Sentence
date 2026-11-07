@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
 
@@ -29,7 +30,7 @@ class ImagePickBridge(private val activity: Activity) : MethodChannel.MethodCall
         pendingResult = null
     }
 
-    override fun onMethodCall(call: MethodChannel.MethodCall, result: MethodChannel.Result) {
+    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if (call.method != "pickImages") {
             result.notImplemented()
             return

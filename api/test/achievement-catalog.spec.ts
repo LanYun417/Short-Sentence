@@ -19,6 +19,10 @@ const EMPTY_CONTEXT = {
   unlockedCategories: 0,
   totalCategories: 14,
   xp: 0,
+  todayAnswerCount: 0,
+  todayCorrectCount: 0,
+  checkinTotal: 0,
+  bestRank: Number.POSITIVE_INFINITY,
 };
 
 /** 全满上下文：各项都远超阈值。 */
@@ -30,6 +34,10 @@ const MAX_CONTEXT = {
   unlockedCategories: 14,
   totalCategories: 14,
   xp: 99_999,
+  todayAnswerCount: 99_999,
+  todayCorrectCount: 99_999,
+  checkinTotal: 99_999,
+  bestRank: 1,
 };
 
 describe('成就目录', () => {
@@ -59,6 +67,39 @@ describe('成就目录', () => {
   it('全满状态下所有成就都成立（判定方向没写反）', () => {
     const locked = ACHIEVEMENT_SEEDS.filter((item) => !ACHIEVEMENT_CONDITIONS[item.code](MAX_CONTEXT));
     expect(locked.map((item) => item.code)).toEqual([]);
+  });
+
+  it('排行榜成就各认各的维度（累计值不能顶替今日值，名次默认不点亮）', () => {
+    const lazy = {
+      ...EMPTY_CONTEXT,
+      answerCount: 999,
+      correctCount: 999,
+      streak: 999,
+    };
+    const codes = [
+      'today_answer_20',
+      'today_answer_50',
+      'today_correct_15',
+      'today_correct_30',
+      'checkin_total_30',
+      'checkin_total_100',
+      'rank_top3',
+      'rank_first',
+    ];
+    for (const code of codes) {
+      expect(ACHIEVEMENT_CONDITIONS[code](lazy), `${code} 不该被累计值/默认名次误解锁`).toBe(false);
+    }
+
+    const onBoard = { ...EMPTY_CONTEXT, todayAnswerCount: 20, todayCorrectCount: 30, checkinTotal: 30, bestRank: 3 };
+    expect(ACHIEVEMENT_CONDITIONS.today_answer_20(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.today_answer_50(onBoard)).toBe(false);
+    expect(ACHIEVEMENT_CONDITIONS.today_correct_15(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.today_correct_30(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.checkin_total_30(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.checkin_total_100(onBoard)).toBe(false);
+    expect(ACHIEVEMENT_CONDITIONS.rank_top3(onBoard)).toBe(true);
+    expect(ACHIEVEMENT_CONDITIONS.rank_first(onBoard)).toBe(false);
+    expect(ACHIEVEMENT_CONDITIONS.rank_first({ ...onBoard, bestRank: 1 })).toBe(true);
   });
 
   it('奖励经验与图标名都填了（空值会让勋章墙空白）', () => {
