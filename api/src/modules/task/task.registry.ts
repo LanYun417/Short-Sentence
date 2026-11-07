@@ -74,6 +74,24 @@ export function cronOf(schedule: TaskSchedule): string {
   return `0 0 */${picked} * * *`;
 }
 
+/** 任务说明里的模型占位符取值（列表接口返回前由运行时实际模型替换）。 */
+export interface TaskModelLabels {
+  /** 文本对话实际使用的模型（随 genChannel 开关在 Agnes / NIM 间切换） */
+  textModel: string;
+  /** 图像生成模型（图像侧始终走全局 Agnes 通道，不受开关影响） */
+  imageModel: string;
+}
+
+/**
+ * 渲染任务说明：把 `{textModel}` / `{imageModel}` 占位符替换为当前实际生效的模型名。
+ *
+ * 说明里不写死模型名（如 "Agnes 2.5 Flash"）——后台切到 NIM 通道后文本模型就变了，
+ * 写死会误导运维；占位符在 TaskService.listTasks 返回时用 AiSettingsService 快照实时渲染。
+ */
+export function renderTaskDescription(description: string, models: TaskModelLabels): string {
+  return description.replaceAll('{textModel}', models.textModel).replaceAll('{imageModel}', models.imageModel);
+}
+
 /** 任务执行体所依赖的业务服务。 */
 export interface TaskDeps {
   /** 日志归档（FileLoggerService.archiveYesterday） */
@@ -148,7 +166,7 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       name: 'sentence-gen',
       title: '短句题库生成',
       description:
-        '批量生成英语短句题库：AI 生文（Agnes 2.5 Flash）→ 场景配图（Agnes）→ 转 webp 入库。' +
+        '批量生成英语短句题库：AI 生文（{textModel}）→ 场景配图（{imageModel}）→ 转 webp 入库。' +
         '按当日目标题数补足，一天一批（当天已成功则跳过），支持断点续跑。',
       schedule: { kind: 'daily', hour: config.sentence.cronHour, minute: config.sentence.cronMinute },
       // 停用时不注册调度，但仍出现在管理端列表并标记「已停用」——运维看得到「有它但没跑」
@@ -200,7 +218,7 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       name: 'daily-sentence-card',
       title: '每日句签生成',
       description:
-        'AI 生成当天的精美句签（Agnes 2.5 Flash 文案 + Agnes 生图 → webp 入库），一天一张（当天已就绪则跳过）。' +
+        'AI 生成当天的精美句签（{textModel} 文案 + {imageModel} 生图 → webp 入库），一天一张（当天已就绪则跳过）。' +
         '用户完成每日目标后可在客户端领取。',
       // 凌晨生成，保证白天用户达标时句签已就绪
       schedule: { kind: 'daily', hour: 0, minute: 10 },

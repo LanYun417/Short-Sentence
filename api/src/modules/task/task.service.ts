@@ -26,7 +26,17 @@ import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { ConfigService } from '../config/config.service.js';
-import { buildTaskRegistry, cronOf, type TaskContext, type TaskDefinition, type TaskDeps } from './task.registry.js';
+import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
+import { resolveTextChannel } from '../../common/ai/ai.config.js';
+import {
+  buildTaskRegistry,
+  cronOf,
+  renderTaskDescription,
+  type TaskContext,
+  type TaskDefinition,
+  type TaskDeps,
+  type TaskModelLabels,
+} from './task.registry.js';
 
 /** 每日提醒的可配置项（存 sys_config，后台「参数管理」可改）。 */
 const REMINDER_CONFIG_KEYS = {
@@ -146,6 +156,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly sentenceCard: SentenceCardService,
     private readonly dailyReminder: DailyReminderService,
     private readonly configService: ConfigService,
+    private readonly aiSettings: AiSettingsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -483,7 +494,8 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       items.push({
         name: definition.name,
         title: definition.title,
-        description: definition.description,
+        // 说明里的模型名不写死：返回时用当前生效通道渲染（切到 NIM 后立即反映出来）
+        description: renderTaskDescription(definition.description, this.currentModelLabels()),
         cron: definition.cron,
         enabled: definition.enabled,
         nextRunAt,
@@ -492,6 +504,15 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       });
     }
     return items;
+  }
+
+  /**
+   * 当前实际生效的模型名（渲染任务说明用）。
+   * 文本模型走 resolveTextChannel（genChannel=nim 时为 NIM 模型），图像模型始终是全局 imageModel。
+   */
+  private currentModelLabels(): TaskModelLabels {
+    const settings = this.aiSettings.current;
+    return { textModel: resolveTextChannel(settings).model, imageModel: settings.imageModel };
   }
 
   /** 查某任务最近一次执行（不论成败）。 */
