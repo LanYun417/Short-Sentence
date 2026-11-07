@@ -10,6 +10,7 @@
  */
 import { getAiCallStatsApi, getAiLogListApi, getAiLogSummaryApi } from '@/api/analytics';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { AiCallLogSummary, AiCallStat } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -18,6 +19,8 @@ import StatCard from '@/views/home/components/StatCard.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'AiCallLogList' });
+
+const { tableHeight } = useTablePage();
 
 /**
  * 调用类型文案。
@@ -146,9 +149,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="sentence-ai-logs-page">
+  <div class="sentence-ai-logs-page table-page">
     <!-- 当前筛选范围汇总：改任何筛选条件都会重算 -->
-    <div class="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div class="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4 table-page__extra">
       <StatCard
         title="当前范围调用"
         :value="summary?.calls ?? 0"
@@ -180,7 +183,7 @@ onMounted(async () => {
     </div>
 
     <!-- 近 7 日按类型拆分：合计卡打头，与 7 个类型凑满两行（4 列不空格） -->
-    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 table-page__extra">
       <StatCard
         title="近 7 日合计"
         :value="statsTotal"
@@ -198,11 +201,11 @@ onMounted(async () => {
         :color="STAT_COLORS[(index + 1) % STAT_COLORS.length]"
       />
     </div>
-    <el-card v-if="stats.length === 0" shadow="never" class="mb-4">
+    <el-card v-if="stats.length === 0" shadow="never" class="mb-4 table-page__extra">
       <p class="py-6 text-center text-sm text-muted">近 7 日暂无 AI 调用记录</p>
     </el-card>
 
-    <SearchForm @search="onSearch" @reset="onReset">
+    <SearchForm class="table-page__filter" @search="onSearch" @reset="onReset">
       <el-form-item label="类型">
         <el-select v-model="filters.type" placeholder="全部" clearable style="width: 130px">
           <el-option label="生题" value="sentence_gen" />
@@ -249,51 +252,54 @@ onMounted(async () => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">AI 调用日志（共 {{ total }} 条）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button :loading="loading" @click="getList">刷新</el-button>
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="类型" width="90">
-          <template #default="{ row }">{{ TYPE_LABEL[row.type] ?? row.type }}</template>
-        </el-table-column>
-        <el-table-column prop="provider" label="提供方" width="100" />
-        <el-table-column prop="model" label="模型" min-width="180" show-overflow-tooltip />
-        <el-table-column label="关联 ID" width="110">
-          <template #default="{ row }">
-            <span v-if="row.bizId > 0" :title="BIZ_HINT[row.type] ?? ''">{{ row.bizId }}</span>
-            <span v-else class="text-faint">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="Token" width="130">
-          <template #default="{ row }">{{ row.promptTokens }} / {{ row.completionTokens }}</template>
-        </el-table-column>
-        <el-table-column label="耗时" width="100">
-          <template #default="{ row }">{{ row.latencyMs }} ms</template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'success' ? '成功' : '失败' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="errorMessage" label="错误摘要" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.errorMessage ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column label="类型" width="90">
+            <template #default="{ row }">{{ TYPE_LABEL[row.type] ?? row.type }}</template>
+          </el-table-column>
+          <el-table-column prop="provider" label="提供方" width="100" />
+          <el-table-column prop="model" label="模型" min-width="180" show-overflow-tooltip />
+          <el-table-column label="关联 ID" width="110">
+            <template #default="{ row }">
+              <span v-if="row.bizId > 0" :title="BIZ_HINT[row.type] ?? ''">{{ row.bizId }}</span>
+              <span v-else class="text-faint">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="Token" width="130">
+            <template #default="{ row }">{{ row.promptTokens }} / {{ row.completionTokens }}</template>
+          </el-table-column>
+          <el-table-column label="耗时" width="100">
+            <template #default="{ row }">{{ row.latencyMs }} ms</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
+                {{ row.status === 'success' ? '成功' : '失败' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="errorMessage" label="错误摘要" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.errorMessage ?? '—' }}</template>
+          </el-table-column>
+          <el-table-column label="时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

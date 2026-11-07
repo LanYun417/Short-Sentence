@@ -17,6 +17,7 @@ import {
   uploadFilesApi,
 } from '@/api/file';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { downloadBlob } from '@/utils/download';
 import { sha256Hex } from '@/utils/hash';
 import { formatFileSize, formatDateTime } from '@/utils/format';
@@ -25,6 +26,8 @@ import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'Files' });
+
+const { tableHeight } = useTablePage();
 
 /** KB → 字节换算（表单按 KB 录入，接口按字节过滤） */
 const BYTES_PER_KB = 1024;
@@ -187,8 +190,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="files-page">
-    <el-card shadow="never">
+  <div class="files-page table-page">
+    <el-card shadow="never" class="table-page__extra">
       <template #header>
         <div class="flex items-center justify-between">
           <span>文件上传</span>
@@ -216,7 +219,7 @@ onMounted(() => {
       </el-upload>
     </el-card>
 
-    <SearchForm class="mt-4" @search="search" @reset="reset">
+    <SearchForm class="mt-4 table-page__filter" @search="search" @reset="reset">
       <el-form-item label="文件名">
         <el-input
           v-model="query.originName"
@@ -284,7 +287,7 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
+    <el-card shadow="never" class="mt-4 table-page__card">
       <template #header>
         <div class="flex items-center justify-between">
           <span>文件列表</span>
@@ -293,63 +296,67 @@ onMounted(() => {
           >
         </div>
       </template>
-      <el-table v-loading="loading" border :data="fileList">
-        <el-table-column label="预览" width="88" align="center">
-          <template #default="{ row }">
-            <el-image
-              v-if="row.mimeType?.startsWith('image/')"
-              class="block w-12 h-12 overflow-hidden border border-line-lighter rounded-md cursor-zoom-in"
-              :src="thumbUrl(row.fileUrl)"
-              :preview-src-list="[row.fileUrl]"
-              preview-teleported
-              fit="cover"
-              lazy
-            >
-              <template #error>
-                <div class="w-full h-full flex-center text-[22px] text-muted bg-fill-light rounded-md">
-                  <el-icon aria-hidden="true"><i class="bi bi-file-earmark-image" /></el-icon>
-                </div>
-              </template>
-            </el-image>
-            <div
-              v-else
-              class="w-12 h-12 flex-center text-[22px] text-muted bg-fill-light border border-line-lighter rounded-md"
-            >
-              <el-icon aria-hidden="true"><i class="bi bi-file-earmark" /></el-icon>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="originName" label="文件名" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="mimeType" label="类型" width="160" show-overflow-tooltip />
-        <el-table-column label="大小" width="110">
-          <template #default="{ row }">{{ formatFileSize(row.size) }}</template>
-        </el-table-column>
-        <el-table-column label="业务归属" width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span v-if="row.bizType"
-              >{{ row.bizType }}<span v-if="row.bizId"> / #{{ row.bizId }}</span></span
-            >
-            <span v-else class="text-faint">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="上传时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-link type="primary" :href="row.fileUrl" target="_blank" rel="noopener" class="mr-3"> 查看 </el-link>
-            <el-button v-permission="'file:download'" type="success" link @click="handleDownload(row as FileItem)">
-              下载
-            </el-button>
-            <el-button v-permission="'file:remove'" type="danger" link @click="handleDelete(row as FileItem)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" border :data="fileList" :height="tableHeight">
+          <el-table-column label="预览" width="88" align="center">
+            <template #default="{ row }">
+              <el-image
+                v-if="row.mimeType?.startsWith('image/')"
+                class="block w-12 h-12 overflow-hidden border border-line-lighter rounded-md cursor-zoom-in"
+                :src="thumbUrl(row.fileUrl)"
+                :preview-src-list="[row.fileUrl]"
+                preview-teleported
+                fit="cover"
+                lazy
+              >
+                <template #error>
+                  <div class="w-full h-full flex-center text-[22px] text-muted bg-fill-light rounded-md">
+                    <el-icon aria-hidden="true"><i class="bi bi-file-earmark-image" /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <div
+                v-else
+                class="w-12 h-12 flex-center text-[22px] text-muted bg-fill-light border border-line-lighter rounded-md"
+              >
+                <el-icon aria-hidden="true"><i class="bi bi-file-earmark" /></el-icon>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="originName" label="文件名" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="mimeType" label="类型" width="160" show-overflow-tooltip />
+          <el-table-column label="大小" width="110">
+            <template #default="{ row }">{{ formatFileSize(row.size) }}</template>
+          </el-table-column>
+          <el-table-column label="业务归属" width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span v-if="row.bizType"
+                >{{ row.bizType }}<span v-if="row.bizId"> / #{{ row.bizId }}</span></span
+              >
+              <span v-else class="text-faint">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <el-link type="primary" :href="row.fileUrl" target="_blank" rel="noopener" class="mr-3"> 查看 </el-link>
+              <el-button v-permission="'file:download'" type="success" link @click="handleDownload(row as FileItem)">
+                下载
+              </el-button>
+              <el-button v-permission="'file:remove'" type="danger" link @click="handleDelete(row as FileItem)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next"

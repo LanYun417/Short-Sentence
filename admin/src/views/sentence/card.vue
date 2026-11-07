@@ -17,6 +17,7 @@ import {
   updateSentenceCardApi,
 } from '@/api/sentence-card';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { SentenceCardDetail, SentenceCardItem, SentenceCardPayload } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -25,6 +26,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { computed, ref } from 'vue';
 
 defineOptions({ name: 'SentenceCardList' });
+
+const { tableHeight } = useTablePage();
 
 /** 状态 → 标签样式与文案 */
 const STATUS_TAG: Record<string, { type: 'success' | 'info' | 'danger'; label: string }> = {
@@ -185,9 +188,9 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
 </script>
 
 <template>
-  <div class="sentence-card-page">
-    <el-card shadow="never">
-      <SearchForm @search="search" @reset="reset">
+  <div class="sentence-card-page table-page">
+    <el-card shadow="never" class="table-page__card">
+      <SearchForm class="table-page__filter" @search="search" @reset="reset">
         <el-form-item label="日期">
           <el-date-picker
             v-model="dateRange"
@@ -217,7 +220,7 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
         </el-form-item>
       </SearchForm>
 
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">每日句签（共 {{ total }} 天）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'sentence:card:gen'" type="primary" @click="handleGenerate()"> 重新生成 </el-button>
@@ -225,77 +228,80 @@ async function handleDelete(row: SentenceCardItem): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="bizDate" label="日期" width="110" />
-        <el-table-column label="配图" width="100">
-          <template #default="{ row }">
-            <el-image
-              v-if="row.imageUrl"
-              :src="row.imageUrl"
-              :preview-src-list="[row.imageUrl]"
-              preview-teleported
-              fit="cover"
-              class="w-[80px] h-[45px] rounded"
-            />
-            <span v-else class="text-muted">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="主题" min-width="140">
-          <template #default="{ row }">
-            <div class="font-medium">{{ row.titleZh || '—' }}</div>
-            <div class="text-xs text-muted">{{ row.title || '—' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="文案" min-width="240">
-          <template #default="{ row }">
-            <div class="truncate">{{ row.sentenceEn || '—' }}</div>
-            <div class="truncate text-xs text-muted">{{ row.translationZh || '—' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="statusTag(row.status).type" size="small">{{ statusTag(row.status).label }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="claimCount" label="领取" width="80" />
-        <el-table-column label="更新时间" width="160">
-          <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <!-- 操作列 250px：四个 link 按钮并排不换行（210px 时「删除」会被挤到第二行） -->
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleDetail(row as SentenceCardItem)">详情</el-button>
-            <el-button
-              v-permission="'sentence:card:edit'"
-              link
-              type="primary"
-              @click="handleEdit(row as SentenceCardItem)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              v-permission="'sentence:card:gen'"
-              link
-              type="primary"
-              @click="handleGenerate(row as SentenceCardItem)"
-            >
-              重生成
-            </el-button>
-            <el-button
-              v-permission="'sentence:card:remove'"
-              link
-              type="danger"
-              @click="handleDelete(row as SentenceCardItem)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="bizDate" label="日期" width="110" />
+          <el-table-column label="配图" width="100">
+            <template #default="{ row }">
+              <el-image
+                v-if="row.imageUrl"
+                :src="row.imageUrl"
+                :preview-src-list="[row.imageUrl]"
+                preview-teleported
+                fit="cover"
+                class="w-[80px] h-[45px] rounded"
+              />
+              <span v-else class="text-muted">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="主题" min-width="140">
+            <template #default="{ row }">
+              <div class="font-medium">{{ row.titleZh || '—' }}</div>
+              <div class="text-xs text-muted">{{ row.title || '—' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="文案" min-width="240">
+            <template #default="{ row }">
+              <div class="truncate">{{ row.sentenceEn || '—' }}</div>
+              <div class="truncate text-xs text-muted">{{ row.translationZh || '—' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="statusTag(row.status).type" size="small">{{ statusTag(row.status).label }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="claimCount" label="领取" width="80" />
+          <el-table-column label="更新时间" width="160">
+            <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <!-- 操作列 250px：四个 link 按钮并排不换行（210px 时「删除」会被挤到第二行） -->
+          <el-table-column label="操作" width="250" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleDetail(row as SentenceCardItem)">详情</el-button>
+              <el-button
+                v-permission="'sentence:card:edit'"
+                link
+                type="primary"
+                @click="handleEdit(row as SentenceCardItem)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-permission="'sentence:card:gen'"
+                link
+                type="primary"
+                @click="handleGenerate(row as SentenceCardItem)"
+              >
+                重生成
+              </el-button>
+              <el-button
+                v-permission="'sentence:card:remove'"
+                link
+                type="danger"
+                @click="handleDelete(row as SentenceCardItem)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

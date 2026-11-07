@@ -16,6 +16,7 @@ import {
 } from '@/api/log';
 import { getDeptTreeApi } from '@/api/dept';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { useBatchDelete } from '@/composables/useBatchDelete';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime, formatDuration } from '@/utils/format';
@@ -25,6 +26,8 @@ import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'LogHttp' });
+
+const { tableHeight } = useTablePage();
 
 const dateRange = ref<string[]>([]);
 const deptTree = ref<DeptNode[]>([]);
@@ -212,8 +215,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="log-http-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="log-http-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="请求方法">
         <el-select v-model="query.method" placeholder="全部" clearable style="width: 140px">
           <el-option label="GET" value="GET" />
@@ -261,8 +264,8 @@ onMounted(() => {
       </template>
     </SearchForm>
 
-    <el-card shadow="never">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="table-page__card">
+      <div class="table-page__toolbar flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span class="text-[15px] font-semibold text-ink">HTTP 访问日志</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button @click="getList">
@@ -289,86 +292,90 @@ onMounted(() => {
         </div>
       </div>
 
-      <el-table
-        v-loading="loading"
-        :data="list"
-        border
-        @expand-change="handleExpand"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="48" align="center" />
-        <el-table-column type="expand">
-          <template #default="{ row }">
-            <div v-loading="detailLoading[row.id]" class="py-2 px-4">
-              <div>
-                <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">请求参数（Query + Body，敏感字段已脱敏）</p>
-                <!-- 长 JSON 内部滚动：用 el-scrollbar，避免展开行里出现原生滚动条 -->
-                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
-                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
-                    formatParams(detailMap[row.id])
-                  }}</pre>
-                </el-scrollbar>
+      <div class="table-page__table">
+        <el-table
+          v-loading="loading"
+          :data="list"
+          border
+          :height="tableHeight"
+          @expand-change="handleExpand"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="48" align="center" />
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div v-loading="detailLoading[row.id]" class="py-2 px-4">
+                <div>
+                  <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">请求参数（Query + Body，敏感字段已脱敏）</p>
+                  <!-- 长 JSON 内部滚动：用 el-scrollbar，避免展开行里出现原生滚动条 -->
+                  <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                    <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                      formatParams(detailMap[row.id])
+                    }}</pre>
+                  </el-scrollbar>
+                </div>
+                <div>
+                  <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">User-Agent</p>
+                  <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                    <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                      row.userAgent || '无 User-Agent'
+                    }}</pre>
+                  </el-scrollbar>
+                </div>
+                <div v-if="detailMap[row.id]?.resBody">
+                  <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">响应内容</p>
+                  <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
+                    <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
+                      detailMap[row.id]?.resBody
+                    }}</pre>
+                  </el-scrollbar>
+                </div>
               </div>
-              <div>
-                <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">User-Agent</p>
-                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
-                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
-                    row.userAgent || '无 User-Agent'
-                  }}</pre>
-                </el-scrollbar>
-              </div>
-              <div v-if="detailMap[row.id]?.resBody">
-                <p class="mt-2.5 mb-1 text-xs font-semibold text-muted">响应内容</p>
-                <el-scrollbar max-height="15rem" class="rounded bg-fill-light">
-                  <pre class="m-0 whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-xs leading-[1.6]">{{
-                    detailMap[row.id]?.resBody
-                  }}</pre>
-                </el-scrollbar>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="method" label="方法" width="100" align="center" />
-        <el-table-column prop="url" label="URL" min-width="260" show-overflow-tooltip />
-        <el-table-column label="状态码" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.statusCode)" size="small">{{ row.statusCode }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="耗时" width="110" align="center">
-          <template #default="{ row }">{{ formatDuration(row.duration) }}</template>
-        </el-table-column>
-        <el-table-column label="操作人" width="130" show-overflow-tooltip>
-          <template #default="{ row }">{{ displayOrDash(row.username) }}</template>
-        </el-table-column>
-        <el-table-column label="所属部门" width="130" show-overflow-tooltip>
-          <template #default="{ row }">{{ displayOrDash(row.deptName) }}</template>
-        </el-table-column>
-        <el-table-column label="浏览器" width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.browser || '未知' }}</template>
-        </el-table-column>
-        <el-table-column label="操作系统" width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.os || '未知' }}</template>
-        </el-table-column>
-        <el-table-column prop="ip" label="IP" width="150" />
-        <el-table-column label="归属地" width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.location || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.time) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button v-permission="'log:http:remove'" type="danger" link @click="removeOne(row as HttpLog)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+            </template>
+          </el-table-column>
+          <el-table-column prop="method" label="方法" width="100" align="center" />
+          <el-table-column prop="url" label="URL" min-width="260" show-overflow-tooltip />
+          <el-table-column label="状态码" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="statusType(row.statusCode)" size="small">{{ row.statusCode }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="耗时" width="110" align="center">
+            <template #default="{ row }">{{ formatDuration(row.duration) }}</template>
+          </el-table-column>
+          <el-table-column label="操作人" width="130" show-overflow-tooltip>
+            <template #default="{ row }">{{ displayOrDash(row.username) }}</template>
+          </el-table-column>
+          <el-table-column label="所属部门" width="130" show-overflow-tooltip>
+            <template #default="{ row }">{{ displayOrDash(row.deptName) }}</template>
+          </el-table-column>
+          <el-table-column label="浏览器" width="150" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.browser || '未知' }}</template>
+          </el-table-column>
+          <el-table-column label="操作系统" width="150" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.os || '未知' }}</template>
+          </el-table-column>
+          <el-table-column prop="ip" label="IP" width="150" />
+          <el-table-column label="归属地" width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.location || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.time) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button v-permission="'log:http:remove'" type="danger" link @click="removeOne(row as HttpLog)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

@@ -17,6 +17,7 @@ import {
   updateClientNoticeApi,
 } from '@/api/client-notice';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { ClientNoticeItem, ClientNoticePayload, ClientNoticeStatus } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -25,6 +26,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'ClientNotice' });
+
+const { tableHeight } = useTablePage();
 
 /** 状态 → 标签（未知状态原样展示，不吞信息）。 */
 const STATUS_TAG: Record<number, { type: 'success' | 'info' | 'warning'; label: string }> = {
@@ -160,8 +163,8 @@ async function handleDelete(row: ClientNoticeItem): Promise<void> {
 </script>
 
 <template>
-  <div class="sentence-client-notice-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="sentence-client-notice-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="状态">
         <el-select v-model="query.status" placeholder="全部" clearable style="width: 120px">
           <el-option label="草稿" :value="0" />
@@ -181,8 +184,8 @@ async function handleDelete(row: ClientNoticeItem): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">客户端公告（共 {{ total }} 条）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'client:notice:add'" type="primary" @click="handleCreate">发布公告</el-button>
@@ -190,60 +193,63 @@ async function handleDelete(row: ClientNoticeItem): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="置顶" width="70" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.pinned === 1" type="warning" size="small">置顶</el-tag>
-            <span v-else class="text-faint">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
-        <el-table-column label="类型" width="90">
-          <template #default="{ row }">{{ TYPE_LABEL[row.noticeType] ?? row.noticeType }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="statusTag(row.status).type" size="small">{{ statusTag(row.status).label }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="readCount" label="已读人数" width="100" align="center" />
-        <el-table-column label="发布时间" width="170">
-          <template #default="{ row }">{{ row.publishedAt ? formatDateTime(row.publishedAt) : '—' }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'client:notice:edit'"
-              link
-              type="primary"
-              @click="handleEdit(row as ClientNoticeItem)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              v-permission="'client:notice:edit'"
-              link
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="handleToggleStatus(row as ClientNoticeItem)"
-            >
-              {{ row.status === 1 ? '撤回' : '发布' }}
-            </el-button>
-            <el-button
-              v-permission="'client:notice:remove'"
-              link
-              type="danger"
-              @click="handleDelete(row as ClientNoticeItem)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column label="置顶" width="70" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.pinned === 1" type="warning" size="small">置顶</el-tag>
+              <span v-else class="text-faint">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="title" label="标题" min-width="220" show-overflow-tooltip />
+          <el-table-column label="类型" width="90">
+            <template #default="{ row }">{{ TYPE_LABEL[row.noticeType] ?? row.noticeType }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="statusTag(row.status).type" size="small">{{ statusTag(row.status).label }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="readCount" label="已读人数" width="100" align="center" />
+          <el-table-column label="发布时间" width="170">
+            <template #default="{ row }">{{ row.publishedAt ? formatDateTime(row.publishedAt) : '—' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'client:notice:edit'"
+                link
+                type="primary"
+                @click="handleEdit(row as ClientNoticeItem)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-permission="'client:notice:edit'"
+                link
+                :type="row.status === 1 ? 'warning' : 'success'"
+                @click="handleToggleStatus(row as ClientNoticeItem)"
+              >
+                {{ row.status === 1 ? '撤回' : '发布' }}
+              </el-button>
+              <el-button
+                v-permission="'client:notice:remove'"
+                link
+                type="danger"
+                @click="handleDelete(row as ClientNoticeItem)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

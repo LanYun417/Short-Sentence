@@ -7,6 +7,7 @@
 import { ElMessage } from '@/utils/element';
 import { getReportListApi, handleReportApi } from '@/api/report';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { HandleReportPayload, SentenceReportItem } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -15,6 +16,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'SentenceReport' });
+
+const { tableHeight } = useTablePage();
 
 /** 举报类型文案 */
 const REASON_LABEL: Record<string, string> = {
@@ -89,9 +92,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sentence-report-page">
+  <div class="sentence-report-page table-page">
     <!-- 查询 -->
-    <SearchForm @search="search" @reset="reset">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="英文 / 翻译 / 补充说明" clearable @keyup.enter="search" />
       </el-form-item>
@@ -112,8 +115,8 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">举报处理（共 {{ total }} 条）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button :loading="loading" @click="getList">刷新</el-button>
@@ -121,57 +124,60 @@ onMounted(() => {
       </div>
 
       <!-- 表格 -->
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="题目" min-width="260">
-          <template #default="{ row }">
-            <template v-if="row.sentence">
-              <p class="text-sm font-medium">{{ row.sentence.sentenceEn }}</p>
-              <p class="text-xs text-gray-400">{{ row.sentence.translationZh }}</p>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column label="题目" min-width="260">
+            <template #default="{ row }">
+              <template v-if="row.sentence">
+                <p class="text-sm font-medium">{{ row.sentence.sentenceEn }}</p>
+                <p class="text-xs text-gray-400">{{ row.sentence.translationZh }}</p>
+              </template>
+              <span v-else class="text-gray-400">题目已删除</span>
             </template>
-            <span v-else class="text-gray-400">题目已删除</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="类型" width="140">
-          <template #default="{ row }">
-            <el-tag size="small" type="warning">{{ REASON_LABEL[row.reason] ?? row.reason }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="补充说明" min-width="200">
-          <template #default="{ row }">
-            <span class="text-sm text-gray-600">{{ row.description || '—' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="举报人" width="130">
-          <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
-              {{ STATUS_LABEL[row.status] ?? row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="举报时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'sentence:report:handle'"
-              link
-              type="primary"
-              @click="handleOpen(row as SentenceReportItem)"
-            >
-              {{ row.status === 'pending' ? '处理' : '改判' }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          </el-table-column>
+          <el-table-column label="类型" width="140">
+            <template #default="{ row }">
+              <el-tag size="small" type="warning">{{ REASON_LABEL[row.reason] ?? row.reason }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="补充说明" min-width="200">
+            <template #default="{ row }">
+              <span class="text-sm text-gray-600">{{ row.description || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="举报人" width="130">
+            <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
+                {{ STATUS_LABEL[row.status] ?? row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="举报时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'sentence:report:handle'"
+                link
+                type="primary"
+                @click="handleOpen(row as SentenceReportItem)"
+              >
+                {{ row.status === 'pending' ? '处理' : '改判' }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

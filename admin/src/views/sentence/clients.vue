@@ -20,6 +20,7 @@ import {
   setClientUserStatusApi,
 } from '@/api/client-user';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime } from '@/utils/format';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MESSAGE, PASSWORD_REGEX } from '@/utils/validate';
@@ -37,6 +38,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'ClientUserList' });
+
+const { tableHeight } = useTablePage();
 
 const GENDER_LABEL: Record<string, string> = { male: '男', female: '女', secret: '保密' };
 
@@ -271,9 +274,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sentence-clients-page">
+  <div class="sentence-clients-page table-page">
     <!-- 查询 -->
-    <SearchForm @search="search" @reset="reset">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="邮箱 / 昵称" clearable @keyup.enter="search" />
       </el-form-item>
@@ -292,8 +295,8 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">客户端用户（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button :loading="exporting" @click="handleExport">
@@ -305,92 +308,95 @@ onMounted(() => {
       </div>
 
       <!-- 表格 -->
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column label="用户" min-width="200">
-          <template #default="{ row }">
-            <div class="flex items-center gap-2">
-              <el-avatar :size="32" :src="row.avatarUrl || undefined">
-                {{ (row.nickname || '?').slice(0, 1) }}
-              </el-avatar>
-              <div class="min-w-0">
-                <p class="truncate font-medium">{{ row.nickname }}</p>
-                <p class="truncate text-xs text-gray-400">{{ row.email }}</p>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column label="用户" min-width="200">
+            <template #default="{ row }">
+              <div class="flex items-center gap-2">
+                <el-avatar :size="32" :src="row.avatarUrl || undefined">
+                  {{ (row.nickname || '?').slice(0, 1) }}
+                </el-avatar>
+                <div class="min-w-0">
+                  <p class="truncate font-medium">{{ row.nickname }}</p>
+                  <p class="truncate text-xs text-gray-400">{{ row.email }}</p>
+                </div>
               </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="性别" width="70">
-          <template #default="{ row }">{{ GENDER_LABEL[row.gender] ?? row.gender }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="answerCount" label="答题数" width="90" />
-        <el-table-column label="正确率" width="90">
-          <template #default="{ row }">{{ correctRate(row as ClientUserItem) }}</template>
-        </el-table-column>
-        <el-table-column prop="favoriteCount" label="收藏" width="80" />
-        <el-table-column prop="streak" label="连续打卡" width="100" />
-        <el-table-column label="最后登录" width="170">
-          <template #default="{ row }">{{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : '—' }}</template>
-        </el-table-column>
-        <el-table-column label="注册时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="290" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'client:user:query'"
-              link
-              type="primary"
-              @click="handleDetail(row as ClientUserItem)"
-            >
-              详情
-            </el-button>
-            <el-button
-              v-permission="'client:user:edit'"
-              link
-              type="warning"
-              @click="handleToggleStatus(row as ClientUserItem)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
-            <el-button
-              v-permission="'client:user:reset'"
-              link
-              type="primary"
-              @click="handleResetPwd(row as ClientUserItem)"
-            >
-              重置密码
-            </el-button>
-            <el-button
-              v-permission="'client:user:offline'"
-              link
-              type="danger"
-              @click="handleOffline(row as ClientUserItem)"
-            >
-              下线
-            </el-button>
-            <el-button
-              v-permission="'client:user:delete'"
-              link
-              type="danger"
-              :loading="deleting"
-              @click="handleDelete(row as ClientUserItem)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+            </template>
+          </el-table-column>
+          <el-table-column label="性别" width="70">
+            <template #default="{ row }">{{ GENDER_LABEL[row.gender] ?? row.gender }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="answerCount" label="答题数" width="90" />
+          <el-table-column label="正确率" width="90">
+            <template #default="{ row }">{{ correctRate(row as ClientUserItem) }}</template>
+          </el-table-column>
+          <el-table-column prop="favoriteCount" label="收藏" width="80" />
+          <el-table-column prop="streak" label="连续打卡" width="100" />
+          <el-table-column label="最后登录" width="170">
+            <template #default="{ row }">{{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : '—' }}</template>
+          </el-table-column>
+          <el-table-column label="注册时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="290" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'client:user:query'"
+                link
+                type="primary"
+                @click="handleDetail(row as ClientUserItem)"
+              >
+                详情
+              </el-button>
+              <el-button
+                v-permission="'client:user:edit'"
+                link
+                type="warning"
+                @click="handleToggleStatus(row as ClientUserItem)"
+              >
+                {{ row.status === 1 ? '禁用' : '启用' }}
+              </el-button>
+              <el-button
+                v-permission="'client:user:reset'"
+                link
+                type="primary"
+                @click="handleResetPwd(row as ClientUserItem)"
+              >
+                重置密码
+              </el-button>
+              <el-button
+                v-permission="'client:user:offline'"
+                link
+                type="danger"
+                @click="handleOffline(row as ClientUserItem)"
+              >
+                下线
+              </el-button>
+              <el-button
+                v-permission="'client:user:delete'"
+                link
+                type="danger"
+                :loading="deleting"
+                @click="handleDelete(row as ClientUserItem)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

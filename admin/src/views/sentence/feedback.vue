@@ -10,6 +10,7 @@
 import { ElMessage } from '@/utils/element';
 import { getFeedbackListApi, handleFeedbackApi } from '@/api/feedback';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { ClientFeedbackItem, ClientFeedbackStatus, HandleFeedbackPayload } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -18,6 +19,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'ClientFeedback' });
+
+const { tableHeight } = useTablePage();
 
 /** 反馈类型文案 */
 const TYPE_LABEL: Record<string, string> = {
@@ -120,9 +123,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="client-feedback-page">
+  <div class="client-feedback-page table-page">
     <!-- 查询 -->
-    <SearchForm @search="search" @reset="reset">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="反馈内容 / 联系方式" clearable @keyup.enter="search" />
       </el-form-item>
@@ -150,8 +153,8 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">用户反馈（共 {{ total }} 条）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button :loading="loading" @click="getList">刷新</el-button>
@@ -159,74 +162,77 @@ onMounted(() => {
       </div>
 
       <!-- 表格 -->
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="反馈内容" min-width="300">
-          <template #default="{ row }">
-            <p class="text-sm break-all line-clamp-2">{{ row.content }}</p>
-            <div v-if="row.images?.length" class="mt-1.5 flex flex-wrap gap-1.5">
-              <el-image
-                v-for="url in row.images"
-                :key="url"
-                :src="url"
-                :preview-src-list="row.images"
-                :initial-index="row.images.indexOf(url)"
-                fit="cover"
-                preview-teleported
-                class="h-12 w-12 shrink-0 cursor-zoom-in rounded border border-gray-200"
-              />
-            </div>
-            <p v-if="row.reply" class="mt-1 text-xs text-success">已回复：{{ row.reply }}</p>
-          </template>
-        </el-table-column>
-        <el-table-column label="类型" width="110">
-          <template #default="{ row }">
-            <el-tag size="small" :type="TYPE_TAG[row.type] ?? 'primary'">
-              {{ TYPE_LABEL[row.type] ?? row.type }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="提交人" width="130">
-          <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
-        </el-table-column>
-        <el-table-column label="来源" width="120">
-          <template #default="{ row }">
-            <span class="text-sm">{{ PLATFORM_LABEL[row.platform] ?? row.platform }}</span>
-            <span v-if="row.appVersion" class="ml-1 text-xs text-gray-400">v{{ row.appVersion }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="联系方式" width="150">
-          <template #default="{ row }">
-            <span class="text-sm text-gray-600">{{ row.contact || '—' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
-              {{ STATUS_LABEL[row.status] ?? row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="提交时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'client:feedback:handle'"
-              link
-              type="primary"
-              @click="handleOpen(row as ClientFeedbackItem)"
-            >
-              {{ row.status === 'pending' ? '处理' : '改判' }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column label="反馈内容" min-width="300">
+            <template #default="{ row }">
+              <p class="text-sm break-all line-clamp-2">{{ row.content }}</p>
+              <div v-if="row.images?.length" class="mt-1.5 flex flex-wrap gap-1.5">
+                <el-image
+                  v-for="url in row.images"
+                  :key="url"
+                  :src="url"
+                  :preview-src-list="row.images"
+                  :initial-index="row.images.indexOf(url)"
+                  fit="cover"
+                  preview-teleported
+                  class="h-12 w-12 shrink-0 cursor-zoom-in rounded border border-gray-200"
+                />
+              </div>
+              <p v-if="row.reply" class="mt-1 text-xs text-success">已回复：{{ row.reply }}</p>
+            </template>
+          </el-table-column>
+          <el-table-column label="类型" width="110">
+            <template #default="{ row }">
+              <el-tag size="small" :type="TYPE_TAG[row.type] ?? 'primary'">
+                {{ TYPE_LABEL[row.type] ?? row.type }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="提交人" width="130">
+            <template #default="{ row }">{{ row.reporter?.nickname ?? '—' }}</template>
+          </el-table-column>
+          <el-table-column label="来源" width="120">
+            <template #default="{ row }">
+              <span class="text-sm">{{ PLATFORM_LABEL[row.platform] ?? row.platform }}</span>
+              <span v-if="row.appVersion" class="ml-1 text-xs text-gray-400">v{{ row.appVersion }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="联系方式" width="150">
+            <template #default="{ row }">
+              <span class="text-sm text-gray-600">{{ row.contact || '—' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="STATUS_TAG[row.status] ?? 'info'" size="small">
+                {{ STATUS_LABEL[row.status] ?? row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="提交时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="110" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'client:feedback:handle'"
+                link
+                type="primary"
+                @click="handleOpen(row as ClientFeedbackItem)"
+              >
+                {{ row.status === 'pending' ? '处理' : '改判' }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

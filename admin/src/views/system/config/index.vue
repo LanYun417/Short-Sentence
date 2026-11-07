@@ -4,12 +4,15 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { deleteConfigApi, getConfigListApi } from '@/api/config';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import type { SysConfigItem } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import ConfigForm from './components/ConfigForm.vue';
 
 defineOptions({ name: 'SystemConfig' });
+
+const { tableHeight } = useTablePage();
 
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
@@ -60,8 +63,8 @@ function handleFormSuccess(): void {
 </script>
 
 <template>
-  <div class="config-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="config-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="参数名称">
         <el-input v-model="query.configName" placeholder="请输入参数名称" clearable @keyup.enter="search" />
       </el-form-item>
@@ -70,8 +73,8 @@ function handleFormSuccess(): void {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never">
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <el-card shadow="never" class="table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">参数列表</span>
         <el-button v-permission="'system:config:add'" type="primary" @click="handleAdd">
           <template #icon><i class="bi bi-plus" /></template>
@@ -79,46 +82,49 @@ function handleFormSuccess(): void {
         </el-button>
       </div>
 
-      <el-table v-loading="loading" border :data="list">
-        <el-table-column prop="configName" label="参数名称" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="configKey" label="参数键名" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="configValue" label="参数值" min-width="140" show-overflow-tooltip />
-        <el-table-column label="内置" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.systemFlag === 1 ? 'warning' : 'info'" size="small">
-              {{ row.systemFlag === 1 ? '内置' : '自定义' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <div class="table-action">
-              <el-button
-                v-permission="'system:config:edit'"
-                type="primary"
-                link
-                @click="handleEdit(row as SysConfigItem)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                v-if="row.systemFlag !== 1"
-                v-permission="'system:config:remove'"
-                type="danger"
-                link
-                @click="handleDelete(row as SysConfigItem)"
-              >
-                删除
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" border :data="list" :height="tableHeight">
+          <el-table-column prop="configName" label="参数名称" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="configKey" label="参数键名" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="configValue" label="参数值" min-width="140" show-overflow-tooltip />
+          <el-table-column label="内置" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.systemFlag === 1 ? 'warning' : 'info'" size="small">
+                {{ row.systemFlag === 1 ? '内置' : '自定义' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <div class="table-action">
+                <el-button
+                  v-permission="'system:config:edit'"
+                  type="primary"
+                  link
+                  @click="handleEdit(row as SysConfigItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  v-if="row.systemFlag !== 1"
+                  v-permission="'system:config:remove'"
+                  type="danger"
+                  link
+                  @click="handleDelete(row as SysConfigItem)"
+                >
+                  删除
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

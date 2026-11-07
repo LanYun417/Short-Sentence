@@ -28,6 +28,7 @@ import {
   type SentenceCategoryOption,
 } from '@/api/sentence';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime } from '@/utils/format';
 import type { GenTaskItem, SentenceItem, SentenceSavePayload, SentenceStatus } from '@/types/api';
@@ -38,12 +39,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 
 defineOptions({ name: 'SentenceList' });
 
-/**
- * 宽屏启用「三段式撑满」布局：表格固定高度、内部滚动，分页常驻内容区底部。
- * 窄屏(<768px)不传 height，退回整页滚动（筛选换行后固定高度会把表格压得过矮）。
- */
-const isWideScreen = useMediaQuery('(min-width: 768px)');
-const sentenceTableHeight = computed<string | undefined>(() => (isWideScreen.value ? '100%' : undefined));
+const { tableHeight } = useTablePage();
 
 /** 状态 → 标签样式与文案 */
 const STATUS_TAG: Record<SentenceStatus, { type: 'primary' | 'success' | 'info'; label: string }> = {
@@ -826,7 +822,7 @@ onMounted(async () => {
           :data="list"
           border
           row-key="id"
-          :height="sentenceTableHeight"
+          :height="tableHeight"
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="45" :reserve-selection="true" />

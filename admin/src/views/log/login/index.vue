@@ -3,6 +3,7 @@
 
 import { deleteLoginLogApi, deleteLoginLogsApi, exportLoginLogsApi, getLoginLogsApi } from '@/api/log';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { useBatchDelete } from '@/composables/useBatchDelete';
 import { useCsvExport } from '@/composables/useCsvExport';
 import { formatDateTime } from '@/utils/format';
@@ -11,6 +12,8 @@ import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'LogLogin' });
+
+const { tableHeight } = useTablePage();
 
 const dateRange = ref<string[]>([]);
 
@@ -56,8 +59,8 @@ function handleExport(): void {
 </script>
 
 <template>
-  <div class="log-login-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="log-login-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="账号">
         <el-input v-model="query.username" placeholder="请输入账号" clearable @keyup.enter="search" />
       </el-form-item>
@@ -81,8 +84,8 @@ function handleExport(): void {
       </template>
     </SearchForm>
 
-    <el-card shadow="never">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="table-page__card">
+      <div class="table-page__toolbar flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <span class="text-[15px] font-semibold text-ink">登录日志</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button @click="getList">
@@ -106,37 +109,46 @@ function handleExport(): void {
         </div>
       </div>
 
-      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="48" align="center" />
-        <el-table-column prop="username" label="账号" min-width="120" />
-        <el-table-column prop="ip" label="IP 地址" width="140" />
-        <el-table-column prop="location" label="归属地" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.location || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="userAgent" label="User-Agent" min-width="220" show-overflow-tooltip />
-        <el-table-column label="结果" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ row.status === 1 ? '成功' : '失败' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="message" label="描述" min-width="160" show-overflow-tooltip />
-        <el-table-column label="登录时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button v-permission="'log:login:remove'" type="danger" link @click="removeOne(row as LoginLog)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table
+          v-loading="loading"
+          border
+          :data="list"
+          :height="tableHeight"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="48" align="center" />
+          <el-table-column prop="username" label="账号" min-width="120" />
+          <el-table-column prop="ip" label="IP 地址" width="140" />
+          <el-table-column prop="location" label="归属地" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.location || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="userAgent" label="User-Agent" min-width="220" show-overflow-tooltip />
+          <el-table-column label="结果" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '成功' : '失败' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="message" label="描述" min-width="160" show-overflow-tooltip />
+          <el-table-column label="登录时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button v-permission="'log:login:remove'" type="danger" link @click="removeOne(row as LoginLog)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

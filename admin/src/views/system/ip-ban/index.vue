@@ -13,11 +13,14 @@ import { ElMessage, ElMessageBox } from '@/utils/element';
 import { addIpBanApi, getIpBanListApi, getIpBanStatsApi, removeIpBanApi } from '@/api/ip-ban';
 import type { IpBanRecord, IpBanStats } from '@/api/ip-ban';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'SystemIpBan' });
+
+const { tableHeight } = useTablePage();
 
 const TYPE_LABEL: Record<string, string> = { auto: '自动', manual: '人工' };
 const SCOPE_LABEL: Record<string, string> = {
@@ -111,8 +114,8 @@ async function submitDialog(): Promise<void> {
 </script>
 
 <template>
-  <div class="ip-ban-page">
-    <el-row :gutter="12" class="mb-4">
+  <div class="ip-ban-page table-page">
+    <el-row :gutter="12" class="mb-4 table-page__extra">
       <el-col :span="8">
         <el-card shadow="never">
           <div class="stat-label">封禁总数</div>
@@ -133,7 +136,7 @@ async function submitDialog(): Promise<void> {
       </el-col>
     </el-row>
 
-    <SearchForm @search="searchWrapped" @reset="resetWrapped">
+    <SearchForm class="table-page__filter" @search="searchWrapped" @reset="resetWrapped">
       <el-form-item label="IP">
         <el-input
           v-model="query.keyword"
@@ -148,8 +151,8 @@ async function submitDialog(): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">封禁记录（{{ total }}）</span>
         <div class="flex gap-2">
           <el-button :loading="loading" @click="loadList">
@@ -163,53 +166,56 @@ async function submitDialog(): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" border :data="list">
-        <el-table-column prop="ip" label="IP" min-width="140" />
-        <el-table-column label="类型" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.type === 'auto' ? 'warning' : 'info'" size="small">
-              {{ TYPE_LABEL[row.type] ?? row.type }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="触发来源" width="110" align="center">
-          <template #default="{ row }">{{ SCOPE_LABEL[row.scope] ?? row.scope }}</template>
-        </el-table-column>
-        <el-table-column prop="reason" label="原因" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="operator" label="操作人" width="120" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.operator || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="到期时间" width="170">
-          <template #default="{ row }">{{ row.expiresAt ? formatDateTime(row.expiresAt) : '永久' }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.active ? 'danger' : 'success'" size="small">
-              {{ row.active ? '生效中' : '已解封' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="封禁时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'ip:ban:remove'"
-              type="success"
-              link
-              :disabled="!row.active"
-              @click="handleUnban(row as IpBanRecord)"
-            >
-              解封
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" border :data="list" :height="tableHeight">
+          <el-table-column prop="ip" label="IP" min-width="140" />
+          <el-table-column label="类型" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.type === 'auto' ? 'warning' : 'info'" size="small">
+                {{ TYPE_LABEL[row.type] ?? row.type }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="触发来源" width="110" align="center">
+            <template #default="{ row }">{{ SCOPE_LABEL[row.scope] ?? row.scope }}</template>
+          </el-table-column>
+          <el-table-column prop="reason" label="原因" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="operator" label="操作人" width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.operator || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="到期时间" width="170">
+            <template #default="{ row }">{{ row.expiresAt ? formatDateTime(row.expiresAt) : '永久' }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.active ? 'danger' : 'success'" size="small">
+                {{ row.active ? '生效中' : '已解封' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="封禁时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'ip:ban:remove'"
+                type="success"
+                link
+                :disabled="!row.active"
+                @click="handleUnban(row as IpBanRecord)"
+              >
+                解封
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

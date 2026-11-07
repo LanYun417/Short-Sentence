@@ -12,6 +12,7 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { analyzeWordApi, deleteWordRootApi, getWordRootListApi, updateWordRootApi } from '@/api/word-root';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { WordRootItem, WordRootPart, WordRootPayload } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -20,6 +21,8 @@ import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'SentenceWordRoot' });
+
+const { tableHeight } = useTablePage();
 
 /** 词素类型 → 中文标签与颜色 */
 const PART_TYPE: Record<string, { label: string; type: 'primary' | 'success' | 'warning' }> = {
@@ -169,9 +172,9 @@ function partsOf(item: WordRootItem | null): WordRootPart[] {
 </script>
 
 <template>
-  <div class="sentence-word-root-page">
-    <el-card shadow="never">
-      <SearchForm @search="search" @reset="reset">
+  <div class="sentence-word-root-page table-page">
+    <el-card shadow="never" class="table-page__card">
+      <SearchForm class="table-page__filter" @search="search" @reset="reset">
         <el-form-item label="单词">
           <el-input
             v-model="query.keyword"
@@ -189,7 +192,7 @@ function partsOf(item: WordRootItem | null): WordRootPart[] {
         </el-form-item>
       </SearchForm>
 
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">词根词典（共 {{ total }} 个词条）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'sentence:wordroot:gen'" type="primary" @click="handleAnalyze"> 立即解析 </el-button>
@@ -205,65 +208,68 @@ function partsOf(item: WordRootItem | null): WordRootPart[] {
         title="批量补词请到「系统管理 → 定时任务」手动执行 word-root-ingest（一次约 100 词，耗时较长）"
       />
 
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column prop="word" label="单词" min-width="140">
-          <template #default="{ row }">
-            <span class="font-medium">{{ row.word }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="phonetic" label="音标" min-width="140">
-          <template #default="{ row }">{{ row.phonetic || '—' }}</template>
-        </el-table-column>
-        <el-table-column prop="meaning" label="释义" min-width="200">
-          <template #default="{ row }">{{ row.meaning || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="词素" min-width="220">
-          <template #default="{ row }">
-            <el-tag
-              v-for="(part, index) in row.parts"
-              :key="index"
-              :type="partType(part.type).type"
-              size="small"
-              class="mr-1"
-            >
-              {{ part.text }}
-            </el-tag>
-            <span v-if="!row.parts.length" class="text-muted">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="来源" width="100">
-          <template #default="{ row }">{{ sourceLabel(row.source) }}</template>
-        </el-table-column>
-        <el-table-column prop="searchCount" label="查询次数" width="100" />
-        <el-table-column label="更新时间" width="160">
-          <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="170" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleDetail(row as WordRootItem)">详情</el-button>
-            <el-button
-              v-permission="'sentence:wordroot:edit'"
-              link
-              type="primary"
-              @click="handleEdit(row as WordRootItem)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              v-permission="'sentence:wordroot:remove'"
-              link
-              type="danger"
-              @click="handleDelete(row as WordRootItem)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column prop="word" label="单词" min-width="140">
+            <template #default="{ row }">
+              <span class="font-medium">{{ row.word }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phonetic" label="音标" min-width="140">
+            <template #default="{ row }">{{ row.phonetic || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="meaning" label="释义" min-width="200">
+            <template #default="{ row }">{{ row.meaning || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="词素" min-width="220">
+            <template #default="{ row }">
+              <el-tag
+                v-for="(part, index) in row.parts"
+                :key="index"
+                :type="partType(part.type).type"
+                size="small"
+                class="mr-1"
+              >
+                {{ part.text }}
+              </el-tag>
+              <span v-if="!row.parts.length" class="text-muted">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="来源" width="100">
+            <template #default="{ row }">{{ sourceLabel(row.source) }}</template>
+          </el-table-column>
+          <el-table-column prop="searchCount" label="查询次数" width="100" />
+          <el-table-column label="更新时间" width="160">
+            <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="170" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleDetail(row as WordRootItem)">详情</el-button>
+              <el-button
+                v-permission="'sentence:wordroot:edit'"
+                link
+                type="primary"
+                @click="handleEdit(row as WordRootItem)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-permission="'sentence:wordroot:remove'"
+                link
+                type="danger"
+                @click="handleDelete(row as WordRootItem)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

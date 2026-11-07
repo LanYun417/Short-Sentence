@@ -17,6 +17,7 @@ import {
   uploadApkApi,
 } from '@/api/app-version';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime, formatFileSize } from '@/utils/format';
 import type { AppVersionItem, AppVersionPayload } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -24,6 +25,8 @@ import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 
 defineOptions({ name: 'SystemAppVersion' });
+
+const { tableHeight } = useTablePage();
 
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
@@ -167,8 +170,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-version-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="app-version-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="关键词">
         <el-input v-model="query.keyword" placeholder="版本号 / 更新说明" clearable @keyup.enter="search" />
       </el-form-item>
@@ -180,8 +183,8 @@ onMounted(() => {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-y-2">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-y-2 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">App 版本（共 {{ total }} 个）</span>
         <div class="flex items-center gap-2">
           <el-button v-permission="'system:app-version:add'" type="primary" @click="handleCreate">
@@ -191,76 +194,79 @@ onMounted(() => {
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="list" border row-key="id">
-        <el-table-column label="版本" width="140">
-          <template #default="{ row }">
-            <span class="font-medium">v{{ row.version }}</span>
-            <span class="ml-1 text-xs text-gray-400">({{ row.versionCode }})</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="平台" width="90">
-          <template #default="{ row }">{{ row.platform === 'android' ? 'Android' : 'iOS' }}</template>
-        </el-table-column>
-        <el-table-column label="安装包" min-width="200">
-          <template #default="{ row }">
-            <span class="text-sm">{{ row.fileName || '—' }}</span>
-            <span class="ml-1 text-xs text-gray-400">{{ formatFileSize(row.fileSize) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="更新说明" min-width="240">
-          <template #default="{ row }">
-            <p class="text-sm break-all line-clamp-2">{{ row.changelog || '—' }}</p>
-          </template>
-        </el-table-column>
-        <el-table-column label="强制更新" width="90">
-          <template #default="{ row }">{{ forceText(row.forceUpdate) }}</template>
-        </el-table-column>
-        <el-table-column label="下载量" width="90">
-          <template #default="{ row }">{{ row.downloadCount }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
-              {{ row.status === 1 ? '上架' : '下架' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="发布时间" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'system:app-version:edit'"
-              link
-              type="primary"
-              @click="handleEdit(row as AppVersionItem)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              v-permission="'system:app-version:edit'"
-              link
-              type="primary"
-              @click="handleToggleStatus(row as AppVersionItem)"
-            >
-              {{ row.status === 1 ? '下架' : '上架' }}
-            </el-button>
-            <el-button
-              v-permission="'system:app-version:remove'"
-              link
-              type="danger"
-              @click="handleDelete(row as AppVersionItem)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <el-table-column label="版本" width="140">
+            <template #default="{ row }">
+              <span class="font-medium">v{{ row.version }}</span>
+              <span class="ml-1 text-xs text-gray-400">({{ row.versionCode }})</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="平台" width="90">
+            <template #default="{ row }">{{ row.platform === 'android' ? 'Android' : 'iOS' }}</template>
+          </el-table-column>
+          <el-table-column label="安装包" min-width="200">
+            <template #default="{ row }">
+              <span class="text-sm">{{ row.fileName || '—' }}</span>
+              <span class="ml-1 text-xs text-gray-400">{{ formatFileSize(row.fileSize) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="更新说明" min-width="240">
+            <template #default="{ row }">
+              <p class="text-sm break-all line-clamp-2">{{ row.changelog || '—' }}</p>
+            </template>
+          </el-table-column>
+          <el-table-column label="强制更新" width="90">
+            <template #default="{ row }">{{ forceText(row.forceUpdate) }}</template>
+          </el-table-column>
+          <el-table-column label="下载量" width="90">
+            <template #default="{ row }">{{ row.downloadCount }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                {{ row.status === 1 ? '上架' : '下架' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="发布时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.publishedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'system:app-version:edit'"
+                link
+                type="primary"
+                @click="handleEdit(row as AppVersionItem)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-permission="'system:app-version:edit'"
+                link
+                type="primary"
+                @click="handleToggleStatus(row as AppVersionItem)"
+              >
+                {{ row.status === 1 ? '下架' : '上架' }}
+              </el-button>
+              <el-button
+                v-permission="'system:app-version:remove'"
+                link
+                type="danger"
+                @click="handleDelete(row as AppVersionItem)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

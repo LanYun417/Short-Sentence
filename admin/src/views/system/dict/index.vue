@@ -4,6 +4,7 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { batchDeleteDictTypesApi, deleteDictTypeApi, getDictTypeListApi, setDictTypeStatusApi } from '@/api/dict';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { useBatchDelete } from '@/composables/useBatchDelete';
 import { clearDictCache, useStatusDict } from '@/composables/useDict';
 import { formatDateTime } from '@/utils/format';
@@ -15,6 +16,8 @@ import DictTypeForm from './components/DictTypeForm.vue';
 import DictItemDrawer from './components/DictItemDrawer.vue';
 
 defineOptions({ name: 'SystemDict' });
+
+const { tableHeight } = useTablePage();
 
 /** 状态字典（字典管理 → 通用状态 sys_common_status），驱动状态筛选与提示文案 */
 const { statusOptions, statusLabel } = useStatusDict();
@@ -119,8 +122,8 @@ async function handleDelete(row: DictType): Promise<void> {
 </script>
 
 <template>
-  <div class="dict-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="dict-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="字典名称">
         <el-input v-model="query.dictName" placeholder="请输入字典名称" clearable @keyup.enter="search" />
       </el-form-item>
@@ -134,8 +137,8 @@ async function handleDelete(row: DictType): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">字典类型</span>
         <div class="flex items-center gap-2">
           <el-button
@@ -155,43 +158,57 @@ async function handleDelete(row: DictType): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="48" align="center" />
-        <el-table-column prop="dictName" label="字典名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="dictType" label="类型编码" min-width="180" show-overflow-tooltip />
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-switch
-              :model-value="row.status === 1"
-              :disabled="!hasPermission('system:dict:edit')"
-              @change="handleToggleStatus(row as DictType)"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <div class="table-action">
-              <el-button v-permission="'system:dict:edit'" type="primary" link @click="handleEdit(row as DictType)">
-                编辑
-              </el-button>
-              <el-button v-permission="'system:dict:list'" type="warning" link @click="handleItems(row as DictType)">
-                字典项
-              </el-button>
-              <el-button v-permission="'system:dict:remove'" type="danger" link @click="handleDelete(row as DictType)">
-                删除
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table
+          v-loading="loading"
+          border
+          :data="list"
+          :height="tableHeight"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="48" align="center" />
+          <el-table-column prop="dictName" label="字典名称" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="dictType" label="类型编码" min-width="180" show-overflow-tooltip />
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="row.status === 1"
+                :disabled="!hasPermission('system:dict:edit')"
+                @change="handleToggleStatus(row as DictType)"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+          <el-table-column label="创建时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right">
+            <template #default="{ row }">
+              <div class="table-action">
+                <el-button v-permission="'system:dict:edit'" type="primary" link @click="handleEdit(row as DictType)">
+                  编辑
+                </el-button>
+                <el-button v-permission="'system:dict:list'" type="warning" link @click="handleItems(row as DictType)">
+                  字典项
+                </el-button>
+                <el-button
+                  v-permission="'system:dict:remove'"
+                  type="danger"
+                  link
+                  @click="handleDelete(row as DictType)"
+                >
+                  删除
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

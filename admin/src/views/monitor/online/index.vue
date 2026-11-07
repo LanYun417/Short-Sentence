@@ -10,12 +10,15 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { forceLogoutSessionApi, forceLogoutUserApi, getOnlineSessionsApi } from '@/api/monitor';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { OnlineSession } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'MonitorOnline' });
+
+const { tableHeight } = useTablePage();
 
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
@@ -62,8 +65,8 @@ async function handleForceLogoutAll(row: OnlineSession): Promise<void> {
 </script>
 
 <template>
-  <div class="monitor-online-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="monitor-online-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="账号">
         <el-input
           v-model="query.username"
@@ -78,8 +81,8 @@ async function handleForceLogoutAll(row: OnlineSession): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">在线会话（{{ total }}）</span>
         <el-button :loading="loading" @click="getList">
           <template #icon><i class="bi bi-arrow-clockwise" /></template>
@@ -87,47 +90,50 @@ async function handleForceLogoutAll(row: OnlineSession): Promise<void> {
         </el-button>
       </div>
 
-      <el-table v-loading="loading" border :data="list">
-        <el-table-column prop="username" label="账号" min-width="120" />
-        <el-table-column prop="nickname" label="昵称" min-width="120" />
-        <el-table-column prop="ip" label="登录 IP" width="140" />
-        <el-table-column prop="location" label="归属地" width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.location || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="客户端" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ [row.browser, row.os].filter(Boolean).join(' / ') || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="登录时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
-        </el-table-column>
-        <el-table-column label="最后活跃" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button
-              v-permission="'monitor:online:forceLogout'"
-              type="danger"
-              link
-              @click="handleForceLogout(row as OnlineSession)"
-            >
-              强制下线
-            </el-button>
-            <el-button
-              v-permission="'monitor:online:forceLogout'"
-              type="warning"
-              link
-              @click="handleForceLogoutAll(row as OnlineSession)"
-            >
-              全部下线
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" border :data="list" :height="tableHeight">
+          <el-table-column prop="username" label="账号" min-width="120" />
+          <el-table-column prop="nickname" label="昵称" min-width="120" />
+          <el-table-column prop="ip" label="登录 IP" width="140" />
+          <el-table-column prop="location" label="归属地" width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.location || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="客户端" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ [row.browser, row.os].filter(Boolean).join(' / ') || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="登录时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.loginAt) }}</template>
+          </el-table-column>
+          <el-table-column label="最后活跃" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="180" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button
+                v-permission="'monitor:online:forceLogout'"
+                type="danger"
+                link
+                @click="handleForceLogout(row as OnlineSession)"
+              >
+                强制下线
+              </el-button>
+              <el-button
+                v-permission="'monitor:online:forceLogout'"
+                type="warning"
+                link
+                @click="handleForceLogoutAll(row as OnlineSession)"
+              >
+                全部下线
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

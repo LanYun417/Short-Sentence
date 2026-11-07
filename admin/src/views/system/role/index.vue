@@ -6,6 +6,7 @@ import { batchDeleteRolesApi, deleteRoleApi, getRoleListApi, resetRoleMenusApi }
 import { useStatusDict } from '@/composables/useDict';
 import { useBatchDelete } from '@/composables/useBatchDelete';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import { DATA_SCOPE_OPTIONS, type Role } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -14,6 +15,8 @@ import RoleForm from './components/RoleForm.vue';
 import PermissionDrawer from './components/PermissionDrawer.vue';
 
 defineOptions({ name: 'SystemRole' });
+
+const { tableHeight } = useTablePage();
 
 /** 状态字典（字典管理 → 通用状态 sys_common_status），驱动状态筛选与标签文案 */
 const { statusOptions, statusLabel } = useStatusDict();
@@ -115,8 +118,8 @@ async function handleResetMenus(row: Role): Promise<void> {
 </script>
 
 <template>
-  <div class="role-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="role-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="角色名称">
         <el-input v-model="query.roleName" placeholder="请输入角色名称" clearable @keyup.enter="search" />
       </el-form-item>
@@ -127,8 +130,8 @@ async function handleResetMenus(row: Role): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">角色列表</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button
@@ -148,58 +151,67 @@ async function handleResetMenus(row: Role): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" border :data="list" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="48" align="center" />
-        <el-table-column prop="roleName" label="角色名称" min-width="140" />
-        <el-table-column prop="roleCode" label="角色编码" min-width="140" />
-        <el-table-column prop="sort" label="排序" width="80" align="center" />
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
-              {{ statusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="数据范围" width="130" align="center">
-          <template #default="{ row }">{{ dataScopeLabel((row as Role).dataScope) }}</template>
-        </el-table-column>
-        <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
-          <template #default="{ row }">
-            <div class="table-action">
-              <el-button v-permission="'system:role:edit'" type="primary" link @click="handleEdit(row as Role)">
-                编辑
-              </el-button>
-              <el-button
-                v-permission="'system:role:assignMenu'"
-                type="warning"
-                link
-                @click="handlePermission(row as Role)"
-              >
-                权限
-              </el-button>
-              <el-button
-                v-permission="'system:role:assignMenu'"
-                type="info"
-                link
-                @click="handleResetMenus(row as Role)"
-              >
-                恢复默认
-              </el-button>
-              <el-button v-permission="'system:role:remove'" type="danger" link @click="handleDelete(row as Role)">
-                删除
-              </el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table
+          v-loading="loading"
+          border
+          :data="list"
+          :height="tableHeight"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="48" align="center" />
+          <el-table-column prop="roleName" label="角色名称" min-width="140" />
+          <el-table-column prop="roleCode" label="角色编码" min-width="140" />
+          <el-table-column prop="sort" label="排序" width="80" align="center" />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ statusLabel(row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="数据范围" width="130" align="center">
+            <template #default="{ row }">{{ dataScopeLabel((row as Role).dataScope) }}</template>
+          </el-table-column>
+          <el-table-column prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+          <el-table-column label="创建时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="300" fixed="right">
+            <template #default="{ row }">
+              <div class="table-action">
+                <el-button v-permission="'system:role:edit'" type="primary" link @click="handleEdit(row as Role)">
+                  编辑
+                </el-button>
+                <el-button
+                  v-permission="'system:role:assignMenu'"
+                  type="warning"
+                  link
+                  @click="handlePermission(row as Role)"
+                >
+                  权限
+                </el-button>
+                <el-button
+                  v-permission="'system:role:assignMenu'"
+                  type="info"
+                  link
+                  @click="handleResetMenus(row as Role)"
+                >
+                  恢复默认
+                </el-button>
+                <el-button v-permission="'system:role:remove'" type="danger" link @click="handleDelete(row as Role)">
+                  删除
+                </el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

@@ -142,6 +142,7 @@
  * 适用：结构简单、只有「筛选区 / 表格卡片 / 分页」的列表页。
  * 页面根节点加 `table-page`，内部按下面四个类标记：
  *   table-page__filter     —— 筛选表单（固定高度）
+ *   table-page__extra      —— 其他固定高度块（统计卡、上传区等，不参与剩余高度分配）
  *   table-page__card       —— 表格所在的 el-card（吃掉剩余高度）
  *   table-page__toolbar    —— 卡片内工具栏（固定高度）
  *   table-page__table      —— 包住 el-table 的一层，el-table 传 height="100%"
@@ -185,6 +186,7 @@
   }
 
   .table-page__filter,
+  .table-page__extra,
   .table-page__toolbar,
   .table-page__pagination {
     flex: 0 0 auto;

@@ -16,6 +16,7 @@ import {
 } from '@/api/notice';
 import { useNoticeStore } from '@/store/modules/notice';
 import { useTable } from '@/composables/useTable';
+import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { NoticeItem, NoticePublishPayload } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -23,6 +24,8 @@ import SearchForm from '@/components/SearchForm/index.vue';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 
 defineOptions({ name: 'SystemNotice' });
+
+const { tableHeight } = useTablePage();
 
 const router = useRouter();
 const noticeStore = useNoticeStore();
@@ -154,8 +157,8 @@ async function handlePublish(): Promise<void> {
 </script>
 
 <template>
-  <div class="system-notice-page">
-    <SearchForm @search="search" @reset="reset">
+  <div class="system-notice-page table-page">
+    <SearchForm class="table-page__filter" @search="search" @reset="reset">
       <el-form-item label="标题">
         <el-input v-model="query.title" placeholder="请输入标题" clearable style="width: 180px" @keyup.enter="search" />
       </el-form-item>
@@ -172,8 +175,8 @@ async function handlePublish(): Promise<void> {
       </el-form-item>
     </SearchForm>
 
-    <el-card shadow="never" class="mt-4">
-      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+    <el-card shadow="never" class="mt-4 table-page__card">
+      <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">我的通知（{{ total }}）</span>
         <div class="flex items-center gap-2">
           <el-button :disabled="noticeStore.unreadCount === 0" @click="handleReadAll">全部已读</el-button>
@@ -185,38 +188,41 @@ async function handlePublish(): Promise<void> {
         </div>
       </div>
 
-      <el-table v-loading="loading" border :data="list">
-        <el-table-column label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.isRead === 0" type="danger" size="small">未读</el-tag>
-            <span v-else class="text-faint">已读</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="content" label="内容" min-width="280" show-overflow-tooltip />
-        <el-table-column label="类型" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="TYPE_TAG[row.noticeType]?.type ?? 'primary'" size="small">
-              {{ TYPE_TAG[row.noticeType]?.label ?? '通知' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="时间" width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="handleRead(row as NoticeItem)">
-              {{ row.isRead === 0 ? '标记已读' : '查看' }}
-            </el-button>
-            <el-button type="danger" link @click="handleDelete(row as NoticeItem)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-page__table">
+        <el-table v-loading="loading" border :data="list" :height="tableHeight">
+          <el-table-column label="状态" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.isRead === 0" type="danger" size="small">未读</el-tag>
+              <span v-else class="text-faint">已读</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="content" label="内容" min-width="280" show-overflow-tooltip />
+          <el-table-column label="类型" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="TYPE_TAG[row.noticeType]?.type ?? 'primary'" size="small">
+                {{ TYPE_TAG[row.noticeType]?.label ?? '通知' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="180">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="handleRead(row as NoticeItem)">
+                {{ row.isRead === 0 ? '标记已读' : '查看' }}
+              </el-button>
+              <el-button type="danger" link @click="handleDelete(row as NoticeItem)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
+        class="table-page__pagination"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"
