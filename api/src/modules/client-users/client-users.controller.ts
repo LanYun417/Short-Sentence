@@ -12,9 +12,13 @@ import type { PageResult } from '../../common/types.js';
 import { writeCsvStream } from '../../common/utils/csv-stream.js';
 import { AiQuotaService, type AiQuotaUsage } from '../../common/ai/ai-quota.service.js';
 import { ClientUsersService, type ClientUserDetail, type ClientUserItem } from './client-users.service.js';
-import { ClientUserResetPasswordDto, ClientUserStatusDto } from './dto.js';
+import { ClientUserResetPasswordDto, ClientUserStatusDto, GrantSentenceCardDto } from './dto.js';
 import { GamifyService, type GamifyOverview } from '../client/gamify/gamify.service.js';
-import { SentenceCardService, type SentenceCardView } from '../client/sentence-card/sentence-card.service.js';
+import {
+  SentenceCardService,
+  type MissingSentenceCards,
+  type SentenceCardView,
+} from '../client/sentence-card/sentence-card.service.js';
 
 /** 补发漏签结果。 */
 export interface BackfillSentenceCardsResult {
@@ -96,6 +100,31 @@ export class ClientUsersController {
     const result = await this.sentenceCard.backfillMissed(params.id);
     const message = result.granted > 0 ? `已补发 ${result.granted} 张漏签句签` : '没有漏签的句签（该用户均已领取）';
     return { __raw: true, data: result, message };
+  }
+
+  /** 未拥有的句签（已就绪 − 已获得；total + 最近一批，供详情弹窗「未拥有」区展示）。 */
+  @Get(':id/sentence-cards/missing')
+  @RequirePermissions('client:user:query')
+  async missingSentenceCards(@Param() params: IdParamDto): Promise<MissingSentenceCards> {
+    await this.clientUsers.ensureExists(params.id);
+    return this.sentenceCard.listMissing(params.id);
+  }
+
+  /** 一键解锁指定句签（幂等；重复解锁返回 alreadyOwned=true）。 */
+  @Post(':id/sentence-cards/grant')
+  @RequirePermissions('client:user:edit')
+  @OperationLog('客户端用户', '解锁句签')
+  async grantSentenceCard(
+    @Param() params: IdParamDto,
+    @Body() dto: GrantSentenceCardDto,
+  ): Promise<ResponseEnvelope<{ view: SentenceCardView; alreadyOwned: boolean }>> {
+    await this.clientUsers.ensureExists(params.id);
+    const result = await this.sentenceCard.grantCard(params.id, dto.cardId);
+    return {
+      __raw: true,
+      data: result,
+      message: result.alreadyOwned ? '该用户已拥有此句签' : `已解锁句签「${result.view.titleZh || result.view.title}」`,
+    };
   }
 
   /** 启用 / 禁用。 */

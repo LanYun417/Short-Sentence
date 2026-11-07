@@ -10,6 +10,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
+import { AppException } from '../../../common/exception/app.exception.js';
 import { dayContextOf, parseDateKey } from '../../../common/calendar/day-context.js';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
@@ -257,6 +258,36 @@ export class SentenceCardService {
       `[SentenceCard] 用户 ${userId} 补发漏签 ${missing.length} 张：${missing.map((c) => c.bizDate).join(', ')}`,
     );
     return { granted: missing.length, bizDates: missing.map((card) => card.bizDate) };
+  }
+
+  /**
+   * 运营后台「解锁」指定句签（幂等）。
+   *
+   * 与 claimToday 同一条写入链路：userId + sentenceCardId 唯一键兜底并发，
+   * 重复解锁返回 alreadyOwned=true 而不是报错。card 不存在或未就绪时报错，
+   * 避免运营对 pending/failed 的卡误操作。
+   */
+  async grantCard(userId: number, cardId: number): Promise<{ view: SentenceCardView; alreadyOwned: boolean }> {
+    const card = await this.prisma.dailySentenceCard.findUnique({ where: { id: BigInt(cardId) } });
+    if (!card) {
+      throw AppException.notFound('句签不存在');
+    }
+    if (card.status !== 'ready') {
+      throw AppException.badRequest('该句签尚未就绪（pending/failed），无法解锁');
+    }
+    const existing = await this.prisma.userSentenceCard.findUnique({
+      where: { userId_sentenceCardId: { userId: BigInt(userId), sentenceCardId: card.id } },
+      select: { id: true },
+    });
+    const grant = await this.prisma.userSentenceCard.upsert({
+      where: { userId_sentenceCardId: { userId: BigInt(userId), sentenceCardId: card.id } },
+      create: { userId: BigInt(userId), sentenceCardId: card.id },
+      update: {},
+      select: { obtainedAt: true },
+    });
+    const imageUrl = await this.imageUrlOf(card.imageFileId);
+    this.logger.log(`[SentenceCard] 运营为用户 ${userId} 解锁句签 #${cardId}（${card.bizDate}）`);
+    return { view: this.toView(card, grant.obtainedAt, imageUrl), alreadyOwned: existing !== null };
   }
 
   /** 我的句签列表（按获得时间倒序）。 */

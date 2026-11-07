@@ -2,7 +2,7 @@
  * 客户端用户管理 DTO。
  */
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import {
   PASSWORD_COMPLEXITY_MESSAGE,
   PASSWORD_COMPLEXITY_REGEX,
@@ -36,4 +36,14 @@ export class ClientUserResetPasswordDto {
   @MaxLength(PASSWORD_MAX_LENGTH, { message: PASSWORD_LENGTH_MESSAGE })
   @Matches(PASSWORD_COMPLEXITY_REGEX, { message: PASSWORD_COMPLEXITY_MESSAGE })
   newPassword!: string;
+}
+
+/** 解锁（授予）指定句签入参（管理端一键解锁用）。 */
+export class GrantSentenceCardDto {
+  /** 句签 id（daily_sentence_card.id） */
+  @Type(() => Number)
+  @IsInt({ message: '句签 id 必须为整数' })
+  @Min(1, { message: '句签 id 必须为正整数' })
+  @Max(Number.MAX_SAFE_INTEGER, { message: '句签 id 超出范围' })
+  cardId!: number;
 }
