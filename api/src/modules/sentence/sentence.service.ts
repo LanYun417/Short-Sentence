@@ -106,6 +106,11 @@ export class SentenceService {
    */
   private buildSentenceWhere(query: Record<string, unknown>): Record<string, unknown> {
     const where: Record<string, unknown> = {};
+    const id = readNumber(query.id);
+    if (id !== undefined && Number.isInteger(id) && id > 0) {
+      // 题目 ID 精确匹配（列表/导出共用；非法值忽略）
+      where.id = BigInt(id);
+    }
     const status = readString(query.status);
     if (status) {
       where.status = status;
