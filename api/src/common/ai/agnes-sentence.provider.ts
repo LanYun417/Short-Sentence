@@ -575,10 +575,14 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '1. Output JSON only, shaped as {"items":[{"index":0,"words":[{"word":"...","meaning":"..."}]}]}. No explanations.',
       '2. Split the sentence by whitespace. Every token must appear exactly once, in the original order.',
       '3. Keep punctuation attached to the token exactly as it appears (e.g. "minutes?", "I\'m", "don\'t").',
-      '4. meaning: 1-6 Chinese characters, the sense in THIS sentence. Never output English, pinyin, or multiple senses.',
-      '5. Function words get their grammatical meaning in context (e.g. "to" → "去/到（不定式）", "the" → "这个/那个").',
-      '6. Contractions get their full meaning (e.g. "I\'m" → "我是", "don\'t" → "不要").',
-      '7. Never skip a token, including "a", "the", "to", "and".',
+      '4. meaning: 1-6 Chinese characters, the sense of THIS WORD ALONE in this sentence. Never output English, pinyin, spaces, brackets, or multiple senses.',
+      '5. Translate ONLY the word itself — NEVER fold the meaning of neighboring words or a phrase into it.',
+      '   Example: in "I finished reading the book you recommended.", "finished" → "完成/结束" (NOT "读完"), "reading" → "读", "recommended" → "推荐".',
+      '   Another: in "She runs a small cafe.", "runs" → "经营" (NOT "跑"), "small" → "小".',
+      '6. Polysemous words: pick the single sense that fits THIS sentence best; do not list alternatives.',
+      '7. Function words get their grammatical meaning in context (e.g. "to" → "去/到（不定式）", "the" → "这个/那个").',
+      '8. Contractions get their full meaning (e.g. "I\'m" → "我是", "don\'t" → "不要").',
+      '9. Never skip a token, including "a", "the", "to", "and".',
     ].join('\n');
 
     const userContent =
@@ -641,9 +645,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         }
         const word = str((entry as Record<string, unknown>).word, 60);
         const meaning = str((entry as Record<string, unknown>).meaning, 30);
-        // 只收该句真实存在的 token，且含义必须含汉字（模型偶尔会回英文解释）
+        // 只收该句真实存在的 token；含义必须含汉字且不含空格
+        // （模型偶尔回英文解释，或把短语揉进释义如 "读完 完成"——含空格的一律丢弃）
         const key = tokens.has(word) ? word : (tokenByCore.get(coreOf(word)) ?? '');
-        if (key && meaning && /[\u4e00-\u9fa5]/.test(meaning)) {
+        if (key && meaning && /[\u4e00-\u9fa5]/.test(meaning) && !/\s/.test(meaning)) {
           map[key] = meaning;
         }
       }
