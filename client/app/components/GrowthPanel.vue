@@ -152,6 +152,8 @@ function iconOf(name: string): string {
           </p>
         </div>
       </div>
+
+      <MemoryHealthCard />
     </div>
   </div>
 

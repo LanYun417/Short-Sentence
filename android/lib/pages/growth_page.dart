@@ -23,6 +23,8 @@ import '../widgets/shimmer.dart';
 import '../widgets/staggered.dart';
 import '../sheets/claim_card.dart';
 import '../sheets/sentence_card_sheet.dart';
+import '../api/models/memory_stats.dart';
+import '../api/questions_api.dart';
 
 class GrowthPage extends ConsumerStatefulWidget {
   const GrowthPage({super.key});
@@ -45,6 +47,8 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   }
 
   Future<void> _refresh() async {
+    // 记忆健康概览随成长页一起刷新
+    ref.invalidate(memoryStatsProvider);
     await Future.wait(<Future<void>>[
       ref.read(growthControllerProvider.notifier).refresh(),
       ref.read(cardControllerProvider.notifier).refresh(),
@@ -108,6 +112,12 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                               totalAchievements:
                                   growth.overview?.totalAchievements ?? 0,
                             ),
+                          ),
+                          const SizedBox(height: 14),
+                          ref.watch(memoryStatsProvider).when(
+                            data: (stats) => _MemoryHealthCard(stats: stats),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
                           ),
                           const SizedBox(height: 14),
                           if (cards.claimable &&
@@ -616,6 +626,152 @@ class _ClaimCardBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 记忆健康概览（遗忘曲线 / 待复习分布可视化）。
+final memoryStatsProvider = FutureProvider<MemoryStats>((ref) async {
+  final api = ref.watch(questionsApiProvider);
+  return api.getMemoryStats();
+});
+
+class _MemoryHealthCard extends StatelessWidget {
+  const _MemoryHealthCard({required this.stats});
+  final MemoryStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final hint = theme.textTheme.bodySmall?.color;
+    final maxDist = stats.distribution.isEmpty
+        ? 1
+        : stats.distribution.reduce((a, b) => a > b ? a : b);
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text('记忆巩固',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('你的遗忘曲线',
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _MemoryStat(value: '${stats.reviewed}', label: '已复习', color: colors.brand),
+              _MemoryStat(value: '${stats.graduated}', label: '已毕业', color: Colors.green),
+              _MemoryStat(value: '${stats.dueToday}', label: '今日待复习', color: Colors.orange),
+              _MemoryStat(value: '${stats.dueIn7}', label: '7天待复习', color: Colors.indigo),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text('未来 30 天复习分布',
+              style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 56,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                for (var i = 0; i < stats.distribution.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0.5),
+                      child: Container(
+                        height: maxDist == 0
+                            ? 0
+                            : (stats.distribution[i] / maxDist) * 54,
+                        decoration: BoxDecoration(
+                          color: colors.brand.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('记忆保留率（每复习一次即被拉平）',
+              style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 56,
+            child: CustomPaint(
+              size: const Size(double.infinity, 56),
+              painter: _RetentionPainter(
+                points: stats.retentionCurve,
+                color: Colors.indigo,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemoryStat extends StatelessWidget {
+  const _MemoryStat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Column(
+          children: <Widget>[
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 2),
+            Text(label,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color)),
+          ],
+        ),
+      );
+}
+
+class _RetentionPainter extends CustomPainter {
+  const _RetentionPainter({required this.points, required this.color});
+  final List<RetentionPoint> points;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.85)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x = (points[i].day / 30) * size.width;
+      final y = size.height - points[i].retention * (size.height - 6) - 3;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RetentionPainter old) => false;
 }
 
 /* ------------------------------ 成就墙 ------------------------------ */

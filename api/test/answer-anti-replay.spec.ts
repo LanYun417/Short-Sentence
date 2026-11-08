@@ -29,6 +29,8 @@ function fakePrisma(options: { nextReviewAt: Date | null; hasRecord: boolean }) 
       }),
     },
     sentenceRecord: {
+      // 本用例只验证防重放，不关心毕业语义：累计答对返回 0 即可
+      count: vi.fn().mockResolvedValue(0),
       findFirst: vi
         .fn()
         .mockResolvedValue(options.hasRecord ? { reviewLevel: 2, nextReviewAt: options.nextReviewAt } : null),

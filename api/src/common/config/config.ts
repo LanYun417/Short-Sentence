@@ -451,10 +451,18 @@ export const config = {
     masteryStep: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_STEP, 5)),
     /** 每档权重衰减因子（0~1，默认 0.5 = 每档概率减半） */
     masteryStepFactor: Math.min(1, Math.max(0, toNumber(process.env.SENTENCE_MASTERY_STEP_FACTOR, 0.5))),
-    /** 累计答对达到该次数后，开始 30 天内不再被抽到（默认 20 次） */
-    masterySuppressAt: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_SUPPRESS_AT, 20)),
-    /** 累计答对达到 masterySuppressAt 后的禁抽天数（默认 30 天） */
-    masterySuppressDays: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_SUPPRESS_DAYS, 30)),
+    /**
+     * 累计答对达到该次数视为「已毕业」，转入长期维护复习（默认 20 次）。
+     * 毕业不再硬禁抽——只把下次复习间隔拉到维护基线之上，到期仍会出现（符合间隔重复）。
+     * 复用原 SENTENCE_MASTERY_SUPPRESS_AT 环境变量名，避免部署断配。
+     */
+    masteryGraduateAt: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_SUPPRESS_AT, 20)),
+    /** 毕业后维护复习间隔基线（天，默认 90） */
+    masteryMaintenanceBase: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_MAINTENANCE_BASE, 90)),
+    /** 毕业后每次继续答对，间隔 × 该增长因子（默认 1.3） */
+    masteryMaintenanceGrowth: Math.max(1, toNumber(process.env.SENTENCE_MASTERY_MAINTENANCE_GROWTH, 1.3)),
+    /** 毕业后间隔增长封顶步数（默认 5，约 90×1.3^5≈335 天） */
+    masteryMaintenanceCap: Math.max(0, toNumber(process.env.SENTENCE_MASTERY_MAINTENANCE_CAP, 5)),
   },
 } as const;
 

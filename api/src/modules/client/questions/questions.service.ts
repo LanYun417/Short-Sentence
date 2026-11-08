@@ -27,6 +27,9 @@ import { AnswerSentenceDto, type AnswerMode } from './dto.js';
  */
 const REVIEW_INTERVAL_DAYS = [1, 3, 7, 15, 30];
 
+/** 已毕业题的 reviewLevel 编码（高于正常 5 档梯度，便于复盘与可视化区分）。 */
+const GRADUATE_LEVEL = REVIEW_INTERVAL_DAYS.length;
+
 /** 复习池候选批大小（在此范围内随机取，兼顾「到期优先」与「不总是同一题」）。 */
 const REVIEW_POOL_BATCH = 50;
 
@@ -35,6 +38,24 @@ interface MasteryEntry {
   sentenceId: number;
   correctCount: number;
   lastCorrectAt: Date;
+}
+
+/** 记忆健康概览（供前端「遗忘曲线 / 待复习分布」可视化）。 */
+export interface MemoryStats {
+  /** 有答对记录的不同题数（≈已复习题数） */
+  reviewed: number;
+  /** 累计答对 >= graduateAt 的题数（已毕业，转入长期维护） */
+  graduated: number;
+  /** 今天到期需复习的题数 */
+  dueToday: number;
+  /** 未来 7 天内到期 */
+  dueIn7: number;
+  /** 未来 30 天内到期 */
+  dueIn30: number;
+  /** 未来 30 天每天到期题数分布（长度 30，索引 0 = 今天） */
+  distribution: number[];
+  /** 理论遗忘曲线：R(day)=exp(-day/S)，S 取维护基线；长度 31（day 0..30） */
+  retentionCurve: Array<{ day: number; retention: number }>;
 }
 
 /** 下一张卡（不含答案字段）。 */
@@ -258,14 +279,14 @@ export class QuestionsService {
    */
   async next(userId: number, difficulty?: number, festival?: string, categoryId?: number): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
-    // 「累计答对」母题权重：答对次数越多，被随机抽中的概率越低；达到阈值后若干天内禁抽
+    // 「累计答对」降权：答对越多，随机抽中概率越低（不再硬禁抽——
+    // 毕业题靠拉长的复习间隔自然淡出，到期仍会出现，符合间隔重复）。
     const mastery = await this.groupMastery(userId);
-    const suppressedIds = this.suppressedSentenceIds(mastery);
 
     // 节日题库：专门刷题——只在该节日当前（未退场）的题库里抽
     const festivalName = festival?.trim();
     if (festivalName) {
-      const festivalSentenceId = await this.pickFestivalSentence(festivalName, recentIds, mastery, suppressedIds);
+      const festivalSentenceId = await this.pickFestivalSentence(festivalName, recentIds, mastery);
       if (festivalSentenceId === null) {
         throw AppException.notFound(`「${festivalName}」题库暂无可用题目`);
       }
@@ -274,7 +295,7 @@ export class QuestionsService {
 
     // 场景题库：专门刷题——只在该场景当前（未退场）的题库里抽
     if (categoryId && categoryId > 0) {
-      const categorySentenceId = await this.pickCategorySentence(categoryId, recentIds, mastery, suppressedIds);
+      const categorySentenceId = await this.pickCategorySentence(categoryId, recentIds, mastery);
       if (categorySentenceId === null) {
         throw AppException.notFound('该场景题库暂无可用题目');
       }
@@ -286,24 +307,24 @@ export class QuestionsService {
     let sentenceId: number | null;
     let source: 'new' | 'review';
     if (wantNew) {
-      sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery, suppressedIds);
+      sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery);
       source = 'new';
       // 指定难度下没有可用新题：回落到不限难度，避免用户被卡住
       if (sentenceId === null && difficulty) {
-        sentenceId = await this.pickReadySentence(recentIds, undefined, mastery, suppressedIds);
+        sentenceId = await this.pickReadySentence(recentIds, undefined, mastery);
       }
       if (sentenceId === null) {
-        sentenceId = await this.pickDueReviewSentence(userId, recentIds, suppressedIds);
+        sentenceId = await this.pickDueReviewSentence(userId, recentIds);
         source = 'review';
       }
     } else {
-      sentenceId = await this.pickDueReviewSentence(userId, recentIds, suppressedIds);
+      sentenceId = await this.pickDueReviewSentence(userId, recentIds);
       source = 'review';
       if (sentenceId === null) {
-        sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery, suppressedIds);
+        sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery);
         source = 'new';
         if (sentenceId === null && difficulty) {
-          sentenceId = await this.pickReadySentence(recentIds, undefined, mastery, suppressedIds);
+          sentenceId = await this.pickReadySentence(recentIds, undefined, mastery);
         }
       }
     }
@@ -444,14 +465,13 @@ export class QuestionsService {
     return banks;
   }
 
-  /** 从指定节日题库随机抽一道（排除防重窗口与禁抽题，并按累计答对数降权）。 */
+  /** 从指定节日题库随机抽一道（排除防重窗口，并按累计答对数降权）。 */
   private async pickFestivalSentence(
     festivalName: string,
     excludeIds: number[],
     mastery: MasteryEntry[],
-    suppressedIds: number[],
   ): Promise<number | null> {
-    return this.pickBankSentence({ festivalName }, excludeIds, mastery, suppressedIds);
+    return this.pickBankSentence({ festivalName }, excludeIds, mastery);
   }
 
   /** 从指定场景题库随机抽一道（同上）。 */
@@ -459,9 +479,8 @@ export class QuestionsService {
     categoryId: number,
     excludeIds: number[],
     mastery: MasteryEntry[],
-    suppressedIds: number[],
   ): Promise<number | null> {
-    return this.pickBankSentence({ categoryId: BigInt(categoryId) }, excludeIds, mastery, suppressedIds);
+    return this.pickBankSentence({ categoryId: BigInt(categoryId) }, excludeIds, mastery);
   }
 
   /**
@@ -476,7 +495,6 @@ export class QuestionsService {
     where: Record<string, unknown>,
     excludeIds: number[],
     mastery: MasteryEntry[],
-    suppressedIds: number[],
   ): Promise<number | null> {
     const baseWhere: Record<string, unknown> = {
       status: 'ready',
@@ -484,8 +502,8 @@ export class QuestionsService {
       imageFileId: { gt: 0n },
       ...where,
     };
-    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds, suppressedIds);
-    return this.pickWeightedSentence(baseWhere, excludeIds, entries, suppressedIds);
+    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds);
+    return this.pickWeightedSentence(baseWhere, excludeIds, entries);
   }
 
   /**
@@ -556,12 +574,31 @@ export class QuestionsService {
       };
     }
 
-    const level = isCorrect ? Math.min((last?.reviewLevel ?? 0) + 1, REVIEW_INTERVAL_DAYS.length - 1) : 0;
-    // 答错：**立即到期**——当天就在错题库与练习流中复现（此前答错也走 +1 天，
-    // 导致用户刚答错时错题库恒为空，看起来像数据坏了）。
-    // 练习流不会因此连续追问同一题：next() 有防重窗口（recentSentenceIds）兜底。
-    // 答对：按间隔重复等级走天数梯度。
-    const nextReviewAt = isCorrect ? this.addDays(new Date(), REVIEW_INTERVAL_DAYS[level]) : new Date();
+    // 间隔重复（FSRS-light）：答对按「累计答对次数」驱动复习间隔；答错立即到期。
+    // - 未毕业（累计答对 < graduateAt）：沿用 5 档梯度 [1,3,7,15,30] 天。
+    // - 已毕业（累计答对 >= graduateAt）：转入长期维护，间隔随毕业后答对次数指数增长并封顶。
+    const graduateAt = config.sentence.masteryGraduateAt;
+    const correctTotal = await this.prisma.sentenceRecord.count({
+      where: { userId: BigInt(userId), sentenceId: sentence.id, isCorrect: 1 },
+    });
+    const correctTotalAfter = correctTotal + (isCorrect ? 1 : 0);
+
+    let level: number;
+    let intervalDays: number;
+    if (!isCorrect) {
+      level = 0;
+      intervalDays = 0;
+    } else if (correctTotalAfter < graduateAt) {
+      level = Math.min((last?.reviewLevel ?? 0) + 1, REVIEW_INTERVAL_DAYS.length - 1);
+      intervalDays = REVIEW_INTERVAL_DAYS[level];
+    } else {
+      const afterGrad = Math.min(correctTotalAfter - graduateAt, config.sentence.masteryMaintenanceCap);
+      level = GRADUATE_LEVEL;
+      intervalDays = Math.round(
+        config.sentence.masteryMaintenanceBase * Math.pow(config.sentence.masteryMaintenanceGrowth, afterGrad),
+      );
+    }
+    const nextReviewAt = isCorrect ? this.addDays(new Date(), intervalDays) : new Date();
 
     const record = await this.prisma.sentenceRecord.create({
       data: {
@@ -910,7 +947,6 @@ export class QuestionsService {
     excludeIds: number[],
     difficulty?: number,
     mastery: MasteryEntry[] = [],
-    suppressedIds: number[] = [],
   ): Promise<number | null> {
     // retiredAt 非空 = 已退场的旧节日题：不再进入练习流（收藏/历史仍可见）
     // imageFileId > 0：无配图的题不下发（详见 pickBankSentence 的说明）
@@ -918,16 +954,12 @@ export class QuestionsService {
     if (difficulty) {
       baseWhere.difficulty = difficulty;
     }
-    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds, suppressedIds);
-    return this.pickWeightedSentence(baseWhere, excludeIds, entries, suppressedIds);
+    const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds);
+    return this.pickWeightedSentence(baseWhere, excludeIds, entries);
   }
 
   /** 取一道到期复习题（到期最早的优先，候选批内随机打散避免「永远同一题」）。 */
-  private async pickDueReviewSentence(
-    userId: number,
-    excludeIds: number[],
-    suppressedIds: number[] = [],
-  ): Promise<number | null> {
+  private async pickDueReviewSentence(userId: number, excludeIds: number[]): Promise<number | null> {
     const where: Record<string, unknown> = {
       userId: BigInt(userId),
       isCorrect: 0,
@@ -935,10 +967,8 @@ export class QuestionsService {
       // 已退场的旧节日题不再进复习池（收藏/历史仍可见）；无配图的题同样不进
       sentence: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
     };
-    // 累计答对达到阈值且仍在禁抽期内的题，复习池同样不抽
-    const notIn = [...excludeIds, ...suppressedIds];
-    if (notIn.length > 0) {
-      where.sentenceId = { notIn: notIn.map((id) => BigInt(id)) };
+    if (excludeIds.length > 0) {
+      where.sentenceId = { notIn: excludeIds.map((id) => BigInt(id)) };
     }
     const rows = await this.prisma.sentenceRecord.findMany({
       where,
@@ -951,6 +981,71 @@ export class QuestionsService {
     }
     const picked = rows[Math.floor(Math.random() * rows.length)];
     return Number(picked.sentenceId);
+  }
+
+  /**
+   * 记忆健康概览：已复习 / 已毕业题数、未来待复习分布、理论遗忘曲线。
+   * 供前端「遗忘曲线 / 待复习分布」可视化；数据来自 sentence_record 的答对记录 nextReviewAt。
+   */
+  async getMemoryStats(userId: number): Promise<MemoryStats> {
+    const DAY = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+    const horizon = now + 30 * DAY;
+
+    // 未来 30 天内到期的「已答对」记录（含已到期的），每条带 nextReviewAt
+    const records = await this.prisma.sentenceRecord.findMany({
+      where: {
+        userId: BigInt(userId),
+        isCorrect: 1,
+        nextReviewAt: { lte: new Date(horizon) },
+      },
+      select: { sentenceId: true, nextReviewAt: true },
+      orderBy: { nextReviewAt: 'asc' },
+    });
+    // 每题取最新一条 nextReviewAt（同题多次答对，排期以后者为准）
+    const latest = new Map<number, Date>();
+    for (const r of records) {
+      if (!r.nextReviewAt) continue;
+      const sid = Number(r.sentenceId);
+      const t = r.nextReviewAt;
+      if (!latest.has(sid) || t.getTime() > latest.get(sid)!.getTime()) {
+        latest.set(sid, t);
+      }
+    }
+
+    const distribution = new Array<number>(30).fill(0);
+    let dueToday = 0;
+    let dueIn7 = 0;
+    let dueIn30 = 0;
+    for (const t of latest.values()) {
+      const ts = t.getTime();
+      if (ts <= endOfToday.getTime()) dueToday++;
+      if (ts <= now + 7 * DAY) dueIn7++;
+      if (ts <= now + 30 * DAY) dueIn30++;
+      const dayIdx = Math.floor((ts - now) / DAY);
+      if (dayIdx >= 0 && dayIdx < 30) distribution[dayIdx]++;
+    }
+
+    // 累计答对分布：groupBy 后得到「每题答对次数」，直接算已复习 / 已毕业
+    const all = await this.prisma.sentenceRecord.groupBy({
+      by: ['sentenceId'],
+      where: { userId: BigInt(userId), isCorrect: 1 },
+      _count: { _all: true },
+    });
+    const graduateAt = config.sentence.masteryGraduateAt;
+    const reviewed = all.length;
+    const graduated = all.filter((r) => r._count._all >= graduateAt).length;
+
+    // 理论遗忘曲线：R(d)=exp(-d/S)，S 取毕业后维护基线（仅作可视化示意）
+    const S = config.sentence.masteryMaintenanceBase;
+    const retentionCurve = Array.from({ length: 31 }, (_, d) => ({
+      day: d,
+      retention: Number(Math.exp(-d / S).toFixed(4)),
+    }));
+
+    return { reviewed, graduated, dueToday, dueIn7, dueIn30, distribution, retentionCurve };
   }
 
   /**
@@ -974,13 +1069,6 @@ export class QuestionsService {
       }));
   }
 
-  /** 累计答对达到阈值且仍在禁抽期内的题（禁抽期内新题池与复习池都不抽）。 */
-  private suppressedSentenceIds(mastery: MasteryEntry[], now = Date.now()): number[] {
-    const at = config.sentence.masterySuppressAt;
-    const cutoff = now - config.sentence.masterySuppressDays * 24 * 60 * 60 * 1000;
-    return mastery.filter((m) => m.correctCount >= at && m.lastCorrectAt.getTime() >= cutoff).map((m) => m.sentenceId);
-  }
-
   /** 累计答对权重：每 masteryStep 次答对，权重 × masteryStepFactor（默认每 5 次减半）。 */
   private masteryWeight(correctCount: number): number {
     const step = config.sentence.masteryStep;
@@ -995,12 +1083,11 @@ export class QuestionsService {
     mastery: MasteryEntry[],
     baseWhere: Record<string, unknown>,
     excludeIds: number[],
-    suppressedIds: number[],
   ): Promise<MasteryEntry[]> {
     if (mastery.length === 0) {
       return [];
     }
-    const excluded = new Set([...excludeIds, ...suppressedIds]);
+    const excluded = new Set(excludeIds);
     const candidates = mastery.filter((m) => !excluded.has(m.sentenceId));
     if (candidates.length === 0) {
       return [];
@@ -1070,9 +1157,8 @@ export class QuestionsService {
     baseWhere: Record<string, unknown>,
     excludeIds: number[],
     entries: MasteryEntry[],
-    suppressedIds: number[],
   ): Promise<number | null> {
-    const notInBase = [...excludeIds, ...suppressedIds];
+    const notInBase = [...excludeIds];
     const candidateWhere: Record<string, unknown> = { ...baseWhere };
     if (notInBase.length > 0) {
       candidateWhere.id = { notIn: notInBase.map((id) => BigInt(id)) };

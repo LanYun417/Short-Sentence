@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_exception.dart';
 import 'dio_client.dart';
 import 'models/question.dart';
+import 'models/memory_stats.dart';
 
 /// 抽题查询参数。
 ///
@@ -132,6 +133,16 @@ class QuestionsApi {
       final response = await _dio.post<dynamic>('/client/questions/$sentenceId/favorite');
       final data = _data(response);
       return data['favorited'] as bool? ?? false;
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 记忆健康概览（遗忘曲线 / 待复习分布）。
+  Future<MemoryStats> getMemoryStats() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/questions/memory-stats');
+      return MemoryStats.fromJson(_data(response));
     } on DioException catch (error) {
       throw _wrap(error);
     }

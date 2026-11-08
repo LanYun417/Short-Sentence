@@ -24,6 +24,12 @@ export class QuestionsController {
     return this.questions.next(user.userId, query.difficulty, query.festival, query.categoryId);
   }
 
+  /** 记忆健康概览（遗忘曲线 / 待复习分布可视化）。 */
+  @Get('memory-stats')
+  memoryStats(@CurrentClientUser() user: ClientUserContext) {
+    return this.questions.getMemoryStats(user.userId);
+  }
+
   /** 可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）。 */
   @Get('festivals')
   festivals() {
