@@ -15,12 +15,14 @@
 library;
 
 import 'dart:math' as math;
+import 'dart:ui' show ImageByteFormat;
 
 import 'package:cached_network_image/cached_network_image.dart';
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../api/auth_api.dart';
@@ -132,6 +134,16 @@ class _CardPosterState extends State<_CardPoster>
 
   bool _reduceMotion = false;
 
+  /// 离屏海报是否挂载：默认不挂（避免重复文案影响现有测试与无谓的渲染开销），
+  /// 只在用户点「分享 / 保存」时临时挂载一帧用于截图。
+  bool _shareMode = false;
+
+  /// 截图/分享忙锁：避免连点重复触发。
+  bool _sharing = false;
+
+  /// 离屏海报的截图边界（内容固定是正面，不带翻转/姿态）。
+  final GlobalKey _shareKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -208,42 +220,152 @@ class _CardPosterState extends State<_CardPoster>
     // DefaultTextStyle.fallback()（黄字 + 双下划线），看起来像链接
     return Material(
       type: MaterialType.transparency,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 420,
-              maxHeight: size.height * 0.86,
-            ),
-            child: DeviceTiltScope(
-              child: Builder(
-                builder: (context) {
-                  final tracker = DeviceTiltScope.of(context);
-                  return AnimatedBuilder(
-                    animation: tracker,
-                    // 内容做成重绘边界：姿态 50Hz 刷新时只重算矩阵、重新合成，
-                    // 不会每帧重画配图与文字
-                    child: RepaintBoundary(child: _buildFlip()),
-                    builder: (context, child) {
-                      final tilt = tracker.value;
-                      return Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          // 透视焦距 ≈ 900px（网页端是 1000px）；再小边缘会被拉变形
-                          ..setEntry(3, 2, 0.0011)
-                          ..rotateX(-tilt.dy * _maxTilt)
-                          ..rotateY(tilt.dx * _maxTilt),
-                        child: child,
-                      );
-                    },
-                  );
-                },
+      child: Stack(
+        children: <Widget>[
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: size.height * 0.86,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // 顶部操作栏：关闭 / 保存 / 分享（纯图标，不引入新文案，
+                    // 以免与卡片内文案重复、影响既有测试）
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          tooltip: '关闭',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        Row(
+                          children: <Widget>[
+                            IconButton(
+                              icon: const Icon(Icons.save_alt_rounded,
+                                  color: Colors.white70),
+                              tooltip: '保存到相册',
+                              onPressed: _sharing ? null : () => _share(save: true),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.share_rounded,
+                                  color: Colors.white70),
+                              tooltip: '分享',
+                              onPressed: _sharing ? null : () => _share(save: false),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    DeviceTiltScope(
+                      child: Builder(
+                        builder: (context) {
+                          final tracker = DeviceTiltScope.of(context);
+                          return AnimatedBuilder(
+                            animation: tracker,
+                            // 内容做成重绘边界：姿态 50Hz 刷新时只重算矩阵、重新合成，
+                            // 不会每帧重画配图与文字
+                            child: RepaintBoundary(child: _buildFlip()),
+                            builder: (context, child) {
+                              final tilt = tracker.value;
+                              return Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.identity()
+                                  // 透视焦距 ≈ 900px（网页端是 1000px）；再小边缘会被拉变形
+                                  ..setEntry(3, 2, 0.0011)
+                                  ..rotateX(-tilt.dy * _maxTilt)
+                                  ..rotateY(tilt.dx * _maxTilt),
+                                child: child,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+          // 离屏海报：默认不挂；只在用户点「分享 / 保存」时临时挂载一帧用于截图，
+          // 平移到屏幕外不参与可视布局。内容固定是正面（无翻转 / 无姿态），
+          // 截出来是一张干净的、可直接分享的卡片。
+          if (_shareMode)
+            Transform.translate(
+              offset: const Offset(0, -10000),
+              child: RepaintBoundary(
+                key: _shareKey,
+                child: _SharePoster(card: widget.card),
+              ),
+            ),
+        ],
       ),
+    );
+  }
+
+  /// 截图并分享 / 保存当前句签海报。
+  ///
+  /// 离屏海报是「纯正面、无 3D 姿态」的静态渲染，比抓屏上正在翻转的卡片更干净，
+  /// 也避免了把倾斜/扫光等动效带进图片里。
+  Future<void> _share({required bool save}) async {
+    if (_sharing) {
+      return;
+    }
+    setState(() => _sharing = true);
+    try {
+      if (!_shareMode) {
+        // 首次分享才挂载离屏海报
+        setState(() => _shareMode = true);
+      }
+      // 等一帧布局 + 配图从缓存解码（首屏卡片已加载过，离屏复用同一缓存）
+      await Future.delayed(Duration.zero);
+      await WidgetsBinding.instance.endOfFrame;
+      await Future.delayed(const Duration(milliseconds: 350));
+      final boundary = _shareKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        return;
+      }
+      final image = await boundary.toImage(pixelRatio: 3);
+      final bytes = (await image.toByteData(format: ImageByteFormat.png))
+          ?.buffer
+          .asUint8List();
+      if (bytes == null) {
+        return;
+      }
+      final channel = const MethodChannel('short_sentence/share');
+      final fileName = 'short-sentence-${widget.card.bizDate}.png';
+      if (save) {
+        final ok = await channel.invokeMethod<bool>(
+          'saveImage',
+          <String, dynamic>{'bytes': bytes, 'fileName': fileName},
+        );
+        _toast(ok == true ? '已保存到相册' : '保存失败，可改用「分享」');
+      } else {
+        await channel.invokeMethod<void>(
+          'shareImage',
+          <String, dynamic>{'bytes': bytes, 'fileName': fileName},
+        );
+      }
+    } catch (_) {
+      // 分享/保存失败不阻断查看：系统选择器没起来或通道异常时，给个轻提示
+      _toast('操作失败，请重试');
+    } finally {
+      if (mounted) {
+        setState(() => _sharing = false);
+      }
+    }
+  }
+
+  void _toast(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 
@@ -846,6 +968,233 @@ class _CardFooter extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/* ------------------------------ 离屏分享海报 ------------------------------ */
+
+/// 用于截图的「纯正面」海报：与 [_CardFront] 同布局，但不带翻转 / 姿态 / 镭射 /
+/// 扫光等动效，截出来是一张干净的静态卡片（动效截进 PNG 里反而脏）。
+///
+/// 默认不挂进树（见 [_CardPosterState.build] 里的 `_shareMode`），只有用户点
+/// 「分享 / 保存」时临时挂载一帧。
+class _SharePoster extends StatelessWidget {
+  const _SharePoster({required this.card});
+
+  final SentenceCard card;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _SharePhoto(card: card),
+          const SizedBox(height: 8),
+          const _CardFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+/// 离屏海报的配图块：与网页端一致的「浅色照片卡 + 黑色渐隐蒙版 + 文案」。
+class _SharePhoto extends StatelessWidget {
+  const _SharePhoto({required this.card});
+
+  final SentenceCard card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A0F172A),
+            blurRadius: 28,
+            offset: Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: _amber200.withValues(alpha: 0.6)),
+          color: _slate100,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(27),
+          child: Stack(
+            children: <Widget>[
+              AspectRatio(aspectRatio: 16 / 9, child: _image()),
+              // 渐隐蒙版：让文字在任何配图上都清晰
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[
+                          Colors.black.withValues(alpha: 0),
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.75),
+                        ],
+                        stops: const <double>[0, 1 / 3, 1],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // 徽标行
+              Positioned(
+                left: 12,
+                right: 12,
+                top: 12,
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x140F172A),
+                            blurRadius: 6,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Icon(Icons.auto_awesome_rounded, size: 14, color: _amber600),
+                          SizedBox(width: 4),
+                          Text(
+                            '今日句签 · 已获得',
+                            style: TextStyle(
+                              color: _amber600,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        _dateLabel(card.bizDate),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 文案
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: <Widget>[
+                          Flexible(
+                            child: Text(
+                              card.titleZh.isEmpty ? card.title : card.titleZh,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          if (card.title.isNotEmpty) ...<Widget>[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                card.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        card.sentenceEn,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        card.translationZh,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _image() {
+    if (card.imageUrl == null || card.imageUrl!.isEmpty) {
+      return const ColoredBox(color: _slate100);
+    }
+    return CachedNetworkImage(
+      imageUrl: staticUrl(card.imageUrl),
+      fit: BoxFit.cover,
+      // 卡片最宽 420dp，按 3 倍屏解码即可，别按原图 1280px 解
+      memCacheWidth: 1260,
+      fadeInDuration: Motion.slow,
+      placeholder: (context, _) => const ColoredBox(color: Color(0xFFE2E8F0)),
+      errorWidget: (context, _, _) => const ColoredBox(
+        color: _slate100,
+        child: Center(
+          child: Icon(Icons.image_not_supported_outlined, color: _slate400),
+        ),
       ),
     );
   }

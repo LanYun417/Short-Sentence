@@ -61,6 +61,7 @@ void main() {
     expect(find.text('性别'), findsOneWidget);
     expect(find.text('生日'), findsOneWidget);
     expect(find.text('个性签名'), findsOneWidget);
+    expect(find.text('每日邮件提醒'), findsOneWidget);
     expect(find.text('保存'), findsOneWidget);
     container.dispose();
   });

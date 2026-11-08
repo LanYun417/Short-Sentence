@@ -152,6 +152,7 @@ class AuthController extends Notifier<AuthState> {
     String? birthday,
     String? gender,
     String? signature,
+    int? emailReminder,
   }) async {
     try {
       final profile = await _api.updateProfile(
@@ -159,6 +160,7 @@ class AuthController extends Notifier<AuthState> {
         birthday: birthday,
         gender: gender,
         signature: signature,
+        emailReminder: emailReminder,
       );
       await _storage.writeUser(encodeProfile(profile));
       state = state.copyWith(user: profile);

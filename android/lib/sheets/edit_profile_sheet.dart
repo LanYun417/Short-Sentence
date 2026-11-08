@@ -40,6 +40,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
 
   late String _gender = _user?.gender ?? 'secret';
 
+  /// 每日邮件提醒：跟随当前用户设置（1 = 开）。
+  late bool _emailReminder = _user?.emailReminder == 1;
+
   /// 生日的年 / 月 / 日。
   ///
   /// ⚠️ 这里**不能**写成 `late int?`：`late` 的读前必赋值与「可空」无关，
@@ -108,6 +111,8 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           signature: _signature.text.trim(),
           // 未选全就不提交生日：后端「未传即不更新」，传半个日期只会得到 400
           birthday: birthday,
+          // 提醒开关：0/1 直接透传；后端未传即不更新，不影响其它字段
+          emailReminder: _emailReminder ? 1 : 0,
         );
     if (!mounted) {
       return;
@@ -189,6 +194,49 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                 minLines: 2,
                 decoration: const InputDecoration(
                   hintText: '写一句想对自己说的话',
+                ),
+              ),
+              const SizedBox(height: 18),
+              _Label(text: '每日邮件提醒'),
+              const SizedBox(height: 8),
+              Container(
+                height: 58,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: colors.cardMuted,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colors.line),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '完成目标后提醒我',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: colors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '当天没达标时，傍晚发一封邮件提醒',
+                            style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      activeThumbColor: colors.brand,
+                      activeTrackColor: colors.brand.withValues(alpha: 0.5),
+                      value: _emailReminder,
+                      onChanged: (value) => setState(() => _emailReminder = value),
+                    ),
+                  ],
                 ),
               ),
               if (_error != null) ...<Widget>[

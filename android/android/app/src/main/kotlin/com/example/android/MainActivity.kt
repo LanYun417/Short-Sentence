@@ -21,6 +21,9 @@ class MainActivity : FlutterActivity() {
         // 反馈截图选择：系统 SAF 文件选择器桥（零新增依赖）
         imagePickBridge = ImagePickBridge(this)
         imagePickBridge?.attach(flutterEngine.dartExecutor.binaryMessenger)
+        // 句签海报分享：系统分享 / 存相册桥（零新增依赖）
+        shareBridge = ShareBridge(this)
+        shareBridge?.attach(flutterEngine.dartExecutor.binaryMessenger)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -38,6 +41,7 @@ class MainActivity : FlutterActivity() {
         gyroHandler?.dispose()
         ttsBridge?.dispose()
         imagePickBridge?.dispose()
+        shareBridge?.dispose()
         super.onDestroy()
     }
 
@@ -50,5 +54,6 @@ class MainActivity : FlutterActivity() {
     private var tiltHandler: TiltStreamHandler? = null
     private var gyroHandler: GyroStreamHandler? = null
     private var imagePickBridge: ImagePickBridge? = null
+    private var shareBridge: ShareBridge? = null
 }
 

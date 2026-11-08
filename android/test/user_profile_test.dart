@@ -55,6 +55,8 @@ void main() {
     expect(decoded.gender, profile.gender);
     expect(decoded.signature, profile.signature);
     expect(decoded.bgCardId, profile.bgCardId);
+    // 新增字段也要能安全往返（否则重启后提醒开关会丢）
+    expect(decoded.emailReminder, profile.emailReminder);
   });
 
   test('日期格式化为本地日期', () {
