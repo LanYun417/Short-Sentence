@@ -40,6 +40,13 @@ const emit = defineEmits<{
 /** 配图地址。 */
 // 归一到 undefined（而不是 null）：`<img :src>` 只接受 string | undefined
 const imageSrc = computed(() => props.question.imageUrl ?? undefined);
+/** 配图加载失败兜底：文件 404 / 断网时不露原生破图，降级为「配图缺失」占位 */
+const imgError = ref(false);
+// 换题（imageUrl 变化）时重置错误态，否则旧题的破图标记会污染新题
+watch(
+  () => props.question.imageUrl,
+  () => (imgError.value = false),
+);
 
 /** 用户输入 */
 const answer = ref('');
@@ -405,11 +412,12 @@ async function onSubmitReport(): Promise<void> {
           class="aspect-video overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-black/5 dark:bg-slate-700 dark:ring-white/10"
         >
           <img
-            v-if="question.imageUrl"
+            v-if="question.imageUrl && !imgError"
             :src="imageSrc"
             :alt="question.translationZh"
             class="anim-fade h-full w-full object-cover transition-transform duration-700 hover:scale-105"
             loading="lazy"
+            @error="imgError = true"
           />
           <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">配图缺失</div>
         </div>
