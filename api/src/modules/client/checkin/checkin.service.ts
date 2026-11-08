@@ -5,6 +5,7 @@
 import { Injectable } from '@nestjs/common';
 import { config } from '../../../common/config/config.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { TeamService } from '../team/team.service.js';
 
 /** 今日进度。 */
 export interface TodayCheckin {
@@ -19,7 +20,10 @@ export interface TodayCheckin {
 
 @Injectable()
 export class CheckinService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly team: TeamService,
+  ) {}
 
   /** 查询今日进度（无记录时返回零值，不落库）。 */
   async getToday(userId: number): Promise<TodayCheckin | null> {
@@ -46,29 +50,42 @@ export class CheckinService {
     const goal = config.sentence.dailyGoal;
     const existing = await this.prisma.userCheckin.findUnique({
       where: { userId_checkinDate: { userId: BigInt(userId), checkinDate: date } },
-      select: { id: true, doneCount: true },
+      select: { id: true, doneCount: true, goalCount: true },
     });
+    // 只在「恰好越过当日目标线」那一刻结算小队，避免每次答题都查队伍表
+    let justCompleted: boolean;
     if (existing) {
       await this.prisma.userCheckin.update({
         where: { id: existing.id },
         data: { doneCount: existing.doneCount + 1 },
       });
-      return;
+      justCompleted = existing.doneCount < existing.goalCount && existing.doneCount + 1 >= existing.goalCount;
+    } else {
+      // 当天首次作答：streak = 昨天有打卡 ? 昨天 streak + 1 : 1
+      const yesterday = await this.prisma.userCheckin.findUnique({
+        where: { userId_checkinDate: { userId: BigInt(userId), checkinDate: this.shiftDate(date, -1) } },
+        select: { streak: true },
+      });
+      await this.prisma.userCheckin.create({
+        data: {
+          userId: BigInt(userId),
+          checkinDate: date,
+          doneCount: 1,
+          goalCount: goal,
+          streak: yesterday ? yesterday.streak + 1 : 1,
+        },
+      });
+      justCompleted = 1 >= goal;
     }
-    // 当天首次作答：streak = 昨天有打卡 ? 昨天 streak + 1 : 1
-    const yesterday = await this.prisma.userCheckin.findUnique({
-      where: { userId_checkinDate: { userId: BigInt(userId), checkinDate: this.shiftDate(date, -1) } },
-      select: { streak: true },
-    });
-    await this.prisma.userCheckin.create({
-      data: {
-        userId: BigInt(userId),
-        checkinDate: date,
-        doneCount: 1,
-        goalCount: goal,
-        streak: yesterday ? yesterday.streak + 1 : 1,
-      },
-    });
+
+    if (justCompleted) {
+      // 组队是增强能力：结算异常不得影响打卡主流程
+      try {
+        await this.team.onMemberProgress(userId);
+      } catch {
+        // 静默降级（小队状态可在下次查看时自行校准）
+      }
+    }
   }
 
   /** 打卡（幂等；返回 streak）。 */

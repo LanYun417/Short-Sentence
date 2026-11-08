@@ -8823,5 +8823,65 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       }
     ]
+  },
+  {
+    "group": "Team",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/team/my",
+        "summary": "我的小队（无队伍返回 null，前端显示「找队友」入口）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/team/my?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/leave",
+        "summary": "退出小队（可重新匹配）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/leave\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/match",
+        "summary": "找队友：按近 7 天练习节奏匹配陌生队友，或新建一个等待池",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/match\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
   }
 ];

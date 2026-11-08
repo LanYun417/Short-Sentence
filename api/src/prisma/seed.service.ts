@@ -1986,6 +1986,33 @@ export const ACHIEVEMENT_SEEDS: Array<{
     rewardXp: 200,
     sort: 28,
   },
+  {
+    code: 'team_first',
+    name: '并肩同行',
+    description: '首次加入弱连接学习小队',
+    icon: 'users-round',
+    category: 'behavior',
+    rewardXp: 20,
+    sort: 29,
+  },
+  {
+    code: 'team_full_3',
+    name: '默契初成',
+    description: '小队连续 3 天全员完成打卡',
+    icon: 'handshake',
+    category: 'persist',
+    rewardXp: 50,
+    sort: 30,
+  },
+  {
+    code: 'team_full_7',
+    name: '同心之约',
+    description: '小队连续 7 天全员完成打卡',
+    icon: 'trophy',
+    category: 'persist',
+    rewardXp: 120,
+    sort: 31,
+  },
 ];
 
 /** 写入成就定义（幂等：按 code upsert，元数据随发布更新）。 */

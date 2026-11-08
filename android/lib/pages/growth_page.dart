@@ -11,8 +11,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/api_exception.dart';
 import '../api/auth_api.dart';
 import '../api/models/growth.dart';
+import '../api/models/team.dart';
+import '../api/team_api.dart';
 import '../state/card_controller.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
@@ -51,9 +54,10 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   }
 
   Future<void> _refresh() async {
-    // 记忆概览与星系随成长页一起刷新（答题后星点亮度/数量会变）
+    // 记忆概览 / 星系 / 小队随成长页一起刷新（答题后打卡状态会变）
     ref.invalidate(memoryStatsProvider);
     ref.invalidate(memoryGalaxyProvider);
+    ref.invalidate(teamProvider);
     await Future.wait(<Future<void>>[
       ref.read(growthControllerProvider.notifier).refresh(),
       ref.read(cardControllerProvider.notifier).refresh(),
@@ -117,6 +121,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                               totalAchievements:
                                   growth.overview?.totalAchievements ?? 0,
                             ),
+                          ),
+                          const SizedBox(height: 14),
+                          // 学习小队放靠前：「就差你啦」是最强的即时行动召唤
+                          ref.watch(teamProvider).when(
+                            data: (team) => _TeamCard(team: team),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
                           ),
                           const SizedBox(height: 14),
                           ref.watch(memoryStatsProvider).when(
@@ -783,6 +794,226 @@ class _RetentionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RetentionPainter old) => false;
+}
+
+/* ------------------------------ 学习小队 ------------------------------ */
+
+/// 我的小队（成长页靠前展示；null = 未组队）。
+final teamProvider = FutureProvider<TeamView?>((ref) async {
+  final api = ref.watch(teamApiProvider);
+  return api.my();
+});
+
+class _TeamCard extends ConsumerStatefulWidget {
+  const _TeamCard({required this.team});
+
+  final TeamView? team;
+
+  @override
+  ConsumerState<_TeamCard> createState() => _TeamCardState();
+}
+
+class _TeamCardState extends ConsumerState<_TeamCard> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _act(Future<void> Function(TeamApi api) action) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action(ref.read(teamApiProvider));
+      ref.invalidate(teamProvider);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = '操作失败，请稍后重试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hint = theme.textTheme.bodySmall?.color;
+    final team = widget.team;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.groups_rounded,
+                  size: 16, color: context.colors.brand),
+              const SizedBox(width: 6),
+              Text('学习小队',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('节奏相近的伙伴',
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (team == null)
+            _buildEmpty(theme, hint)
+          else
+            _buildTeam(context, theme, team),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(_error!,
+                  style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty(ThemeData theme, Color? hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text('和节奏相近的人，一起把每天坚持下来',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium),
+        const SizedBox(height: 6),
+        Text('系统按近 7 天练习量自动匹配 2~4 人小队；不互加好友、不聊天，只看今日打卡状态。'
+            '全员完成每人额外 +15 XP，小队连续天数一起涨。',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(color: hint, height: 1.5)),
+        const SizedBox(height: 12),
+        Center(
+          child: FilledButton(
+            onPressed: _busy
+                ? null
+                : () => _act((api) async {
+                      await api.match();
+                    }),
+            child: Text(_busy ? '匹配中…' : '找队友'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeam(BuildContext context, ThemeData theme, TeamView team) {
+    final hint = theme.textTheme.bodySmall?.color;
+    final Color toneColor;
+    final IconData toneIcon;
+    switch (team.hintTone) {
+      case 'urge':
+        toneColor = Colors.orange;
+        toneIcon = Icons.notifications_active_rounded;
+      case 'success':
+        toneColor = Colors.green;
+        toneIcon = Icons.check_circle_rounded;
+      default:
+        toneColor = context.colors.brand;
+        toneIcon = Icons.info_rounded;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Text(team.name,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text('连续 ${team.streak} 天',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // 应用内提醒条：urge「就差你啦」是留存关键
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: toneColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(toneIcon, size: 16, color: toneColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(team.hint,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: toneColor)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final m in team.members)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: <Widget>[
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: m.isMe
+                      ? context.colors.brand
+                      : Colors.indigo.withValues(alpha: 0.7),
+                  child: Text(
+                    m.nickname.isEmpty ? '?' : m.nickname.substring(0, 1),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${m.nickname}${m.isMe ? "（我）" : ""}',
+                    style: theme.textTheme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  m.checkedIn ? '今日已打卡' : '待打卡',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: m.checkedIn ? Colors.green : hint),
+                ),
+              ],
+            ),
+          ),
+        Row(
+          children: <Widget>[
+            Text('今日 ${team.doneCount} / ${team.memberCount} 人完成 · 满 ${team.maxMembers} 人',
+                style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            const Spacer(),
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => _act((api) async {
+                        await api.leave();
+                        await api.match();
+                      }),
+              child: Text(_busy ? '处理中…' : '换一批队友',
+                  style: const TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /* ------------------------------ 记忆星系 ------------------------------ */

@@ -47,6 +47,9 @@ const ICON_MAP: Record<string, string> = {
   // 首次上榜 / 十强（名次型成就）
   flag: 'i-lucide-flag',
   'chevrons-up': 'i-lucide-chevrons-up',
+  // 弱连接小队成就（与后端种子、Android icon_map.dart 三处同步）
+  'users-round': 'i-lucide-users-round',
+  handshake: 'i-lucide-handshake',
 };
 
 /** 成就图标名（未知回退到奖章）。 */
@@ -87,6 +90,9 @@ function iconOf(name: string): string {
         </div>
       </div>
     </div>
+
+    <!-- 学习小队：放在成长页靠前位置，「就差你啦」是最强的即时行动召唤 -->
+    <TeamCard />
 
     <!-- 成就勋章墙 -->
     <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80">

@@ -162,6 +162,18 @@ export type UserCheckin = Prisma.UserCheckinModel
  */
 export type AiCallLog = Prisma.AiCallLogModel
 /**
+ * Model StudyTeam
+ * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
+ * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
+ */
+export type StudyTeam = Prisma.StudyTeamModel
+/**
+ * Model StudyTeamMember
+ * 小队成员：一个用户同时只能在一个小队（换队先删旧记录）。
+ * 刻意不与 client_user 建 Prisma 关系，与答题/打卡/句签同口径按 userId 显式查询。
+ */
+export type StudyTeamMember = Prisma.StudyTeamMemberModel
+/**
  * Model User
  * 用户表
  */

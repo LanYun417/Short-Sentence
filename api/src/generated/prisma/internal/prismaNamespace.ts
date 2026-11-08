@@ -424,6 +424,8 @@ export const ModelName = {
   SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
+  StudyTeam: 'StudyTeam',
+  StudyTeamMember: 'StudyTeamMember',
   User: 'User',
   Role: 'Role',
   Menu: 'Menu',
@@ -449,7 +451,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2235,6 +2237,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    StudyTeam: {
+      payload: Prisma.$StudyTeamPayload<ExtArgs>
+      fields: Prisma.StudyTeamFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StudyTeamFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StudyTeamFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        findFirst: {
+          args: Prisma.StudyTeamFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StudyTeamFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        findMany: {
+          args: Prisma.StudyTeamFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>[]
+        }
+        create: {
+          args: Prisma.StudyTeamCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        createMany: {
+          args: Prisma.StudyTeamCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StudyTeamDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        update: {
+          args: Prisma.StudyTeamUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        deleteMany: {
+          args: Prisma.StudyTeamDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StudyTeamUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StudyTeamUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamPayload>
+        }
+        aggregate: {
+          args: Prisma.StudyTeamAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStudyTeam>
+        }
+        groupBy: {
+          args: Prisma.StudyTeamGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StudyTeamCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamCountAggregateOutputType> | number
+        }
+      }
+    }
+    StudyTeamMember: {
+      payload: Prisma.$StudyTeamMemberPayload<ExtArgs>
+      fields: Prisma.StudyTeamMemberFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StudyTeamMemberFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StudyTeamMemberFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        findFirst: {
+          args: Prisma.StudyTeamMemberFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StudyTeamMemberFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        findMany: {
+          args: Prisma.StudyTeamMemberFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>[]
+        }
+        create: {
+          args: Prisma.StudyTeamMemberCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        createMany: {
+          args: Prisma.StudyTeamMemberCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StudyTeamMemberDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        update: {
+          args: Prisma.StudyTeamMemberUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        deleteMany: {
+          args: Prisma.StudyTeamMemberDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StudyTeamMemberUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StudyTeamMemberUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMemberPayload>
+        }
+        aggregate: {
+          args: Prisma.StudyTeamMemberAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStudyTeamMember>
+        }
+        groupBy: {
+          args: Prisma.StudyTeamMemberGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamMemberGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StudyTeamMemberCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamMemberCountAggregateOutputType> | number
+        }
+      }
+    }
     User: {
       payload: Prisma.$UserPayload<ExtArgs>
       fields: Prisma.UserFieldRefs
@@ -3372,6 +3506,31 @@ export const AiCallLogScalarFieldEnum = {
 export type AiCallLogScalarFieldEnum = (typeof AiCallLogScalarFieldEnum)[keyof typeof AiCallLogScalarFieldEnum]
 
 
+export const StudyTeamScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  status: 'status',
+  bucket: 'bucket',
+  streak: 'streak',
+  lastFullDate: 'lastFullDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StudyTeamScalarFieldEnum = (typeof StudyTeamScalarFieldEnum)[keyof typeof StudyTeamScalarFieldEnum]
+
+
+export const StudyTeamMemberScalarFieldEnum = {
+  id: 'id',
+  teamId: 'teamId',
+  userId: 'userId',
+  joinedDate: 'joinedDate',
+  createdAt: 'createdAt'
+} as const
+
+export type StudyTeamMemberScalarFieldEnum = (typeof StudyTeamMemberScalarFieldEnum)[keyof typeof StudyTeamMemberScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   username: 'username',
@@ -3828,6 +3987,22 @@ export const AiCallLogOrderByRelevanceFieldEnum = {
 export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevanceFieldEnum)[keyof typeof AiCallLogOrderByRelevanceFieldEnum]
 
 
+export const StudyTeamOrderByRelevanceFieldEnum = {
+  name: 'name',
+  status: 'status',
+  lastFullDate: 'lastFullDate'
+} as const
+
+export type StudyTeamOrderByRelevanceFieldEnum = (typeof StudyTeamOrderByRelevanceFieldEnum)[keyof typeof StudyTeamOrderByRelevanceFieldEnum]
+
+
+export const StudyTeamMemberOrderByRelevanceFieldEnum = {
+  joinedDate: 'joinedDate'
+} as const
+
+export type StudyTeamMemberOrderByRelevanceFieldEnum = (typeof StudyTeamMemberOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMemberOrderByRelevanceFieldEnum]
+
+
 export const UserOrderByRelevanceFieldEnum = {
   username: 'username',
   password: 'password',
@@ -4126,6 +4301,8 @@ export type GlobalOmitConfig = {
   sentenceReport?: Prisma.SentenceReportOmit
   userCheckin?: Prisma.UserCheckinOmit
   aiCallLog?: Prisma.AiCallLogOmit
+  studyTeam?: Prisma.StudyTeamOmit
+  studyTeamMember?: Prisma.StudyTeamMemberOmit
   user?: Prisma.UserOmit
   role?: Prisma.RoleOmit
   menu?: Prisma.MenuOmit

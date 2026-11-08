@@ -19,7 +19,7 @@ IconData appIcon(String? name) {
     'briefcase' => Icons.work_rounded,
     'airplane' || 'plane' => Icons.flight_takeoff_rounded,
     'cup-hot' || 'coffee' => Icons.local_cafe_rounded,
-    'people' || 'users' => Icons.groups_rounded,
+    'people' || 'users' || 'users-round' => Icons.groups_rounded,
     'book' => Icons.menu_book_rounded,
     'shopping-bag' => Icons.shopping_bag_rounded,
     'stethoscope' => Icons.monitor_heart_rounded,
@@ -56,6 +56,8 @@ IconData appIcon(String? name) {
     'calendar-days' => Icons.calendar_month_rounded,
     'flag' => Icons.flag_rounded,
     'chevrons-up' => Icons.keyboard_double_arrow_up_rounded,
+    // ---------- 弱连接小队成就 ----------
+    'handshake' => Icons.people_rounded,
     _ => Icons.auto_awesome_rounded,
   };
 }

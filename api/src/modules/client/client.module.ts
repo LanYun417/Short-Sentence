@@ -28,6 +28,8 @@ import { ClientNoticeController } from './notice/client-notice.controller.js';
 import { ClientNoticeService } from './notice/client-notice.service.js';
 import { LeaderboardController } from './leaderboard/leaderboard.controller.js';
 import { LeaderboardService } from './leaderboard/leaderboard.service.js';
+import { TeamController } from './team/team.controller.js';
+import { TeamService } from './team/team.service.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -49,6 +51,8 @@ import { LeaderboardService } from './leaderboard/leaderboard.service.js';
     ClientNoticeController,
     // 今日排行榜（答题数 / 答对数前 100）
     LeaderboardController,
+    // 弱连接学习小队（自动匹配 / 组队打卡）
+    TeamController,
   ],
   providers: [
     ClientAuthUserService,
@@ -61,6 +65,8 @@ import { LeaderboardService } from './leaderboard/leaderboard.service.js';
     ClientAiService,
     ClientNoticeService,
     LeaderboardService,
+    // 组队结算由 CheckinService 在「今日刚达成目标」时调用，故必须在此登记
+    TeamService,
   ],
 })
 export class ClientModule {}

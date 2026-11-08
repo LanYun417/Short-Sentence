@@ -78,6 +78,8 @@ export const ModelName = {
   SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
+  StudyTeam: 'StudyTeam',
+  StudyTeamMember: 'StudyTeamMember',
   User: 'User',
   Role: 'Role',
   Menu: 'Menu',
@@ -544,6 +546,31 @@ export const AiCallLogScalarFieldEnum = {
 export type AiCallLogScalarFieldEnum = (typeof AiCallLogScalarFieldEnum)[keyof typeof AiCallLogScalarFieldEnum]
 
 
+export const StudyTeamScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  status: 'status',
+  bucket: 'bucket',
+  streak: 'streak',
+  lastFullDate: 'lastFullDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StudyTeamScalarFieldEnum = (typeof StudyTeamScalarFieldEnum)[keyof typeof StudyTeamScalarFieldEnum]
+
+
+export const StudyTeamMemberScalarFieldEnum = {
+  id: 'id',
+  teamId: 'teamId',
+  userId: 'userId',
+  joinedDate: 'joinedDate',
+  createdAt: 'createdAt'
+} as const
+
+export type StudyTeamMemberScalarFieldEnum = (typeof StudyTeamMemberScalarFieldEnum)[keyof typeof StudyTeamMemberScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   username: 'username',
@@ -998,6 +1025,22 @@ export const AiCallLogOrderByRelevanceFieldEnum = {
 } as const
 
 export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevanceFieldEnum)[keyof typeof AiCallLogOrderByRelevanceFieldEnum]
+
+
+export const StudyTeamOrderByRelevanceFieldEnum = {
+  name: 'name',
+  status: 'status',
+  lastFullDate: 'lastFullDate'
+} as const
+
+export type StudyTeamOrderByRelevanceFieldEnum = (typeof StudyTeamOrderByRelevanceFieldEnum)[keyof typeof StudyTeamOrderByRelevanceFieldEnum]
+
+
+export const StudyTeamMemberOrderByRelevanceFieldEnum = {
+  joinedDate: 'joinedDate'
+} as const
+
+export type StudyTeamMemberOrderByRelevanceFieldEnum = (typeof StudyTeamMemberOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMemberOrderByRelevanceFieldEnum]
 
 
 export const UserOrderByRelevanceFieldEnum = {

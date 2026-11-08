@@ -22,6 +22,8 @@ const EMPTY_CONTEXT = {
   todayAnswerCount: 0,
   todayCorrectCount: 0,
   checkinTotal: 0,
+  inTeam: false,
+  teamStreak: 0,
   bestRank: Number.POSITIVE_INFINITY,
 };
 
@@ -37,6 +39,8 @@ const MAX_CONTEXT = {
   todayAnswerCount: 99_999,
   todayCorrectCount: 99_999,
   checkinTotal: 99_999,
+  inTeam: true,
+  teamStreak: 9_999,
   bestRank: 1,
 };
 

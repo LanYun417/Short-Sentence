@@ -125,6 +125,10 @@ interface AchievementContext {
   todayCorrectCount: number;
   /** 累计打卡天数（排行榜「打卡榜」同口径：user_checkin 行数，不受答题记录保留期清理）。 */
   checkinTotal: number;
+  /** 是否已加入弱连接小队（active 状态才算）。 */
+  inTeam: boolean;
+  /** 小队当前有效的「全员打卡」连续天数（断签归零）。 */
+  teamStreak: number;
   /**
    * 本次检查所知的最好名次（1 = 榜首）。
    * 名次只有查询排行榜时才算得出来，答题/打卡路径不额外全表聚合，故默认 Infinity；
@@ -180,6 +184,10 @@ export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) =>
   rank_top10: (ctx) => ctx.bestRank <= 10,
   rank_top3: (ctx) => ctx.bestRank <= 3,
   rank_first: (ctx) => ctx.bestRank === 1,
+  // ---- 弱连接小队（组队打卡） ----
+  team_first: (ctx) => ctx.inTeam,
+  team_full_3: (ctx) => ctx.teamStreak >= 3,
+  team_full_7: (ctx) => ctx.teamStreak >= 7,
 };
 
 /** 名次型成就 code 全集：用于「已经集齐就不必再跑全量成就检查」的短路判断。 */
@@ -422,6 +430,7 @@ export class GamifyService {
       todayAnswerCount,
       todayCorrectCount,
       checkinTotal,
+      teamMembership,
     ] = await Promise.all([
       this.prisma.sentenceRecord.count({ where: { userId: uid } }),
       this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1 } }),
@@ -443,6 +452,11 @@ export class GamifyService {
       this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1, createdAt: { gte: dayStart } } }),
       // 打卡榜维度：user_checkin 一天一行且不随答题记录清理，累计口径可靠
       this.prisma.userCheckin.count({ where: { userId: uid } }),
+      // 小队维度：只认「今天或昨天仍全员达成」的连续天数，陈旧的 streak 不算
+      this.prisma.studyTeamMember.findUnique({
+        where: { userId: uid },
+        select: { team: { select: { status: true, streak: true, lastFullDate: true } } },
+      }),
     ]);
 
     const categoryIds = new Set<string>();
@@ -451,6 +465,12 @@ export class GamifyService {
         categoryIds.add(String(row.sentence.categoryId));
       }
     }
+
+    const team = teamMembership?.team;
+    const lastFull = team?.lastFullDate ? new Date(`${team.lastFullDate}T00:00:00`).getTime() : 0;
+    // 2 天容差兼容服务端本地时区与东八区的边界差异；超期视为断签
+    const teamStreak =
+      team?.status === 'active' && lastFull > 0 && Date.now() - lastFull < 2 * 24 * 60 * 60 * 1000 ? team.streak : 0;
 
     return {
       answerCount,
@@ -463,6 +483,8 @@ export class GamifyService {
       todayAnswerCount,
       todayCorrectCount,
       checkinTotal,
+      inTeam: team?.status === 'active',
+      teamStreak,
       bestRank: rankHint && rankHint > 0 ? rankHint : Number.POSITIVE_INFINITY,
     };
   }

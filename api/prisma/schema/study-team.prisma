@@ -1,0 +1,48 @@
+// use prisma-next
+
+/// 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
+/// 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
+model StudyTeam {
+  /// 主键
+  id       BigInt @id @default(autoincrement()) @db.BigInt
+  /// 小队名（系统生成，如「晨光小队」）
+  name     String @db.VarChar(50)
+  /// 状态：active 进行中 / dissolved 已解散（成员退空后置位）
+  status   String @default("active") @db.VarChar(20)
+  /// 匹配分桶：近 7 天答题量档位（0~4），同桶才能匹配，保证节奏相近
+  bucket   Int    @default(0) @db.Int
+  /// 全员打卡连续天数
+  streak   Int    @default(0) @db.Int
+  /// 最近一次「全员完成」日期 YYYY-MM-DD；断签判定用
+  lastFullDate String? @map("last_full_date") @db.VarChar(10)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members StudyTeamMember[]
+
+  @@index([status, bucket])
+  @@map("study_team")
+}
+
+/// 小队成员：一个用户同时只能在一个小队（换队先删旧记录）。
+/// 刻意不与 client_user 建 Prisma 关系，与答题/打卡/句签同口径按 userId 显式查询。
+model StudyTeamMember {
+  /// 主键
+  id         BigInt @id @default(autoincrement()) @db.BigInt
+  /// 小队 id
+  teamId     BigInt @map("team_id") @db.BigInt
+  /// 用户 id（client_user）
+  userId     BigInt @map("user_id") @db.BigInt
+  /// 加入日期 YYYY-MM-DD
+  joinedDate String @map("joined_date") @db.VarChar(10)
+  /// 创建时间
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  team StudyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([teamId])
+  @@map("study_team_member")
+}
