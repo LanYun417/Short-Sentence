@@ -140,6 +140,8 @@ const { loading, list, total, query, search, reset, getList, changePage, changeP
 const dialogVisible = ref(false);
 const dialogSaving = ref(false);
 const editingId = ref<number | null>(null);
+/** 当前编辑的题是否已有配图：无图时不允许置「就绪」（后端同样会拒绝）。 */
+const editingHasImage = ref(false);
 const form = ref<SentenceSavePayload>({
   categoryId: 0,
   sentenceEn: '',
@@ -148,7 +150,7 @@ const form = ref<SentenceSavePayload>({
   explanation: '',
   scenePrompt: '',
   difficulty: 2,
-  status: 'ready',
+  status: 'pending_image',
 });
 
 /* ------------------------------ 详情弹窗 ------------------------------ */
@@ -188,9 +190,10 @@ async function handleDetail(row: SentenceItem): Promise<void> {
   }
 }
 
-/** 打开新增。 */
+/** 打开新增：新题必然还没配图，默认「待生成」，由生图任务推进到就绪。 */
 function handleCreate(): void {
   editingId.value = null;
+  editingHasImage.value = false;
   form.value = {
     categoryId: categories.value[0]?.id ?? 0,
     sentenceEn: '',
@@ -199,14 +202,15 @@ function handleCreate(): void {
     explanation: '',
     scenePrompt: '',
     difficulty: 2,
-    status: 'ready',
+    status: 'pending_image',
   };
   dialogVisible.value = true;
 }
 
-/** 打开编辑（回填；状态缺省按就绪处理）。 */
+/** 打开编辑（按真实状态回填，不再把「待生成」误显示成「就绪」）。 */
 function handleEdit(row: SentenceItem): void {
   editingId.value = row.id;
+  editingHasImage.value = Number(row.imageFileId) > 0;
   form.value = {
     categoryId: row.categoryId,
     sentenceEn: row.sentenceEn,
@@ -215,7 +219,7 @@ function handleEdit(row: SentenceItem): void {
     explanation: row.explanation ?? '',
     scenePrompt: row.scenePrompt,
     difficulty: row.difficulty,
-    status: row.status === 'offline' ? 'offline' : 'ready',
+    status: row.status === 'ready' || row.status === 'offline' ? row.status : 'pending_image',
   };
   dialogVisible.value = true;
 }
@@ -244,7 +248,7 @@ async function handleSave(): Promise<void> {
     };
     if (editingId.value === null) {
       await createSentenceApi(payload);
-      ElMessage.success('新增成功');
+      ElMessage.success('新增成功；新题待生成配图，请在列表中点「重新生图」后才会上架');
     } else {
       await updateSentenceApi(editingId.value, payload);
       ElMessage.success('保存成功');
@@ -1093,10 +1097,16 @@ onMounted(async () => {
           </el-radio-group>
         </el-form-item>
         <el-form-item v-if="editingId !== null" label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio value="ready">就绪</el-radio>
-            <el-radio value="offline">下架</el-radio>
-          </el-radio-group>
+          <div>
+            <el-radio-group v-model="form.status">
+              <el-radio value="pending_image">待生成</el-radio>
+              <el-radio value="ready" :disabled="!editingHasImage">就绪</el-radio>
+              <el-radio value="offline">下架</el-radio>
+            </el-radio-group>
+            <p v-if="!editingHasImage" class="mt-1 text-xs text-amber-600">
+              该题尚无配图，请先「重新生图」，否则无法上架
+            </p>
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>

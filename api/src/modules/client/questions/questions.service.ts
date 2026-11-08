@@ -380,7 +380,8 @@ export class QuestionsService {
   async listFestivals(): Promise<FestivalBank[]> {
     const rows = await this.prisma.sentence.groupBy({
       by: ['festivalName'],
-      where: { status: 'ready', retiredAt: null, festivalName: { not: null } },
+      // 题数按「真正可抽」统计：与抽题条件一致，避免显示 100 题却点进去抽不到
+      where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n }, festivalName: { not: null } },
       _count: { _all: true },
       _max: { festivalDate: true },
     });
@@ -466,6 +467,10 @@ export class QuestionsService {
   /**
    * 从指定题库（where 描述的子集：节日 / 场景分类）随机抽一道。
    * 在「count + 随机 offset」均匀随机之上叠加「累计答对」权重（见 pickWeightedSentence）。
+   *
+   * `imageFileId > 0` 是下发前的最后一道保险：正常生成链路里 status 与图片是同一条
+   * update 写入的，但运营手工改状态 / 补图脚本中途放行 / sys_file 记录被删都可能留下
+   * 「ready 但无图」的脏数据。只靠状态过滤会把这类题抽出来变成一张空图卡。
    */
   private async pickBankSentence(
     where: Record<string, unknown>,
@@ -473,7 +478,12 @@ export class QuestionsService {
     mastery: MasteryEntry[],
     suppressedIds: number[],
   ): Promise<number | null> {
-    const baseWhere: Record<string, unknown> = { status: 'ready', retiredAt: null, ...where };
+    const baseWhere: Record<string, unknown> = {
+      status: 'ready',
+      retiredAt: null,
+      imageFileId: { gt: 0n },
+      ...where,
+    };
     const entries = await this.filterMasteryBySentence(mastery, baseWhere, excludeIds, suppressedIds);
     return this.pickWeightedSentence(baseWhere, excludeIds, entries, suppressedIds);
   }
@@ -903,7 +913,8 @@ export class QuestionsService {
     suppressedIds: number[] = [],
   ): Promise<number | null> {
     // retiredAt 非空 = 已退场的旧节日题：不再进入练习流（收藏/历史仍可见）
-    const baseWhere: Record<string, unknown> = { status: 'ready', retiredAt: null };
+    // imageFileId > 0：无配图的题不下发（详见 pickBankSentence 的说明）
+    const baseWhere: Record<string, unknown> = { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } };
     if (difficulty) {
       baseWhere.difficulty = difficulty;
     }
@@ -921,8 +932,8 @@ export class QuestionsService {
       userId: BigInt(userId),
       isCorrect: 0,
       nextReviewAt: { lte: new Date() },
-      // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
-      sentence: { status: 'ready', retiredAt: null },
+      // 已退场的旧节日题不再进复习池（收藏/历史仍可见）；无配图的题同样不进
+      sentence: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
     };
     // 累计答对达到阈值且仍在禁抽期内的题，复习池同样不抽
     const notIn = [...excludeIds, ...suppressedIds];
@@ -996,7 +1007,15 @@ export class QuestionsService {
     }
     const sentences = await this.prisma.sentence.findMany({
       where: { id: { in: candidates.map((m) => BigInt(m.sentenceId)) } },
-      select: { id: true, status: true, retiredAt: true, difficulty: true, festivalName: true, categoryId: true },
+      select: {
+        id: true,
+        status: true,
+        retiredAt: true,
+        difficulty: true,
+        festivalName: true,
+        categoryId: true,
+        imageFileId: true,
+      },
     });
     const byId = new Map(sentences.map((s) => [Number(s.id), s]));
     const wantDifficulty = baseWhere.difficulty as number | undefined;
@@ -1004,7 +1023,9 @@ export class QuestionsService {
     const wantCategory = baseWhere.categoryId as bigint | number | undefined;
     return candidates.filter((m) => {
       const s = byId.get(m.sentenceId);
-      if (!s || s.status !== 'ready' || s.retiredAt !== null) {
+      // 高答对题是加权池里「直接按 id 抽」的，不经过 baseWhere 的 count/findFirst，
+      // 所以这里必须同样把无图题剔掉，否则仍会从侧门抽到空图卡。
+      if (!s || s.status !== 'ready' || s.retiredAt !== null || s.imageFileId <= 0n) {
         return false;
       }
       if (wantDifficulty !== undefined && s.difficulty !== wantDifficulty) {

@@ -213,6 +213,11 @@ export class SentenceService {
 
   /** 手工创建（source=manual；未传 scenePrompt 时用句子本身构图）。 */
   async create(dto: SaveSentenceDto): Promise<{ id: number }> {
+    // 手工新建的题此刻必然没有配图，不允许一步置 ready——否则会造出「可抽但空图」的题。
+    // 批量上架（batchSetStatus）已有同样的约束，这里把单题入口补齐。
+    if (dto.status === SENTENCE_STATUS.READY) {
+      throw AppException.badRequest('新题尚无配图，请先生成配图再上架');
+    }
     const duplicate = await this.prisma.sentence.findUnique({
       where: { sentenceEn: dto.sentenceEn.trim() },
       select: { id: true },
@@ -241,10 +246,14 @@ export class SentenceService {
   async update(id: number, dto: SaveSentenceDto): Promise<void> {
     const existing = await this.prisma.sentence.findUnique({
       where: { id: BigInt(id) },
-      select: { id: true },
+      select: { id: true, imageFileId: true },
     });
     if (!existing) {
       throw AppException.notFound('题目不存在');
+    }
+    // 同 create：把无图题直接上架会被用户端抽成空图卡，运营应先用「重新生图」补图
+    if (dto.status === SENTENCE_STATUS.READY && existing.imageFileId <= 0n) {
+      throw AppException.badRequest('该题尚无配图，请先生成配图再上架');
     }
     if (dto.sentenceEn) {
       const duplicate = await this.prisma.sentence.findFirst({

@@ -39,7 +39,8 @@ export class CategoriesController {
       }),
       this.prisma.sentence.groupBy({
         by: ['categoryId'],
-        where: { status: 'ready', retiredAt: null },
+        // 与抽题条件一致：无配图的题既不下发，也不计入场景题库的展示题数
+        where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
         _count: { _all: true },
       }),
     ]);
