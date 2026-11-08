@@ -78,6 +78,7 @@ export const ModelName = {
   SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
+  StudyStageProgress: 'StudyStageProgress',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
   User: 'User',
@@ -544,6 +545,20 @@ export const AiCallLogScalarFieldEnum = {
 } as const
 
 export type AiCallLogScalarFieldEnum = (typeof AiCallLogScalarFieldEnum)[keyof typeof AiCallLogScalarFieldEnum]
+
+
+export const StudyStageProgressScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  categoryId: 'categoryId',
+  correctCount: 'correctCount',
+  answerCount: 'answerCount',
+  clearedAt: 'clearedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalarFieldEnum)[keyof typeof StudyStageProgressScalarFieldEnum]
 
 
 export const StudyTeamScalarFieldEnum = {

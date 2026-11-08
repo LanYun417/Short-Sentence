@@ -38,7 +38,13 @@ function makeService() {
     sentence: { findMany: vi.fn(async () => sentences) },
     sentenceCategory: { findMany: vi.fn(async () => categories) },
   };
-  const service = new QuestionsService(prisma as unknown as PrismaService, {} as never, {} as never, {} as never);
+  const service = new QuestionsService(
+    prisma as unknown as PrismaService,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
   return { service, prisma };
 }
 

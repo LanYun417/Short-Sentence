@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import type { CheckinService } from '../src/modules/client/checkin/checkin.service.js';
 import type { GamifyService } from '../src/modules/client/gamify/gamify.service.js';
+import type { StageService } from '../src/modules/client/stage/stage.service.js';
 import type { FileService } from '../src/common/file/file.service.js';
 import { QuestionsService } from '../src/modules/client/questions/questions.service.js';
 
@@ -26,6 +27,8 @@ function fakePrisma(options: { nextReviewAt: Date | null; hasRecord: boolean }) 
         translationZh: '我一到就会给你打电话。',
         ipa: null,
         imageFileId: 0n,
+        categoryId: 4n,
+        category: { name: '餐饮美食' },
       }),
     },
     sentenceRecord: {
@@ -51,7 +54,13 @@ function buildService(prisma: PrismaService) {
     checkAchievements: vi.fn().mockResolvedValue([]),
   } as unknown as GamifyService;
   const fileService = { findById: vi.fn().mockResolvedValue(null) } as unknown as FileService;
-  return { service: new QuestionsService(prisma, fileService, checkin, gamify), checkin, gamify };
+  // 防重放路径在写入进度前就返回了；这里只给一个不会真的落库的桩
+  const stage = { recordAnswer: vi.fn().mockResolvedValue(undefined) } as unknown as StageService;
+  return {
+    service: new QuestionsService(prisma, fileService, checkin, gamify, stage),
+    checkin,
+    gamify,
+  };
 }
 
 const ANSWER = { userAnswer: 'I will call you as soon as I arrive.', elapsedMs: 1000, mode: 'input' } as never;

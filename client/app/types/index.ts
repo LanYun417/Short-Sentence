@@ -362,3 +362,62 @@ export interface LeaderboardResult {
   /** 当前用户名次；未上榜为 null */
   me: { rank: number; count: number } | null;
 }
+
+/* ------------------------------ 情景闯关 ------------------------------ */
+
+/** 一个关卡（关卡 = 场景分类）。 */
+export interface StageView {
+  /** 关卡 id = 场景分类 id，用于跳转按场景刷题 */
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  /** 剧情化关卡标题 */
+  title: string;
+  /** 进入关卡的剧情引入 */
+  intro: string;
+  /** 通关剧情 */
+  outro: string;
+  /** 通关所需累计答对数 */
+  target: number;
+  rewardXp: number;
+  /** 该场景累计答对数（已按 target 封顶） */
+  correctCount: number;
+  answerCount: number;
+  /** 进度百分比 0~100 */
+  progress: number;
+  cleared: boolean;
+  unlocked: boolean;
+  claimed: boolean;
+  /** 该场景当前可刷题数（0 = 题库准备中） */
+  bankCount: number;
+}
+
+/** 一章（含若干关卡，章内顺序解锁）。 */
+export interface StageChapter {
+  key: string;
+  name: string;
+  subtitle: string;
+  stages: StageView[];
+  clearedCount: number;
+  total: number;
+}
+
+/** 闯关总览。 */
+export interface StageOverview {
+  chapters: StageChapter[];
+  clearedStages: number;
+  totalStages: number;
+  activeStages: number;
+  claimable: number;
+  /** 推荐关卡 id（第一个已解锁未通关的关卡） */
+  recommendedId: number | null;
+}
+
+/** 领取通关奖励结果。 */
+export interface StageClaimResult {
+  awarded: boolean;
+  alreadyClaimed: boolean;
+  rewardXp: number;
+  xp: number;
+}

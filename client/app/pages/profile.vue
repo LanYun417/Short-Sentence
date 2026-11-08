@@ -536,6 +536,17 @@ async function onChangePassword(): Promise<void> {
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
+    <!-- 情景闯关入口：关卡 = 场景，带剧情与通关奖励 -->
+    <NuxtLink
+      to="/stages"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 98ms"
+    >
+      <UIcon name="i-lucide-map" class="h-5 w-5 shrink-0 text-indigo-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">情景闯关</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
     <!-- 消息中心入口：未读红点来自服务端口径（SSR 预取，首屏即带） -->
     <NuxtLink
       to="/notices"

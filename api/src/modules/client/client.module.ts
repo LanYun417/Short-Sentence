@@ -32,6 +32,8 @@ import { TeamController } from './team/team.controller.js';
 import { TeamService } from './team/team.service.js';
 import { ClientCoachController } from './ai/coach.controller.js';
 import { ClientCoachService } from './ai/coach.service.js';
+import { StageController } from './stage/stage.controller.js';
+import { StageService } from './stage/stage.service.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -57,6 +59,8 @@ import { ClientCoachService } from './ai/coach.service.js';
     TeamController,
     // AI 私教（薄弱点画像 / 可选 AI 点评，独立 controller 不碰 SSE 端点）
     ClientCoachController,
+    // 情景闯关（关卡 = 场景；进度与通关奖励）
+    StageController,
   ],
   providers: [
     ClientAuthUserService,
@@ -72,6 +76,8 @@ import { ClientCoachService } from './ai/coach.service.js';
     // 组队结算由 CheckinService 在「今日刚达成目标」时调用，故必须在此登记
     TeamService,
     ClientCoachService,
+    // 情景闯关：进度由 QuestionsService 在答题链路写入，故必须在此登记
+    StageService,
   ],
 })
 export class ClientModule {}

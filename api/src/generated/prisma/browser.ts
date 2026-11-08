@@ -162,6 +162,17 @@ export type UserCheckin = Prisma.UserCheckinModel
  */
 export type AiCallLog = Prisma.AiCallLogModel
 /**
+ * Model StudyStageProgress
+ * 情景闯关进度（一行 = 用户在某场景关卡上的累计进度）。
+ * 
+ * **为什么不从 sentence_record 派生**：答题记录默认只保留 30 天
+ * （每日 00:20 清理 `< now-30d`），派生口径会让用户一个月后「通关进度倒退」，
+ * 关卡也会重新上锁。本表只增不减，是解锁与通关奖励的权威依据。
+ * 
+ * 与答题/打卡/句签同口径，刻意不与 client_user 建 Prisma 关系，按 userId 显式查询。
+ */
+export type StudyStageProgress = Prisma.StudyStageProgressModel
+/**
  * Model StudyTeam
  * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
  * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。

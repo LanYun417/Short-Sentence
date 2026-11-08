@@ -424,6 +424,7 @@ export const ModelName = {
   SentenceReport: 'SentenceReport',
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
+  StudyStageProgress: 'StudyStageProgress',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
   User: 'User',
@@ -451,7 +452,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2237,6 +2238,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    StudyStageProgress: {
+      payload: Prisma.$StudyStageProgressPayload<ExtArgs>
+      fields: Prisma.StudyStageProgressFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StudyStageProgressFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StudyStageProgressFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        findFirst: {
+          args: Prisma.StudyStageProgressFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StudyStageProgressFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        findMany: {
+          args: Prisma.StudyStageProgressFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>[]
+        }
+        create: {
+          args: Prisma.StudyStageProgressCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        createMany: {
+          args: Prisma.StudyStageProgressCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StudyStageProgressDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        update: {
+          args: Prisma.StudyStageProgressUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        deleteMany: {
+          args: Prisma.StudyStageProgressDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StudyStageProgressUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StudyStageProgressUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyStageProgressPayload>
+        }
+        aggregate: {
+          args: Prisma.StudyStageProgressAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStudyStageProgress>
+        }
+        groupBy: {
+          args: Prisma.StudyStageProgressGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyStageProgressGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StudyStageProgressCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyStageProgressCountAggregateOutputType> | number
+        }
+      }
+    }
     StudyTeam: {
       payload: Prisma.$StudyTeamPayload<ExtArgs>
       fields: Prisma.StudyTeamFieldRefs
@@ -3506,6 +3573,20 @@ export const AiCallLogScalarFieldEnum = {
 export type AiCallLogScalarFieldEnum = (typeof AiCallLogScalarFieldEnum)[keyof typeof AiCallLogScalarFieldEnum]
 
 
+export const StudyStageProgressScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  categoryId: 'categoryId',
+  correctCount: 'correctCount',
+  answerCount: 'answerCount',
+  clearedAt: 'clearedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalarFieldEnum)[keyof typeof StudyStageProgressScalarFieldEnum]
+
+
 export const StudyTeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -4301,6 +4382,7 @@ export type GlobalOmitConfig = {
   sentenceReport?: Prisma.SentenceReportOmit
   userCheckin?: Prisma.UserCheckinOmit
   aiCallLog?: Prisma.AiCallLogOmit
+  studyStageProgress?: Prisma.StudyStageProgressOmit
   studyTeam?: Prisma.StudyTeamOmit
   studyTeamMember?: Prisma.StudyTeamMemberOmit
   user?: Prisma.UserOmit

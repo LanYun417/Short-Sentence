@@ -24,6 +24,8 @@ const EMPTY_CONTEXT = {
   checkinTotal: 0,
   inTeam: false,
   teamStreak: 0,
+  clearedStages: 0,
+  stageTotal: 14,
   bestRank: Number.POSITIVE_INFINITY,
 };
 
@@ -41,6 +43,8 @@ const MAX_CONTEXT = {
   checkinTotal: 99_999,
   inTeam: true,
   teamStreak: 9_999,
+  clearedStages: 14,
+  stageTotal: 14,
   bestRank: 1,
 };
 

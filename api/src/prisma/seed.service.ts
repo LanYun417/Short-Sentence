@@ -2013,6 +2013,24 @@ export const ACHIEVEMENT_SEEDS: Array<{
     rewardXp: 120,
     sort: 31,
   },
+  {
+    code: 'stage_first',
+    name: '第一章落笔',
+    description: '通关任意一个情景关卡',
+    icon: 'map',
+    category: 'explore',
+    rewardXp: 60,
+    sort: 32,
+  },
+  {
+    code: 'stage_all',
+    name: '全境通关',
+    description: '通关全部情景关卡',
+    icon: 'route',
+    category: 'persist',
+    rewardXp: 300,
+    sort: 33,
+  },
 ];
 
 /** 写入成就定义（幂等：按 code upsert，元数据随发布更新）。 */

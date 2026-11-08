@@ -58,6 +58,9 @@ IconData appIcon(String? name) {
     'chevrons-up' => Icons.keyboard_double_arrow_up_rounded,
     // ---------- 弱连接小队成就 ----------
     'handshake' => Icons.people_rounded,
+    // ---------- 情景闯关成就 ----------
+    // `map` 已在上面「通用」段落里映射过，这里只补 route
+    'route' => Icons.route_rounded,
     _ => Icons.auto_awesome_rounded,
   };
 }

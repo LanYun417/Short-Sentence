@@ -15,6 +15,7 @@ import 'pages/leaderboard_page.dart';
 import 'pages/login_page.dart';
 import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
+import 'pages/stage_page.dart';
 import 'state/auth_controller.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -43,6 +44,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
       GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
+      GoRoute(path: '/stages', builder: (context, state) => const StagePage()),
     ],
   );
 });

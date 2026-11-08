@@ -9,7 +9,7 @@
  * - **复习池不另建表**：由 sentence_record（isCorrect=0 且 nextReviewAt<=now）派生；
  * - **间隔重复**：答对 level+1（1/3/7/15/30 天），答错回落到「明天」。
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
@@ -18,6 +18,7 @@ import { buildPageResult, parsePagination, readNumber } from '../../../common/ut
 import type { PageResult } from '../../../common/types.js';
 import { CheckinService } from '../checkin/checkin.service.js';
 import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
+import { StageService } from '../stage/stage.service.js';
 import { AnswerSentenceDto, type AnswerMode } from './dto.js';
 
 /**
@@ -319,11 +320,14 @@ const XP_EVENT: Record<
 
 @Injectable()
 export class QuestionsService {
+  private readonly logger = new Logger(QuestionsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly fileService: FileService,
     private readonly checkinService: CheckinService,
     private readonly gamify: GamifyService,
+    private readonly stage: StageService,
   ) {}
 
   /**
@@ -580,6 +584,9 @@ export class QuestionsService {
         ipa: true,
         explanation: true,
         imageFileId: true,
+        // 情景闯关：按分类推进关卡进度，需要场景名定位剧情
+        categoryId: true,
+        category: { select: { name: true } },
       },
     });
     if (!sentence) {
@@ -673,6 +680,13 @@ export class QuestionsService {
       select: { id: true },
     });
     await this.checkinService.recordAnswer(userId);
+    // 情景闯关进度：答对才推进。进度单独落库（答题记录只留 30 天，派生会让关卡倒退）；
+    // 这一笔是附加统计，写失败不该让用户看到「提交失败」，故旁路吞掉只记日志。
+    await this.stage
+      .recordAnswer(userId, Number(sentence.categoryId), sentence.category.name, isCorrect)
+      .catch((error: unknown) => {
+        this.logger.warn(`情景闯关进度写入失败（不影响答题）：${String(error)}`);
+      });
 
     // 微游戏化：按作答质量与模式发 XP（服务端权威 + event_key 幂等），并尝试解锁成就
     // 模式只决定用哪组规则，经验值恒由服务端算——拼词模式经验约为默写六成
@@ -1075,7 +1089,7 @@ export class QuestionsService {
       }
     }
 
-    const distribution = new Array<number>(30).fill(0);
+    const distribution = Array.from<number>({ length: 30 }).fill(0);
     let dueToday = 0;
     let dueIn7 = 0;
     let dueIn30 = 0;

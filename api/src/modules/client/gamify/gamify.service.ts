@@ -10,6 +10,7 @@
 import { Injectable } from '@nestjs/common';
 import { config } from '../../../common/config/config.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { STAGE_STORIES } from '../stage/stage-stories.js';
 
 /** 东八区偏移（Asia/Shanghai 无夏令时，固定 +8 即可；与 AiQuotaService 同口径）。 */
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -129,6 +130,10 @@ interface AchievementContext {
   inTeam: boolean;
   /** 小队当前有效的「全员打卡」连续天数（断签归零）。 */
   teamStreak: number;
+  /** 已通关的情景关卡数（study_stage_progress 中 clearedAt 非空的行数）。 */
+  clearedStages: number;
+  /** 当前有效关卡总数（随分类启停变化，避免关卡被下线后成就永远解不开）。 */
+  stageTotal: number;
   /**
    * 本次检查所知的最好名次（1 = 榜首）。
    * 名次只有查询排行榜时才算得出来，答题/打卡路径不额外全表聚合，故默认 Infinity；
@@ -188,6 +193,10 @@ export const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementContext) =>
   team_first: (ctx) => ctx.inTeam,
   team_full_3: (ctx) => ctx.teamStreak >= 3,
   team_full_7: (ctx) => ctx.teamStreak >= 7,
+  // ---- 情景闯关 ----
+  stage_first: (ctx) => ctx.clearedStages >= 1,
+  // 分母取「当前有效关卡数」：关卡随分类下线而减少时，已通关的人不会永远差一关
+  stage_all: (ctx) => ctx.stageTotal > 0 && ctx.clearedStages >= ctx.stageTotal,
 };
 
 /** 名次型成就 code 全集：用于「已经集齐就不必再跑全量成就检查」的短路判断。 */
@@ -425,12 +434,13 @@ export class GamifyService {
       favoriteCount,
       latestCheckin,
       user,
-      totalCategories,
+      enabledCategories,
       practiced,
       todayAnswerCount,
       todayCorrectCount,
       checkinTotal,
       teamMembership,
+      clearedStages,
     ] = await Promise.all([
       this.prisma.sentenceRecord.count({ where: { userId: uid } }),
       this.prisma.sentenceRecord.count({ where: { userId: uid, isCorrect: 1 } }),
@@ -441,7 +451,9 @@ export class GamifyService {
         select: { streak: true },
       }),
       this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
-      this.prisma.sentenceCategory.count({ where: { status: 1 } }),
+      // 取名字而不是 count：情景闯关的「通关全部」需要知道哪些场景**真的存在**，
+      // 分类下线后分母要跟着降，否则老用户永远差一关
+      this.prisma.sentenceCategory.findMany({ where: { status: 1 }, select: { name: true } }),
       this.prisma.sentenceRecord.findMany({
         where: { userId: uid },
         select: { sentenceId: true, sentence: { select: { categoryId: true } } },
@@ -457,7 +469,13 @@ export class GamifyService {
         where: { userId: uid },
         select: { team: { select: { status: true, streak: true, lastFullDate: true } } },
       }),
+      // 情景闯关：进度表只增不减，userId 有索引，count 很轻
+      this.prisma.studyStageProgress.count({ where: { userId: uid, clearedAt: { not: null } } }),
     ]);
+
+    const totalCategories = enabledCategories.length;
+    const enabledNames = new Set(enabledCategories.map((row) => row.name));
+    const stageTotal = STAGE_STORIES.filter((story) => enabledNames.has(story.category)).length;
 
     const categoryIds = new Set<string>();
     for (const row of practiced) {
@@ -485,6 +503,8 @@ export class GamifyService {
       checkinTotal,
       inTeam: team?.status === 'active',
       teamStreak,
+      clearedStages,
+      stageTotal,
       bestRank: rankHint && rankHint > 0 ? rankHint : Number.POSITIVE_INFINITY,
     };
   }

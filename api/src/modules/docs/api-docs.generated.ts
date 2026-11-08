@@ -8874,6 +8874,68 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "Stage",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/stages",
+        "summary": "闯关地图（章节 + 关卡 + 我的进度 + 可领取数）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/stages?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/stages/:id/claim",
+        "summary": "领取某关通关奖励（幂等）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "Team",
     "endpoints": [
       {

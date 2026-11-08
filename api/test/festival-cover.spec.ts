@@ -72,7 +72,7 @@ function fakeFileService(files: Record<number, string>) {
 
 /** 装配被测服务（checkin / gamify 与封面逻辑无关，传空对象即可）。 */
 function buildService(prisma: unknown, fileService: unknown): QuestionsService {
-  return new QuestionsService(prisma as never, fileService as never, {} as never, {} as never);
+  return new QuestionsService(prisma as never, fileService as never, {} as never, {} as never, {} as never);
 }
 
 describe('QuestionsService.listFestivals（节日题库封面）', () => {

@@ -68,7 +68,13 @@ function makePrisma(sentenceRows: Array<Record<string, unknown>> = []) {
     },
     sentenceCategory: { findMany: vi.fn(async () => []) },
   };
-  const service = new QuestionsService(prisma as unknown as PrismaService, {} as never, {} as never, {} as never);
+  const service = new QuestionsService(
+    prisma as unknown as PrismaService,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
   return {
     pickers: service as unknown as Pickers,
     countWhere,

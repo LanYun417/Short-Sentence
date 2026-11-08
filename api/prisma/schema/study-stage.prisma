@@ -1,0 +1,32 @@
+// use prisma-next
+
+/// 情景闯关进度（一行 = 用户在某场景关卡上的累计进度）。
+///
+/// **为什么不从 sentence_record 派生**：答题记录默认只保留 30 天
+/// （每日 00:20 清理 `< now-30d`），派生口径会让用户一个月后「通关进度倒退」，
+/// 关卡也会重新上锁。本表只增不减，是解锁与通关奖励的权威依据。
+///
+/// 与答题/打卡/句签同口径，刻意不与 client_user 建 Prisma 关系，按 userId 显式查询。
+model StudyStageProgress {
+  /// 主键
+  id           BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 用户 id（client_user）
+  userId       BigInt    @map("user_id") @db.BigInt
+  /// 场景分类 id（sentence_category）：关卡 = 场景
+  categoryId   BigInt    @map("category_id") @db.BigInt
+  /// 累计答对数（只增不减，用于通关判定与进度展示）
+  correctCount Int       @default(0) @map("correct_count") @db.Int
+  /// 累计作答数（含答错）
+  answerCount  Int       @default(0) @map("answer_count") @db.Int
+  /// 首次通关时间（null = 未通关；只写一次，后续答对不改写）
+  clearedAt    DateTime? @map("cleared_at")
+  /// 创建时间
+  createdAt    DateTime  @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  /// 一个用户在一个场景只有一行
+  @@unique([userId, categoryId])
+  @@index([userId])
+  @@map("study_stage_progress")
+}

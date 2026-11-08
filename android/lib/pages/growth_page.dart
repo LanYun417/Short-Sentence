@@ -10,13 +10,16 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/api_exception.dart';
 import '../api/auth_api.dart';
 import '../api/coach_api.dart';
 import '../api/models/coach.dart';
 import '../api/models/growth.dart';
+import '../api/models/stage.dart';
 import '../api/models/team.dart';
+import '../api/stage_api.dart';
 import '../api/team_api.dart';
 import '../state/card_controller.dart';
 import '../state/growth_controller.dart';
@@ -61,6 +64,7 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     ref.invalidate(memoryGalaxyProvider);
     ref.invalidate(teamProvider);
     ref.invalidate(coachProfileProvider);
+    ref.invalidate(stageOverviewProvider);
     await Future.wait(<Future<void>>[
       ref.read(growthControllerProvider.notifier).refresh(),
       ref.read(cardControllerProvider.notifier).refresh(),
@@ -129,6 +133,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                           // 学习小队放靠前：「就差你啦」是最强的即时行动召唤
                           ref.watch(teamProvider).when(
                             data: (team) => _TeamCard(team: team),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 14),
+                          // 情景闯关：给「下一步练什么」一个带剧情的答案（关卡 = 场景）
+                          ref.watch(stageOverviewProvider).when(
+                            data: (overview) => _StageCard(overview: overview),
                             loading: () => const SizedBox.shrink(),
                             error: (_, _) => const SizedBox.shrink(),
                           ),
@@ -1033,6 +1044,196 @@ class _AiCoachCardState extends ConsumerState<_AiCoachCard> {
               child: Text(_error!,
                   style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ------------------------------ 情景闯关 ------------------------------ */
+
+/// 情景闯关入口卡片：只给总进度与「当前推荐关卡」，完整地图在 /stages。
+///
+/// 刻意不在成长页铺 14 个关卡：成长页已有 5 张卡片，关卡地图需要纵向空间讲剧情，
+/// 挤成图标墙就没人看得出这是个有故事的玩法。
+class _StageCard extends StatelessWidget {
+  const _StageCard({required this.overview});
+
+  final StageOverview overview;
+
+  StageView? get _recommended {
+    final int? id = overview.recommendedId;
+    if (id == null) return null;
+    for (final StageChapter chapter in overview.chapters) {
+      for (final StageView stage in chapter.stages) {
+        if (stage.id == id) return stage;
+      }
+    }
+    return null;
+  }
+
+  StageChapter? get _chapter {
+    final int? id = overview.recommendedId;
+    if (id == null) return null;
+    for (final StageChapter chapter in overview.chapters) {
+      if (chapter.stages.any((StageView stage) => stage.id == id)) return chapter;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final StageView? stage = _recommended;
+    final StageChapter? chapter = _chapter;
+    final double percent = overview.totalStages == 0
+        ? 0
+        : overview.clearedStages / overview.totalStages;
+
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      radius: 22,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.map_rounded, size: 16, color: colors.brand),
+              const SizedBox(width: 6),
+              Text(
+                '情景闯关',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.ink),
+              ),
+              const Spacer(),
+              Text(
+                '已通关 ${overview.clearedStages} / ${overview.totalStages}',
+                style: TextStyle(fontSize: 11, color: colors.inkSoft),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: percent,
+              minHeight: 6,
+              backgroundColor: colors.cardMuted,
+              valueColor: AlwaysStoppedAnimation<Color>(colors.brand),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (stage != null)
+            GestureDetector(
+              onTap: () => context.push('/stages'),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.brand.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      chapter == null
+                          ? stage.name
+                          : '${chapter.name.replaceAll(' ', '')} · ${stage.name}',
+                      style: TextStyle(fontSize: 10.5, color: colors.brand),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      stage.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: colors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      stage.intro,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, height: 1.6, color: colors.inkSoft),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: LinearProgressIndicator(
+                              value: stage.progress / 100,
+                              minHeight: 5,
+                              backgroundColor: colors.card,
+                              valueColor: AlwaysStoppedAnimation<Color>(colors.brand),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${stage.correctCount} / ${stage.target} 句',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: colors.brand,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Text(
+              '全部关卡已通关。回去复习，或者等新的章节上线。',
+              style: TextStyle(fontSize: 12, color: colors.inkSoft),
+            ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              if (overview.claimable > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colors.gold.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${overview.claimable} 个通关奖励待领取',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.gold,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  '每关答对该场景若干句即可通关',
+                  style: TextStyle(fontSize: 10.5, color: colors.inkFaint),
+                ),
+              const Spacer(),
+              InkWell(
+                onTap: () => context.push('/stages'),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      '查看地图',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: colors.brand,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, size: 16, color: colors.brand),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

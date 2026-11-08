@@ -27,6 +27,8 @@ function makeService() {
         ipa: null,
         explanation: null,
         imageFileId: 5n,
+        categoryId: 4n,
+        category: { name: '餐饮美食' },
       })),
       findMany: vi.fn(async () => []),
       count: vi.fn(async () => 0),
@@ -68,6 +70,7 @@ function makeService() {
     fileService as never,
     checkinService as never,
     gamify as never,
+    { recordAnswer: vi.fn(async () => {}) } as never,
   );
   return { service, records };
 }
@@ -107,7 +110,13 @@ describe('getMemoryStats 聚合', () => {
         ]),
       },
     };
-    const service = new QuestionsService(prisma as unknown as PrismaService, {} as never, {} as never, {} as never);
+    const service = new QuestionsService(
+      prisma as unknown as PrismaService,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
 
     const stats = await service.getMemoryStats(1);
     expect(stats.reviewed).toBe(2);

@@ -166,12 +166,12 @@ export default defineNuxtConfig({
   // 而同名 User-agent 的空组有被解读为「允许全部」的风险，反而削弱上面的规则。
   robots: {
     disallowNonIndexableRoutes: false,
-    disallow: ['/ai', '/favorites', '/review', '/profile', '/notices', '/feedback', '/leaderboard'],
+    disallow: ['/ai', '/favorites', '/review', '/profile', '/notices', '/feedback', '/leaderboard', '/stages'],
   },
 
   // sitemap：只保留公开入口。模块会自动发现全部路由，不排除就会把私有页也写进去。
   sitemap: {
-    exclude: ['/ai', '/favorites', '/review', '/profile', '/notices', '/feedback', '/leaderboard'],
+    exclude: ['/ai', '/favorites', '/review', '/profile', '/notices', '/feedback', '/leaderboard', '/stages'],
     urls: () => [
       { loc: '/', changefreq: 'daily', priority: 1 },
       { loc: '/login', changefreq: 'monthly', priority: 0.3 },
