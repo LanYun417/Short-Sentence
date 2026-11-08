@@ -1628,3 +1628,39 @@ export interface HandleFeedbackPayload {
   /** 内部备注（不下发用户端） */
   handleNote?: string;
 }
+
+/* ------------------------------ 句子接龙 ------------------------------ */
+
+/** 接龙条目状态 */
+export type ChainEntryStatus = 'visible' | 'hidden';
+
+/** 接龙条目（后台视角：含举报数与作者 id） */
+export interface ChainEntryAdminItem {
+  id: number;
+  topicId: number;
+  /** 所属主题标题 */
+  topicTitle: string;
+  contentEn: string;
+  contentZh: string | null;
+  likeCount: number;
+  /** 被举报次数（满 3 次服务端自动隐藏） */
+  reportCount: number;
+  status: ChainEntryStatus;
+  /** 作者 id（client_user，仅后台可见） */
+  userId: number;
+  createdAt: string;
+}
+
+/** 接龙查询参数 */
+export interface ChainEntryQuery extends PageQuery {
+  /** visible / hidden；空串表示全部（表单清空后就是空串，故不收窄成联合类型） */
+  status?: string;
+  topicId?: number;
+  keyword?: string;
+}
+
+/** 接龙主题选项 */
+export interface ChainTopicOption {
+  id: number;
+  title: string;
+}

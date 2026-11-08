@@ -28,6 +28,32 @@ export * from './enums.js';
  */
 export type AppVersion = Prisma.AppVersionModel
 /**
+ * Model ChainTopic
+ * 接龙主题：给一句英文开头 + 一句中文提示，用户在此之下匿名续写。
+ * 
+ * 主题由种子写入（运营也可在后台改），**一个主题下的所有条目共享同一条叙事线**，
+ * 这是「接龙」与「句子墙」的区别：不是各写各的，而是接着上一个人的话往下走。
+ */
+export type ChainTopic = Prisma.ChainTopicModel
+/**
+ * Model ChainEntry
+ * 接龙条目：用户匿名提交的一句续写。
+ * 
+ * 与答题/打卡/句签同口径，**刻意不与 client_user 建 Prisma 关系**：
+ * 对外只下发按 userId 派生的稳定化名，作者身份不离开服务端。
+ */
+export type ChainEntry = Prisma.ChainEntryModel
+/**
+ * Model ChainEntryLike
+ * 接龙点赞（一人一条一次；取消即删除）。
+ */
+export type ChainEntryLike = Prisma.ChainEntryLikeModel
+/**
+ * Model ChainEntryReport
+ * 接龙内容举报：一人对一条只能报一次，累计达阈值自动隐藏该条。
+ */
+export type ChainEntryReport = Prisma.ChainEntryReportModel
+/**
  * Model ClientFeedback
  * 客户端用户反馈（对产品本身的意见）
  */

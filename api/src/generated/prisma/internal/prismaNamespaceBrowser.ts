@@ -52,6 +52,10 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   AppVersion: 'AppVersion',
+  ChainTopic: 'ChainTopic',
+  ChainEntry: 'ChainEntry',
+  ChainEntryLike: 'ChainEntryLike',
+  ChainEntryReport: 'ChainEntryReport',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -126,6 +130,57 @@ export const AppVersionScalarFieldEnum = {
 } as const
 
 export type AppVersionScalarFieldEnum = (typeof AppVersionScalarFieldEnum)[keyof typeof AppVersionScalarFieldEnum]
+
+
+export const ChainTopicScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  starterEn: 'starterEn',
+  promptZh: 'promptZh',
+  categoryId: 'categoryId',
+  status: 'status',
+  sort: 'sort',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ChainTopicScalarFieldEnum = (typeof ChainTopicScalarFieldEnum)[keyof typeof ChainTopicScalarFieldEnum]
+
+
+export const ChainEntryScalarFieldEnum = {
+  id: 'id',
+  topicId: 'topicId',
+  userId: 'userId',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  likeCount: 'likeCount',
+  reportCount: 'reportCount',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryScalarFieldEnum = (typeof ChainEntryScalarFieldEnum)[keyof typeof ChainEntryScalarFieldEnum]
+
+
+export const ChainEntryLikeScalarFieldEnum = {
+  id: 'id',
+  entryId: 'entryId',
+  userId: 'userId',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryLikeScalarFieldEnum = (typeof ChainEntryLikeScalarFieldEnum)[keyof typeof ChainEntryLikeScalarFieldEnum]
+
+
+export const ChainEntryReportScalarFieldEnum = {
+  id: 'id',
+  entryId: 'entryId',
+  userId: 'userId',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryReportScalarFieldEnum = (typeof ChainEntryReportScalarFieldEnum)[keyof typeof ChainEntryReportScalarFieldEnum]
 
 
 export const ClientFeedbackScalarFieldEnum = {
@@ -761,12 +816,37 @@ export const AppVersionOrderByRelevanceFieldEnum = {
 export type AppVersionOrderByRelevanceFieldEnum = (typeof AppVersionOrderByRelevanceFieldEnum)[keyof typeof AppVersionOrderByRelevanceFieldEnum]
 
 
+export const ChainTopicOrderByRelevanceFieldEnum = {
+  title: 'title',
+  starterEn: 'starterEn',
+  promptZh: 'promptZh'
+} as const
+
+export type ChainTopicOrderByRelevanceFieldEnum = (typeof ChainTopicOrderByRelevanceFieldEnum)[keyof typeof ChainTopicOrderByRelevanceFieldEnum]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const ChainEntryOrderByRelevanceFieldEnum = {
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  status: 'status'
+} as const
+
+export type ChainEntryOrderByRelevanceFieldEnum = (typeof ChainEntryOrderByRelevanceFieldEnum)[keyof typeof ChainEntryOrderByRelevanceFieldEnum]
+
+
+export const ChainEntryReportOrderByRelevanceFieldEnum = {
+  reason: 'reason'
+} as const
+
+export type ChainEntryReportOrderByRelevanceFieldEnum = (typeof ChainEntryReportOrderByRelevanceFieldEnum)[keyof typeof ChainEntryReportOrderByRelevanceFieldEnum]
 
 
 export const ClientFeedbackOrderByRelevanceFieldEnum = {

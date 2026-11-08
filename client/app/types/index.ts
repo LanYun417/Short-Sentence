@@ -421,3 +421,38 @@ export interface StageClaimResult {
   rewardXp: number;
   xp: number;
 }
+
+/* ------------------------------ 句子接龙 ------------------------------ */
+
+/** 接龙主题。 */
+export interface ChainTopic {
+  id: number;
+  title: string;
+  /** 起始句（英文引子） */
+  starterEn: string;
+  /** 中文提示 */
+  promptZh: string;
+  entryCount: number;
+  myEntryCount: number;
+}
+
+/** 一条接龙（作者以匿名化名出现）。 */
+export interface ChainEntry {
+  id: number;
+  alias: string;
+  contentEn: string;
+  contentZh: string | null;
+  likeCount: number;
+  liked: boolean;
+  mine: boolean;
+  createdAt: string;
+}
+
+/** 主题详情。 */
+export interface ChainTopicDetail {
+  topic: ChainTopic;
+  entries: ChainEntry[];
+  /** 今天还能提交几条 */
+  remainingToday: number;
+  dailyLimit: number;
+}

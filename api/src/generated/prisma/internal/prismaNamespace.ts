@@ -398,6 +398,10 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   AppVersion: 'AppVersion',
+  ChainTopic: 'ChainTopic',
+  ChainEntry: 'ChainEntry',
+  ChainEntryLike: 'ChainEntryLike',
+  ChainEntryReport: 'ChainEntryReport',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -452,7 +456,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -519,6 +523,270 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.AppVersionCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.AppVersionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChainTopic: {
+      payload: Prisma.$ChainTopicPayload<ExtArgs>
+      fields: Prisma.ChainTopicFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChainTopicFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChainTopicFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        findFirst: {
+          args: Prisma.ChainTopicFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChainTopicFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        findMany: {
+          args: Prisma.ChainTopicFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>[]
+        }
+        create: {
+          args: Prisma.ChainTopicCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        createMany: {
+          args: Prisma.ChainTopicCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ChainTopicDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        update: {
+          args: Prisma.ChainTopicUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        deleteMany: {
+          args: Prisma.ChainTopicDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChainTopicUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ChainTopicUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainTopicPayload>
+        }
+        aggregate: {
+          args: Prisma.ChainTopicAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChainTopic>
+        }
+        groupBy: {
+          args: Prisma.ChainTopicGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainTopicGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChainTopicCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainTopicCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChainEntry: {
+      payload: Prisma.$ChainEntryPayload<ExtArgs>
+      fields: Prisma.ChainEntryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChainEntryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChainEntryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        findFirst: {
+          args: Prisma.ChainEntryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChainEntryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        findMany: {
+          args: Prisma.ChainEntryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>[]
+        }
+        create: {
+          args: Prisma.ChainEntryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        createMany: {
+          args: Prisma.ChainEntryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ChainEntryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        update: {
+          args: Prisma.ChainEntryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        deleteMany: {
+          args: Prisma.ChainEntryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChainEntryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ChainEntryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryPayload>
+        }
+        aggregate: {
+          args: Prisma.ChainEntryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChainEntry>
+        }
+        groupBy: {
+          args: Prisma.ChainEntryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChainEntryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChainEntryLike: {
+      payload: Prisma.$ChainEntryLikePayload<ExtArgs>
+      fields: Prisma.ChainEntryLikeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChainEntryLikeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChainEntryLikeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        findFirst: {
+          args: Prisma.ChainEntryLikeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChainEntryLikeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        findMany: {
+          args: Prisma.ChainEntryLikeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>[]
+        }
+        create: {
+          args: Prisma.ChainEntryLikeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        createMany: {
+          args: Prisma.ChainEntryLikeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ChainEntryLikeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        update: {
+          args: Prisma.ChainEntryLikeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        deleteMany: {
+          args: Prisma.ChainEntryLikeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChainEntryLikeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ChainEntryLikeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryLikePayload>
+        }
+        aggregate: {
+          args: Prisma.ChainEntryLikeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChainEntryLike>
+        }
+        groupBy: {
+          args: Prisma.ChainEntryLikeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryLikeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChainEntryLikeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryLikeCountAggregateOutputType> | number
+        }
+      }
+    }
+    ChainEntryReport: {
+      payload: Prisma.$ChainEntryReportPayload<ExtArgs>
+      fields: Prisma.ChainEntryReportFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ChainEntryReportFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ChainEntryReportFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        findFirst: {
+          args: Prisma.ChainEntryReportFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ChainEntryReportFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        findMany: {
+          args: Prisma.ChainEntryReportFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>[]
+        }
+        create: {
+          args: Prisma.ChainEntryReportCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        createMany: {
+          args: Prisma.ChainEntryReportCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ChainEntryReportDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        update: {
+          args: Prisma.ChainEntryReportUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        deleteMany: {
+          args: Prisma.ChainEntryReportDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ChainEntryReportUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ChainEntryReportUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ChainEntryReportPayload>
+        }
+        aggregate: {
+          args: Prisma.ChainEntryReportAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateChainEntryReport>
+        }
+        groupBy: {
+          args: Prisma.ChainEntryReportGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryReportGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ChainEntryReportCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ChainEntryReportCountAggregateOutputType> | number
         }
       }
     }
@@ -3154,6 +3422,57 @@ export const AppVersionScalarFieldEnum = {
 export type AppVersionScalarFieldEnum = (typeof AppVersionScalarFieldEnum)[keyof typeof AppVersionScalarFieldEnum]
 
 
+export const ChainTopicScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  starterEn: 'starterEn',
+  promptZh: 'promptZh',
+  categoryId: 'categoryId',
+  status: 'status',
+  sort: 'sort',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ChainTopicScalarFieldEnum = (typeof ChainTopicScalarFieldEnum)[keyof typeof ChainTopicScalarFieldEnum]
+
+
+export const ChainEntryScalarFieldEnum = {
+  id: 'id',
+  topicId: 'topicId',
+  userId: 'userId',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  likeCount: 'likeCount',
+  reportCount: 'reportCount',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryScalarFieldEnum = (typeof ChainEntryScalarFieldEnum)[keyof typeof ChainEntryScalarFieldEnum]
+
+
+export const ChainEntryLikeScalarFieldEnum = {
+  id: 'id',
+  entryId: 'entryId',
+  userId: 'userId',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryLikeScalarFieldEnum = (typeof ChainEntryLikeScalarFieldEnum)[keyof typeof ChainEntryLikeScalarFieldEnum]
+
+
+export const ChainEntryReportScalarFieldEnum = {
+  id: 'id',
+  entryId: 'entryId',
+  userId: 'userId',
+  reason: 'reason',
+  createdAt: 'createdAt'
+} as const
+
+export type ChainEntryReportScalarFieldEnum = (typeof ChainEntryReportScalarFieldEnum)[keyof typeof ChainEntryReportScalarFieldEnum]
+
+
 export const ClientFeedbackScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3787,12 +4106,37 @@ export const AppVersionOrderByRelevanceFieldEnum = {
 export type AppVersionOrderByRelevanceFieldEnum = (typeof AppVersionOrderByRelevanceFieldEnum)[keyof typeof AppVersionOrderByRelevanceFieldEnum]
 
 
+export const ChainTopicOrderByRelevanceFieldEnum = {
+  title: 'title',
+  starterEn: 'starterEn',
+  promptZh: 'promptZh'
+} as const
+
+export type ChainTopicOrderByRelevanceFieldEnum = (typeof ChainTopicOrderByRelevanceFieldEnum)[keyof typeof ChainTopicOrderByRelevanceFieldEnum]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const ChainEntryOrderByRelevanceFieldEnum = {
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  status: 'status'
+} as const
+
+export type ChainEntryOrderByRelevanceFieldEnum = (typeof ChainEntryOrderByRelevanceFieldEnum)[keyof typeof ChainEntryOrderByRelevanceFieldEnum]
+
+
+export const ChainEntryReportOrderByRelevanceFieldEnum = {
+  reason: 'reason'
+} as const
+
+export type ChainEntryReportOrderByRelevanceFieldEnum = (typeof ChainEntryReportOrderByRelevanceFieldEnum)[keyof typeof ChainEntryReportOrderByRelevanceFieldEnum]
 
 
 export const ClientFeedbackOrderByRelevanceFieldEnum = {
@@ -4356,6 +4700,10 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   appVersion?: Prisma.AppVersionOmit
+  chainTopic?: Prisma.ChainTopicOmit
+  chainEntry?: Prisma.ChainEntryOmit
+  chainEntryLike?: Prisma.ChainEntryLikeOmit
+  chainEntryReport?: Prisma.ChainEntryReportOmit
   clientFeedback?: Prisma.ClientFeedbackOmit
   clientNotice?: Prisma.ClientNoticeOmit
   clientNoticeRead?: Prisma.ClientNoticeReadOmit

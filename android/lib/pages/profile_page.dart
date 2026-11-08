@@ -189,6 +189,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.map_outlined,
+                    label: '情景闯关',
+                    hint: '十四个场景，答对就往前走一段故事',
+                    onTap: () => context.push('/stages'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
+                    icon: Icons.edit_note_rounded,
+                    label: '句子接龙',
+                    hint: '一句开头，匿名往下接',
+                    onTap: () => context.push('/chains'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.campaign_outlined,
                     label: '消息中心',
                     hint: '运营公告与活动通知',

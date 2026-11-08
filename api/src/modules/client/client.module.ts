@@ -34,6 +34,9 @@ import { ClientCoachController } from './ai/coach.controller.js';
 import { ClientCoachService } from './ai/coach.service.js';
 import { StageController } from './stage/stage.controller.js';
 import { StageService } from './stage/stage.service.js';
+import { ChainController } from './chain/chain.controller.js';
+import { ChainAdminController } from './chain/chain-admin.controller.js';
+import { ChainService } from './chain/chain.service.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -61,6 +64,9 @@ import { StageService } from './stage/stage.service.js';
     ClientCoachController,
     // 情景闯关（关卡 = 场景；进度与通关奖励）
     StageController,
+    // 句子接龙（匿名共创；后台审核控制器与它共用同一个 service，见下方注释）
+    ChainController,
+    ChainAdminController,
   ],
   providers: [
     ClientAuthUserService,
@@ -78,6 +84,8 @@ import { StageService } from './stage/stage.service.js';
     ClientCoachService,
     // 情景闯关：进度由 QuestionsService 在答题链路写入，故必须在此登记
     StageService,
+    // 接龙：客户端与后台审核共用同一份内容校验规则，故意只放一个 service
+    ChainService,
   ],
 })
 export class ClientModule {}

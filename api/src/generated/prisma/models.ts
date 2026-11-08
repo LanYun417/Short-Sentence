@@ -9,6 +9,10 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/AppVersion.js'
+export type * from './models/ChainTopic.js'
+export type * from './models/ChainEntry.js'
+export type * from './models/ChainEntryLike.js'
+export type * from './models/ChainEntryReport.js'
 export type * from './models/ClientFeedback.js'
 export type * from './models/ClientNotice.js'
 export type * from './models/ClientNoticeRead.js'

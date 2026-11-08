@@ -1,0 +1,104 @@
+// use prisma-next
+
+/// 接龙主题：给一句英文开头 + 一句中文提示，用户在此之下匿名续写。
+///
+/// 主题由种子写入（运营也可在后台改），**一个主题下的所有条目共享同一条叙事线**，
+/// 这是「接龙」与「句子墙」的区别：不是各写各的，而是接着上一个人的话往下走。
+model ChainTopic {
+  /// 主键
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 主题标题（中文，如「如果那天我没有上那班地铁」）
+  title      String   @db.VarChar(60)
+  /// 起始句（英文，接龙的引子）
+  starterEn  String   @map("starter_en") @db.VarChar(200)
+  /// 中文提示（引导续写方向）
+  promptZh   String   @map("prompt_zh") @db.VarChar(200)
+  /// 关联场景分类 id（0 = 不限；仅用于归类展示）
+  categoryId BigInt   @default(0) @map("category_id") @db.BigInt
+  /// 1 启用 / 0 停用
+  status     Int      @default(1) @db.TinyInt
+  /// 排序（升序）
+  sort       Int      @default(0) @db.Int
+  /// 创建时间
+  createdAt  DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  entries ChainEntry[]
+
+  @@index([status, sort])
+  @@map("chain_topic")
+}
+
+/// 接龙条目：用户匿名提交的一句续写。
+///
+/// 与答题/打卡/句签同口径，**刻意不与 client_user 建 Prisma 关系**：
+/// 对外只下发按 userId 派生的稳定化名，作者身份不离开服务端。
+model ChainEntry {
+  /// 主键
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 所属主题
+  topicId     BigInt   @map("topic_id") @db.BigInt
+  /// 作者 id（client_user；仅服务端判定「我的」用，不下发）
+  userId      BigInt   @map("user_id") @db.BigInt
+  /// 英文续写（已过内容校验：ASCII、长度、无链接/联系方式）
+  contentEn   String   @map("content_en") @db.VarChar(200)
+  /// 中文翻译（可空）
+  contentZh   String?  @map("content_zh") @db.VarChar(120)
+  /// 点赞数（冗余计数，列表按它排序，避免每次聚合）
+  likeCount   Int      @default(0) @map("like_count") @db.Int
+  /// 被举报次数（一人一次，去重在 chain_entry_report 的唯一键上）
+  reportCount Int      @default(0) @map("report_count") @db.Int
+  /// 状态：visible 正常 / hidden 已隐藏（举报达阈值自动置位，或运营手动）
+  status      String   @default("visible") @db.VarChar(20)
+  /// 创建时间
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  topic   ChainTopic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  likes   ChainEntryLike[]
+  reports ChainEntryReport[]
+
+  @@index([topicId, status, likeCount])
+  @@index([userId, createdAt])
+  @@map("chain_entry")
+}
+
+/// 接龙点赞（一人一条一次；取消即删除）。
+model ChainEntryLike {
+  /// 主键
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 条目 id
+  entryId   BigInt   @map("entry_id") @db.BigInt
+  /// 点赞用户 id
+  userId    BigInt   @map("user_id") @db.BigInt
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry ChainEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  /// 同一用户对同一条目只能赞一次
+  @@unique([entryId, userId])
+  @@index([userId])
+  @@map("chain_entry_like")
+}
+
+/// 接龙内容举报：一人对一条只能报一次，累计达阈值自动隐藏该条。
+model ChainEntryReport {
+  /// 主键
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 条目 id
+  entryId   BigInt   @map("entry_id") @db.BigInt
+  /// 举报人 id
+  userId    BigInt   @map("user_id") @db.BigInt
+  /// 原因：inappropriate 内容不当 / spam 广告灌水 / other 其他
+  reason    String   @default("inappropriate") @db.VarChar(20)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry ChainEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  /// 同一用户对同一条目只能举报一次（自动隐藏的计数依赖这个约束）
+  @@unique([entryId, userId])
+  @@index([entryId])
+  @@map("chain_entry_report")
+}

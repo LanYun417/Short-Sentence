@@ -6830,6 +6830,97 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/chains",
+        "summary": "分页列表（按举报数倒序，优先暴露有问题的条目）",
+        "permission": [
+          "sentence:chain"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "topicId",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/chains?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/chains/topics",
+        "summary": "主题下拉选项",
+        "permission": [
+          "sentence:chain"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/chains/topics?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/reports",
         "summary": "分页列表（筛选：status/reason/keyword）",
         "permission": [
@@ -7511,6 +7602,43 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "PUT",
+        "path": "/api/chains/:id/status",
+        "summary": "隐藏 / 恢复一条接龙",
+        "permission": [
+          "sentence:chain:handle"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 审核接龙",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "'visible' | 'hidden'",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/chains/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "PUT",
         "path": "/api/reports/:id",
         "summary": "处理举报（标记已处理/已驳回 + 备注）",
         "permission": [
@@ -7725,6 +7853,32 @@ export const API_DOCS: ApiDocGroup[] = [
             "icon": "示例值",
             "sort": 1,
             "status": 1
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/chains/:id",
+        "summary": "删除一条接龙（级联清点赞与举报记录）",
+        "permission": [
+          "sentence:chain:handle"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 删除接龙",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/chains/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
           }
         }
       },
@@ -8676,6 +8830,171 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X DELETE \"http://localhost:3000/api/app-versions/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "Chain",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/chains",
+        "summary": "接龙主题列表",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/chains?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/chains/:id",
+        "summary": "主题详情 + 接龙内容",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/chains/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/chains/:id/entries",
+        "summary": "提交一条续写",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "contentEn",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "英文续写（必填）",
+            "example": "示例值"
+          },
+          {
+            "name": "contentZh",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "中文翻译（可选）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/chains/1/entries\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"contentEn\": \"示例值\",\n      \"contentZh\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "contentEn": "示例值",
+            "contentZh": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/chains/entries/:entryId/like",
+        "summary": "点赞 / 取消点赞（同一入口，幂等）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/chains/entries/1/like\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "entryId": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/chains/entries/:entryId/report",
+        "summary": "举报（一人一条一次，累计达阈值自动隐藏）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "reason",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "原因：inappropriate 内容不当 / spam 广告灌水 / other 其他",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/chains/entries/1/report\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"reason\": \"示例值\"\n    }'",
+          "pathParams": {
+            "entryId": "1"
+          },
+          "requestBody": {
+            "reason": "示例值"
           }
         }
       }

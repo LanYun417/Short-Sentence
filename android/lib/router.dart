@@ -11,6 +11,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'pages/chain_page.dart';
 import 'pages/leaderboard_page.dart';
 import 'pages/login_page.dart';
 import 'pages/shell_page.dart';
@@ -45,6 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
       GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
       GoRoute(path: '/stages', builder: (context, state) => const StagePage()),
+      GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
     ],
   );
 });

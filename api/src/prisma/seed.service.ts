@@ -14,6 +14,7 @@
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { DataScope, MenuType, Status, SUPER_ADMIN_ROLE } from '../common/config/constants.js';
 import { hashPassword } from '../common/utils/utils.js';
+import { CHAIN_TOPIC_SEEDS } from '../modules/client/chain/chain-topics.js';
 import { PrismaService } from './prisma.service.js';
 
 /** 日志上下文（种子各步骤共用）。 */
@@ -1029,6 +1030,28 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 接龙审核：UGC 内容复核（举报达阈值自动隐藏，这里可人工恢复/删除）
+        key: 'sentence:chain',
+        menuName: '接龙审核',
+        menuType: MenuType.MENU,
+        path: '/sentence/chain',
+        component: 'sentence/chain',
+        icon: 'chat-square-quote',
+        permission: 'sentence:chain',
+        sort: 11,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:chain:handle',
+            menuName: '审核/删除',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:chain:handle',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）
@@ -1656,6 +1679,7 @@ export async function runSeed(prisma: PrismaService): Promise<void> {
   await seedConfig(prisma);
   await seedSentenceCategories(prisma);
   await seedAchievements(prisma);
+  await seedChainTopics(prisma);
 
   logger.log('种子数据初始化完成');
 }
@@ -1710,6 +1734,34 @@ async function seedSentenceCategories(prisma: PrismaService): Promise<void> {
     }
   }
   logger.log(`短句分类数据完成，共 ${SENTENCE_CATEGORY_SEEDS.length} 个（新建 ${created} 个）`);
+}
+
+/* --------------------------------- 接龙主题种子 -------------------------------- */
+
+/**
+ * 写入接龙主题（幂等：按 title 去重）。
+ *
+ * **只补不更新**：运营在后台改过的提示语不该被下一次启动覆盖，
+ * 与成就种子同口径（那边按 code 只补，这边按 title 只补）。
+ */
+async function seedChainTopics(prisma: PrismaService): Promise<void> {
+  let created = 0;
+  for (const seed of CHAIN_TOPIC_SEEDS) {
+    const existing = await prisma.chainTopic.findFirst({ where: { title: seed.title }, select: { id: true } });
+    if (!existing) {
+      await prisma.chainTopic.create({
+        data: {
+          title: seed.title,
+          starterEn: seed.starterEn,
+          promptZh: seed.promptZh,
+          sort: seed.sort,
+          status: Status.ENABLED,
+        },
+      });
+      created += 1;
+    }
+  }
+  logger.log(`接龙主题数据完成，共 ${CHAIN_TOPIC_SEEDS.length} 个（新建 ${created} 个）`);
 }
 
 /* --------------------------------- 成就种子 -------------------------------- */
