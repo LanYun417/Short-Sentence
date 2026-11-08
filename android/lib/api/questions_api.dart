@@ -15,6 +15,7 @@ import 'api_exception.dart';
 import 'dio_client.dart';
 import 'models/question.dart';
 import 'models/memory_stats.dart';
+import 'models/memory_galaxy.dart';
 
 /// 抽题查询参数。
 ///
@@ -143,6 +144,16 @@ class QuestionsApi {
     try {
       final response = await _dio.get<dynamic>('/client/questions/memory-stats');
       return MemoryStats.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 记忆星系（星座坐标 / 星点亮度由后端确定性生成）。
+  Future<MemoryGalaxy> getMemoryGalaxy() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/questions/memory-galaxy');
+      return MemoryGalaxy.fromJson(_data(response));
     } on DioException catch (error) {
       throw _wrap(error);
     }

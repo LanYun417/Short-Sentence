@@ -4,6 +4,9 @@
 /// 下面的白卡再展开成就与场景——一屏之内不出现第二个渐变块，避免抢焦点。
 library;
 
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +27,7 @@ import '../widgets/staggered.dart';
 import '../sheets/claim_card.dart';
 import '../sheets/sentence_card_sheet.dart';
 import '../api/models/memory_stats.dart';
+import '../api/models/memory_galaxy.dart';
 import '../api/questions_api.dart';
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -47,8 +51,9 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   }
 
   Future<void> _refresh() async {
-    // 记忆健康概览随成长页一起刷新
+    // 记忆概览与星系随成长页一起刷新（答题后星点亮度/数量会变）
     ref.invalidate(memoryStatsProvider);
+    ref.invalidate(memoryGalaxyProvider);
     await Future.wait(<Future<void>>[
       ref.read(growthControllerProvider.notifier).refresh(),
       ref.read(cardControllerProvider.notifier).refresh(),
@@ -116,6 +121,12 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                           const SizedBox(height: 14),
                           ref.watch(memoryStatsProvider).when(
                             data: (stats) => _MemoryHealthCard(stats: stats),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 14),
+                          ref.watch(memoryGalaxyProvider).when(
+                            data: (galaxy) => _MemoryGalaxyCard(galaxy: galaxy),
                             loading: () => const SizedBox.shrink(),
                             error: (_, _) => const SizedBox.shrink(),
                           ),
@@ -772,6 +783,234 @@ class _RetentionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RetentionPainter old) => false;
+}
+
+/* ------------------------------ 记忆星系 ------------------------------ */
+
+/// 记忆星系数据（与记忆巩固互补：一个讲趋势，一个讲收藏感）。
+final memoryGalaxyProvider = FutureProvider<MemoryGalaxy>((ref) async {
+  final api = ref.watch(questionsApiProvider);
+  return api.getMemoryGalaxy();
+});
+
+class _MemoryGalaxyCard extends StatelessWidget {
+  const _MemoryGalaxyCard({required this.galaxy});
+
+  final MemoryGalaxy galaxy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hint = theme.textTheme.bodySmall?.color;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text('记忆星系',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('每一句都是一颗星',
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _MemoryStat(
+                  value: '${galaxy.litClusters}/${galaxy.totalClusters}',
+                  label: '已点亮星座',
+                  color: Colors.lightBlue),
+              _MemoryStat(
+                  value: '${galaxy.graduated}',
+                  label: '毕业之星',
+                  color: Colors.amber),
+              _MemoryStat(
+                  value: '${galaxy.dueCount}',
+                  label: '该复习了',
+                  color: Colors.orange),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: CustomPaint(painter: _GalaxyPainter(galaxy: galaxy)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: const <Widget>[
+              _GalaxyLegend(color: Color(0xFFFBBF24), label: '已毕业'),
+              _GalaxyLegend(color: Color(0xFF7DD3FC), label: '记忆稳固'),
+              _GalaxyLegend(color: Color(0xFFFB923C), label: '到期该复习'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GalaxyLegend extends StatelessWidget {
+  const _GalaxyLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color),
+          ),
+        ],
+      );
+}
+
+/// 星空自绘：坐标 / 颜色 / 亮度全部来自后端，与 Web 端同一套数据。
+/// 这里不加入闪烁动画（静态星图功耗更低，也不需要在 Widget 测试里关循环动画）。
+class _GalaxyPainter extends CustomPainter {
+  const _GalaxyPainter({required this.galaxy});
+
+  final MemoryGalaxy galaxy;
+
+  static const Color _gold = Color(0xFFFBBF24);
+  static const Color _stable = Color(0xFF7DD3FC);
+  static const Color _faded = Color(0xFFFB923C);
+
+  Color _tone(String tone) {
+    if (tone == 'gold') return _gold;
+    if (tone == 'faded') return _faded;
+    return _stable;
+  }
+
+  void _drawLabel(Canvas canvas, String text, double x, double y, Color color) {
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(fontSize: 7.5, color: color)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(x - tp.width / 2, y));
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bg = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(size.width * 0.5, size.height * 0.45),
+        size.width * 0.72,
+        const <Color>[
+          Color(0xFF1B2450),
+          Color(0xFF111832),
+          Color(0xFF080C1A),
+        ],
+        const <double>[0.0, 0.6, 1.0],
+      );
+    canvas.drawRect(Offset.zero & size, bg);
+
+    // 背景星尘：与 Web 端同 seed 同算法，纯装饰
+    var seed = 20261108;
+    double rnd() {
+      seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF;
+      return seed / 4294967296;
+    }
+
+    for (var i = 0; i < 70; i++) {
+      final x = rnd() * size.width;
+      final y = rnd() * size.height;
+      final r = 0.35 + rnd() * 0.75;
+      final o = 0.12 + rnd() * 0.35;
+      canvas.drawCircle(
+        Offset(x, y),
+        r,
+        Paint()..color = const Color(0xFFCBD5E1).withValues(alpha: o),
+      );
+    }
+
+    // 星座轮廓：点亮为实线圈、未探索为虚线圈
+    for (final c in galaxy.clusters) {
+      final center = Offset(c.x * size.width, c.y * size.height);
+      final ring = 12.0 + math.min(26.0, c.starCount * 1.6);
+      final lit = c.starCount > 0;
+      final ringPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.8
+        ..color = lit
+            ? const Color(0xFF60A5FA).withValues(alpha: 0.22)
+            : const Color(0xFF475569).withValues(alpha: 0.16);
+      if (lit) {
+        canvas.drawCircle(center, ring, ringPaint);
+      } else {
+        // 12 段弧隔段绘制 = 虚线圈，表示「待探索」
+        const segments = 12;
+        for (var k = 0; k < segments; k += 2) {
+          canvas.drawArc(
+            Rect.fromCircle(center: center, radius: ring),
+            k * 2 * math.pi / segments,
+            2 * math.pi / segments,
+            false,
+            ringPaint,
+          );
+        }
+      }
+      _drawLabel(
+        canvas,
+        c.name,
+        center.dx,
+        math.min(size.height - 10, center.dy + ring + 10),
+        lit ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+      );
+    }
+
+    // 记忆星：光晕 + 实心核
+    for (final s in galaxy.stars) {
+      final center = Offset(s.x * size.width, s.y * size.height);
+      final r = s.radius * 1.35;
+      final color = _tone(s.tone);
+      if (s.tone == 'gold' || s.radius > 2.6) {
+        canvas.drawCircle(
+          center,
+          r * 2.4,
+          Paint()..color = color.withValues(alpha: 0.13),
+        );
+      }
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()..color = color.withValues(alpha: 0.35 + s.brightness * 0.65),
+      );
+    }
+
+    if (galaxy.stars.isEmpty) {
+      final tp = TextPainter(
+        text: const TextSpan(
+          text: '星空还是空的，去练第一句吧',
+          style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas,
+          Offset((size.width - tp.width) / 2, size.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GalaxyPainter old) => old.galaxy != galaxy;
 }
 
 /* ------------------------------ 成就墙 ------------------------------ */

@@ -155,6 +155,9 @@ function iconOf(name: string): string {
 
       <MemoryHealthCard />
     </div>
+
+    <!-- 记忆星系：学过的句子按场景聚成星座（与记忆巩固互补，一个讲趋势、一个讲收藏感） -->
+    <MemoryGalaxyCard />
   </div>
 
   <div v-else class="py-10 text-center text-sm text-slate-400">成长数据加载中…</div>

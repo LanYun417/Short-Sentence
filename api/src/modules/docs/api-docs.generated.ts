@@ -5946,6 +5946,32 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/client-users/:id/sentence-cards/missing",
+        "summary": "未拥有的句签（已就绪 − 已获得；total + 最近一批，供详情弹窗「未拥有」区展示）",
+        "permission": [
+          "client:user:query"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/1/sentence-cards/missing\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client-users/export",
         "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）",
         "permission": [
@@ -6005,6 +6031,32 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client-users/1/sentence-cards/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client-users/:id/sentence-cards/grant",
+        "summary": "一键解锁指定句签（幂等；重复解锁返回 alreadyOwned=true）",
+        "permission": [
+          "client:user:edit"
+        ],
+        "isPublic": false,
+        "action": "客户端用户 · 解锁句签",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client-users/1/sentence-cards/grant\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
           }
@@ -6594,6 +6646,72 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X GET \"http://localhost:3000/api/client/questions/festivals?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/questions/memory-galaxy",
+        "summary": "记忆星系：学过的句子按场景聚成星座，坐标为后端确定性生成（双端一致）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/memory-galaxy?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/questions/memory-stats",
+        "summary": "记忆健康概览（遗忘曲线 / 待复习分布可视化）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/memory-stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -7357,6 +7475,41 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "POST",
+        "path": "/api/sentences/word-meanings/backfill",
+        "summary": "补全存量题逐词释义（管理端手动、按批；拼词模式悬浮词义用）。 与解析回填同一取舍：全量补一遍要花不少 token，由运营决定什么时候花、花多少。 默认补「还没有词义」的题；force=true 重生成「已有词义」的题（模型升级后刷新口径）。 每批返回 scanned/updated/remaining（remaining 恒为「缺词义」的题数，便于点到 0）",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 逐词释义回填",
+        "params": [
+          {
+            "name": "limit",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
+            "example": 1
+          },
+          {
+            "name": "force",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "是否重新生成已有词义（缺省 false）。 true = 连已生成过释义的题一起重新生成（用于模型升级后统一刷新口径）， 可反复点到 remaining=0。",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/word-meanings/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"limit\": 1,\n      \"force\": true\n    }'",
+          "requestBody": {
+            "limit": 1,
+            "force": true
+          }
+        }
+      },
+      {
         "method": "PUT",
         "path": "/api/reports/:id",
         "summary": "处理举报（标记已处理/已驳回 + 备注）",
@@ -7630,7 +7783,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "DELETE",
         "path": "/api/sentences/gen-tasks/:id",
-        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目）",
+        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目；运行中的批次会在当前批次边界停下）",
         "permission": [
           "sentence:gen"
         ],
@@ -8027,7 +8180,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "POST",
         "path": "/api/ai-settings/test",
-        "summary": "测试连通性：用当前生文模型发一个极短的请求。 只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "summary": "测试连通性：用指定通道发一个极短的请求。 `channel=nim` 时测英伟达 NIM 生题通道（地址/密钥/模型回落到全局 Agnes 对应项）； 缺省测全局生文模型。只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
         "permission": [
           "system:ai:edit"
         ],
@@ -8078,15 +8231,51 @@ export const API_DOCS: ApiDocGroup[] = [
             "required": false,
             "description": "生图模型（留空 = 不修改）",
             "example": "示例值"
+          },
+          {
+            "name": "nimBaseUrl",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。",
+            "example": "示例值"
+          },
+          {
+            "name": "nimApiKey",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效）",
+            "example": "示例值"
+          },
+          {
+            "name": "nimModel",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM）",
+            "example": "示例值"
+          },
+          {
+            "name": "genChannel",
+            "in": "body",
+            "type": "'agnes' | 'nim'",
+            "required": false,
+            "description": "生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。",
+            "example": "示例值"
           }
         ],
         "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/ai-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"apiKey\": \"示例值\",\n      \"baseUrl\": \"示例值\",\n      \"textModel\": \"示例值\",\n      \"imageModel\": \"示例值\"\n    }'",
+          "curl": "curl -X PUT \"http://localhost:3000/api/ai-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"apiKey\": \"示例值\",\n      \"baseUrl\": \"示例值\",\n      \"textModel\": \"示例值\",\n      \"imageModel\": \"示例值\",\n      \"nimBaseUrl\": \"示例值\",\n      \"nimApiKey\": \"示例值\",\n      \"nimModel\": \"示例值\",\n      \"genChannel\": \"示例值\"\n    }'",
           "requestBody": {
             "apiKey": "示例值",
             "baseUrl": "示例值",
             "textModel": "示例值",
-            "imageModel": "示例值"
+            "imageModel": "示例值",
+            "nimBaseUrl": "示例值",
+            "nimApiKey": "示例值",
+            "nimModel": "示例值",
+            "genChannel": "示例值"
           }
         }
       }
@@ -8601,6 +8790,35 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X DELETE \"http://localhost:3000/api/ip-ban/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "ip": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "Leaderboard",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/leaderboard",
+        "summary": "排行榜：type=today_* / week_* / month_*（今日、近 7 天、近 30 天答题/答对前 100）、 checkin_total（累计打卡天数前 100）。响应附带当前用户名次 me（未上榜为 null）。 名次型成就（榜上有名 / 十强之列 / 三甲之列 / 榜首加冕）在这里旁路解锁：名次只有查榜单 时才算得出来，答题路径不做全表聚合；仅进入前 100 才触发，且由 GamifyService 在勋章 集齐后短路，避免每次看榜都白跑一遍",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "type",
+            "in": "query",
+            "type": "LeaderboardType",
+            "required": true,
+            "description": "榜单类型（必填）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/leaderboard?type=%E7%A4%BA%E4%BE%8B%E5%80%BC\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "type": "示例值"
           }
         }
       }

@@ -144,6 +144,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
     },
     {
       "name": "IP黑名单"
+    },
+    {
+      "name": "Leaderboard"
     }
   ],
   "paths": {
@@ -10935,6 +10938,80 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client-users/{id}/sentence-cards/missing": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "未拥有的句签（已就绪 − 已获得；total + 最近一批，供详情弹窗「未拥有」区展示）",
+        "operationId": "get__api_client_users__id_sentence_cards_missing",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client-users/export": {
       "get": {
         "tags": [
@@ -11023,6 +11100,60 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "补发过往漏领的句签（历史达标日 + 当日句签已就绪；幂等，重复调用不重复发）",
         "operationId": "post__api_client_users__id_sentence_cards_backfill",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client-users/{id}/sentence-cards/grant": {
+      "post": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "一键解锁指定句签（幂等；重复解锁返回 alreadyOwned=true）",
+        "operationId": "post__api_client_users__id_sentence_cards_grant",
         "parameters": [
           {
             "name": "id",
@@ -12333,6 +12464,176 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）",
         "operationId": "get__api_client_questions_festivals",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/questions/memory-galaxy": {
+      "get": {
+        "tags": [
+          "刷题"
+        ],
+        "summary": "记忆星系：学过的句子按场景聚成星座，坐标为后端确定性生成（双端一致）",
+        "operationId": "get__api_client_questions_memory_galaxy",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/questions/memory-stats": {
+      "get": {
+        "tags": [
+          "刷题"
+        ],
+        "summary": "记忆健康概览（遗忘曲线 / 待复习分布可视化）",
+        "operationId": "get__api_client_questions_memory_stats",
         "parameters": [
           {
             "name": "page",
@@ -13923,6 +14224,61 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/word-meanings/backfill": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "补全存量题逐词释义（管理端手动、按批；拼词模式悬浮词义用）。 与解析回填同一取舍：全量补一遍要花不少 token，由运营决定什么时候花、花多少。 默认补「还没有词义」的题；force=true 重生成「已有词义」的题（模型升级后刷新口径）。 每批返回 scanned/updated/remaining（remaining 恒为「缺词义」的题数，便于点到 0）",
+        "operationId": "post__api_sentences_word_meanings_backfill",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillWordMeaningsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BackfillWordMeaningsDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/reports/{id}": {
       "put": {
         "tags": [
@@ -14112,7 +14468,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "题库管理"
         ],
-        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目）",
+        "summary": "删除批次（保留已配图题目，只清理未生成配图的题目；运行中的批次会在当前批次边界停下）",
         "operationId": "delete__api_sentences_gen_tasks__id",
         "parameters": [
           {
@@ -14932,7 +15288,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "AI 设置"
         ],
-        "summary": "测试连通性：用当前生文模型发一个极短的请求。 只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "summary": "测试连通性：用指定通道发一个极短的请求。 `channel=nim` 时测英伟达 NIM 生题通道（地址/密钥/模型回落到全局 Agnes 对应项）； 缺省测全局生文模型。只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
         "operationId": "post__api_ai_settings_test",
         "responses": {
           "200": {
@@ -15775,6 +16131,82 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                       "example": "success"
                     },
                     "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/leaderboard": {
+      "get": {
+        "tags": [
+          "Leaderboard"
+        ],
+        "summary": "排行榜：type=today_* / week_* / month_*（今日、近 7 天、近 30 天答题/答对前 100）、 checkin_total（累计打卡天数前 100）。响应附带当前用户名次 me（未上榜为 null）。 名次型成就（榜上有名 / 十强之列 / 三甲之列 / 榜首加冕）在这里旁路解锁：名次只有查榜单 时才算得出来，答题路径不做全表聚合；仅进入前 100 才触发，且由 GamifyService 在勋章 集齐后短路，避免每次看榜都白跑一遍",
+        "operationId": "get__api_client_leaderboard",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "榜单类型（必填）",
+              "example": "示例值"
+            },
+            "description": "榜单类型（必填）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
                   },
                   "required": [
                     "code",
@@ -16828,6 +17260,21 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           }
         }
       },
+      "BackfillWordMeaningsDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "本批补多少条（缺省 20，上限 100）。 上限刻意压得低：一次补太多会长时间占用上游配额并逼近请求超时， 分批点几次更可控，接口每次都返回剩余条数。",
+            "example": 1
+          },
+          "force": {
+            "type": "boolean",
+            "description": "是否重新生成已有词义（缺省 false）。 true = 连已生成过释义的题一起重新生成（用于模型升级后统一刷新口径）， 可反复点到 remaining=0。",
+            "example": true
+          }
+        }
+      },
       "HandleReportDto": {
         "type": "object",
         "properties": {
@@ -16921,6 +17368,26 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "imageModel": {
             "type": "string",
             "description": "生图模型（留空 = 不修改）",
+            "example": "示例值"
+          },
+          "nimBaseUrl": {
+            "type": "string",
+            "description": "英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。",
+            "example": "示例值"
+          },
+          "nimApiKey": {
+            "type": "string",
+            "description": "英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效）",
+            "example": "示例值"
+          },
+          "nimModel": {
+            "type": "string",
+            "description": "英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM）",
+            "example": "示例值"
+          },
+          "genChannel": {
+            "type": "string",
+            "description": "生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。",
             "example": "示例值"
           }
         }

@@ -30,6 +30,12 @@ export class QuestionsController {
     return this.questions.getMemoryStats(user.userId);
   }
 
+  /** 记忆星系：学过的句子按场景聚成星座，坐标为后端确定性生成（双端一致）。 */
+  @Get('memory-galaxy')
+  memoryGalaxy(@CurrentClientUser() user: ClientUserContext) {
+    return this.questions.getMemoryGalaxy(user.userId);
+  }
+
   /** 可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）。 */
   @Get('festivals')
   festivals() {

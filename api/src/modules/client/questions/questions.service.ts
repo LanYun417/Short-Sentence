@@ -58,6 +58,66 @@ export interface MemoryStats {
   retentionCurve: Array<{ day: number; retention: number }>;
 }
 
+/** 一颗「记忆星」：用户学过的某个句子在星系中的可视化表示。 */
+export interface GalaxyStar {
+  /** 归一化坐标 0..1；由后端按 sentenceId 确定性生成，保证 Web/App 一致且刷新不跳 */
+  x: number;
+  y: number;
+  /** 星点半径（相对单位，前端按画布比例缩放） */
+  radius: number;
+  /** 亮度 0..1：记忆强度 × 新鲜度 */
+  brightness: number;
+  /** gold=已毕业 / stable=记忆稳固 / faded=到期该复习（暖色提醒） */
+  tone: 'gold' | 'stable' | 'faded';
+  /** 所属星座（场景分类）id */
+  categoryId: number;
+}
+
+/** 一个星座（场景分类）。未点亮的也会返回，供前端画「待探索」轮廓。 */
+export interface GalaxyCluster {
+  categoryId: number;
+  name: string;
+  nameEn: string | null;
+  /** 星座中心归一化坐标 0..1 */
+  x: number;
+  y: number;
+  /** 该场景学过的句数 */
+  starCount: number;
+  graduated: number;
+  dueCount: number;
+  /** 平均记忆强度 0..1 */
+  avgStrength: number;
+}
+
+/** 记忆星系：把「学过的句子」画成一片星空，按场景聚成星座。 */
+export interface MemoryGalaxy {
+  stars: GalaxyStar[];
+  clusters: GalaxyCluster[];
+  /** 学过的总句数（超过渲染上限时可能大于 stars.length） */
+  totalLearned: number;
+  /** 全局已毕业星数 */
+  graduated: number;
+  /** 全局今日到期需复习的星数（与 MemoryStats.dueToday 同口径） */
+  dueCount: number;
+  /** 已点亮星座数（至少学过 1 句） */
+  litClusters: number;
+  totalClusters: number;
+}
+
+/**
+ * 确定性伪随机（mulberry32）：同一 seed 恒得同一序列。
+ * 星点坐标不能每次刷新都变，否则「我的星系」失去收藏感。
+ */
+function seededRandom(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** 下一张卡（不含答案字段）。 */
 export interface NextQuestion {
   sentenceId: number;
@@ -1046,6 +1106,148 @@ export class QuestionsService {
     }));
 
     return { reviewed, graduated, dueToday, dueIn7, dueIn30, distribution, retentionCurve };
+  }
+
+  /**
+   * 记忆星系：把用户学过的每个句子渲染成一颗星，按场景分类聚成星座。
+   *
+   * 视觉语义：
+   * - 半径/亮度 = 记忆强度（累计答对次数相对毕业阈值，开方让新手期也有可见差异）；
+   * - 金色 = 已毕业、蓝色 = 记忆稳固、暖橙 = 今日到期该复习（亮度按超期天数衰减）；
+   * - 坐标为确定性伪随机（seed=sentenceId），星座中心按分类顺序均匀环形排布。
+   *
+   * 口径与 getMemoryStats 一致：仅取「答对」记录的最新一次排期（复习池权威仍由错题派生），
+   * 到期判定用「今天结束前」。坐标由后端算，Web/App 只负责画，避免两端布局漂移。
+   * 渲染上限 MAX_STARS 防止极端用户一次拉回过多点位。
+   */
+  async getMemoryGalaxy(userId: number): Promise<MemoryGalaxy> {
+    const DAY = 24 * 60 * 60 * 1000;
+    const MAX_STARS = 800;
+    const now = Date.now();
+    const endOfToday = new Date(now);
+    endOfToday.setHours(23, 59, 59, 999);
+    const graduateAt = config.sentence.masteryGraduateAt;
+    const stability = config.sentence.masteryMaintenanceBase;
+
+    // 1. 每题累计答对次数 + 最后一次答对的排期（groupBy 走索引，避免全量拉记录）
+    const grouped = await this.prisma.sentenceRecord.groupBy({
+      by: ['sentenceId'],
+      where: { userId: BigInt(userId), isCorrect: 1 },
+      _count: { _all: true },
+      _max: { nextReviewAt: true },
+    });
+
+    // 2. 句子 → 场景（题被物理删除时跳过，不画孤儿星）
+    const ids = grouped.map((r) => r.sentenceId);
+    const sentences = ids.length
+      ? await this.prisma.sentence.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, categoryId: true },
+        })
+      : [];
+    const categoryOf = new Map(sentences.map((s) => [Number(s.id), Number(s.categoryId)]));
+
+    // 3. 全部启用场景（含未点亮的，前端画「待探索」轮廓）
+    const categories = await this.prisma.sentenceCategory.findMany({
+      where: { status: 1 },
+      select: { id: true, name: true, nameEn: true, sort: true },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+    });
+    const count = Math.max(1, categories.length);
+    const centers = new Map<number, { x: number; y: number }>();
+    categories.forEach((c, i) => {
+      const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+      centers.set(Number(c.id), {
+        x: 0.5 + 0.33 * Math.cos(angle),
+        y: 0.5 + 0.33 * Math.sin(angle),
+      });
+    });
+
+    // 4. 组装每题的记忆状态
+    interface GalaxyItem {
+      sentenceId: number;
+      categoryId: number;
+      strength: number;
+      graduated: boolean;
+      due: boolean;
+      freshness: number;
+    }
+    const byCategory = new Map<number, GalaxyItem[]>();
+    let graduated = 0;
+    let dueCount = 0;
+    for (const r of grouped) {
+      const sid = Number(r.sentenceId);
+      const categoryId = categoryOf.get(sid);
+      if (categoryId === undefined) continue;
+      const correct = r._count._all;
+      const isGraduated = correct >= graduateAt;
+      // 开方：前几次答对也能明显变亮，避免新手期一片暗星
+      const strength = Math.min(1, Math.sqrt(Math.min(1, correct / graduateAt)) * 0.82 + 0.18);
+      const reviewAt = r._max.nextReviewAt;
+      const due = !reviewAt || reviewAt.getTime() <= endOfToday.getTime();
+      const overdueDays = reviewAt ? Math.max(0, (now - reviewAt.getTime()) / DAY) : 30;
+      // 未到期=1；到期后按 R(d)=exp(-d/S) 衰减，但留 0.4 底亮，避免「忘光了看不见」
+      const freshness = due ? Math.max(0.4, Math.exp(-overdueDays / stability)) : 1;
+      if (isGraduated) graduated++;
+      if (due) dueCount++;
+      const item: GalaxyItem = { sentenceId: sid, categoryId, strength, graduated: isGraduated, due, freshness };
+      const list = byCategory.get(categoryId) ?? [];
+      list.push(item);
+      byCategory.set(categoryId, list);
+    }
+
+    // 5. 确定性布点：先按 id 排序保证截断稳定，再在各自星座内极坐标散开
+    const clamp = (v: number) => Math.min(0.98, Math.max(0.02, v));
+    const stars: GalaxyStar[] = [];
+    const ordered = [...byCategory.entries()].sort((a, b) => a[0] - b[0]);
+    for (const [categoryId, list] of ordered) {
+      const center = centers.get(categoryId) ?? { x: 0.5, y: 0.5 };
+      const spread = 0.048 + Math.min(0.07, list.length * 0.003);
+      for (const it of list) {
+        const rand = seededRandom(it.sentenceId * 2654435761);
+        const r = Math.sqrt(rand()) * spread;
+        const angle = rand() * 2 * Math.PI;
+        stars.push({
+          x: Number(clamp(center.x + r * Math.cos(angle)).toFixed(4)),
+          y: Number(clamp(center.y + r * Math.sin(angle)).toFixed(4)),
+          radius: Number((1.1 + it.strength * 1.9 + (it.graduated ? 0.5 : 0)).toFixed(3)),
+          brightness: Number(Math.min(1, Math.max(0.25, it.strength * it.freshness)).toFixed(3)),
+          tone: it.due ? 'faded' : it.graduated ? 'gold' : 'stable',
+          categoryId,
+        });
+      }
+    }
+
+    const clusters: GalaxyCluster[] = categories.map((c) => {
+      const cid = Number(c.id);
+      const center = centers.get(cid) ?? { x: 0.5, y: 0.5 };
+      const list = byCategory.get(cid) ?? [];
+      const starCount = list.length;
+      const avgStrength = starCount
+        ? Number((list.reduce((sum, it) => sum + it.strength, 0) / starCount).toFixed(3))
+        : 0;
+      return {
+        categoryId: cid,
+        name: c.name,
+        nameEn: c.nameEn,
+        x: Number(center.x.toFixed(4)),
+        y: Number(center.y.toFixed(4)),
+        starCount,
+        graduated: list.filter((it) => it.graduated).length,
+        dueCount: list.filter((it) => it.due).length,
+        avgStrength,
+      };
+    });
+
+    return {
+      stars: stars.slice(0, MAX_STARS),
+      clusters,
+      totalLearned: stars.length,
+      graduated,
+      dueCount,
+      litClusters: clusters.filter((c) => c.starCount > 0).length,
+      totalClusters: clusters.length,
+    };
   }
 
   /**
