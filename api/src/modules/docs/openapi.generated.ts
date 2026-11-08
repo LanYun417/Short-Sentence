@@ -143,6 +143,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       "name": "App 版本"
     },
     {
+      "name": "ClientCoach"
+    },
+    {
       "name": "IP黑名单"
     },
     {
@@ -15869,6 +15872,134 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                     "data": {
                       "$ref": "#/components/schemas/AppVersionStatusDto"
                     }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/ai/coach/profile": {
+      "get": {
+        "tags": [
+          "ClientCoach"
+        ],
+        "summary": "薄弱点画像 + 今日复习计划（纯计算、始终可用、不消耗 AI 额度）",
+        "operationId": "get__api_client_ai_coach_profile",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/ai/coach/advice": {
+      "post": {
+        "tags": [
+          "ClientCoach"
+        ],
+        "summary": "AI 点评（可选增强；不可用时自动降级为规则文案，永远 200）",
+        "operationId": "post__api_client_ai_coach_advice",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
                   },
                   "required": [
                     "code",

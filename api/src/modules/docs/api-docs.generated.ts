@@ -8682,6 +8682,55 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "ClientCoach",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/ai/coach/profile",
+        "summary": "薄弱点画像 + 今日复习计划（纯计算、始终可用、不消耗 AI 额度）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/ai/coach/profile?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/ai/coach/advice",
+        "summary": "AI 点评（可选增强；不可用时自动降级为规则文案，永远 200）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ai/coach/advice\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
     "group": "IP黑名单",
     "endpoints": [
       {

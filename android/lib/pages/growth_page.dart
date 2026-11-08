@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_exception.dart';
 import '../api/auth_api.dart';
+import '../api/coach_api.dart';
+import '../api/models/coach.dart';
 import '../api/models/growth.dart';
 import '../api/models/team.dart';
 import '../api/team_api.dart';
@@ -54,10 +56,11 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
   }
 
   Future<void> _refresh() async {
-    // 记忆概览 / 星系 / 小队随成长页一起刷新（答题后打卡状态会变）
+    // 记忆概览 / 星系 / 小队 / 私教画像随成长页一起刷新（答题后都会变）
     ref.invalidate(memoryStatsProvider);
     ref.invalidate(memoryGalaxyProvider);
     ref.invalidate(teamProvider);
+    ref.invalidate(coachProfileProvider);
     await Future.wait(<Future<void>>[
       ref.read(growthControllerProvider.notifier).refresh(),
       ref.read(cardControllerProvider.notifier).refresh(),
@@ -138,6 +141,12 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                           const SizedBox(height: 14),
                           ref.watch(memoryGalaxyProvider).when(
                             data: (galaxy) => _MemoryGalaxyCard(galaxy: galaxy),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 14),
+                          ref.watch(coachProfileProvider).when(
+                            data: (profile) => _AiCoachCard(profile: profile),
                             loading: () => const SizedBox.shrink(),
                             error: (_, _) => const SizedBox.shrink(),
                           ),
@@ -794,6 +803,240 @@ class _RetentionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RetentionPainter old) => false;
+}
+
+/* ------------------------------ AI 私教 ------------------------------ */
+
+/// 薄弱点画像（纯计算，始终可用）。
+final coachProfileProvider = FutureProvider<CoachProfile>((ref) async {
+  final api = ref.watch(coachApiProvider);
+  return api.profile();
+});
+
+class _AiCoachCard extends ConsumerStatefulWidget {
+  const _AiCoachCard({required this.profile});
+
+  final CoachProfile profile;
+
+  @override
+  ConsumerState<_AiCoachCard> createState() => _AiCoachCardState();
+}
+
+class _AiCoachCardState extends ConsumerState<_AiCoachCard> {
+  CoachAdvice? _advice;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _ask() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final advice = await ref.read(coachApiProvider).advice();
+      if (mounted) setState(() => _advice = advice);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = '生成失败，请稍后重试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hint = theme.textTheme.bodySmall?.color;
+    final p = widget.profile;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.school_rounded, size: 16, color: Colors.indigo),
+              const SizedBox(width: 6),
+              Text('AI 私教',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('按你的数据排计划',
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _MemoryStat(
+                  value: '${(p.accuracy * 100).round()}%',
+                  label: '正确率',
+                  color: Colors.indigo),
+              _MemoryStat(
+                  value: '${p.totalAnswers}',
+                  label: '累计作答',
+                  color: context.colors.brand),
+              _MemoryStat(
+                  value: '${p.streak}',
+                  label: '连续打卡',
+                  color: Colors.amber),
+              _MemoryStat(
+                  value: '${p.dueToday}',
+                  label: '待复习',
+                  color: Colors.orange),
+            ],
+          ),
+          if (p.focus.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.indigo.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.my_location_rounded,
+                      size: 15, color: Colors.indigo),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('今日重点：${p.focus}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.indigo)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (p.weakCategories.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Text('需要补的场景',
+                style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                for (final c in p.weakCategories)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('${c.name} · ${(c.accuracy * 100).round()}%',
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.orange)),
+                  ),
+              ],
+            ),
+          ],
+          if (p.plan.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Text('今日复习计划',
+                style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            const SizedBox(height: 6),
+            for (var i = 0; i < p.plan.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      width: 16,
+                      height: 16,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text('${i + 1}',
+                          style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.indigo)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(p.plan[i],
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(height: 1.4)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if (p.toughSentences.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 6),
+            Text('总也记不住的句子',
+                style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            const SizedBox(height: 4),
+            Text(
+              p.toughSentences
+                  .map((t) => '「${t.translationZh}」×${t.wrongCount}')
+                  .join('、'),
+              style: theme.textTheme.labelSmall?.copyWith(height: 1.5),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.5)),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: _busy ? null : _ask,
+                icon: const Icon(Icons.auto_awesome_rounded, size: 15),
+                label: Text(
+                  _busy
+                      ? '思考中…'
+                      : _advice != null
+                          ? '再听一句'
+                          : '让私教说两句',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  p.aiAvailable ? '会占用 1 次今日 AI 额度' : '当前为规则建议',
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint),
+                ),
+              ),
+            ],
+          ),
+          if (_advice != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${_advice!.text}${_advice!.source == 'rule' ? '（规则建议）' : ''}',
+                style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+              ),
+            ),
+          ],
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_error!,
+                  style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /* ------------------------------ 学习小队 ------------------------------ */
