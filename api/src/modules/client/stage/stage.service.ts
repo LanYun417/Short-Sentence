@@ -116,6 +116,10 @@ export interface StageDialogueView {
   turnCount: number;
   goalReached: boolean;
   cleared: boolean;
+  /** 当前是否显示中文翻译（用户偏好，刷新后回显） */
+  showTranslation: boolean;
+  /** 当前候选英文短句（续聊/刷新时回显，避免丢失） */
+  hints: string[];
   title: string;
   intro: string;
   goal: string;
@@ -134,6 +138,8 @@ export interface StageTurnResult {
   goalReached: boolean;
   ended: boolean;
   cleared: boolean;
+  /** 本轮模型给出的候选英文短句（动态更新） */
+  hints: string[];
   summary: string | null;
   feedback: StageDialogueSummary | null;
 }
@@ -142,6 +148,14 @@ export interface StageTurnResult {
 function claimKey(userId: number, categoryId: number): string {
   return `stage:${userId}:${categoryId}`;
 }
+
+/** 无翻译通关加成的 XP 幂等键（与基础奖励分开，避免重复领取时互相吞掉）。 */
+function bonusKey(userId: number, categoryId: number): string {
+  return `stage-bonus:${userId}:${categoryId}`;
+}
+
+/** 无翻译通关的额外经验比例（在基础奖励之上再加 50%）。 */
+const NO_TRANSLATION_BONUS_RATIO = 0.5;
 
 /** 从 DB 存的 JSON 字符串还原复盘（坏数据不影响会话读取）。 */
 function parseFeedback(raw: string | null): StageDialogueSummary | null {
@@ -152,6 +166,23 @@ function parseFeedback(raw: string | null): StageDialogueSummary | null {
   } catch {
     return null;
   }
+}
+
+/** 从 DB 存的 JSON 字符串还原候选短句（坏数据回落到剧情 starterHints）。 */
+function parseHints(raw: string | null, fallback: string[]): string[] {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const out = parsed
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .slice(0, 3);
+      return out.length > 0 ? out : fallback;
+    }
+  } catch {
+    // 落到 fallback
+  }
+  return fallback;
 }
 
 @Injectable()
@@ -317,7 +348,15 @@ export class StageService {
 
     const session = await this.prisma.$transaction(async (tx) => {
       const created = await tx.stageDialogueSession.create({
-        data: { userId: uid, categoryId: cid },
+        data: {
+          userId: uid,
+          categoryId: cid,
+          // 默认开启翻译；translationUsed 在用户实际「开着翻译发消息」时才置位，
+          // 这样「进局就关掉翻译」仍可拿到无翻译加成，而「全程开着、最后一句才关」会被粘住。
+          showTranslation: true,
+          translationUsed: false,
+          lastHints: JSON.stringify(story.starterHints),
+        },
         select: { id: true },
       });
       await tx.stageDialogueMessage.createMany({
@@ -352,15 +391,16 @@ export class StageService {
    * 顺序很关键：**先拿到模型输出，再一次性落库**（用户消息 + NPC 台词），
    * AI 挂了就不写任何东西，用户可原样重发，不会留下半截对话。
    */
-  async sendMessage(userId: number, categoryId: number, raw: string): Promise<StageTurnResult> {
+  async sendMessage(userId: number, categoryId: number, raw: string, showTranslation = true): Promise<StageTurnResult> {
     const story = await this.storyOfCategory(categoryId);
     if (!story) throw AppException.notFound('关卡不存在');
     const content = (raw ?? '').replace(/\s+/g, ' ').trim();
     if (!content) throw AppException.badRequest('先说点什么吧');
     if (content.length > 300) throw AppException.badRequest('一句最多 300 个字符');
     // 这是英语对话练习：纯中文 / 纯符号不算一次发言，也不能占通关轮数。
+    // 数字允许（场景里常要报手机号、房号、时间），只拦截「既无字母也无数字」的输入。
     // 卡住时给一句可直接照着说的英文，比单纯报错更贴合学习场景。
-    if (!/[A-Za-z]/.test(content)) {
+    if (!/[A-Za-z0-9]/.test(content)) {
       throw AppException.badRequest(
         '这一关请用英语说一句；不知道怎么说可以试试 “I’m not sure” 或 “Could you repeat that?”',
       );
@@ -432,6 +472,13 @@ export class StageService {
     const cleared = ended && goalReached && turnCount >= story.minTurns;
     const feedback = ended ? await this.summarize(story, history, content, replies, cleared) : null;
 
+    // 候选短句：模型没给（老模型/解析失败）时回落到本关 starterHints
+    const hints = result.hints.length > 0 ? result.hints : story.starterHints;
+    const showTr = showTranslation !== false;
+    // translationUsed 粘性：任一句话发送时翻译处于开启即记 true，之后无法撤销——
+    // 这样「全程开着、最后一句才关」仍会被判定用过翻译，拿不到无翻译加成。
+    const translationUsed = session.translationUsed || showTr;
+
     await this.prisma.$transaction(async (tx) => {
       await tx.stageDialogueMessage.createMany({
         data: [
@@ -451,6 +498,9 @@ export class StageService {
           turnCount,
           goalReached,
           cleared,
+          showTranslation: showTr,
+          translationUsed,
+          lastHints: JSON.stringify(hints),
           ...(ended
             ? {
                 status: cleared ? 'completed' : 'ended',
@@ -476,6 +526,7 @@ export class StageService {
       goalReached,
       ended,
       cleared,
+      hints,
       summary: feedback?.summary ?? null,
       feedback,
     };
@@ -567,6 +618,8 @@ export class StageService {
         turnCount: true,
         goalReached: true,
         cleared: true,
+        showTranslation: true,
+        lastHints: true,
         summary: true,
         feedback: true,
       },
@@ -583,6 +636,8 @@ export class StageService {
       turnCount: row.turnCount,
       goalReached: row.goalReached,
       cleared: row.cleared,
+      showTranslation: row.showTranslation,
+      hints: parseHints(row.lastHints, story.starterHints),
       title: story.title,
       intro: story.intro,
       goal: story.goal,
@@ -631,39 +686,76 @@ export class StageService {
     });
   }
 
-  /** 领取通关奖励（幂等；只认对话通关）。 */
+  /** 领取通关奖励（幂等；只认对话通关）。无翻译通关额外加成。 */
   async claim(userId: number, categoryId: number): Promise<ClaimResult> {
     const story = await this.storyOfCategory(categoryId);
     if (!story) throw AppException.notFound('关卡不存在');
 
     const uid = BigInt(userId);
     const cid = BigInt(categoryId);
-    const [progress, user, existing] = await Promise.all([
+    const [progress, user, existing, clearing] = await Promise.all([
       this.prisma.studyStageProgress.findUnique({
         where: { userId_categoryId: { userId: uid, categoryId: cid } },
         select: { dialogueClearedAt: true },
       }),
       this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
       this.prisma.clientXpLog.findUnique({ where: { eventKey: claimKey(userId, categoryId) }, select: { id: true } }),
+      // 找出通关的那一局（最近一次 cleared 的会话），用它的 translationUsed 判定是否无翻译通关
+      this.prisma.stageDialogueSession.findFirst({
+        where: { userId: uid, categoryId: cid, cleared: true },
+        orderBy: { endedAt: 'desc' },
+        select: { translationUsed: true },
+      }),
     ]);
 
     if (!progress?.dialogueClearedAt) {
       throw AppException.badRequest('完成场景对话并达成目标后才能领取');
     }
     if (existing) {
-      return { awarded: false, alreadyClaimed: true, rewardXp: 0, xp: user?.xp ?? 0 };
+      return { awarded: false, alreadyClaimed: true, rewardXp: 0, bonusXp: 0, xp: user?.xp ?? 0 };
     }
 
-    const awarded = await this.gamify.awardXp(userId, 'stage_clear', claimKey(userId, categoryId), story.rewardXp);
-    const latest = awarded
-      ? await this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } })
-      : user;
+    // 本局全程关闭翻译 → 额外加成（基础奖励的 50%）；用过翻译则不加。
+    const noTranslation = !clearing?.translationUsed;
+    const bonus = noTranslation ? Math.round(story.rewardXp * NO_TRANSLATION_BONUS_RATIO) : 0;
+
+    const baseAwarded = await this.gamify.awardXp(userId, 'stage_clear', claimKey(userId, categoryId), story.rewardXp);
+    const bonusAwarded =
+      bonus > 0
+        ? await this.gamify.awardXp(userId, 'stage_no_translation', bonusKey(userId, categoryId), bonus)
+        : false;
+    const latest =
+      baseAwarded || bonusAwarded
+        ? await this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } })
+        : user;
     return {
-      awarded,
+      awarded: baseAwarded || bonusAwarded,
       alreadyClaimed: false,
-      rewardXp: awarded ? story.rewardXp : 0,
+      rewardXp: baseAwarded ? story.rewardXp : 0,
+      bonusXp: bonusAwarded ? bonus : 0,
       xp: latest?.xp ?? 0,
     };
+  }
+
+  /**
+   * 切换翻译显示开关（持久化到会话）。
+   * 开启翻译即把 translationUsed 置位（粘性，不可撤销）——防止「全程开着、最后一句才关」骗加成。
+   * 关闭翻译不清空 translationUsed，已用过就仍是用过。
+   */
+  async setTranslation(userId: number, categoryId: number, show: boolean): Promise<{ showTranslation: boolean }> {
+    const session = await this.prisma.stageDialogueSession.findFirst({
+      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      orderBy: { id: 'desc' },
+    });
+    if (!session) throw AppException.badRequest('没有进行中的对话');
+    await this.prisma.stageDialogueSession.update({
+      where: { id: session.id },
+      data: {
+        showTranslation: show,
+        translationUsed: session.translationUsed || show,
+      },
+    });
+    return { showTranslation: show };
   }
 
   /** 已通关关卡数（成就判定用；只数对话通关）。 */
@@ -689,8 +781,10 @@ export interface ClaimResult {
   awarded: boolean;
   /** 是否此前已领取 */
   alreadyClaimed: boolean;
-  /** 本次实发经验（已领过或撞上限为 0） */
+  /** 本次实发基础经验（已领过或撞上限为 0） */
   rewardXp: number;
+  /** 无翻译通关的额外加成经验（本局全程关闭翻译才计；已领过或撞上限为 0） */
+  bonusXp: number;
   /** 领取后的总经验 */
   xp: number;
 }

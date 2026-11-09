@@ -110,7 +110,7 @@ function handleAuthFailure(): void {
 
 /** 请求选项。 */
 export interface ApiOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Record<string, unknown>;
   /** 静默：业务错误也不抛（返回 null），由调用方自行处理 */

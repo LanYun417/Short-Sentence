@@ -37,18 +37,34 @@ const draft = ref('');
 const error = ref('');
 const scroller = ref<InstanceType<typeof AppScrollbar> | null>(null);
 
-/** 卡壳时可直接套用的英文短句（点一下填入输入框，可再改）。 */
-const QUICK_PHRASES = [
+/** 候选英文短句兜底（进入场景前 / 服务端没给时用；进入后会用服务端返回的替换）。 */
+const FALLBACK_HINTS = [
   "I'm not sure. Could you help me?",
   'Could you say that again, please?',
-  "I'd like a coffee, please.",
   'What do you recommend?',
 ];
+/** 当前候选短句（动态，来自服务端 hints；空时用兜底）。 */
+const hints = ref<string[]>(FALLBACK_HINTS);
+/** 是否显示中文翻译（关掉后不显示 NPC 台词翻译，且通关经验 +50%）。 */
+const showTranslation = ref(true);
 
 function usePhrase(text: string): void {
   if (ended.value || sending.value) return;
   draft.value = text;
   error.value = '';
+}
+
+/** 切换翻译后持久化到会话（防作弊由服务端按「是否曾开启过」判定，本地状态先乐观更新）。 */
+async function persistTranslation(): Promise<void> {
+  error.value = '';
+  try {
+    await apiFetch<{ showTranslation: boolean }>(`/client/stages/${stageId.value}/dialogue/translation`, {
+      method: 'PATCH',
+      body: { show: showTranslation.value },
+    });
+  } catch {
+    // 持久化失败不阻断体验：下次发消息也会带上最新开关
+  }
 }
 
 /** 角色英文名 → 展示信息（模型偶尔写错 speaker 时回落到第一位角色）。 */
@@ -72,6 +88,8 @@ function apply(view: StageDialogue): void {
   summary.value = view.summary;
   feedback.value = view.feedback;
   ended.value = view.status !== 'active';
+  showTranslation.value = view.showTranslation !== false;
+  hints.value = view.hints.length > 0 ? view.hints : FALLBACK_HINTS;
   void scrollToBottom();
 }
 
@@ -105,7 +123,7 @@ async function send(): Promise<void> {
   try {
     const result = await apiFetch<StageTurnResult>(`/client/stages/${stageId.value}/dialogue/messages`, {
       method: 'POST',
-      body: { content },
+      body: { content, showTranslation: showTranslation.value },
     });
     const now = new Date().toISOString();
     const base = messages.value.length + 1;
@@ -130,6 +148,7 @@ async function send(): Promise<void> {
     draft.value = '';
     turnCount.value = result.turnCount;
     goalReached.value = result.goalReached;
+    hints.value = result.hints.length > 0 ? result.hints : FALLBACK_HINTS;
     if (result.ended) {
       ended.value = true;
       cleared.value = result.cleared;
@@ -188,9 +207,19 @@ onMounted(async () => {
           <UIcon name="i-lucide-chevron-left" class="h-3.5 w-3.5" />
           关卡地图
         </NuxtLink>
-        <span class="ml-auto text-[11px] text-slate-400 dark:text-slate-500">
-          第 {{ turnCount }} 轮 · 至少 {{ dialogue?.minTurns ?? 0 }} 轮
-        </span>
+        <div class="ml-auto flex items-center gap-2.5">
+          <span class="text-[11px] text-slate-400 dark:text-slate-500">
+            第 {{ turnCount }} 轮 · 至少 {{ dialogue?.minTurns ?? 0 }} 轮
+          </span>
+          <!-- 翻译开关：关掉后隐藏中文翻译，通关经验 +50%（服务端防作弊：全程未开启才给加成） -->
+          <label
+            class="flex cursor-pointer items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400"
+            :title="showTranslation ? '关闭后隐藏翻译，通关经验 +50%' : '开启后显示中文翻译'"
+          >
+            翻译
+            <USwitch v-model="showTranslation" size="xs" :disabled="loading" @change="persistTranslation" />
+          </label>
+        </div>
       </div>
       <h1 v-if="dialogue" class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">
         {{ dialogue.title }}
@@ -250,7 +279,10 @@ onMounted(async () => {
               class="rounded-2xl rounded-tl-md bg-white px-3.5 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-800"
             >
               <p>{{ item.contentEn }}</p>
-              <p v-if="item.contentZh" class="mt-1 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+              <p
+                v-if="showTranslation && item.contentZh"
+                class="mt-1 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500"
+              >
                 {{ item.contentZh }}
               </p>
             </div>
@@ -313,10 +345,10 @@ onMounted(async () => {
     <!-- 输入区 -->
     <div class="mt-3 shrink-0">
       <p v-if="error && messages.length" class="mb-1.5 text-xs text-rose-500">{{ error }}</p>
-      <!-- 卡壳时的英文台阶：避免用户不知道说什么就退回中文 -->
+      <!-- 卡壳时的英文台阶（随对话动态更新，避免用户不知道说什么就退回中文） -->
       <div v-if="!ended" class="mb-2 flex flex-wrap gap-1.5">
         <button
-          v-for="phrase in QUICK_PHRASES"
+          v-for="phrase in hints"
           :key="phrase"
           type="button"
           :disabled="loading || sending"
@@ -340,7 +372,9 @@ onMounted(async () => {
         <UButton color="neutral" variant="ghost" size="sm" :disabled="sending" @click="finish">结束</UButton>
       </div>
       <p class="mt-1.5 text-center text-[10px] text-slate-400 dark:text-slate-500">
-        这一关请用英语对话；卡住了可以点上面的短句 · 聊够轮数并达成目标即可通关
+        <template v-if="showTranslation">关掉右上「翻译」可在通关时经验 +50% · </template>
+        <template v-else>已隐藏翻译，本关通关经验 +50% · </template>
+        这一关请用英语对话，卡住可点上方短句 · 聊够轮数并达成目标即可通关
       </p>
     </div>
   </div>

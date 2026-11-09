@@ -58,10 +58,11 @@ async function claim(stage: StageView): Promise<void> {
   flash.value = '';
   try {
     const result = await apiFetch<StageClaimResult>(`/client/stages/${stage.id}/claim`, { method: 'POST' });
+    const bonusPart = result.bonusXp > 0 ? `（无翻译加成 +${result.bonusXp}）` : '';
     flash.value = result.alreadyClaimed
       ? '这一关的奖励已经领过了'
       : result.awarded
-        ? `领取成功，+${result.rewardXp} XP`
+        ? `领取成功，+${result.rewardXp} XP${bonusPart}`
         : '今日经验已达上限，明天再来领取';
     await refresh();
   } catch (error) {
@@ -88,6 +89,10 @@ async function claim(stage: StageView): Promise<void> {
       </div>
       <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
         每一关都是一段真实场景的长对话。进入场景，和里面的人把目标聊成，故事就往前走。
+      </p>
+      <p class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 dark:text-sky-300">
+        <UIcon name="i-lucide-languages" class="h-3 w-3" />
+        对话里关掉「翻译」开关，通关时经验 +50%
       </p>
       <p
         v-if="flash"

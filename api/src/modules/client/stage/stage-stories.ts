@@ -69,6 +69,8 @@ export interface StageStory {
   roles: StageRole[];
   /** 开场白（多人场景可连续几句） */
   opening: StageLine[];
+  /** 进入场景时给的候选英文短句（2~3 条，作为第一屏「不知道说什么」的台阶；之后由模型按剧情动态更新） */
+  starterHints: string[];
   /** 旧版「答对 N 句」通关线（仅用于旧进度统计，不再决定解锁/通关） */
   target: number;
   /** 通关奖励经验 */
@@ -127,6 +129,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Maya', contentEn: 'The coffee machine just finished warming up.', contentZh: '咖啡机刚热好。' },
     ],
+    starterHints: ["I'd like a hot coffee, please.", 'Do you have a membership card?'],
     target: 5,
     rewardXp: 30,
   },
@@ -167,6 +170,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '嘿，我住楼下。有什么坏了就敲门。',
       },
     ],
+    starterHints: ['How do I pay the water bill?', 'When will the internet be ready?'],
     target: 5,
     rewardXp: 30,
   },
@@ -203,6 +207,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '我是值班经理。这盏灯有什么问题吗？',
       },
     ],
+    starterHints: ['This lamp does not work.', 'When will I get the refund?'],
     target: 6,
     rewardXp: 35,
   },
@@ -245,6 +250,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '如果时间紧，现在就告诉我。',
       },
     ],
+    starterHints: ['Could you explain the task again?', 'Can we set a deadline?'],
     target: 6,
     rewardXp: 40,
   },
@@ -285,6 +291,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '我上学期上过写作课，值得。',
       },
     ],
+    starterHints: ['What time are the classes?', 'How much is the course?'],
     target: 8,
     rewardXp: 45,
   },
@@ -325,6 +332,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '试试 HDMI 线，我去看转接头。',
       },
     ],
+    starterHints: ['The projector is not working.', 'Can we have five more minutes?'],
     target: 8,
     rewardXp: 45,
   },
@@ -356,6 +364,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '你怎么认识 Jamie 的？你是第一个拿汽水的人。',
       },
     ],
+    starterHints: ["I'm here with Jamie.", 'We should hang out again.'],
     target: 8,
     rewardXp: 50,
   },
@@ -392,6 +401,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Emma', contentEn: "Sorry I'm late! Have you ordered yet?", contentZh: '抱歉我来晚了！你点了吗？' },
     ],
+    starterHints: ['Could we see the menu?', 'Does this have nuts?'],
     target: 8,
     rewardXp: 50,
   },
@@ -417,6 +427,7 @@ export const STAGE_STORIES: StageStory[] = [
     opening: [
       { speaker: 'Chris', contentEn: "You said you wanted to talk. I'm listening.", contentZh: '你说想谈谈。我在听。' },
     ],
+    starterHints: ['There is something I want to say.', 'How do you feel about it?'],
     target: 10,
     rewardXp: 55,
   },
@@ -453,6 +464,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Clerk', contentEn: 'Next in line, please.', contentZh: '下一位，请。' },
     ],
+    starterHints: ['Comedy sounds good.', 'Two tickets, please.'],
     target: 10,
     rewardXp: 55,
   },
@@ -491,6 +503,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Ben', contentEn: 'Same boat. The next one might be at six.', contentZh: '我也是。下一班可能六点。' },
     ],
+    starterHints: ['I missed my flight.', 'Where does my luggage go?'],
     target: 10,
     rewardXp: 60,
   },
@@ -531,6 +544,7 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '医生看完后我帮你约复诊。',
       },
     ],
+    starterHints: ['My throat has hurt for three days.', 'How do I take this medicine?'],
     target: 10,
     rewardXp: 60,
   },
@@ -567,6 +581,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Ryan', contentEn: "Don't worry. I started here too.", contentZh: '别担心，我也是从这儿开始的。' },
     ],
+    starterHints: ["It's my first class.", 'What is the key move here?'],
     target: 12,
     rewardXp: 65,
   },
@@ -603,6 +618,7 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Mr. Wu', contentEn: 'Careful, the steps are slippery.', contentZh: '小心，台阶滑。' },
     ],
+    starterHints: ["Let's build a snowman!", 'What time should we meet?'],
     target: 12,
     rewardXp: 70,
   },

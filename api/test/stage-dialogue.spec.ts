@@ -24,7 +24,17 @@ describe('parseStageDialogueTurn', () => {
       ],
       goalReached: true,
       ended: true,
+      hints: [],
     });
+  });
+
+  it('解析动态候选短句 hints：最多 3 条、过滤纯中文/超长/非字符串', () => {
+    const raw = JSON.stringify({
+      replies: [],
+      hints: ['One coffee, please.', '', '好的', 'x'.repeat(100), 'How much is it?', 42],
+    });
+    const result = parseStageDialogueTurn(raw);
+    expect(result.hints).toEqual(['One coffee, please.', 'x'.repeat(80), 'How much is it?']);
   });
 
   it('最多只收 3 个角色，且丢掉缺 speaker / 缺英文的脏项', () => {

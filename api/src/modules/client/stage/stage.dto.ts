@@ -16,4 +16,15 @@ export class StageMessageDto {
   @IsString()
   @Length(1, 300)
   content!: string;
+
+  /** 发送时翻译是否开启（用于无翻译通关加成反作弊；默认 true）。 */
+  @IsOptional()
+  @IsBoolean()
+  showTranslation?: boolean;
+}
+
+/** 切换翻译显示开关。 */
+export class StageTranslationDto {
+  @IsBoolean()
+  show!: boolean;
 }

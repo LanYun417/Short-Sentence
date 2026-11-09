@@ -431,6 +431,8 @@ export interface StageClaimResult {
   awarded: boolean;
   alreadyClaimed: boolean;
   rewardXp: number;
+  /** 无翻译通关的额外加成经验（全程关闭翻译才计） */
+  bonusXp: number;
   xp: number;
 }
 
@@ -459,6 +461,10 @@ export interface StageDialogue {
   turnCount: number;
   goalReached: boolean;
   cleared: boolean;
+  /** 当前是否显示中文翻译 */
+  showTranslation: boolean;
+  /** 当前候选英文短句（动态更新） */
+  hints: string[];
   title: string;
   intro: string;
   goal: string;
@@ -477,6 +483,8 @@ export interface StageTurnResult {
   goalReached: boolean;
   ended: boolean;
   cleared: boolean;
+  /** 本轮模型给出的候选英文短句（动态更新） */
+  hints: string[];
   summary: string | null;
   feedback: StageFeedback | null;
 }

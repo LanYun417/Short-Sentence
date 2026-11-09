@@ -35,6 +35,8 @@ const {
   scrollable,
   visible,
   thumbStyle,
+  canScrollStart,
+  canScrollEnd,
   measure,
   onScroll,
   onEnter,
@@ -84,5 +86,15 @@ defineExpose({
         :style="thumbStyle"
       />
     </div>
+
+    <!-- 边缘柔化：仅纵向、且仅当该侧还有被遮住的内容时，给个隐约的渐隐，避免生硬截断 -->
+    <div
+      v-if="axis === 'y' && canScrollStart"
+      class="pointer-events-none absolute inset-x-0 top-0 z-[5] h-7 bg-gradient-to-b from-slate-50/95 to-transparent dark:from-slate-950/80"
+    />
+    <div
+      v-if="axis === 'y' && canScrollEnd"
+      class="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-7 bg-gradient-to-t from-slate-50/95 to-transparent dark:from-slate-950/80"
+    />
   </div>
 </template>

@@ -32,8 +32,12 @@ interface SessionRow {
   turnCount: number;
   goalReached: boolean;
   cleared: boolean;
+  showTranslation: boolean;
+  translationUsed: boolean;
+  lastHints: string | null;
   summary: string | null;
   feedback: string | null;
+  endedAt: Date | null;
 }
 
 interface MessageRow {
@@ -134,33 +138,62 @@ function makePrisma(goalAtTurn: number | null = 6) {
           .map((item) => ({ id: item.id, categoryId: item.categoryId, turnCount: item.turnCount })),
       ),
       findFirst: vi.fn(
-        async (args: { where: { userId: bigint; categoryId: bigint; status: string } }) =>
-          sessions.find(
+        async (args: {
+          where: {
+            userId: bigint;
+            categoryId?: bigint;
+            status?: string;
+            cleared?: boolean;
+          };
+          orderBy?: { endedAt?: 'asc' | 'desc' };
+        }) => {
+          const w = args.where;
+          const hit = sessions.filter(
             (item) =>
-              item.userId === args.where.userId &&
-              item.categoryId === args.where.categoryId &&
-              item.status === args.where.status,
-          ) ?? null,
+              item.userId === w.userId &&
+              (w.categoryId === undefined || item.categoryId === w.categoryId) &&
+              (w.status === undefined || item.status === w.status) &&
+              (w.cleared === undefined || item.cleared === w.cleared),
+          );
+          if (args.orderBy?.endedAt === 'desc') {
+            hit.sort((a, b) => (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0));
+          }
+          return hit[0] ?? null;
+        },
       ),
       findUnique: vi.fn(
         async (args: { where: { id: bigint } }) => sessions.find((item) => item.id === args.where.id) ?? null,
       ),
-      create: vi.fn(async (args: { data: { userId: bigint; categoryId: bigint } }) => {
-        const row: SessionRow = {
-          id: nextSessionId,
-          userId: args.data.userId,
-          categoryId: args.data.categoryId,
-          status: 'active',
-          turnCount: 0,
-          goalReached: false,
-          cleared: false,
-          summary: null,
-          feedback: null,
-        };
-        nextSessionId += 1n;
-        sessions.push(row);
-        return { id: row.id };
-      }),
+      create: vi.fn(
+        async (args: {
+          data: {
+            userId: bigint;
+            categoryId: bigint;
+            showTranslation?: boolean;
+            translationUsed?: boolean;
+            lastHints?: string | null;
+          };
+        }) => {
+          const row: SessionRow = {
+            id: nextSessionId,
+            userId: args.data.userId,
+            categoryId: args.data.categoryId,
+            status: 'active',
+            turnCount: 0,
+            goalReached: false,
+            cleared: false,
+            showTranslation: args.data.showTranslation ?? true,
+            translationUsed: args.data.translationUsed ?? false,
+            lastHints: args.data.lastHints ?? null,
+            summary: null,
+            feedback: null,
+            endedAt: null,
+          };
+          nextSessionId += 1n;
+          sessions.push(row);
+          return { id: row.id };
+        },
+      ),
       update: vi.fn(async (args: { where: { id: bigint }; data: Record<string, unknown> }) => {
         const row = sessions.find((item) => item.id === args.where.id);
         if (row) Object.assign(row, args.data);
@@ -219,6 +252,7 @@ function makePrisma(goalAtTurn: number | null = 6) {
       replies: [{ speaker: 'Maya', contentEn: 'Sure, here you go.', contentZh: '好的，给你。' }],
       goalReached: goalAtTurn !== null && turnCount >= goalAtTurn,
       ended: false,
+      hints: ['One coffee, please.', 'Any food today?', 'What do you recommend?'],
     })),
     stageDialogueSummary: vi.fn(async () => ({
       summary: '这一场聊得很自然。',
@@ -235,10 +269,10 @@ function makePrisma(goalAtTurn: number | null = 6) {
   return { service, prisma, gamify, ai, rows, sessions, messages, claimKeys };
 }
 
-/** 连发 n 句（每句内容不同，避免任何潜在去重干扰）。 */
-async function talk(service: StageService, categoryId: number, count: number): Promise<void> {
+/** 连发 n 句（每句内容不同，避免任何潜在去重干扰）。showTranslation 透传翻译开关。 */
+async function talk(service: StageService, categoryId: number, count: number, showTranslation = true): Promise<void> {
   for (let i = 0; i < count; i += 1) {
-    await service.sendMessage(1, categoryId, `Could you help me with this, please? ${i}`);
+    await service.sendMessage(1, categoryId, `Could you help me with this, please? ${i}`, showTranslation);
   }
 }
 
@@ -356,5 +390,57 @@ describe('情景闯关（对话玩法）', () => {
     expect(second.sessionId).not.toBe(first.sessionId);
     expect(sessions[0].status).toBe('abandoned');
     expect(second.turnCount).toBe(0);
+  });
+
+  it('数字输入（如手机号）允许，不被当成纯中文拒绝', async () => {
+    const { service, messages } = makePrisma();
+    await service.startDialogue(1, 1);
+    const before = messages.length;
+    await expect(service.sendMessage(1, 1, '13000000000')).resolves.toBeTruthy();
+    expect(messages.length).toBe(before + 2); // 用户 1 句 + NPC 1 句
+  });
+
+  it('每轮返回动态候选短句，续聊视图回显 hints 与翻译开关', async () => {
+    const { service } = makePrisma();
+    await service.startDialogue(1, 1);
+    const result = await service.sendMessage(1, 1, 'Could you help me please?', false);
+    expect(result.hints).toEqual(['One coffee, please.', 'Any food today?', 'What do you recommend?']);
+    const view = await service.getDialogue(1, 1);
+    expect(view?.hints).toEqual(result.hints);
+    expect(view?.showTranslation).toBe(false);
+  });
+
+  it('全程开着翻译、最后一句才关 → translationUsed 粘住，拿不到无翻译加成', async () => {
+    const { service, sessions } = makePrisma();
+    await service.startDialogue(1, 1);
+    for (let i = 0; i < STAGE_STORIES[0].minTurns - 1; i += 1) {
+      await service.sendMessage(1, 1, `Could you help me with this, please? ${i}`, true);
+    }
+    // 最后一句临时把翻译关掉
+    await service.sendMessage(1, 1, 'I would like a coffee, please.', false);
+    expect(sessions[0].translationUsed).toBe(true);
+    const result = await service.claim(1, 1);
+    expect(result.rewardXp).toBe(STAGE_STORIES[0].rewardXp);
+    expect(result.bonusXp).toBe(0);
+  });
+
+  it('全程关闭翻译通关 → 给无翻译加成（基础 50%）', async () => {
+    const { service } = makePrisma();
+    await service.startDialogue(1, 1);
+    await talk(service, 1, STAGE_STORIES[0].minTurns, false);
+    const result = await service.claim(1, 1);
+    expect(result.bonusXp).toBe(Math.round(STAGE_STORIES[0].rewardXp * 0.5));
+  });
+
+  it('开关翻译的 PATCH：开启即把 translationUsed 置位（粘性）', async () => {
+    const { service, sessions } = makePrisma();
+    await service.startDialogue(1, 1);
+    expect(sessions[0].translationUsed).toBe(false);
+    await service.setTranslation(1, 1, true);
+    expect(sessions[0].translationUsed).toBe(true);
+    // 再关掉也不清空
+    await service.setTranslation(1, 1, false);
+    expect(sessions[0].showTranslation).toBe(false);
+    expect(sessions[0].translationUsed).toBe(true);
   });
 });

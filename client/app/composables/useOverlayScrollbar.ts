@@ -36,6 +36,10 @@ export function useOverlayScrollbar(
   const ratio = ref(1);
   /** 滚动进度 0 ~ 1（决定滑块位置） */
   const progress = ref(0);
+  /** 是否还能向「起点」方向滚动（顶部/最左还有内容被遮住，用于边缘柔化淡入） */
+  const canScrollStart = ref(false);
+  /** 是否还能向「末尾」方向滚动（底部/最右还有内容被遮住） */
+  const canScrollEnd = ref(false);
 
   let hideTimer: ReturnType<typeof setTimeout> | 0 = 0;
   let observer: ResizeObserver | null = null;
@@ -58,6 +62,9 @@ export function useOverlayScrollbar(
     // 内容缩短后滚动位置可能回退，进度也要跟着更新
     const max = m.content - m.view;
     progress.value = max > 0 ? Math.min(1, Math.max(0, m.offset / max)) : 0;
+    // 距边 2px 内视为已到边，避免浮点误差造成边缘淡入一直挂着
+    canScrollStart.value = m.offset > 2;
+    canScrollEnd.value = m.content - m.view - m.offset > 2;
   }
 
   /** 滚动中：更新进度，并让滚动条短暂显示后淡出。 */
@@ -66,6 +73,8 @@ export function useOverlayScrollbar(
     if (!m) return;
     const max = m.content - m.view;
     progress.value = max > 0 ? Math.min(1, Math.max(0, m.offset / max)) : 0;
+    canScrollStart.value = m.offset > 2;
+    canScrollEnd.value = m.content - m.view - m.offset > 2;
     visible.value = true;
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
@@ -155,6 +164,8 @@ export function useOverlayScrollbar(
     visible,
     ratio,
     progress,
+    canScrollStart,
+    canScrollEnd,
     thumbStyle,
     measure,
     onScroll,

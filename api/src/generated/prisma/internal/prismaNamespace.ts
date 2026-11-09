@@ -4051,6 +4051,9 @@ export const StageDialogueSessionScalarFieldEnum = {
   turnCount: 'turnCount',
   goalReached: 'goalReached',
   cleared: 'cleared',
+  showTranslation: 'showTranslation',
+  translationUsed: 'translationUsed',
+  lastHints: 'lastHints',
   summary: 'summary',
   feedback: 'feedback',
   startedAt: 'startedAt',
@@ -4583,6 +4586,7 @@ export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevan
 
 export const StageDialogueSessionOrderByRelevanceFieldEnum = {
   status: 'status',
+  lastHints: 'lastHints',
   summary: 'summary',
   feedback: 'feedback'
 } as const

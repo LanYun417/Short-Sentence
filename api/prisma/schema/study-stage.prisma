@@ -55,6 +55,12 @@ model StageDialogueSession {
   goalReached  Boolean   @default(false) @map("goal_reached")
   /// 是否通关（goalReached && turnCount >= minTurns）
   cleared      Boolean   @default(false)
+  /// 用户当前是否显示中文翻译（默认 true；关闭后不显示 NPC 台词翻译，通关经验更高）
+  showTranslation Boolean @default(true) @map("show_translation")
+  /// 本局是否曾借助翻译（任一句话发送时翻译处于开启即记为 true，**不可逆**；反作弊：用于无翻译通关加成）
+  translationUsed  Boolean @default(false) @map("translation_used")
+  /// 最近一轮模型给出的候选英文短句（JSON 数组；续聊/刷新时回显，避免丢失；null = 用剧情 starterHints）
+  lastHints   String?   @map("last_hints") @db.Text
   /// 中文总结（结束时生成，2~3 句）
   summary      String?   @db.Text
   /// 复盘 JSON：{"highlights":["..."],"improvements":["..."]}

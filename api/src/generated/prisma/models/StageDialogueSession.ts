@@ -52,6 +52,9 @@ export type StageDialogueSessionMinAggregateOutputType = {
   turnCount: number | null
   goalReached: boolean | null
   cleared: boolean | null
+  showTranslation: boolean | null
+  translationUsed: boolean | null
+  lastHints: string | null
   summary: string | null
   feedback: string | null
   startedAt: Date | null
@@ -67,6 +70,9 @@ export type StageDialogueSessionMaxAggregateOutputType = {
   turnCount: number | null
   goalReached: boolean | null
   cleared: boolean | null
+  showTranslation: boolean | null
+  translationUsed: boolean | null
+  lastHints: string | null
   summary: string | null
   feedback: string | null
   startedAt: Date | null
@@ -82,6 +88,9 @@ export type StageDialogueSessionCountAggregateOutputType = {
   turnCount: number
   goalReached: number
   cleared: number
+  showTranslation: number
+  translationUsed: number
+  lastHints: number
   summary: number
   feedback: number
   startedAt: number
@@ -113,6 +122,9 @@ export type StageDialogueSessionMinAggregateInputType = {
   turnCount?: true
   goalReached?: true
   cleared?: true
+  showTranslation?: true
+  translationUsed?: true
+  lastHints?: true
   summary?: true
   feedback?: true
   startedAt?: true
@@ -128,6 +140,9 @@ export type StageDialogueSessionMaxAggregateInputType = {
   turnCount?: true
   goalReached?: true
   cleared?: true
+  showTranslation?: true
+  translationUsed?: true
+  lastHints?: true
   summary?: true
   feedback?: true
   startedAt?: true
@@ -143,6 +158,9 @@ export type StageDialogueSessionCountAggregateInputType = {
   turnCount?: true
   goalReached?: true
   cleared?: true
+  showTranslation?: true
+  translationUsed?: true
+  lastHints?: true
   summary?: true
   feedback?: true
   startedAt?: true
@@ -245,6 +263,9 @@ export type StageDialogueSessionGroupByOutputType = {
   turnCount: number
   goalReached: boolean
   cleared: boolean
+  showTranslation: boolean
+  translationUsed: boolean
+  lastHints: string | null
   summary: string | null
   feedback: string | null
   startedAt: Date
@@ -283,6 +304,9 @@ export type StageDialogueSessionWhereInput = {
   turnCount?: Prisma.IntFilter<"StageDialogueSession"> | number
   goalReached?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
   cleared?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  showTranslation?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  translationUsed?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  lastHints?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   summary?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   feedback?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   startedAt?: Prisma.DateTimeFilter<"StageDialogueSession"> | Date | string
@@ -299,6 +323,9 @@ export type StageDialogueSessionOrderByWithRelationInput = {
   turnCount?: Prisma.SortOrder
   goalReached?: Prisma.SortOrder
   cleared?: Prisma.SortOrder
+  showTranslation?: Prisma.SortOrder
+  translationUsed?: Prisma.SortOrder
+  lastHints?: Prisma.SortOrderInput | Prisma.SortOrder
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   feedback?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -319,6 +346,9 @@ export type StageDialogueSessionWhereUniqueInput = Prisma.AtLeast<{
   turnCount?: Prisma.IntFilter<"StageDialogueSession"> | number
   goalReached?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
   cleared?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  showTranslation?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  translationUsed?: Prisma.BoolFilter<"StageDialogueSession"> | boolean
+  lastHints?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   summary?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   feedback?: Prisma.StringNullableFilter<"StageDialogueSession"> | string | null
   startedAt?: Prisma.DateTimeFilter<"StageDialogueSession"> | Date | string
@@ -335,6 +365,9 @@ export type StageDialogueSessionOrderByWithAggregationInput = {
   turnCount?: Prisma.SortOrder
   goalReached?: Prisma.SortOrder
   cleared?: Prisma.SortOrder
+  showTranslation?: Prisma.SortOrder
+  translationUsed?: Prisma.SortOrder
+  lastHints?: Prisma.SortOrderInput | Prisma.SortOrder
   summary?: Prisma.SortOrderInput | Prisma.SortOrder
   feedback?: Prisma.SortOrderInput | Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -358,6 +391,9 @@ export type StageDialogueSessionScalarWhereWithAggregatesInput = {
   turnCount?: Prisma.IntWithAggregatesFilter<"StageDialogueSession"> | number
   goalReached?: Prisma.BoolWithAggregatesFilter<"StageDialogueSession"> | boolean
   cleared?: Prisma.BoolWithAggregatesFilter<"StageDialogueSession"> | boolean
+  showTranslation?: Prisma.BoolWithAggregatesFilter<"StageDialogueSession"> | boolean
+  translationUsed?: Prisma.BoolWithAggregatesFilter<"StageDialogueSession"> | boolean
+  lastHints?: Prisma.StringNullableWithAggregatesFilter<"StageDialogueSession"> | string | null
   summary?: Prisma.StringNullableWithAggregatesFilter<"StageDialogueSession"> | string | null
   feedback?: Prisma.StringNullableWithAggregatesFilter<"StageDialogueSession"> | string | null
   startedAt?: Prisma.DateTimeWithAggregatesFilter<"StageDialogueSession"> | Date | string
@@ -373,6 +409,9 @@ export type StageDialogueSessionCreateInput = {
   turnCount?: number
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: string | null
   summary?: string | null
   feedback?: string | null
   startedAt?: Date | string
@@ -389,6 +428,9 @@ export type StageDialogueSessionUncheckedCreateInput = {
   turnCount?: number
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: string | null
   summary?: string | null
   feedback?: string | null
   startedAt?: Date | string
@@ -405,6 +447,9 @@ export type StageDialogueSessionUpdateInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -421,6 +466,9 @@ export type StageDialogueSessionUncheckedUpdateInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -437,6 +485,9 @@ export type StageDialogueSessionCreateManyInput = {
   turnCount?: number
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: string | null
   summary?: string | null
   feedback?: string | null
   startedAt?: Date | string
@@ -452,6 +503,9 @@ export type StageDialogueSessionUpdateManyMutationInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -467,6 +521,9 @@ export type StageDialogueSessionUncheckedUpdateManyInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -488,6 +545,9 @@ export type StageDialogueSessionCountOrderByAggregateInput = {
   turnCount?: Prisma.SortOrder
   goalReached?: Prisma.SortOrder
   cleared?: Prisma.SortOrder
+  showTranslation?: Prisma.SortOrder
+  translationUsed?: Prisma.SortOrder
+  lastHints?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   feedback?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -510,6 +570,9 @@ export type StageDialogueSessionMaxOrderByAggregateInput = {
   turnCount?: Prisma.SortOrder
   goalReached?: Prisma.SortOrder
   cleared?: Prisma.SortOrder
+  showTranslation?: Prisma.SortOrder
+  translationUsed?: Prisma.SortOrder
+  lastHints?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   feedback?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -525,6 +588,9 @@ export type StageDialogueSessionMinOrderByAggregateInput = {
   turnCount?: Prisma.SortOrder
   goalReached?: Prisma.SortOrder
   cleared?: Prisma.SortOrder
+  showTranslation?: Prisma.SortOrder
+  translationUsed?: Prisma.SortOrder
+  lastHints?: Prisma.SortOrder
   summary?: Prisma.SortOrder
   feedback?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
@@ -570,6 +636,9 @@ export type StageDialogueSessionCreateWithoutMessagesInput = {
   turnCount?: number
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: string | null
   summary?: string | null
   feedback?: string | null
   startedAt?: Date | string
@@ -585,6 +654,9 @@ export type StageDialogueSessionUncheckedCreateWithoutMessagesInput = {
   turnCount?: number
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: string | null
   summary?: string | null
   feedback?: string | null
   startedAt?: Date | string
@@ -616,6 +688,9 @@ export type StageDialogueSessionUpdateWithoutMessagesInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -631,6 +706,9 @@ export type StageDialogueSessionUncheckedUpdateWithoutMessagesInput = {
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
   goalReached?: Prisma.BoolFieldUpdateOperationsInput | boolean
   cleared?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showTranslation?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  translationUsed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  lastHints?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -677,6 +755,9 @@ export type StageDialogueSessionSelect<ExtArgs extends runtime.Types.Extensions.
   turnCount?: boolean
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: boolean
   summary?: boolean
   feedback?: boolean
   startedAt?: boolean
@@ -696,6 +777,9 @@ export type StageDialogueSessionSelectScalar = {
   turnCount?: boolean
   goalReached?: boolean
   cleared?: boolean
+  showTranslation?: boolean
+  translationUsed?: boolean
+  lastHints?: boolean
   summary?: boolean
   feedback?: boolean
   startedAt?: boolean
@@ -703,7 +787,7 @@ export type StageDialogueSessionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StageDialogueSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "categoryId" | "status" | "turnCount" | "goalReached" | "cleared" | "summary" | "feedback" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["stageDialogueSession"]>
+export type StageDialogueSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "categoryId" | "status" | "turnCount" | "goalReached" | "cleared" | "showTranslation" | "translationUsed" | "lastHints" | "summary" | "feedback" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["stageDialogueSession"]>
 export type StageDialogueSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   messages?: boolean | Prisma.StageDialogueSession$messagesArgs<ExtArgs>
   _count?: boolean | Prisma.StageDialogueSessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -743,6 +827,18 @@ export type $StageDialogueSessionPayload<ExtArgs extends runtime.Types.Extension
      * 是否通关（goalReached && turnCount >= minTurns）
      */
     cleared: boolean
+    /**
+     * 用户当前是否显示中文翻译（默认 true；关闭后不显示 NPC 台词翻译，通关经验更高）
+     */
+    showTranslation: boolean
+    /**
+     * 本局是否曾借助翻译（任一句话发送时翻译处于开启即记为 true，**不可逆**；反作弊：用于无翻译通关加成）
+     */
+    translationUsed: boolean
+    /**
+     * 最近一轮模型给出的候选英文短句（JSON 数组；续聊/刷新时回显，避免丢失；null = 用剧情 starterHints）
+     */
+    lastHints: string | null
     /**
      * 中文总结（结束时生成，2~3 句）
      */
@@ -1140,6 +1236,9 @@ export interface StageDialogueSessionFieldRefs {
   readonly turnCount: Prisma.FieldRef<"StageDialogueSession", 'Int'>
   readonly goalReached: Prisma.FieldRef<"StageDialogueSession", 'Boolean'>
   readonly cleared: Prisma.FieldRef<"StageDialogueSession", 'Boolean'>
+  readonly showTranslation: Prisma.FieldRef<"StageDialogueSession", 'Boolean'>
+  readonly translationUsed: Prisma.FieldRef<"StageDialogueSession", 'Boolean'>
+  readonly lastHints: Prisma.FieldRef<"StageDialogueSession", 'String'>
   readonly summary: Prisma.FieldRef<"StageDialogueSession", 'String'>
   readonly feedback: Prisma.FieldRef<"StageDialogueSession", 'String'>
   readonly startedAt: Prisma.FieldRef<"StageDialogueSession", 'DateTime'>

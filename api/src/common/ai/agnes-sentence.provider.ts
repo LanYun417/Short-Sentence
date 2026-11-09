@@ -371,6 +371,8 @@ export interface StageDialogueTurnResult {
   goalReached: boolean;
   /** 是否可以结束（由模型建议，服务端再按轮数兜底） */
   ended: boolean;
+  /** 2~3 条贴合当前剧情的英文短句，作为用户下一段可以说的话的提示（动态更新） */
+  hints: string[];
 }
 
 /** 对话结束后的中文复盘。 */
@@ -402,9 +404,14 @@ const STAGE_DIALOGUE_PROMPT = [
   '  Be strict: a friendly chat, a promise, or the character offering something is not enough.',
   '- ended = true ONLY when (turnCount >= minTurns AND goalReached) OR turnCount >= maxTurns.',
   '  Otherwise ended=false. When ending, close the scene naturally in the final lines.',
+  '- "hints" is a list of 2-3 SHORT English phrases (1-6 words each, CEFR A2, no translation)',
+  '  the learner could realistically say NEXT to move the scene forward or ask something natural.',
+  '  These are suggestions for the learner, NOT lines the characters say. Vary them each turn',
+  '  based on what just happened — do not repeat the same hints every turn.',
   '',
   'Output JSON only, no markdown:',
-  '{"replies":[{"speaker":"name","contentEn":"...","contentZh":"..."}],"goalReached":false,"ended":false}',
+  '{"replies":[{"speaker":"name","contentEn":"...","contentZh":"..."}],"goalReached":false,"ended":false,',
+  '"hints":["I will take the coffee.","Do you have a membership?","How much is it?"]}',
 ].join('\n');
 
 /** 对话复盘提示词：给学习者简短、具体、不打分数的中文反馈。 */
@@ -437,6 +444,7 @@ export function parseStageDialogueTurn(content: string): StageDialogueTurnResult
       replies?: unknown;
       goalReached?: unknown;
       ended?: unknown;
+      hints?: unknown;
     };
     const replies: StageDialogueReply[] = [];
     if (Array.isArray(parsed.replies)) {
@@ -449,14 +457,26 @@ export function parseStageDialogueTurn(content: string): StageDialogueTurnResult
         if (speaker && contentEn) replies.push({ speaker, contentEn, contentZh });
       }
     }
+    // hints：2~3 条贴合剧情的英文短句，过滤非字符串/超长/非英文，最多 3 条
+    const hints: string[] = [];
+    if (Array.isArray(parsed.hints)) {
+      for (const raw of parsed.hints) {
+        if (typeof raw !== 'string') continue;
+        const hint = raw.trim().replace(/\s+/g, ' ').slice(0, 80);
+        if (!hint || !/[A-Za-z]/.test(hint)) continue;
+        if (hints.length >= 3) break;
+        hints.push(hint);
+      }
+    }
     return {
       // 先过滤脏项再截 3 条，避免模型前几行写坏就把整轮回复丢空
       replies: replies.slice(0, 3),
       goalReached: parsed.goalReached === true,
       ended: parsed.ended === true,
+      hints,
     };
   } catch {
-    return { replies: [], goalReached: false, ended: false };
+    return { replies: [], goalReached: false, ended: false, hints: [] };
   }
 }
 
