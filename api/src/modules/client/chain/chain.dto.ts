@@ -33,3 +33,10 @@ export class SetChainEntryStatusDto {
   @IsIn(['visible', 'hidden', 'rejected'])
   status!: 'visible' | 'hidden' | 'rejected';
 }
+
+/** 后台启用 / 停用一个接龙主题。 */
+export class SetChainTopicStatusDto {
+  /** 1 启用 / 0 停用 */
+  @IsIn([0, 1])
+  status!: 0 | 1;
+}

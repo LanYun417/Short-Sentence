@@ -78,6 +78,23 @@ export interface ChainEntryAdminItem {
   createdAt: string;
 }
 
+/** 后台-主题管理条目（含往期已停用批次）。 */
+export interface ChainTopicAdminItem {
+  id: number;
+  title: string;
+  starterEn: string;
+  promptZh: string;
+  /** 1 启用 / 0 停用 */
+  status: number;
+  /** seed 手工种子 / ai 每周 AI 生成 */
+  source: string;
+  /** AI 批次所属周一 YYYY-MM-DD；seed 为 null */
+  weekStart: string | null;
+  sort: number;
+  entryCount: number;
+  createdAt: string;
+}
+
 /** Prisma 唯一键冲突。 */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002';
@@ -93,17 +110,22 @@ export class ChainService {
   ) {}
 
   /**
-   * 主题列表：启用的主题，**本周 AI 新主题排在最前**（weekStart 倒序、seed 为 null 排最后），
-   * 再按 sort 升序。附可见条目数与我的提交数。
+   * 主题列表（客户端可见）。
+   *
+   * 「每周刷新、往期不展示」的口径：
+   * - 只返回**本周一及以后**的 AI 批次（weekStart === 本周一），往期 AI 批次不展示
+   *   （周更任务入库时也会把往期 AI 置 status=0，双保险；详情页 getEnabledTopic 同样只认 status=1）；
+   * - 本周 AI 批次一旦存在，就**只展示它**，手工种子不再露出
+   *   （种子只在「本周还没生成过」时兜底，避免页面空白）；
+   * - 排序：本周 AI 主题按 sort 升序。
    */
   async listTopics(userId: number): Promise<ChainTopicView[]> {
     const uid = BigInt(userId);
     const [topics, counts, mine] = await Promise.all([
       this.prisma.chainTopic.findMany({
         where: { status: 1 },
-        // MySQL 里 NULL 在 DESC 下排最后：AI 主题(weekStart 非空)在前，手工种子(null)在后
         orderBy: [{ weekStart: 'desc' }, { sort: 'asc' }, { id: 'asc' }],
-        select: { id: true, title: true, starterEn: true, promptZh: true, source: true },
+        select: { id: true, title: true, starterEn: true, promptZh: true, source: true, weekStart: true },
       }),
       this.prisma.chainEntry.groupBy({
         by: ['topicId'],
@@ -117,10 +139,16 @@ export class ChainService {
       }),
     ]);
 
+    // 「每周刷新、往期不展示」：只返回**本周一及以后**的 AI 批次；
+    // 本周还没生成过（或 AI 关闭）时，回落到手工种子，避免页面空白。
+    const currentWeek = this.mondayOf(new Date());
+    const aiThisWeek = topics.filter((row) => row.source === 'ai' && row.weekStart === currentWeek);
+    const visible = aiThisWeek.length > 0 ? aiThisWeek : topics.filter((row) => row.source === 'seed');
+
     const countByTopic = new Map(counts.map((row) => [String(row.topicId), row._count._all]));
     const mineByTopic = new Map(mine.map((row) => [String(row.topicId), row._count._all]));
 
-    return topics.map((row) => ({
+    return visible.map((row) => ({
       id: Number(row.id),
       title: row.title,
       starterEn: row.starterEn,
@@ -500,6 +528,56 @@ export class ChainService {
       select: { id: true, title: true },
     });
     return rows.map((row) => ({ id: Number(row.id), title: row.title }));
+  }
+
+  /**
+   * 后台-主题管理列表：**全部主题**（含已停用的往期批次），附来源/所属周/状态/条目数。
+   * 「往期对用户不展示」靠 status=0 + 客户端只查启用实现，但后台这里要能看到全部历史。
+   */
+  async adminTopicsAll(): Promise<ChainTopicAdminItem[]> {
+    const [rows, counts] = await Promise.all([
+      this.prisma.chainTopic.findMany({
+        orderBy: [{ weekStart: 'desc' }, { sort: 'asc' }, { id: 'asc' }],
+        select: {
+          id: true,
+          title: true,
+          starterEn: true,
+          promptZh: true,
+          status: true,
+          source: true,
+          weekStart: true,
+          sort: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.chainEntry.groupBy({
+        by: ['topicId'],
+        _count: { _all: true },
+      }),
+    ]);
+    const countByTopic = new Map(counts.map((row) => [String(row.topicId), row._count._all]));
+    return rows.map((row) => ({
+      id: Number(row.id),
+      title: row.title,
+      starterEn: row.starterEn,
+      promptZh: row.promptZh,
+      status: row.status,
+      source: row.source,
+      weekStart: row.weekStart,
+      sort: row.sort,
+      entryCount: countByTopic.get(String(row.id)) ?? 0,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
+
+  /** 后台-启用 / 停用一个主题（停用后客户端列表与详情都不再可见，仅后台可见）。 */
+  async adminSetTopicStatus(topicId: number, status: 0 | 1): Promise<void> {
+    const exists = await this.prisma.chainTopic.findUnique({
+      where: { id: BigInt(topicId) },
+      select: { id: true },
+    });
+    if (!exists) throw AppException.notFound('主题不存在');
+    await this.prisma.chainTopic.update({ where: { id: BigInt(topicId) }, data: { status } });
   }
 
   /* ------------------------------ 内部 ------------------------------ */

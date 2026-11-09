@@ -64,72 +64,87 @@ describe('cronOf weekly', () => {
   });
 });
 
-describe('ChainService.generateWeeklyTopics', () => {
-  function makeService(drafts: ChainTopicDraft[]) {
-    const topics: Array<Record<string, unknown>> = [
-      // 一条旧的 AI 主题（上周）和一条种子
-      {
-        id: 1n,
-        title: '旧AI主题',
-        starterEn: 'Old starter sentence here.',
-        promptZh: '旧提示',
-        status: 1,
-        source: 'ai',
-        weekStart: '2026-11-02',
-        sort: 100,
-        createdAt: new Date('2026-11-02'),
-      },
-      {
-        id: 2n,
-        title: '种子主题',
-        starterEn: 'A seed starter sentence.',
-        promptZh: '种子提示',
-        status: 1,
-        source: 'seed',
-        weekStart: null,
-        sort: 1,
-        createdAt: new Date('2026-11-01'),
-      },
-    ];
-    let seq = 10n;
-    const prisma: any = {
-      chainTopic: {
-        count: vi.fn(
-          async ({ where }: any) =>
-            topics.filter((t) => {
-              if (where?.source && t.source !== where.source) return false;
-              if (where?.weekStart && t.weekStart !== where.weekStart) return false;
-              return true;
-            }).length,
-        ),
-        findMany: vi.fn(async ({ take }: any) => topics.slice(0, take ?? 40)),
-        aggregate: vi.fn(async () => ({ _max: { sort: 100 } })),
-        updateMany: vi.fn(async ({ where, data }: any) => {
-          let n = 0;
-          for (const t of topics) {
-            if (t.source !== 'ai') continue;
-            if (where?.weekStart?.not && t.weekStart === where.weekStart.not) continue;
-            t.status = data.status;
-            n += 1;
-          }
-          return { count: n };
-        }),
-        createMany: vi.fn(async ({ data }: any) => {
-          for (const d of data) {
-            topics.push({ id: seq++, ...d, createdAt: new Date() });
-          }
-          return { count: data.length };
-        }),
-      },
-      $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma),
-    };
-    const moderator = {
-      generateChainTopics: vi.fn(async () => drafts),
-    };
-    const service = new ChainService(prisma as unknown as PrismaService, moderator as unknown as AgnesSentenceProvider);
-    return { service, prisma, moderator, topics };
-  }
+function makeService(drafts: ChainTopicDraft[]) {
+  const topics: Array<Record<string, unknown>> = [
+    // 一条旧的 AI 主题（上周）和一条种子
+    {
+      id: 1n,
+      title: '旧AI主题',
+      starterEn: 'Old starter sentence here.',
+      promptZh: '旧提示',
+      status: 1,
+      source: 'ai',
+      weekStart: '2026-11-02',
+      sort: 100,
+      createdAt: new Date('2026-11-02'),
+    },
+    {
+      id: 2n,
+      title: '种子主题',
+      starterEn: 'A seed starter sentence.',
+      promptZh: '种子提示',
+      status: 1,
+      source: 'seed',
+      weekStart: null,
+      sort: 1,
+      createdAt: new Date('2026-11-01'),
+    },
+  ];
+  let seq = 10n;
+  const prisma: any = {
+    chainTopic: {
+      count: vi.fn(
+        async ({ where }: any) =>
+          topics.filter((t) => {
+            if (where?.source && t.source !== where.source) return false;
+            if (where?.weekStart && t.weekStart !== where.weekStart) return false;
+            return true;
+          }).length,
+      ),
+      findMany: vi.fn(async ({ where, take }: any) => {
+        let rows = topics;
+        if (where?.status !== undefined) rows = rows.filter((t) => t.status === where.status);
+        return rows.slice(0, take ?? 40);
+      }),
+      findUnique: vi.fn(
+        async ({ where }: { where: { id: bigint } }) => topics.find((t) => String(t.id) === String(where.id)) ?? null,
+      ),
+      aggregate: vi.fn(async () => ({ _max: { sort: 100 } })),
+      update: vi.fn(async ({ where, data }: any) => {
+        const row = topics.find((t) => String(t.id) === String(where.id));
+        if (row) Object.assign(row, data);
+        return row;
+      }),
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        let n = 0;
+        for (const t of topics) {
+          if (t.source !== 'ai') continue;
+          if (where?.weekStart?.not && t.weekStart === where.weekStart.not) continue;
+          t.status = data.status;
+          n += 1;
+        }
+        return { count: n };
+      }),
+      createMany: vi.fn(async ({ data }: any) => {
+        for (const d of data) {
+          topics.push({ id: seq++, ...d, createdAt: new Date() });
+        }
+        return { count: data.length };
+      }),
+    },
+    chainEntry: {
+      groupBy: vi.fn(async () => []),
+    },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma),
+  };
+  const moderator = {
+    generateChainTopics: vi.fn(async () => drafts),
+  };
+  const service = new ChainService(prisma as unknown as PrismaService, moderator as unknown as AgnesSentenceProvider);
+  return { service, prisma, moderator, topics };
+}
 
+describe('ChainService.generateWeeklyTopics', () => {
   const drafts: ChainTopicDraft[] = [
     { title: '雨夜出租车', starterEn: 'The taxi door closed softly at midnight.', promptZh: '写司机问你去哪。' },
     {
@@ -187,5 +202,48 @@ describe('ChainService.generateWeeklyTopics', () => {
     // 让 count 查不到本周已有（首次生成路径），但 AI 返回空
     await expect(service.generateWeeklyTopics(5)).rejects.toThrow();
     expect(prisma.chainTopic.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('listTopics：有本周 AI 批则只展示 AI 主题，种子隐藏；无 AI 批时种子兜底', () => {
+  it('存在启用的 AI 主题时，返回列表不含种子', async () => {
+    const { service } = makeService([
+      { title: '新主题', starterEn: 'A brand new starter sentence here.', promptZh: '写吧。' },
+    ]);
+    await service.generateWeeklyTopics(5); // 生成一批 AI 主题（停用旧 AI，种子 status 仍 1）
+    const list = await service.listTopics(1);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.every((t) => t.source === 'ai')).toBe(true);
+    expect(list.some((t) => t.source === 'seed')).toBe(false);
+  });
+
+  it('没有任何 AI 主题时，回落到种子主题', async () => {
+    const { service } = makeService([]);
+    const list = await service.listTopics(1);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.every((t) => t.source === 'seed')).toBe(true);
+  });
+});
+
+describe('后台主题管理：全部可见 + 手动停启', () => {
+  it('adminTopicsAll 返回全部主题（含已停用的往期 AI 批次）', async () => {
+    const { service } = makeService([
+      { title: '新主题', starterEn: 'A brand new starter sentence here.', promptZh: '写吧。' },
+    ]);
+    await service.generateWeeklyTopics(5); // 旧 AI 主题被停用
+    const all = await service.adminTopicsAll();
+    // 旧 AI（停用）+ 种子 + 新 AI 批次 都在
+    expect(all.some((t) => t.source === 'ai' && t.status === 0)).toBe(true);
+    expect(all.some((t) => t.source === 'seed')).toBe(true);
+    expect(all.some((t) => t.source === 'ai' && t.status === 1)).toBe(true);
+    expect(all[0]).toHaveProperty('weekStart');
+    expect(all[0]).toHaveProperty('entryCount');
+  });
+
+  it('adminSetTopicStatus：停用后 status=0，不存在时报错', async () => {
+    const { service, topics } = makeService([]);
+    await service.adminSetTopicStatus(2, 0); // 停用种子主题
+    expect(topics.find((t) => t.id === 2n)?.status).toBe(0);
+    await expect(service.adminSetTopicStatus(999, 1)).rejects.toThrow(/不存在/);
   });
 });

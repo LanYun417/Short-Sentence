@@ -1783,3 +1783,20 @@ export interface TeamAdminDetail extends Omit<TeamAdminItem, 'memberCount'> {
     checkedIn: boolean;
   }>;
 }
+
+/** 后台-接龙主题管理条目（含往期已停用批次） */
+export interface ChainTopicAdminItem {
+  id: number;
+  title: string;
+  starterEn: string;
+  promptZh: string;
+  /** 1 启用 / 0 停用 */
+  status: number;
+  /** seed 手工种子 / ai 每周 AI 生成 */
+  source: string;
+  /** AI 批次所属周一 YYYY-MM-DD；seed 为 null */
+  weekStart: string | null;
+  sort: number;
+  entryCount: number;
+  createdAt: string;
+}

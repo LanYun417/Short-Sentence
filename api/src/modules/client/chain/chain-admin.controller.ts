@@ -11,7 +11,7 @@ import { OperationLog } from '../../../common/log/operation-log.decorator.js';
 import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
-import { SetChainEntryStatusDto } from './chain.dto.js';
+import { SetChainEntryStatusDto, SetChainTopicStatusDto } from './chain.dto.js';
 import { ChainService } from './chain.service.js';
 
 @Controller('chains')
@@ -27,11 +27,30 @@ export class ChainAdminController {
     return buildPageResult(list, total, page, pageSize);
   }
 
-  /** 主题下拉选项。 */
+  /** 主题下拉选项（条目筛选用，只列启用的）。 */
   @Get('topics')
   @RequirePermissions('sentence:chain')
   topics() {
     return this.chains.adminTopics();
+  }
+
+  /** 主题管理列表：全部主题（含往期已停用批次），后台可见历史。 */
+  @Get('topics/all')
+  @RequirePermissions('sentence:chain')
+  topicsAll() {
+    return this.chains.adminTopicsAll();
+  }
+
+  /** 启用 / 停用一个主题（停用后客户端不再展示，仅后台可见）。 */
+  @Put('topics/:id/status')
+  @RequirePermissions('sentence:chain:handle')
+  @OperationLog('题库管理', '启停接龙主题')
+  async setTopicStatus(
+    @Param() params: IdParamDto,
+    @Body() dto: SetChainTopicStatusDto,
+  ): Promise<ResponseEnvelope<null>> {
+    await this.chains.adminSetTopicStatus(params.id, dto.status);
+    return { __raw: true, data: null, message: dto.status === 1 ? '已启用' : '已停用' };
   }
 
   /** 通过 / 拒绝 / 隐藏一条接龙。 */
