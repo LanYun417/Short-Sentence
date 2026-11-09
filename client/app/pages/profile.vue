@@ -504,7 +504,9 @@ async function onChangePassword(): Promise<void> {
     </section>
 
     <!-- 收藏与复习：低频的「回看 / 巩固」动作，收进「我的」做二级入口，
-         顶部导航只留核心四项（刷题 / 题库 / AI 拓展 / 我的）。 -->
+         顶部导航只留核心四项（刷题 / 功能 / 排行榜 / 我的）。
+         别把排行榜 / 情景闯关 / 句子接龙再放回来：它们分别常驻导航 Tab 与「功能」页，
+         放这里只会重复。 -->
     <NuxtLink
       to="/favorites"
       class="anim-in mt-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
@@ -522,39 +524,6 @@ async function onChangePassword(): Promise<void> {
     >
       <UIcon name="i-lucide-refresh-cw" class="h-5 w-5 shrink-0 text-sky-500" />
       <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">复习</span>
-      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
-    </NuxtLink>
-
-    <!-- 排行榜入口：今日答题/答对前 100 -->
-    <NuxtLink
-      to="/leaderboard"
-      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
-      style="animation-delay: 97ms"
-    >
-      <UIcon name="i-lucide-trophy" class="h-5 w-5 shrink-0 text-amber-500" />
-      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">排行榜</span>
-      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
-    </NuxtLink>
-
-    <!-- 情景闯关入口：关卡 = 场景，带剧情与通关奖励 -->
-    <NuxtLink
-      to="/stages"
-      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
-      style="animation-delay: 98ms"
-    >
-      <UIcon name="i-lucide-map" class="h-5 w-5 shrink-0 text-indigo-500" />
-      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">情景闯关</span>
-      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
-    </NuxtLink>
-
-    <!-- 句子接龙入口：一句开头，人人可接（匿名共创） -->
-    <NuxtLink
-      to="/chains"
-      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
-      style="animation-delay: 99ms"
-    >
-      <UIcon name="i-lucide-feather" class="h-5 w-5 shrink-0 text-emerald-500" />
-      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">句子接龙</span>
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
