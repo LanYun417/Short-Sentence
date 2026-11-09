@@ -358,6 +358,13 @@ export class StageService {
     const content = (raw ?? '').replace(/\s+/g, ' ').trim();
     if (!content) throw AppException.badRequest('先说点什么吧');
     if (content.length > 300) throw AppException.badRequest('一句最多 300 个字符');
+    // 这是英语对话练习：纯中文 / 纯符号不算一次发言，也不能占通关轮数。
+    // 卡住时给一句可直接照着说的英文，比单纯报错更贴合学习场景。
+    if (!/[A-Za-z]/.test(content)) {
+      throw AppException.badRequest(
+        '这一关请用英语说一句；不知道怎么说可以试试 “I’m not sure” 或 “Could you repeat that?”',
+      );
+    }
 
     const uid = BigInt(userId);
     const cid = BigInt(categoryId);
@@ -416,7 +423,10 @@ export class StageService {
       speaker: stageRoleOf(story, reply.speaker) ? reply.speaker : (story.roles[0]?.nameEn ?? 'NPC'),
     }));
 
-    const goalReached = session.goalReached || result.goalReached;
+    // 服务端兜底：模型再乐观，也不能在用户只蹦了一个词（或答非所问）时判定目标达成。
+    // 上一轮已经达成的结论保留，避免重复达成又把目标打回未达成。
+    const englishWords = (content.match(/[A-Za-z][A-Za-z'-]*/g) ?? []).length;
+    const goalReached = session.goalReached || (result.goalReached && englishWords >= 2);
     // 结束只由服务端裁决：轮数够 + 目标达成，或撞到硬上限。模型说 ended 不算数。
     const ended = (turnCount >= story.minTurns && goalReached) || turnCount >= story.maxTurns;
     const cleared = ended && goalReached && turnCount >= story.minTurns;

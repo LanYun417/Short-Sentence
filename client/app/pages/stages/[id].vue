@@ -36,6 +36,20 @@ const draft = ref('');
 const error = ref('');
 const scroller = ref<HTMLElement | null>(null);
 
+/** 卡壳时可直接套用的英文短句（点一下填入输入框，可再改）。 */
+const QUICK_PHRASES = [
+  "I'm not sure. Could you help me?",
+  'Could you say that again, please?',
+  "I'd like a coffee, please.",
+  'What do you recommend?',
+];
+
+function usePhrase(text: string): void {
+  if (ended.value || sending.value) return;
+  draft.value = text;
+  error.value = '';
+}
+
 /** 角色英文名 → 展示信息（模型偶尔写错 speaker 时回落到第一位角色）。 */
 function roleOf(speaker: string | null): StageRole {
   const list = dialogue.value?.roles ?? [];
@@ -298,6 +312,19 @@ onMounted(async () => {
     <!-- 输入区 -->
     <div class="mt-3 shrink-0">
       <p v-if="error && messages.length" class="mb-1.5 text-xs text-rose-500">{{ error }}</p>
+      <!-- 卡壳时的英文台阶：避免用户不知道说什么就退回中文 -->
+      <div v-if="!ended" class="mb-2 flex flex-wrap gap-1.5">
+        <button
+          v-for="phrase in QUICK_PHRASES"
+          :key="phrase"
+          type="button"
+          :disabled="loading || sending"
+          class="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-500 ring-1 ring-slate-200 transition hover:text-sky-600 hover:ring-sky-300 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-800"
+          @click="usePhrase(phrase)"
+        >
+          {{ phrase }}
+        </button>
+      </div>
       <div v-if="!ended" class="flex items-end gap-2">
         <textarea
           v-model="draft"
@@ -312,7 +339,7 @@ onMounted(async () => {
         <UButton color="neutral" variant="ghost" size="sm" :disabled="sending" @click="finish">结束</UButton>
       </div>
       <p class="mt-1.5 text-center text-[10px] text-slate-400 dark:text-slate-500">
-        AI 扮演场景里的角色，内容由模型生成；聊够轮数并达成目标即可通关
+        这一关请用英语对话；卡住了可以点上面的短句 · 聊够轮数并达成目标即可通关
       </p>
     </div>
   </div>

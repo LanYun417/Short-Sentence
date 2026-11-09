@@ -281,6 +281,21 @@ describe('情景闯关（对话玩法）', () => {
     expect(overview.recommendedId).toBe(2);
   });
 
+  it('纯中文输入被拒，不落库也不占轮数', async () => {
+    const { service, messages } = makePrisma();
+    await service.startDialogue(1, 1);
+    const before = messages.length;
+    await expect(service.sendMessage(1, 1, '不知道')).rejects.toThrow(/英语/);
+    expect(messages.length).toBe(before);
+  });
+
+  it('只蹦一个英文词时，模型说目标达成也不算', async () => {
+    const { service } = makePrisma(1);
+    await service.startDialogue(1, 1);
+    const result = await service.sendMessage(1, 1, 'ok');
+    expect(result.goalReached).toBe(false);
+  });
+
   it('目标达成太早不算通关，必须聊够 minTurns', async () => {
     const { service } = makePrisma(1);
     await service.startDialogue(1, 1);
