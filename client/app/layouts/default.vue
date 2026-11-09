@@ -20,12 +20,14 @@ const { status: todayCard } = useTodayCard();
  * 导航项（含移动端底部 Tab 图标）。
  *
  * 收藏与复习**不进导航**：它们是低频的「回看 / 巩固」动作，收进「我的」页做二级入口，
- * 让导航只留核心三件事——刷题、功能、我的。
+ * 让导航只留核心四件事——刷题、功能、排行榜、我的。
  * 题库、AI 工具与情景闯关 / 句子接龙入口都收进「功能」页，避免工具型入口各占一个 Tab。
+ * 排行榜是高频的社交驱动入口，独立成 Tab 放在「我的」左侧。
  */
 const NAV_ITEMS = [
   { to: '/', label: '刷题', icon: 'i-lucide-layers' },
   { to: '/features', label: '功能', icon: 'i-lucide-layout-grid' },
+  { to: '/leaderboard', label: '排行榜', icon: 'i-lucide-trophy' },
   { to: '/profile', label: '我的', icon: 'i-lucide-user' },
 ];
 
