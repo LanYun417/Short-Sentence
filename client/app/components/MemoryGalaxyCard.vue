@@ -37,17 +37,7 @@ interface MemoryGalaxy {
   totalClusters: number;
 }
 
-const { data } = await useFetch<MemoryGalaxy>('/api/client/questions/memory-galaxy', {
-  default: () => ({
-    stars: [],
-    clusters: [],
-    totalLearned: 0,
-    graduated: 0,
-    dueCount: 0,
-    litClusters: 0,
-    totalClusters: 0,
-  }),
-});
+const { data } = await useSsrApi<MemoryGalaxy>('ss:memory-galaxy', '/client/questions/memory-galaxy');
 
 const TONE: Record<string, string> = {
   gold: '#fbbf24',

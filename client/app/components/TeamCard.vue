@@ -29,9 +29,7 @@ interface TeamView {
   members: TeamMemberView[];
 }
 
-const { data: team, refresh } = await useFetch<TeamView | null>('/api/client/team/my', {
-  default: () => null,
-});
+const { data: team, refresh } = await useSsrApi<TeamView>('ss:team-my', '/client/team/my');
 const busy = ref(false);
 const error = ref('');
 

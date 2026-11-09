@@ -38,21 +38,7 @@ interface CoachAdvice {
   source: 'ai' | 'rule';
 }
 
-const { data: profile } = await useFetch<CoachProfile>('/api/client/ai/coach/profile', {
-  default: () => ({
-    totalAnswers: 0,
-    correctAnswers: 0,
-    accuracy: 0,
-    todayAnswers: 0,
-    dueToday: 0,
-    streak: 0,
-    weakCategories: [],
-    toughSentences: [],
-    plan: [],
-    focus: '',
-    aiAvailable: false,
-  }),
-});
+const { data: profile } = await useSsrApi<CoachProfile>('ss:ai-coach', '/client/ai/coach/profile');
 
 const advice = ref<CoachAdvice | null>(null);
 const loading = ref(false);

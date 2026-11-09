@@ -10,7 +10,7 @@
  *
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除）。
  */
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { apiFetch } from '~/composables/useApi';
 import type { ChainEntry, ChainTopic, ChainTopicDetail } from '~/types';
 
@@ -21,8 +21,19 @@ usePageSeo({
   description: '给一句英文开头，接着往下写一句。匿名的，谁都可以接。',
 });
 
-const { data: topics } = await useFetch<ChainTopic[]>('/api/client/chains', {
-  default: () => [] as ChainTopic[],
+/**
+ * 主题列表走 useSsrApi（带 Cookie 令牌）：裸 useFetch 不会带 Authorization，
+ * SSR 与客户端都会 401，页面永远停在空状态。
+ */
+const { data: topicsData, refresh: refreshTopics } = await useSsrApi<ChainTopic[]>('ss:chains', '/client/chains');
+
+/** 主题列表（SSR 令牌过期时为 null，由客户端兜底填充）。 */
+const topics = computed(() => topicsData.value ?? []);
+
+onMounted(async () => {
+  if (topicsData.value === null) {
+    topicsData.value = await apiFetch<ChainTopic[]>('/client/chains').catch(() => []);
+  }
 });
 
 const activeId = ref<number | null>(null);
@@ -83,6 +94,8 @@ async function submit(): Promise<void> {
     draftZh.value = '';
     detail.value = await apiFetch<ChainTopicDetail>(`/client/chains/${topic.id}`);
     flash.value = '接上了。看看别人怎么往下写。';
+    // 主题列表里的「N 句 / 我接过 N 句」同步刷新
+    await refreshTopics();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '提交失败，请稍后重试';
   } finally {

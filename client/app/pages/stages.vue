@@ -10,7 +10,7 @@
  *
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除）。
  */
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { apiFetch } from '~/composables/useApi';
 import type { StageClaimResult, StageOverview, StageView } from '~/types';
 
@@ -21,8 +21,16 @@ usePageSeo({
   description: '把城市生活拆成十四个情景关卡，答对一个场景的句子，就往前走一段故事。',
 });
 
-const { data: overview, refresh } = await useFetch<StageOverview | null>('/api/client/stages', {
-  default: () => null,
+/**
+ * 关卡数据走 useSsrApi（带 Cookie 令牌）：裸 useFetch 不带 Authorization，
+ * SSR 与客户端都会 401，页面永远停在「正在加载关卡…」。
+ */
+const { data: overview, refresh } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
+
+onMounted(async () => {
+  if (!overview.value) {
+    overview.value = await apiFetch<StageOverview>('/client/stages').catch(() => null);
+  }
 });
 
 const chapters = computed(() => overview.value?.chapters ?? []);

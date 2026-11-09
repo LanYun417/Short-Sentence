@@ -9,9 +9,7 @@
 import { computed } from 'vue';
 import type { StageChapter, StageOverview, StageView } from '~/types';
 
-const { data: overview } = await useFetch<StageOverview | null>('/api/client/stages', {
-  default: () => null,
-});
+const { data: overview } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
 
 /** 推荐关卡（第一个已解锁未通关的关卡）。 */
 const recommended = computed<StageView | null>(() => {

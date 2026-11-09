@@ -11,17 +11,7 @@ interface MemoryStats {
   retentionCurve: Array<{ day: number; retention: number }>;
 }
 
-const { data } = await useFetch<MemoryStats>('/api/client/questions/memory-stats', {
-  default: () => ({
-    reviewed: 0,
-    graduated: 0,
-    dueToday: 0,
-    dueIn7: 0,
-    dueIn30: 0,
-    distribution: [],
-    retentionCurve: [],
-  }),
-});
+const { data } = await useSsrApi<MemoryStats>('ss:memory-stats', '/client/questions/memory-stats');
 
 const maxDist = computed(() => Math.max(1, ...(data.value?.distribution ?? [])));
 
