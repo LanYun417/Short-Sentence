@@ -15,8 +15,12 @@ describe('buildTaskRegistry 任务说明', () => {
     const aiTasks = registry.filter(
       (item) => item.description.includes('{textModel}') || item.description.includes('{imageModel}'),
     );
-    // sentence-gen 与 daily-sentence-card 两个任务都应走占位符
-    expect(aiTasks.map((item) => item.name).sort()).toEqual(['daily-sentence-card', 'sentence-gen']);
+    // sentence-gen、daily-sentence-card、chain-topic-weekly 三个任务都应走占位符
+    expect(aiTasks.map((item) => item.name).sort()).toEqual([
+      'chain-topic-weekly',
+      'daily-sentence-card',
+      'sentence-gen',
+    ]);
     for (const item of registry) {
       expect(item.description).not.toContain('Agnes 2.5 Flash');
     }

@@ -134,6 +134,16 @@ export interface SentenceCardTheme {
   blessing: string;
 }
 
+/** AI 生成的接龙主题草稿（一条主题 = 中文标题 + 英文起始句 + 中文续写提示）。 */
+export interface ChainTopicDraft {
+  /** 主题标题（中文，6~14 字，有画面感） */
+  title: string;
+  /** 起始句（英文，8~18 词，现在时，一个具体的小瞬间，别人能顺着接下去） */
+  starterEn: string;
+  /** 中文提示（一句话，点明可以往哪个方向续写） */
+  promptZh: string;
+}
+
 /** 生图结果（原始字节，转 webp 与入库由调用方负责）。 */
 export interface GeneratedImage {
   buffer: Buffer;

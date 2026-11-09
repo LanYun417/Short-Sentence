@@ -30,7 +30,9 @@ export type TaskSchedule =
   /** 每日定点执行 */
   | { kind: 'daily'; hour: number; minute: number }
   /** 每 N 小时执行一次 */
-  | { kind: 'everyHours'; hours: number };
+  | { kind: 'everyHours'; hours: number }
+  /** 每周定点执行（dayOfWeek: 0=周日 … 6=周六） */
+  | { kind: 'weekly'; dayOfWeek: number; hour: number; minute: number };
 
 /** 单个定时任务的定义。 */
 export interface TaskDefinition {
@@ -63,6 +65,10 @@ export interface TaskDefinition {
 export function cronOf(schedule: TaskSchedule): string {
   if (schedule.kind === 'daily') {
     return `0 ${schedule.minute} ${schedule.hour} * * *`;
+  }
+  if (schedule.kind === 'weekly') {
+    // 6 位 cron：秒 分 时 日 月 周；周字段 0 或 7 都是周日
+    return `0 ${schedule.minute} ${schedule.hour} * * ${schedule.dayOfWeek}`;
   }
   // 小时位用步长写法（0 0 ␟/N ␟* * *，␟ 代表斜杠）：
   // N 必须是 24 的约数才能整除（1/2/3/4/6/8/12），
@@ -110,6 +116,8 @@ export interface TaskDeps {
   generateDailySentenceCard: () => Promise<void>;
   /** 每日学习提醒邮件（DailyReminderService.run；只发给主动开启提醒的用户） */
   sendDailyReminders: () => Promise<void>;
+  /** 接龙主题周更（ChainService.generateWeeklyTopics；本周已生成则跳过，旧 AI 主题自动停用） */
+  generateWeeklyChainTopics: (count: number) => Promise<{ weekStart: string; created: number }>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -225,6 +233,24 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: true,
       create: (deps) => async () => {
         await deps.generateDailySentenceCard();
+      },
+    },
+    {
+      name: 'chain-topic-weekly',
+      title: '接龙主题周更',
+      description:
+        'AI（{textModel}）每周生成一批新的「句子接龙」主题（默认 5 条）：本周已生成则跳过（幂等）；' +
+        '新批次入库前自动停用往周的 AI 主题，手工种子主题不受影响。可在后台任务页手动触发。',
+      // 默认每周一 09:00，避开夜间生成流水线；时间/开关/条数走 config.chain.* 环境变量
+      schedule: {
+        kind: 'weekly',
+        dayOfWeek: config.chain.weeklyDayOfWeek,
+        hour: config.chain.weeklyHour,
+        minute: config.chain.weeklyMinute,
+      },
+      enabled: config.chain.weeklyCronEnabled,
+      create: (deps) => async () => {
+        await deps.generateWeeklyChainTopics(config.chain.weeklyTopicCount);
       },
     },
   ];

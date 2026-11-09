@@ -19,6 +19,10 @@ model ChainTopic {
   status     Int      @default(1) @db.TinyInt
   /// 排序（升序）
   sort       Int      @default(0) @db.Int
+  /// 来源：seed 手工种子 / ai 定时任务生成
+  source     String   @default("seed") @db.VarChar(20)
+  /// AI 批次所属周的周一日期 YYYY-MM-DD（幂等键：同一周重复跑任务直接跳过）；seed 为 null
+  weekStart  String?  @map("week_start") @db.VarChar(10)
   /// 创建时间
   createdAt  DateTime @default(now()) @map("created_at")
   /// 更新时间
@@ -27,6 +31,7 @@ model ChainTopic {
   entries ChainEntry[]
 
   @@index([status, sort])
+  @@index([source, weekStart])
   @@map("chain_topic")
 }
 

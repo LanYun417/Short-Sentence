@@ -18,6 +18,7 @@ import { AiSettingsService } from './ai-settings.service.js';
 import { resolveTextChannel } from './ai.config.js';
 import {
   AiProviderError,
+  type ChainTopicDraft,
   type ExplainItem,
   type ImageReviewContext,
   type ImageReviewResult,
@@ -39,6 +40,53 @@ function isUsableDraft(item: unknown): item is SentenceDraft {
 /** 从任意值安全取出字符串（非字符串按空串处理），trim 后截断到 max。 */
 function str(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+/** 归一化接龙文本用于判重（小写、去标点空白），导出便于单测。 */
+export function normalizeChainText(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+/**
+ * 解析 AI 批量接龙主题输出（导出便于单测）。
+ * 容忍 ```json 围栏与夹带文字；逐条校验字段（三字段齐备、starterEn 为英文且 5~30 词）。
+ */
+export function parseChainTopicBatch(content: string): ChainTopicDraft[] {
+  let text = content.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+  const matched = fence.exec(text);
+  if (matched) text = matched[1].trim();
+  if (!text.startsWith('[')) {
+    const start = text.indexOf('[');
+    const end = text.lastIndexOf(']');
+    if (start >= 0 && end > start) text = text.slice(start, end + 1);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const out: ChainTopicDraft[] = [];
+  for (const raw of parsed) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const item = raw as Record<string, unknown>;
+    const title = typeof item.title === 'string' ? item.title.trim().slice(0, 60) : '';
+    const starterEn =
+      typeof item.starterEn === 'string' ? item.starterEn.trim().replace(/\s+/g, ' ').slice(0, 200) : '';
+    const promptZh = typeof item.promptZh === 'string' ? item.promptZh.trim().replace(/\s+/g, ' ').slice(0, 200) : '';
+    // 三字段齐备且 starterEn 是英文、长度合理才收
+    if (!title || !promptZh) continue;
+    if (!/[A-Za-z]/.test(starterEn)) continue;
+    const words = starterEn.split(/\s+/).length;
+    if (words < 5 || words > 30) continue;
+    out.push({ title, starterEn, promptZh });
+  }
+  return out;
 }
 
 /**
@@ -1254,6 +1302,80 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     // 三次都撞：宁可抛错让定时任务记失败、运营手动重跑，
     // 也不要把一张重复的卡发给用户。
     throw new AiProviderError('句签主题连续重复，已放弃本次生成', { retryable: true });
+  }
+
+  /**
+   * AI 生成一批「句子接龙」主题（每周任务用）。
+   *
+   * @param weekStart 本周周一 YYYY-MM-DD（透传进 prompt 让模型知道这是哪一周）
+   * @param recent 最近已存在的主题标题（中英文混合），喂给模型做去重
+   * @param count 生成条数
+   *
+   * 与句签类似，prompt 的「不得重复」是软约束，这里生成后再用代码硬比对撞重，
+   * 撞了重试最多 3 次；仍撞则抛错，宁可本周少更、也别发重复主题。
+   */
+  async generateChainTopics(weekStart: string, recent: string[], count: number): Promise<ChainTopicDraft[]> {
+    if (!this.enabled) {
+      throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    const target = Math.min(10, Math.max(1, count));
+    const recentBlock =
+      recent.length === 0 ? '(no previous topics)' : recent.map((item, i) => `${i + 1}. ${item}`).join('\n');
+
+    const systemPrompt = [
+      'You are the content editor for "Short Sentence", an English-learning app. Users play「句子接龙」:',
+      'a chain-writing game where one person writes an opening English sentence and others continue the story, one sentence each.',
+      '',
+      'You generate THEMES for this week. Each theme is a story starter.',
+      'Hard requirements:',
+      '1. Output JSON only: an array of objects, exactly this shape, no explanations:',
+      '   [{"title":"","starterEn":"","promptZh":""}]',
+      `2. Generate EXACTLY ${target} themes.`,
+      '3. title: Chinese, 6~14 characters, vivid and concrete (a place, an object, a moment) — NOT an abstract mood.',
+      '   e.g. 「雨夜出租车的后座」「错拿的那把伞」. Avoid clichés like 「某一天」「某个城市」.',
+      '4. starterEn: ONE English sentence, 8~18 words, present tense, a concrete small moment that invites continuation.',
+      '   CEFR A2~B1 vocabulary so learners can actually continue it. It must END mid-scene, leaving something to say next.',
+      '   e.g. "The old key turned in the lock, but the door didn\'t open." — do NOT wrap up the story in the starter.',
+      '5. promptZh: one short Chinese sentence telling the writer which direction to continue (what to reveal, ask, or decide).',
+      '6. Settings should feel like everyday life a learner can relate to (home, street, café, commute, weather, small surprises),',
+      "   matching the app's scene categories — NOT fantasy, sci-fi, horror, or tragedy.",
+      '7. DIVERSITY: these topics already exist (do NOT reuse, paraphrase, or get near-synonymous with any of them):',
+      recentBlock,
+      '   The new batch must differ from each other too: vary the setting (indoor/outdoor), the time of day, and the emotion',
+      '   (curious / funny / bittersweet / hopeful). At least 2 different emotions across the batch.',
+      '8. starterEn sentences must all be distinct and not start with the same 3 words.',
+      '9. No dialogue-only starters ("He said..."); start with a scene or action.',
+      `10. Week context: ${weekStart}. You may subtly nod to the season if it fits, but do not force it.`,
+    ].join('\n');
+
+    const userContent = `Generate ${target} fresh chain-writing themes for the week of ${weekStart}. They must differ from the existing topics listed above.`;
+
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const retryHint =
+        attempt === 1
+          ? ''
+          : '\n\nIMPORTANT: your previous batch duplicated existing topics or was internally repetitive. Produce a clearly different, internally diverse batch.';
+      const content = await this.chat('chain_topic_gen', systemPrompt, `${userContent}${retryHint}`, 1.0);
+      const drafts = parseChainTopicBatch(content);
+      if (drafts.length === 0) {
+        throw new AiProviderError('接龙主题输出不可解析', { retryable: true });
+      }
+      // 硬去重：与已有主题（归一化）撞车的条目丢弃；批次内也去重
+      const seen = new Set(recent.map((t) => normalizeChainText(t)));
+      const fresh: ChainTopicDraft[] = [];
+      for (const d of drafts) {
+        const key = normalizeChainText(`${d.title}${d.starterEn}${d.promptZh}`);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        fresh.push(d);
+      }
+      if (fresh.length > 0) {
+        return fresh.slice(0, target);
+      }
+      this.logger.warn(`[Chain] 第 ${attempt}/${maxAttempts} 批主题全部与已有重复，重试`);
+    }
+    throw new AiProviderError('接龙主题连续重复，已放弃本次生成', { retryable: true });
   }
 
   /**

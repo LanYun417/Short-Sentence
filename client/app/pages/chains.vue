@@ -170,7 +170,15 @@ function dateOf(iso: string): string {
             @click="open(topic)"
           >
             <div class="flex items-start justify-between gap-2">
-              <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ topic.title }}</h2>
+              <h2 class="flex min-w-0 items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-slate-100">
+                <span class="truncate">{{ topic.title }}</span>
+                <span
+                  v-if="topic.source === 'ai'"
+                  class="shrink-0 rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-600 ring-1 ring-sky-200/70 dark:bg-sky-950/50 dark:text-sky-300 dark:ring-sky-800"
+                >
+                  本周新
+                </span>
+              </h2>
               <span class="shrink-0 text-[11px] text-slate-400">{{ topic.entryCount }} 句</span>
             </div>
             <p class="mt-1.5 text-xs italic leading-relaxed text-slate-500 dark:text-slate-400">

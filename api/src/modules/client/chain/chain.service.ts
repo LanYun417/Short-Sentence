@@ -30,6 +30,8 @@ export interface ChainTopicView {
   title: string;
   starterEn: string;
   promptZh: string;
+  /** 来源：seed 手工种子 / ai 每周 AI 生成（前端据此标「本周新」） */
+  source: string;
   /** 该主题下可见条目数 */
   entryCount: number;
   /** 我在该主题下提交过几条 */
@@ -90,14 +92,18 @@ export class ChainService {
     private readonly moderator: AgnesSentenceProvider,
   ) {}
 
-  /** 主题列表（按 sort 升序），附可见条目数与我的提交数。 */
+  /**
+   * 主题列表：启用的主题，**本周 AI 新主题排在最前**（weekStart 倒序、seed 为 null 排最后），
+   * 再按 sort 升序。附可见条目数与我的提交数。
+   */
   async listTopics(userId: number): Promise<ChainTopicView[]> {
     const uid = BigInt(userId);
     const [topics, counts, mine] = await Promise.all([
       this.prisma.chainTopic.findMany({
         where: { status: 1 },
-        orderBy: [{ sort: 'asc' }, { id: 'asc' }],
-        select: { id: true, title: true, starterEn: true, promptZh: true },
+        // MySQL 里 NULL 在 DESC 下排最后：AI 主题(weekStart 非空)在前，手工种子(null)在后
+        orderBy: [{ weekStart: 'desc' }, { sort: 'asc' }, { id: 'asc' }],
+        select: { id: true, title: true, starterEn: true, promptZh: true, source: true },
       }),
       this.prisma.chainEntry.groupBy({
         by: ['topicId'],
@@ -119,9 +125,85 @@ export class ChainService {
       title: row.title,
       starterEn: row.starterEn,
       promptZh: row.promptZh,
+      source: row.source,
       entryCount: countByTopic.get(String(row.id)) ?? 0,
       myEntryCount: mineByTopic.get(String(row.id)) ?? 0,
     }));
+  }
+
+  /* ------------------------------ AI 每周主题 ------------------------------ */
+
+  /**
+   * 每周 AI 生成一批新接龙主题（定时任务 `chain-topic-weekly` 调用，也可在后台手动触发）。
+   *
+   * 幂等：以「本周一日期」为键——本周已生成过（存在 source=ai 且 weekStart=本周一 的主题）就直接跳过，
+   * 重复跑任务不会重复造数据。
+   * 轮换：新批次入库前，把**上一周及以前的所有 AI 主题**置为停用（status=0），
+   * 手工种子（source=seed）永不停用，作为常驻保底内容。
+   */
+  async generateWeeklyTopics(count: number): Promise<{ weekStart: string; created: number }> {
+    const weekStart = this.mondayOf(new Date());
+    const existing = await this.prisma.chainTopic.count({
+      where: { source: 'ai', weekStart },
+    });
+    if (existing > 0) {
+      this.logger.log(`[Chain] 本周(${weekStart})已有 ${existing} 条 AI 主题，跳过生成`);
+      return { weekStart, created: 0 };
+    }
+
+    // 去重窗口：最近 40 条主题标题（AI + 种子混合），喂给模型避免撞车
+    const recentRows = await this.prisma.chainTopic.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 40,
+      select: { title: true, starterEn: true },
+    });
+    const recent = recentRows.flatMap((row) => [row.title, row.starterEn]);
+
+    const drafts = await this.moderator.generateChainTopics(weekStart, recent, count);
+    if (drafts.length === 0) {
+      throw new AppException('AI 未返回可用主题');
+    }
+
+    // 新主题的 sort 接在现有最大 sort 之后，保证列表里排在种子之后、同周内按生成顺序
+    const maxSort = await this.prisma.chainTopic.aggregate({ _max: { sort: true } });
+    let nextSort = (maxSort._max.sort ?? 0) + 1;
+
+    await this.prisma.$transaction(async (tx) => {
+      // 停用上一周及以前的 AI 主题（本周还没有，所以等价于停用全部旧 AI 主题）
+      await tx.chainTopic.updateMany({
+        where: { source: 'ai', weekStart: { not: weekStart } },
+        data: { status: 0 },
+      });
+      await tx.chainTopic.createMany({
+        data: drafts.map((draft) => ({
+          title: draft.title,
+          starterEn: draft.starterEn,
+          promptZh: draft.promptZh,
+          status: 1,
+          source: 'ai',
+          weekStart,
+          sort: nextSort++,
+        })),
+      });
+    });
+    this.logger.log(`[Chain] 本周(${weekStart})新生成 ${drafts.length} 条 AI 主题`);
+    return { weekStart, created: drafts.length };
+  }
+
+  /** 本地时区下，date 所在周的周一 YYYY-MM-DD。 */
+  private mondayOf(date: Date): string {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const dow = d.getDay(); // 0=周日
+    const diff = (dow + 6) % 7; // 距周一的天数
+    d.setDate(d.getDate() - diff);
+    return this.formatDate(d);
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   /** 主题详情 + 可见条目（按赞数、时间排序）。 */
@@ -164,6 +246,7 @@ export class ChainService {
         title: topic.title,
         starterEn: topic.starterEn,
         promptZh: topic.promptZh,
+        source: topic.source,
         entryCount: entries.length,
         myEntryCount: entries.filter((row) => String(row.userId) === String(uid)).length,
       },
@@ -424,7 +507,7 @@ export class ChainService {
   private async getEnabledTopic(topicId: number) {
     const topic = await this.prisma.chainTopic.findUnique({
       where: { id: BigInt(topicId) },
-      select: { id: true, title: true, starterEn: true, promptZh: true, status: true },
+      select: { id: true, title: true, starterEn: true, promptZh: true, status: true, source: true },
     });
     if (!topic || topic.status !== 1) {
       throw AppException.notFound('接龙主题不存在或已下线');

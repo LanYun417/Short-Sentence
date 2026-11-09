@@ -3564,6 +3564,8 @@ export const ChainTopicScalarFieldEnum = {
   categoryId: 'categoryId',
   status: 'status',
   sort: 'sort',
+  source: 'source',
+  weekStart: 'weekStart',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -4277,21 +4279,23 @@ export const AppVersionOrderByRelevanceFieldEnum = {
 export type AppVersionOrderByRelevanceFieldEnum = (typeof AppVersionOrderByRelevanceFieldEnum)[keyof typeof AppVersionOrderByRelevanceFieldEnum]
 
 
-export const ChainTopicOrderByRelevanceFieldEnum = {
-  title: 'title',
-  starterEn: 'starterEn',
-  promptZh: 'promptZh'
-} as const
-
-export type ChainTopicOrderByRelevanceFieldEnum = (typeof ChainTopicOrderByRelevanceFieldEnum)[keyof typeof ChainTopicOrderByRelevanceFieldEnum]
-
-
 export const NullsOrder = {
   first: 'first',
   last: 'last'
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const ChainTopicOrderByRelevanceFieldEnum = {
+  title: 'title',
+  starterEn: 'starterEn',
+  promptZh: 'promptZh',
+  source: 'source',
+  weekStart: 'weekStart'
+} as const
+
+export type ChainTopicOrderByRelevanceFieldEnum = (typeof ChainTopicOrderByRelevanceFieldEnum)[keyof typeof ChainTopicOrderByRelevanceFieldEnum]
 
 
 export const ChainEntryOrderByRelevanceFieldEnum = {

@@ -464,6 +464,18 @@ export const config = {
     /** 毕业后间隔增长封顶步数（默认 5，约 90×1.3^5≈335 天） */
     masteryMaintenanceCap: Math.max(0, toNumber(process.env.SENTENCE_MASTERY_MAINTENANCE_CAP, 5)),
   },
+  /** 句子接龙配置 */
+  chain: {
+    /** 是否启用「AI 每周生成新主题」定时任务 */
+    weeklyCronEnabled: toBoolean(process.env.CHAIN_WEEKLY_CRON_ENABLED, true),
+    /** 每周生成的新主题条数（1~10） */
+    weeklyTopicCount: Math.min(10, Math.max(1, toNumber(process.env.CHAIN_WEEKLY_TOPIC_COUNT, 5))),
+    /** 每周生成的星期几（0=周日 … 6=周六；默认周一） */
+    weeklyDayOfWeek: Math.min(6, Math.max(0, toNumber(process.env.CHAIN_WEEKLY_DAY_OF_WEEK, 1))),
+    /** 每周生成时刻（本地时间，默认周一 09:00） */
+    weeklyHour: toNumber(process.env.CHAIN_WEEKLY_HOUR, 9),
+    weeklyMinute: toNumber(process.env.CHAIN_WEEKLY_MINUTE, 0),
+  },
 } as const;
 
 export type AppConfig = typeof config;

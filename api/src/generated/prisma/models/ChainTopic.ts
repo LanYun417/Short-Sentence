@@ -51,6 +51,8 @@ export type ChainTopicMinAggregateOutputType = {
   categoryId: bigint | null
   status: number | null
   sort: number | null
+  source: string | null
+  weekStart: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -63,6 +65,8 @@ export type ChainTopicMaxAggregateOutputType = {
   categoryId: bigint | null
   status: number | null
   sort: number | null
+  source: string | null
+  weekStart: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -75,6 +79,8 @@ export type ChainTopicCountAggregateOutputType = {
   categoryId: number
   status: number
   sort: number
+  source: number
+  weekStart: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -103,6 +109,8 @@ export type ChainTopicMinAggregateInputType = {
   categoryId?: true
   status?: true
   sort?: true
+  source?: true
+  weekStart?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -115,6 +123,8 @@ export type ChainTopicMaxAggregateInputType = {
   categoryId?: true
   status?: true
   sort?: true
+  source?: true
+  weekStart?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -127,6 +137,8 @@ export type ChainTopicCountAggregateInputType = {
   categoryId?: true
   status?: true
   sort?: true
+  source?: true
+  weekStart?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -226,6 +238,8 @@ export type ChainTopicGroupByOutputType = {
   categoryId: bigint
   status: number
   sort: number
+  source: string
+  weekStart: string | null
   createdAt: Date
   updatedAt: Date
   _count: ChainTopicCountAggregateOutputType | null
@@ -261,6 +275,8 @@ export type ChainTopicWhereInput = {
   categoryId?: Prisma.BigIntFilter<"ChainTopic"> | bigint | number
   status?: Prisma.IntFilter<"ChainTopic"> | number
   sort?: Prisma.IntFilter<"ChainTopic"> | number
+  source?: Prisma.StringFilter<"ChainTopic"> | string
+  weekStart?: Prisma.StringNullableFilter<"ChainTopic"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ChainTopic"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ChainTopic"> | Date | string
   entries?: Prisma.ChainEntryListRelationFilter
@@ -274,6 +290,8 @@ export type ChainTopicOrderByWithRelationInput = {
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   sort?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  weekStart?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   entries?: Prisma.ChainEntryOrderByRelationAggregateInput
@@ -291,6 +309,8 @@ export type ChainTopicWhereUniqueInput = Prisma.AtLeast<{
   categoryId?: Prisma.BigIntFilter<"ChainTopic"> | bigint | number
   status?: Prisma.IntFilter<"ChainTopic"> | number
   sort?: Prisma.IntFilter<"ChainTopic"> | number
+  source?: Prisma.StringFilter<"ChainTopic"> | string
+  weekStart?: Prisma.StringNullableFilter<"ChainTopic"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ChainTopic"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ChainTopic"> | Date | string
   entries?: Prisma.ChainEntryListRelationFilter
@@ -304,6 +324,8 @@ export type ChainTopicOrderByWithAggregationInput = {
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   sort?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  weekStart?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ChainTopicCountOrderByAggregateInput
@@ -324,6 +346,8 @@ export type ChainTopicScalarWhereWithAggregatesInput = {
   categoryId?: Prisma.BigIntWithAggregatesFilter<"ChainTopic"> | bigint | number
   status?: Prisma.IntWithAggregatesFilter<"ChainTopic"> | number
   sort?: Prisma.IntWithAggregatesFilter<"ChainTopic"> | number
+  source?: Prisma.StringWithAggregatesFilter<"ChainTopic"> | string
+  weekStart?: Prisma.StringNullableWithAggregatesFilter<"ChainTopic"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ChainTopic"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ChainTopic"> | Date | string
 }
@@ -336,6 +360,8 @@ export type ChainTopicCreateInput = {
   categoryId?: bigint | number
   status?: number
   sort?: number
+  source?: string
+  weekStart?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   entries?: Prisma.ChainEntryCreateNestedManyWithoutTopicInput
@@ -349,6 +375,8 @@ export type ChainTopicUncheckedCreateInput = {
   categoryId?: bigint | number
   status?: number
   sort?: number
+  source?: string
+  weekStart?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   entries?: Prisma.ChainEntryUncheckedCreateNestedManyWithoutTopicInput
@@ -362,6 +390,8 @@ export type ChainTopicUpdateInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   entries?: Prisma.ChainEntryUpdateManyWithoutTopicNestedInput
@@ -375,6 +405,8 @@ export type ChainTopicUncheckedUpdateInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   entries?: Prisma.ChainEntryUncheckedUpdateManyWithoutTopicNestedInput
@@ -388,6 +420,8 @@ export type ChainTopicCreateManyInput = {
   categoryId?: bigint | number
   status?: number
   sort?: number
+  source?: string
+  weekStart?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -400,6 +434,8 @@ export type ChainTopicUpdateManyMutationInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -412,6 +448,8 @@ export type ChainTopicUncheckedUpdateManyInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -430,6 +468,8 @@ export type ChainTopicCountOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   sort?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  weekStart?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -449,6 +489,8 @@ export type ChainTopicMaxOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   sort?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  weekStart?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -461,6 +503,8 @@ export type ChainTopicMinOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   sort?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  weekStart?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -475,6 +519,10 @@ export type ChainTopicSumOrderByAggregateInput = {
 export type ChainTopicScalarRelationFilter = {
   is?: Prisma.ChainTopicWhereInput
   isNot?: Prisma.ChainTopicWhereInput
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type ChainTopicCreateNestedOneWithoutEntriesInput = {
@@ -499,6 +547,8 @@ export type ChainTopicCreateWithoutEntriesInput = {
   categoryId?: bigint | number
   status?: number
   sort?: number
+  source?: string
+  weekStart?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -511,6 +561,8 @@ export type ChainTopicUncheckedCreateWithoutEntriesInput = {
   categoryId?: bigint | number
   status?: number
   sort?: number
+  source?: string
+  weekStart?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -539,6 +591,8 @@ export type ChainTopicUpdateWithoutEntriesInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -551,6 +605,8 @@ export type ChainTopicUncheckedUpdateWithoutEntriesInput = {
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  weekStart?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -594,6 +650,8 @@ export type ChainTopicSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   categoryId?: boolean
   status?: boolean
   sort?: boolean
+  source?: boolean
+  weekStart?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   entries?: boolean | Prisma.ChainTopic$entriesArgs<ExtArgs>
@@ -610,11 +668,13 @@ export type ChainTopicSelectScalar = {
   categoryId?: boolean
   status?: boolean
   sort?: boolean
+  source?: boolean
+  weekStart?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ChainTopicOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "starterEn" | "promptZh" | "categoryId" | "status" | "sort" | "createdAt" | "updatedAt", ExtArgs["result"]["chainTopic"]>
+export type ChainTopicOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "starterEn" | "promptZh" | "categoryId" | "status" | "sort" | "source" | "weekStart" | "createdAt" | "updatedAt", ExtArgs["result"]["chainTopic"]>
 export type ChainTopicInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   entries?: boolean | Prisma.ChainTopic$entriesArgs<ExtArgs>
   _count?: boolean | Prisma.ChainTopicCountOutputTypeDefaultArgs<ExtArgs>
@@ -654,6 +714,14 @@ export type $ChainTopicPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * 排序（升序）
      */
     sort: number
+    /**
+     * 来源：seed 手工种子 / ai 定时任务生成
+     */
+    source: string
+    /**
+     * AI 批次所属周的周一日期 YYYY-MM-DD（幂等键：同一周重复跑任务直接跳过）；seed 为 null
+     */
+    weekStart: string | null
     /**
      * 创建时间
      */
@@ -1039,6 +1107,8 @@ export interface ChainTopicFieldRefs {
   readonly categoryId: Prisma.FieldRef<"ChainTopic", 'BigInt'>
   readonly status: Prisma.FieldRef<"ChainTopic", 'Int'>
   readonly sort: Prisma.FieldRef<"ChainTopic", 'Int'>
+  readonly source: Prisma.FieldRef<"ChainTopic", 'String'>
+  readonly weekStart: Prisma.FieldRef<"ChainTopic", 'String'>
   readonly createdAt: Prisma.FieldRef<"ChainTopic", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ChainTopic", 'DateTime'>
 }

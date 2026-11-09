@@ -24,6 +24,7 @@ import { SentenceService } from '../sentence/sentence.service.js';
 import { DailyReminderService } from '../mail/daily-reminder.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
+import { ChainService } from '../client/chain/chain.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { ConfigService } from '../config/config.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
@@ -155,6 +156,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly wordRoot: WordRootService,
     private readonly sentenceCard: SentenceCardService,
     private readonly dailyReminder: DailyReminderService,
+    private readonly chain: ChainService,
     private readonly configService: ConfigService,
     private readonly aiSettings: AiSettingsService,
   ) {}
@@ -175,6 +177,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       },
       generateDailySentenceCard: () => this.sentenceCard.generateDaily(),
       sendDailyReminders: () => this.dailyReminder.run(),
+      generateWeeklyChainTopics: (count: number) => this.chain.generateWeeklyTopics(count),
     };
 
     // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值
@@ -353,6 +356,23 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       }
       // 今天还没成功过 → 补跑（跨天则 lastSuccess 必然是昨天之前，自然为 true）
       return !lastSuccess || this.isBeforeToday(lastSuccess);
+    }
+    if (schedule.kind === 'weekly') {
+      // 本周的定时时刻（把今天回拨到目标星期几的 hour:minute）
+      const now = new Date();
+      const diff = (now.getDay() - schedule.dayOfWeek + 7) % 7;
+      const scheduled = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - diff,
+        schedule.hour,
+        schedule.minute,
+        0,
+        0,
+      );
+      if (now < scheduled) return false;
+      // 本周定时点已过、且本周还没成功过 → 补跑
+      return !lastSuccess || lastSuccess < scheduled;
     }
     // 周期任务：距上次成功超过一个周期即补跑
     if (!lastSuccess) {

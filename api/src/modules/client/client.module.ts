@@ -73,6 +73,8 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     // 学习小队后台管理控制器 /api/teams（客户端走 /api/client/team）
     TeamAdminController,
   ],
+  // ChainService 导出给 TaskModule 挂「接龙主题周更」定时任务
+  exports: [ChainService],
   providers: [
     ClientAuthUserService,
     // 邮箱验证码（注册/登录/重置密码；依赖 Redis + 全局 MailService）

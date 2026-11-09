@@ -507,6 +507,8 @@ export interface ChainTopic {
   starterEn: string;
   /** 中文提示 */
   promptZh: string;
+  /** 来源：seed 手工种子 / ai 每周 AI 生成（前端标「本周新」） */
+  source?: string;
   entryCount: number;
   myEntryCount: number;
 }

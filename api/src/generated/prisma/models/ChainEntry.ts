@@ -566,10 +566,6 @@ export type ChainEntryUncheckedUpdateManyWithoutTopicNestedInput = {
   deleteMany?: Prisma.ChainEntryScalarWhereInput | Prisma.ChainEntryScalarWhereInput[]
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type ChainEntryCreateNestedOneWithoutLikesInput = {
   create?: Prisma.XOR<Prisma.ChainEntryCreateWithoutLikesInput, Prisma.ChainEntryUncheckedCreateWithoutLikesInput>
   connectOrCreate?: Prisma.ChainEntryCreateOrConnectWithoutLikesInput
