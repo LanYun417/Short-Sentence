@@ -176,6 +176,7 @@ export default defineNuxtConfig({
       '/feedback',
       '/leaderboard',
       '/stages',
+      '/stages/*',
       '/chains',
     ],
   },
@@ -192,6 +193,7 @@ export default defineNuxtConfig({
       '/feedback',
       '/leaderboard',
       '/stages',
+      '/stages/*',
       '/chains',
     ],
     urls: () => [
