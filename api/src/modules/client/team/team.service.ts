@@ -12,6 +12,7 @@
  * 日期口径与 CheckinService 完全一致（本地时区 YYYY-MM-DD），否则会错判全员打卡。
  */
 import { Injectable } from '@nestjs/common';
+import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { GamifyService } from '../gamify/gamify.service.js';
 
@@ -21,6 +22,24 @@ const MAX_MEMBERS = 4;
 const FULL_TEAM_XP = 15;
 /** 小队名词库（随机取，无唯一约束，重名不影响功能）。 */
 const TEAM_NAMES = ['晨光', '星野', '拾光', '青柠', '远航', '暖阳', '松风', '晴川', '萤火', '知更'];
+/** 小队名长度（按码点计，emoji 记 1）：schema 是 VarChar(50)，产品上取更紧的区间。 */
+const TEAM_NAME_MIN = 2;
+const TEAM_NAME_MAX = 20;
+
+/**
+ * 归一化小队名：控制字符（含换行 / 制表）**换成空格**而不是直接删掉——
+ * 直接删会把「早安\t小队」粘成「早安小队」；换空格后再压缩连续空白，
+ * 既能排版干净又不会改变用户原本想表达的分词。
+ */
+function normalizeTeamName(raw: string): string {
+  return (
+    (raw ?? '')
+      // eslint-disable-next-line no-control-regex -- 故意匹配控制字符（换行/制表等）以便剥掉
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+}
 
 export interface TeamMemberView {
   userId: number;
@@ -236,6 +255,42 @@ export class TeamService {
         data: { status: 'dissolved' },
       });
     }
+  }
+
+  /**
+   * 修改小队名（任意成员可改，改完全队可见）。
+   *
+   * 为什么不做「仅创建者可改」： study_team 没有创建者字段，为这一点加列要回填历史数据，
+   * 而小队上限 4 人、随时可退出重配，被乱改名的代价很低。输入侧做严归一
+   * （丢控制字符 / 压缩空白 / 码点限长）+ Vue 侧天然转义，足够挡住注入与排版破坏。
+   */
+  async rename(userId: number, raw: string): Promise<TeamView> {
+    const name = normalizeTeamName(raw);
+    const length = [...name].length;
+    if (length < TEAM_NAME_MIN) {
+      throw AppException.badRequest(`小队名至少 ${TEAM_NAME_MIN} 个字`);
+    }
+    if (length > TEAM_NAME_MAX) {
+      throw AppException.badRequest(`小队名最多 ${TEAM_NAME_MAX} 个字`);
+    }
+
+    const uid = BigInt(userId);
+    const member = await this.prisma.studyTeamMember.findUnique({
+      where: { userId: uid },
+      select: { teamId: true },
+    });
+    if (!member) throw AppException.badRequest('你还没有小队，先找队友吧');
+    const team = await this.prisma.studyTeam.findUnique({
+      where: { id: member.teamId },
+      select: { id: true, status: true },
+    });
+    if (!team || team.status !== 'active') throw AppException.badRequest('小队已解散，请重新匹配');
+
+    await this.prisma.studyTeam.update({ where: { id: team.id }, data: { name } });
+    const view = await this.getMyTeam(userId);
+    // 刚更新过必然查得到；查不到说明状态异常，宁可报错也不要返回空小队
+    if (!view) throw AppException.serviceUnavailable('小队状态异常，请刷新后重试');
+    return view;
   }
 
   /**

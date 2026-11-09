@@ -204,3 +204,49 @@ describe('弱连接小队：提醒与退队', () => {
     expect(fresh.id).not.toBe(teams[0].id); // 新队伍，没被拉回已解散的队
   });
 });
+
+describe('弱连接小队：小队改名', () => {
+  it('任意成员可改名，归一化空白并写回小队', async () => {
+    const { service, teams } = makeService();
+    await service.match(1);
+    await service.match(2);
+
+    const view = await service.rename(1, '  凌晨     刷题团  ');
+    expect(teams[0].name).toBe('凌晨 刷题团');
+    expect(view.name).toBe('凌晨 刷题团');
+    // 另一个成员看到的是新名字
+    expect((await service.getMyTeam(2))?.name).toBe('凌晨 刷题团');
+  });
+
+  it('长度按码点校验：emoji 记 1 字，少于 2 / 多于 20 都拒', async () => {
+    const { service, teams } = makeService();
+    await service.match(1);
+    const before = teams[0].name;
+
+    await expect(service.rename(1, 'a')).rejects.toThrow(/至少/);
+    await expect(service.rename(1, '   ')).rejects.toThrow(/至少/);
+    await expect(service.rename(1, 'x'.repeat(21))).rejects.toThrow(/最多/);
+    expect(teams[0].name).toBe(before); // 被拒时不改库
+
+    // emoji 小队名：码点算 2 ~ 20 都放行
+    await expect(service.rename(1, '🚀'.repeat(20))).resolves.toBeTruthy();
+    expect(teams[0].name).toBe('🚀'.repeat(20));
+  });
+
+  it('换行/制表等控制字符转成空格，避免排版错乱与词语粘连', async () => {
+    const { service, teams } = makeService();
+    await service.match(1);
+    await service.rename(1, '早安\t小队\n冲呀');
+    expect(teams[0].name).toBe('早安 小队 冲呀');
+  });
+
+  it('未组队不能改名；小队已解散也不能改名', async () => {
+    const { service, teams } = makeService();
+    await expect(service.rename(99, '新名字')).rejects.toThrow(/还没有小队/);
+
+    await service.match(1);
+    // 退队会连成员行一起删，所以先手动置解散来覆盖这条防御分支
+    teams[0].status = 'dissolved';
+    await expect(service.rename(1, '新名字')).rejects.toThrow(/已解散/);
+  });
+});

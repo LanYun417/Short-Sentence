@@ -32,6 +32,22 @@ interface TeamView {
 const { data: team, refresh } = await useSsrApi<TeamView>('ss:team-my', '/client/team/my');
 const busy = ref(false);
 const error = ref('');
+/** 正在编辑小队名（点小队名进入行内编辑）。 */
+const renaming = ref(false);
+const nameDraft = ref('');
+/** 待确认的危险动作：leave 退出 / rematch 换一批队友。空串 = 无待确认。 */
+const confirming = ref<'' | 'leave' | 'rematch'>('');
+
+/** 小队名归一（与服务端同口径，这里只用于即时反馈；服务端会再归一一次）。 */
+function normalizeName(raw: string): string {
+  return (
+    (raw ?? '')
+      // eslint-disable-next-line no-control-regex -- 故意匹配控制字符（换行/制表等）以便剥掉
+      .replace(/[\u0000-\u001F\u007F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
+}
 
 async function run(action: 'match' | 'leave'): Promise<void> {
   if (busy.value) return;
@@ -60,6 +76,57 @@ async function rematch(): Promise<void> {
     error.value = e instanceof Error ? e.message : '操作失败，请稍后重试';
   } finally {
     busy.value = false;
+  }
+}
+
+/** 进入行内改名。 */
+function startRename(): void {
+  if (busy.value) return;
+  nameDraft.value = team.value?.name ?? '';
+  renaming.value = true;
+  error.value = '';
+}
+
+/** 保存小队名（PATCH 返回最新小队视图，直接采用，免一次刷新）。 */
+async function saveRename(): Promise<void> {
+  if (busy.value) return;
+  const name = normalizeName(nameDraft.value);
+  if ([...name].length < 2) {
+    error.value = '小队名至少 2 个字';
+    return;
+  }
+  if ([...name].length > 20) {
+    error.value = '小队名最多 20 个字';
+    return;
+  }
+  busy.value = true;
+  error.value = '';
+  try {
+    team.value = await apiFetch<TeamView>('/client/team/name', { method: 'PATCH', body: { name } });
+    renaming.value = false;
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '修改失败，请稍后重试';
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** 执行待确认的动作（确认框里点「确定」）。 */
+async function runConfirmed(): Promise<void> {
+  const action = confirming.value;
+  confirming.value = '';
+  if (action === 'leave') await run('leave');
+  else if (action === 'rematch') await rematch();
+}
+
+/** 改名输入框：Enter 保存，Esc 取消。 */
+function onNameKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    void saveRename();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    renaming.value = false;
   }
 }
 
@@ -104,10 +171,49 @@ const toneClass = computed(() => {
 
     <!-- 已组队 -->
     <div v-else>
-      <div class="mb-3 flex items-center justify-between">
-        <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ team.name }}</span>
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <!-- 小队名：点一下行内改名 -->
+        <template v-if="!renaming">
+          <button
+            type="button"
+            class="group flex min-w-0 items-center gap-1 text-sm font-semibold text-slate-800 transition hover:text-sky-600 disabled:opacity-50 dark:text-slate-100 dark:hover:text-sky-400"
+            :disabled="busy"
+            title="修改小队名"
+            @click="startRename"
+          >
+            <span class="truncate">{{ team.name }}</span>
+            <UIcon name="i-lucide-pencil" class="h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-60" />
+          </button>
+        </template>
+        <form v-else class="flex min-w-0 flex-1 items-center gap-1.5" @submit.prevent="saveRename">
+          <input
+            v-model="nameDraft"
+            type="text"
+            maxlength="20"
+            autofocus
+            placeholder="小队名 2~20 字"
+            aria-label="小队名"
+            class="min-w-0 flex-1 rounded-lg bg-slate-50 px-2 py-1 text-sm text-slate-800 outline-none ring-1 ring-slate-200 transition focus:ring-sky-400 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700"
+            @keydown="onNameKeydown"
+          />
+          <button
+            type="submit"
+            class="shrink-0 rounded-lg bg-sky-600 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-sky-700 disabled:opacity-50"
+            :disabled="busy"
+          >
+            保存
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg px-1.5 py-1 text-[11px] text-slate-400 transition hover:text-slate-600 disabled:opacity-50 dark:hover:text-slate-300"
+            :disabled="busy"
+            @click="renaming = false"
+          >
+            取消
+          </button>
+        </form>
         <span
-          class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium tabular-nums text-amber-600 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"
+          class="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium tabular-nums text-amber-600 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20"
         >
           连续 {{ team.streak }} 天
         </span>
@@ -158,18 +264,65 @@ const toneClass = computed(() => {
         </div>
       </div>
 
-      <div class="mt-3 flex items-center justify-between">
-        <span class="text-xs tabular-nums text-slate-400">
-          今日 {{ team.doneCount }} / {{ team.memberCount }} 人完成 · 满 {{ team.maxMembers }} 人
-        </span>
-        <button
-          type="button"
-          class="text-xs text-slate-400 underline-offset-2 transition hover:text-sky-600 hover:underline disabled:opacity-50"
-          :disabled="busy"
-          @click="rematch"
+      <div class="mt-3 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs tabular-nums text-slate-400">
+            今日 {{ team.doneCount }} / {{ team.memberCount }} 人完成 · 满 {{ team.maxMembers }} 人
+          </span>
+          <!-- 换一批队友：会丢当前队伍与连续天数，必须二次确认 -->
+          <button
+            v-if="!confirming"
+            type="button"
+            class="text-xs text-slate-400 underline-offset-2 transition hover:text-sky-600 hover:underline disabled:opacity-50"
+            :disabled="busy"
+            @click="confirming = 'rematch'"
+          >
+            换一批队友
+          </button>
+        </div>
+
+        <!-- 二级确认：退出 / 换队都是「丢掉当前小队」的不可逆动作 -->
+        <div
+          v-if="confirming"
+          class="flex items-center gap-2 rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-200/70 dark:bg-slate-800/50 dark:ring-slate-700/60"
         >
-          {{ busy ? '处理中…' : '换一批队友' }}
-        </button>
+          <UIcon name="i-lucide-triangle-alert" class="h-4 w-4 shrink-0 text-amber-500" />
+          <p class="min-w-0 flex-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            {{
+              confirming === 'leave'
+                ? '退出后当前小队与连续天数会清零，之后可以重新匹配。'
+                : '会退出当前小队并按当前节奏重新匹配，连续天数清零。'
+            }}
+          </p>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-rose-700 disabled:opacity-50"
+            :disabled="busy"
+            @click="runConfirmed"
+          >
+            {{ busy ? '处理中…' : '确定' }}
+          </button>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg px-1.5 py-1 text-[11px] text-slate-400 transition hover:text-slate-600 disabled:opacity-50 dark:hover:text-slate-300"
+            :disabled="busy"
+            @click="confirming = ''"
+          >
+            取消
+          </button>
+        </div>
+
+        <!-- 退出小队：同样是危险动作，走同一套确认 -->
+        <div v-else class="flex justify-end">
+          <button
+            type="button"
+            class="text-xs text-slate-400 underline-offset-2 transition hover:text-rose-600 hover:underline disabled:opacity-50"
+            :disabled="busy"
+            @click="confirming = 'leave'"
+          >
+            退出小队
+          </button>
+        </div>
       </div>
     </div>
 
