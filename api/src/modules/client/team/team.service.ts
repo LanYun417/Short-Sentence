@@ -73,6 +73,45 @@ export interface TeamView {
   members: TeamMemberView[];
 }
 
+/* ------------------------------ 后台管理视图类型 ------------------------------ */
+
+/** 后台-小队概览统计。 */
+export interface TeamAdminStats {
+  activeTeamCount: number;
+  dissolvedTeamCount: number;
+  /** 在队用户总数 */
+  inTeamUserCount: number;
+  /** 平均每队人数（无进行中小队为 null） */
+  avgMembers: number | null;
+  /** 今日全员达成的小队数（lastFullDate = 今天） */
+  todayFullTeamCount: number;
+}
+
+/** 后台-小队列表条目。 */
+export interface TeamAdminItem {
+  id: number;
+  name: string;
+  status: string;
+  /** 匹配分桶（近 7 天答题量档位） */
+  bucket: number;
+  streak: number;
+  lastFullDate: string | null;
+  memberCount: number;
+  maxMembers: number;
+  createdAt: string;
+}
+
+/** 后台-小队详情（含成员）。 */
+export interface TeamAdminDetail extends Omit<TeamAdminItem, 'memberCount'> {
+  members: Array<{
+    userId: number;
+    nickname: string;
+    xp: number;
+    joinedDate: string;
+    checkedIn: boolean;
+  }>;
+}
+
 /** Prisma 唯一键冲突。 */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002';
@@ -339,6 +378,149 @@ export class TeamService {
       // 队伍成就（team_full_3 / team_full_7）依赖 teamStreak，结算后统一刷新
       await this.gamify.checkAchievements(mid);
     }
+  }
+
+  /* ------------------------------ 后台管理（运营） ------------------------------ */
+
+  /** 后台-概览统计。 */
+  async adminStats(): Promise<TeamAdminStats> {
+    const today = this.today();
+    const [activeCount, dissolvedCount, memberCount, todayFullCount] = await Promise.all([
+      this.prisma.studyTeam.count({ where: { status: 'active' } }),
+      this.prisma.studyTeam.count({ where: { status: 'dissolved' } }),
+      this.prisma.studyTeamMember.count(),
+      this.prisma.studyTeam.count({ where: { status: 'active', lastFullDate: today } }),
+    ]);
+    return {
+      activeTeamCount: activeCount,
+      dissolvedTeamCount: dissolvedCount,
+      inTeamUserCount: memberCount,
+      avgMembers: activeCount > 0 ? Math.round((memberCount / activeCount) * 10) / 10 : null,
+      todayFullTeamCount: todayFullCount,
+    };
+  }
+
+  /** 后台-小队分页列表（筛选：status / keyword=队名 / minMembers）。 */
+  async adminList(query: Record<string, unknown>): Promise<{ list: TeamAdminItem[]; total: number }> {
+    const page = Math.max(1, Number(query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 20) || 20));
+    const status = typeof query.status === 'string' && query.status ? query.status : 'active';
+    const keyword = typeof query.keyword === 'string' ? query.keyword.trim() : '';
+    const minMembers = Number(query.minMembers ?? 0) || 0;
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(keyword ? { name: { contains: keyword } } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.studyTeam.findMany({
+        where,
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          bucket: true,
+          streak: true,
+          lastFullDate: true,
+          createdAt: true,
+          _count: { select: { members: true } },
+        },
+      }),
+      this.prisma.studyTeam.count({ where }),
+    ]);
+
+    let list = rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      status: row.status,
+      bucket: row.bucket,
+      streak: row.streak,
+      lastFullDate: row.lastFullDate,
+      memberCount: row._count.members,
+      maxMembers: MAX_MEMBERS,
+      createdAt: row.createdAt.toISOString(),
+    }));
+    if (minMembers > 0) list = list.filter((row) => row.memberCount >= minMembers);
+    return { list, total };
+  }
+
+  /** 后台-小队详情：成员（含加入日期、今日打卡）。 */
+  async adminDetail(teamId: number): Promise<TeamAdminDetail> {
+    const team = await this.prisma.studyTeam.findUnique({
+      where: { id: BigInt(teamId) },
+      select: { id: true, name: true, status: true, bucket: true, streak: true, lastFullDate: true, createdAt: true },
+    });
+    if (!team) throw AppException.notFound('小队不存在');
+
+    const members = await this.prisma.studyTeamMember.findMany({
+      where: { teamId: team.id },
+      orderBy: { id: 'asc' },
+      select: { userId: true, joinedDate: true },
+    });
+    const date = this.today();
+    const [users, checkins] = await Promise.all([
+      this.prisma.clientUser.findMany({
+        where: { id: { in: members.map((m) => m.userId) } },
+        select: { id: true, nickname: true, xp: true },
+      }),
+      this.prisma.userCheckin.findMany({
+        where: { userId: { in: members.map((m) => m.userId) }, checkinDate: date },
+        select: { userId: true, doneCount: true, goalCount: true },
+      }),
+    ]);
+    const userMap = new Map(users.map((u) => [String(u.id), u]));
+    const doneSet = new Set(checkins.filter((c) => c.doneCount >= c.goalCount).map((c) => String(c.userId)));
+
+    return {
+      id: Number(team.id),
+      name: team.name,
+      status: team.status,
+      bucket: team.bucket,
+      streak: team.streak,
+      lastFullDate: team.lastFullDate,
+      createdAt: team.createdAt.toISOString(),
+      maxMembers: MAX_MEMBERS,
+      members: members.map((m) => ({
+        userId: Number(m.userId),
+        nickname: userMap.get(String(m.userId))?.nickname ?? `用户${Number(m.userId)}`,
+        xp: userMap.get(String(m.userId))?.xp ?? 0,
+        joinedDate: m.joinedDate,
+        checkedIn: doneSet.has(String(m.userId)),
+      })),
+    };
+  }
+
+  /** 后台-解散小队：置 dissolved 并清空成员（成员可重新匹配），事务保证一致。 */
+  async adminDissolve(teamId: number): Promise<void> {
+    const team = await this.prisma.studyTeam.findUnique({
+      where: { id: BigInt(teamId) },
+      select: { id: true, status: true },
+    });
+    if (!team) throw AppException.notFound('小队不存在');
+    if (team.status === 'dissolved') throw AppException.badRequest('小队已解散');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.studyTeamMember.deleteMany({ where: { teamId: team.id } });
+      await tx.studyTeam.update({ where: { id: team.id }, data: { status: 'dissolved' } });
+    });
+  }
+
+  /** 后台-改名（运营修正不当队名；与用户改名同一套归一化与长度校验）。 */
+  async adminRename(teamId: number, raw: string): Promise<void> {
+    const name = normalizeTeamName(raw);
+    const length = [...name].length;
+    if (length < TEAM_NAME_MIN) throw AppException.badRequest(`小队名至少 ${TEAM_NAME_MIN} 个字`);
+    if (length > TEAM_NAME_MAX) throw AppException.badRequest(`小队名最多 ${TEAM_NAME_MAX} 个字`);
+    const team = await this.prisma.studyTeam.findUnique({
+      where: { id: BigInt(teamId) },
+      select: { id: true, status: true },
+    });
+    if (!team) throw AppException.notFound('小队不存在');
+    if (team.status !== 'active') throw AppException.badRequest('已解散的小队不能改名');
+    await this.prisma.studyTeam.update({ where: { id: team.id }, data: { name } });
   }
 
   /** 本地时区今天（与 CheckinService.today 同口径）。 */

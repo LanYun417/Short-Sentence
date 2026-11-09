@@ -781,6 +781,270 @@ export class StageService {
     });
   }
 
+  /* ------------------------------ 后台管理（运营） ------------------------------ */
+
+  /** 后台-关卡总览条目：剧情 + 每关的参与/通关/领奖统计。 */
+  async adminOverview(): Promise<StageAdminChapter[]> {
+    const categories = await this.prisma.sentenceCategory.findMany({
+      where: { status: 1 },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true },
+    });
+    const categoryByName = new Map(categories.map((row) => [row.name, row]));
+
+    // 一次性聚合各关卡的会话/进度统计，避免每关一条查询
+    const [sessionAll, sessionActive, sessionCleared, sessionNoTrans, clearedProgress, participantRaw, claimKeys] =
+      await Promise.all([
+        this.prisma.stageDialogueSession.groupBy({ by: ['categoryId'], _count: { _all: true } }),
+        this.prisma.stageDialogueSession.groupBy({
+          by: ['categoryId'],
+          where: { status: 'active' },
+          _count: { _all: true },
+        }),
+        this.prisma.stageDialogueSession.groupBy({
+          by: ['categoryId'],
+          where: { cleared: true },
+          _count: { _all: true },
+          _avg: { turnCount: true },
+        }),
+        this.prisma.stageDialogueSession.groupBy({
+          by: ['categoryId'],
+          where: { cleared: true, translationUsed: false },
+          _count: { _all: true },
+        }),
+        this.prisma.studyStageProgress.groupBy({
+          by: ['categoryId'],
+          where: { dialogueClearedAt: { not: null } },
+          _count: { _all: true },
+        }),
+        // 参与人数 = 去重用户数，Prisma 的 count(distinct) 按关卡逐条太碎，用一条原生聚合
+        this.prisma.$queryRaw<Array<{ cid: bigint; cnt: bigint | number }>>`
+          SELECT category_id AS cid, COUNT(DISTINCT user_id) AS cnt
+          FROM stage_dialogue_session
+          GROUP BY category_id`,
+        // 领奖数：eventKey = `stage:{userId}:{categoryId}`；startsWith 'stage:' 天然排除 stage-bonus:
+        this.prisma.clientXpLog.findMany({ where: { eventKey: { startsWith: 'stage:' } }, select: { eventKey: true } }),
+      ]);
+
+    const countOf = (rows: Array<{ categoryId: bigint; _count: { _all: number } }>, cid: bigint): number =>
+      rows.find((row) => row.categoryId === cid)?._count._all ?? 0;
+    const avgOf = (
+      rows: Array<{ categoryId: bigint; _avg: { turnCount: number | null } }>,
+      cid: bigint,
+    ): number | null => {
+      const hit = rows.find((row) => row.categoryId === cid);
+      return hit?._avg.turnCount ?? null;
+    };
+    const participantOf = new Map<string, number>(participantRaw.map((row) => [String(row.cid), Number(row.cnt)]));
+    const claimedOf = new Map<string, number>();
+    for (const row of claimKeys) {
+      // 解析 `stage:{userId}:{categoryId}` 的末段 categoryId
+      const parts = row.eventKey.split(':');
+      const cid = parts[2];
+      if (cid) claimedOf.set(cid, (claimedOf.get(cid) ?? 0) + 1);
+    }
+
+    const chapters: StageAdminChapter[] = [];
+    for (const chapter of STAGE_CHAPTERS) {
+      const stages: StageAdminOverviewItem[] = [];
+      for (const story of STAGE_STORIES.filter((item) => item.chapter === chapter.key)) {
+        const category = categoryByName.get(story.category);
+        if (!category) continue;
+        const cid = category.id;
+        const cleared = countOf(clearedProgress as never, cid);
+        const claimed = claimedOf.get(String(cid)) ?? 0;
+        stages.push({
+          id: Number(cid),
+          categoryName: category.name,
+          chapter: chapter.key,
+          title: story.title,
+          goal: story.goal,
+          minTurns: story.minTurns,
+          maxTurns: story.maxTurns,
+          rewardXp: story.rewardXp,
+          sessionCount: countOf(sessionAll as never, cid),
+          activeSessionCount: countOf(sessionActive as never, cid),
+          participantCount: participantOf.get(String(cid)) ?? 0,
+          clearedCount: cleared,
+          clearedSessionCount: countOf(sessionCleared as never, cid),
+          avgClearedTurns: avgOf(sessionCleared as never, cid),
+          noTranslationClearedCount: countOf(sessionNoTrans as never, cid),
+          claimableCount: Math.max(0, cleared - claimed),
+        });
+      }
+      if (stages.length > 0) {
+        chapters.push({
+          key: chapter.key,
+          name: chapter.name,
+          subtitle: chapter.subtitle,
+          stages,
+        });
+      }
+    }
+    return chapters;
+  }
+
+  /** 后台-对话会话分页列表（可按关卡/状态/用户/无翻译筛选）。 */
+  async adminSessionList(query: Record<string, unknown>): Promise<{ list: StageSessionAdminItem[]; total: number }> {
+    const page = Math.max(1, Number(query.page ?? 1) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize ?? 20) || 20));
+    const categoryId = Number(query.categoryId ?? 0) || 0;
+    const status = typeof query.status === 'string' && query.status ? query.status : undefined;
+    const userId = Number(query.userId ?? 0) || 0;
+    const noTranslation = query.noTranslation === '1' || query.noTranslation === true;
+    const keyword = typeof query.keyword === 'string' ? query.keyword.trim() : '';
+
+    // 用户昵称关键词需要先落到 userId 集合
+    let keywordUserIds: bigint[] | undefined;
+    if (keyword) {
+      const users = await this.prisma.clientUser.findMany({
+        where: { nickname: { contains: keyword } },
+        select: { id: true },
+      });
+      keywordUserIds = users.map((row) => row.id);
+      if (keywordUserIds.length === 0) {
+        return { list: [], total: 0 };
+      }
+    }
+
+    const where = {
+      ...(categoryId > 0 ? { categoryId: BigInt(categoryId) } : {}),
+      ...(status ? { status } : {}),
+      ...(userId > 0 ? { userId: BigInt(userId) } : {}),
+      ...(noTranslation ? { translationUsed: false, cleared: true } : {}),
+      ...(keywordUserIds ? { userId: { in: keywordUserIds } } : {}),
+    };
+
+    const [rows, total] = await Promise.all([
+      this.prisma.stageDialogueSession.findMany({
+        where,
+        orderBy: { startedAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          userId: true,
+          categoryId: true,
+          status: true,
+          turnCount: true,
+          goalReached: true,
+          cleared: true,
+          showTranslation: true,
+          translationUsed: true,
+          startedAt: true,
+          endedAt: true,
+          _count: { select: { messages: true } },
+        },
+      }),
+      this.prisma.stageDialogueSession.count({ where }),
+    ]);
+
+    const userIds = [...new Set(rows.map((row) => row.userId))];
+    const users = await this.prisma.clientUser.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, nickname: true },
+    });
+    const nicknameOf = new Map(users.map((row) => [String(row.id), row.nickname]));
+    const categoryNames = new Map(
+      (await this.prisma.sentenceCategory.findMany({ select: { id: true, name: true } })).map((row) => [
+        String(row.id),
+        row.name,
+      ]),
+    );
+
+    const list: StageSessionAdminItem[] = rows.map((row) => {
+      const categoryName = categoryNames.get(String(row.categoryId)) ?? '';
+      return {
+        id: Number(row.id),
+        userId: Number(row.userId),
+        nickname: nicknameOf.get(String(row.userId)) ?? `用户${Number(row.userId)}`,
+        categoryId: Number(row.categoryId),
+        stageTitle: stageStoryOf(categoryName)?.title ?? categoryName,
+        status: row.status,
+        turnCount: row.turnCount,
+        goalReached: row.goalReached,
+        cleared: row.cleared,
+        showTranslation: row.showTranslation,
+        translationUsed: row.translationUsed,
+        messageCount: row._count.messages,
+        startedAt: row.startedAt.toISOString(),
+        endedAt: row.endedAt?.toISOString() ?? null,
+      };
+    });
+    return { list, total };
+  }
+
+  /** 后台-会话详情：完整消息流（运营抽查 AI 回复质量 / 处理客诉）。 */
+  async adminSessionDetail(sessionId: number): Promise<StageSessionAdminDetail> {
+    const session = await this.prisma.stageDialogueSession.findUnique({
+      where: { id: BigInt(sessionId) },
+      select: {
+        id: true,
+        userId: true,
+        categoryId: true,
+        status: true,
+        turnCount: true,
+        goalReached: true,
+        cleared: true,
+        showTranslation: true,
+        translationUsed: true,
+        summary: true,
+        startedAt: true,
+        endedAt: true,
+      },
+    });
+    if (!session) throw AppException.notFound('会话不存在');
+    const [messages, user, category] = await Promise.all([
+      this.prisma.stageDialogueMessage.findMany({
+        where: { sessionId: session.id },
+        orderBy: { id: 'asc' },
+        select: { id: true, role: true, speaker: true, contentEn: true, contentZh: true, createdAt: true },
+      }),
+      this.prisma.clientUser.findUnique({ where: { id: session.userId }, select: { nickname: true } }),
+      this.prisma.sentenceCategory.findUnique({ where: { id: session.categoryId }, select: { name: true } }),
+    ]);
+    const story = category ? stageStoryOf(category.name) : undefined;
+    return {
+      id: Number(session.id),
+      userId: Number(session.userId),
+      nickname: user?.nickname ?? `用户${Number(session.userId)}`,
+      categoryId: Number(session.categoryId),
+      stageTitle: story?.title ?? category?.name ?? '',
+      goal: story?.goal ?? '',
+      status: session.status,
+      turnCount: session.turnCount,
+      goalReached: session.goalReached,
+      cleared: session.cleared,
+      showTranslation: session.showTranslation,
+      translationUsed: session.translationUsed,
+      summary: session.summary,
+      startedAt: session.startedAt.toISOString(),
+      endedAt: session.endedAt?.toISOString() ?? null,
+      messages: messages.map((row) => ({
+        id: Number(row.id),
+        role: row.role,
+        speaker: row.speaker,
+        contentEn: row.contentEn,
+        contentZh: row.contentZh,
+        createdAt: row.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  /** 后台-强制结束进行中的会话（处理模型卡死/客诉等异常；不改通关与进度）。 */
+  async adminCloseSession(sessionId: number): Promise<void> {
+    const session = await this.prisma.stageDialogueSession.findUnique({
+      where: { id: BigInt(sessionId) },
+      select: { id: true, status: true },
+    });
+    if (!session) throw AppException.notFound('会话不存在');
+    if (session.status !== 'active') throw AppException.badRequest('会话已结束，无需处理');
+    await this.prisma.stageDialogueSession.update({
+      where: { id: session.id },
+      data: { status: 'ended', endedAt: new Date() },
+    });
+  }
+
   /** 按分类 id 反查剧情（分类名 → 剧情）。 */
   private async storyOfCategory(categoryId: number): Promise<StageStory | undefined> {
     const category = await this.prisma.sentenceCategory.findUnique({
@@ -803,4 +1067,74 @@ export interface ClaimResult {
   bonusXp: number;
   /** 领取后的总经验 */
   xp: number;
+}
+
+/* ------------------------------ 后台管理视图类型 ------------------------------ */
+
+/** 后台-关卡总览条目。 */
+export interface StageAdminOverviewItem {
+  id: number;
+  categoryName: string;
+  chapter: string;
+  title: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  rewardXp: number;
+  /** 产生过会话的总次数 */
+  sessionCount: number;
+  /** 进行中的会话数 */
+  activeSessionCount: number;
+  /** 去重参与用户数 */
+  participantCount: number;
+  /** 对话通关人数（study_stage_progress.dialogueClearedAt 非空） */
+  clearedCount: number;
+  /** 通关的会话数 */
+  clearedSessionCount: number;
+  /** 通关会话平均轮数 */
+  avgClearedTurns: number | null;
+  /** 无翻译通关的会话数 */
+  noTranslationClearedCount: number;
+  /** 已通关但未领奖人数 */
+  claimableCount: number;
+}
+
+/** 后台-关卡总览章节。 */
+export interface StageAdminChapter {
+  key: string;
+  name: string;
+  subtitle: string;
+  stages: StageAdminOverviewItem[];
+}
+
+/** 后台-会话列表条目。 */
+export interface StageSessionAdminItem {
+  id: number;
+  userId: number;
+  nickname: string;
+  categoryId: number;
+  stageTitle: string;
+  status: string;
+  turnCount: number;
+  goalReached: boolean;
+  cleared: boolean;
+  showTranslation: boolean;
+  translationUsed: boolean;
+  messageCount: number;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+/** 后台-会话详情（含完整消息）。 */
+export interface StageSessionAdminDetail extends Omit<StageSessionAdminItem, 'messageCount'> {
+  goal: string;
+  summary: string | null;
+  messages: Array<{
+    id: number;
+    role: string;
+    speaker: string | null;
+    contentEn: string;
+    contentZh: string | null;
+    createdAt: string;
+  }>;
 }

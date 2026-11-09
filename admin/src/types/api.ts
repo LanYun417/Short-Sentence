@@ -1666,3 +1666,120 @@ export interface ChainTopicOption {
   id: number;
   title: string;
 }
+
+/* ------------------------------ 情景闯关后台 ------------------------------ */
+
+/** 后台-关卡总览条目 */
+export interface StageAdminItem {
+  id: number;
+  categoryName: string;
+  chapter: string;
+  title: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  rewardXp: number;
+  sessionCount: number;
+  activeSessionCount: number;
+  participantCount: number;
+  clearedCount: number;
+  clearedSessionCount: number;
+  avgClearedTurns: number | null;
+  noTranslationClearedCount: number;
+  claimableCount: number;
+}
+
+/** 后台-关卡总览章节 */
+export interface StageAdminChapter {
+  key: string;
+  name: string;
+  subtitle: string;
+  stages: StageAdminItem[];
+}
+
+/** 后台-会话查询 */
+export interface StageSessionQuery extends PageQuery {
+  categoryId?: number;
+  status?: string;
+  userId?: number;
+  /** '1' = 只看「已通关且未用过翻译」 */
+  noTranslation?: string;
+  keyword?: string;
+}
+
+/** 后台-会话列表条目 */
+export interface StageSessionItem {
+  id: number;
+  userId: number;
+  nickname: string;
+  categoryId: number;
+  stageTitle: string;
+  status: string;
+  turnCount: number;
+  goalReached: boolean;
+  cleared: boolean;
+  showTranslation: boolean;
+  translationUsed: boolean;
+  messageCount: number;
+  startedAt: string;
+  endedAt: string | null;
+}
+
+/** 后台-会话消息 */
+export interface StageSessionMessage {
+  id: number;
+  role: string;
+  speaker: string | null;
+  contentEn: string;
+  contentZh: string | null;
+  createdAt: string;
+}
+
+/** 后台-会话详情 */
+export interface StageSessionDetail extends Omit<StageSessionItem, 'messageCount'> {
+  goal: string;
+  summary: string | null;
+  messages: StageSessionMessage[];
+}
+
+/* ------------------------------ 学习小队后台 ------------------------------ */
+
+/** 后台-小队概览统计 */
+export interface TeamAdminStats {
+  activeTeamCount: number;
+  dissolvedTeamCount: number;
+  inTeamUserCount: number;
+  avgMembers: number | null;
+  todayFullTeamCount: number;
+}
+
+/** 后台-小队查询 */
+export interface TeamQuery extends PageQuery {
+  status?: string;
+  keyword?: string;
+  minMembers?: number;
+}
+
+/** 后台-小队列表条目 */
+export interface TeamAdminItem {
+  id: number;
+  name: string;
+  status: string;
+  bucket: number;
+  streak: number;
+  lastFullDate: string | null;
+  memberCount: number;
+  maxMembers: number;
+  createdAt: string;
+}
+
+/** 后台-小队详情 */
+export interface TeamAdminDetail extends Omit<TeamAdminItem, 'memberCount'> {
+  members: Array<{
+    userId: number;
+    nickname: string;
+    xp: number;
+    joinedDate: string;
+    checkedIn: boolean;
+  }>;
+}

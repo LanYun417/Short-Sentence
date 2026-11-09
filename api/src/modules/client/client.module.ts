@@ -33,10 +33,12 @@ import { TeamService } from './team/team.service.js';
 import { ClientCoachController } from './ai/coach.controller.js';
 import { ClientCoachService } from './ai/coach.service.js';
 import { StageController } from './stage/stage.controller.js';
+import { StageAdminController } from './stage/stage-admin.controller.js';
 import { StageService } from './stage/stage.service.js';
 import { ChainController } from './chain/chain.controller.js';
 import { ChainAdminController } from './chain/chain-admin.controller.js';
 import { ChainService } from './chain/chain.service.js';
+import { TeamAdminController } from './team/team-admin.controller.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -62,11 +64,14 @@ import { ChainService } from './chain/chain.service.js';
     TeamController,
     // AI 私教（薄弱点画像 / 可选 AI 点评，独立 controller 不碰 SSE 端点）
     ClientCoachController,
-    // 情景闯关（关卡 = 场景；进度与通关奖励）
+    // 情景闯关（关卡 = 场景；进度与通关奖励）——含后台管理控制器 /api/stages
     StageController,
+    StageAdminController,
     // 句子接龙（匿名共创；后台审核控制器与它共用同一个 service，见下方注释）
     ChainController,
     ChainAdminController,
+    // 学习小队后台管理控制器 /api/teams（客户端走 /api/client/team）
+    TeamAdminController,
   ],
   providers: [
     ClientAuthUserService,

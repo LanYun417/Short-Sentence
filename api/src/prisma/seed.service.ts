@@ -1052,6 +1052,50 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 情景闯关：关卡总览 + 对话会话抽查（AI 质量/客诉），可强制结束异常会话
+        key: 'sentence:stage',
+        menuName: '情景闯关',
+        menuType: MenuType.MENU,
+        path: '/sentence/stage',
+        component: 'sentence/stage',
+        icon: 'map',
+        permission: 'stage:view',
+        sort: 12,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'stage:handle',
+            menuName: '强制结束会话',
+            menuType: MenuType.BUTTON,
+            permission: 'stage:handle',
+            sort: 1,
+          },
+        ],
+      },
+      {
+        // 学习小队：小队列表/详情/解散/改名（运营干预不当队名与违规队伍）
+        key: 'sentence:team',
+        menuName: '学习小队',
+        menuType: MenuType.MENU,
+        path: '/sentence/team',
+        component: 'sentence/team',
+        icon: 'people',
+        permission: 'team:view',
+        sort: 13,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'team:handle',
+            menuName: '解散/改名',
+            menuType: MenuType.BUTTON,
+            permission: 'team:handle',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）
