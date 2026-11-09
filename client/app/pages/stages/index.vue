@@ -1,6 +1,10 @@
 <script setup lang="ts">
 /**
- * 情景闯关地图（路由 /stages）。
+ * 情景闯关地图（路由 /stages）——**章节封面墙**。
+ *
+ * 一章一张封面（渐变 + 大图标 + 导语 + 进度），点开进入 `/stages/chapter/:key`
+ * 看这一章的关卡。关卡卡片本身有高度，全铺在地图上会把封面墙冲散，所以拆成两级：
+ * 地图只负责「选章节」，关卡收在章节详情页（关卡随运营增加时也更可控）。
  *
  * 玩法：每关是一段**场景长对话**——用户扮演场景里的自己，和 1~3 个 AI 角色
  * 围绕目标把话聊完。聊够最少轮数且达成目标才通关；四章平行，章内顺序解锁。
@@ -8,24 +12,22 @@
  * 进度来自 GET /client/stages（study_stage_progress.dialogueClearedAt），
  * 与答题记录完全解耦；旧版答对句数只作历史展示。
  *
- * 布局：紧凑卡片 + `sm:` 起双列网格。关卡会随运营持续增加，竖排长卡片会把页面
- * 拖到很长，所以每关只保留「标题 / 场景引入 / 角色 / 目标 / 进度 / 操作」六行，
- * 长文案一律 `line-clamp-1` 截断（完整内容在 /stages/:id 对话页）。
- *
- * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除）。
+ * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除，
+ * `/stages/*` 同时覆盖章节详情页）。
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { apiFetch } from '~/composables/useApi';
-import type { StageClaimResult, StageOverview, StageView } from '~/types';
+import { chapterCoverOf } from '~/utils/stage-chapters';
+import type { StageOverview, StageView } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: '情景闯关',
-  description: '进入真实生活场景，和里面的人用英语把一件事聊成。',
+  description: '每一章是一段生活。进入真实场景，和里面的人用英语把一件事聊成。',
 });
 
-const { data: overview, refresh } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
+const { data: overview } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
 
 onMounted(async () => {
   if (!overview.value) {
@@ -34,47 +36,20 @@ onMounted(async () => {
 });
 
 const chapters = computed(() => overview.value?.chapters ?? []);
-const claiming = ref<number | null>(null);
-const flash = ref('');
-
-function toneOf(unlocked: boolean, cleared: boolean): string {
-  if (cleared) return 'bg-emerald-500 text-white';
-  if (unlocked) return 'bg-linear-to-br from-sky-500 to-indigo-600 text-white';
-  return 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500';
-}
-
-function iconOf(stage: StageView): string {
-  if (stage.cleared) return 'i-lucide-check';
-  if (!stage.unlocked) return 'i-lucide-lock';
-  return 'i-lucide-message-circle';
-}
-
-/** 进入（或继续）这一关的场景对话。 */
-async function enter(stage: StageView): Promise<void> {
-  if (!stage.unlocked) return;
-  await navigateTo(`/stages/${stage.id}`);
-}
-
-/** 领取通关奖励（幂等，重复领取由后端兜底）。 */
-async function claim(stage: StageView): Promise<void> {
-  if (claiming.value !== null) return;
-  claiming.value = stage.id;
-  flash.value = '';
-  try {
-    const result = await apiFetch<StageClaimResult>(`/client/stages/${stage.id}/claim`, { method: 'POST' });
-    const bonusPart = result.bonusXp > 0 ? `（无翻译加成 +${result.bonusXp}）` : '';
-    flash.value = result.alreadyClaimed
-      ? '这一关的奖励已经领过了'
-      : result.awarded
-        ? `领取成功，+${result.rewardXp} XP${bonusPart}`
-        : '今日经验已达上限，明天再来领取';
-    await refresh();
-  } catch (error) {
-    flash.value = error instanceof Error ? error.message : '领取失败，请稍后重试';
-  } finally {
-    claiming.value = null;
-  }
-}
+const allStages = computed<StageView[]>(() => chapters.value.flatMap((item) => item.stages));
+/** 推荐关卡（第一个已解锁未通关）：给老用户一条「直奔当前关」的捷径。 */
+const recommendedStage = computed<StageView | null>(
+  () => allStages.value.find((item) => item.id === overview.value?.recommendedId) ?? null,
+);
+/** 第一个「已通关未领奖」的关卡（用于「N 关奖励待领取」提示的跳转目标）。 */
+const firstClaimable = computed<StageView | null>(
+  () => allStages.value.find((item) => item.cleared && !item.claimed) ?? null,
+);
+const firstClaimableChapter = computed<string | null>(() => {
+  const stage = firstClaimable.value;
+  if (!stage) return null;
+  return chapters.value.find((item) => item.stages.some((s) => s.id === stage.id))?.key ?? null;
+});
 </script>
 
 <template>
@@ -92,124 +67,109 @@ async function claim(stage: StageView): Promise<void> {
         </span>
       </div>
       <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-        每一关都是一段真实场景的长对话。进入场景，和里面的人把目标聊成，故事就往前走。
+        每一章是一段生活。点开封面进入章节，和场景里的人用英语把目标聊成，故事就往前走。
       </p>
       <p class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 dark:text-sky-300">
         <UIcon name="i-lucide-languages" class="h-3 w-3" />
         对话里关掉「翻译」开关，通关时经验 +50%
       </p>
-      <p
-        v-if="flash"
-        class="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-xs text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
-      >
-        {{ flash }}
-      </p>
+
+      <!-- 直奔当前推荐关；有奖励待领时给一条提示 -->
+      <div class="mt-3 space-y-2">
+        <NuxtLink
+          v-if="recommendedStage"
+          :to="`/stages/${recommendedStage.id}`"
+          class="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+        >
+          <span
+            class="grid size-9 shrink-0 place-items-center rounded-xl bg-linear-to-br from-sky-500 to-indigo-600 text-white shadow-sm"
+          >
+            <UIcon name="i-lucide-play" class="h-4 w-4" />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-[11px] text-slate-400 dark:text-slate-500">
+              {{ recommendedStage.activeSessionId ? '继续对话' : '当前推荐' }}
+            </span>
+            <span class="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">
+              {{ recommendedStage.title }}
+            </span>
+          </span>
+          <span class="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
+            {{ recommendedStage.progress }}%
+          </span>
+          <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+        </NuxtLink>
+
+        <NuxtLink
+          v-if="overview && overview.claimable > 0 && firstClaimableChapter"
+          :to="`/stages/chapter/${firstClaimableChapter}`"
+          class="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 ring-1 ring-amber-200/70 transition hover:ring-amber-300 dark:bg-amber-950/30 dark:ring-amber-900/60"
+        >
+          <UIcon name="i-lucide-gift" class="h-4 w-4 shrink-0 text-amber-500" />
+          <span class="min-w-0 flex-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+            {{ overview.claimable }} 关奖励待领取，去 {{ firstClaimable?.title }} 领奖
+          </span>
+          <UIcon name="i-lucide-chevron-right" class="h-3.5 w-3.5 shrink-0 text-amber-500" />
+        </NuxtLink>
+      </div>
     </header>
 
     <div v-if="!overview" class="py-16 text-center text-sm text-slate-400">正在加载关卡…</div>
 
-    <template v-else>
-      <section v-for="chapter in chapters" :key="chapter.key" class="mb-7 last:mb-0">
-        <div class="mb-2.5 flex items-baseline justify-between gap-2">
-          <h2 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ chapter.name }}</h2>
-          <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+    <!-- 章节封面墙：一章一张，双列；章节多了就往下一排排，不会把页面拖长 -->
+    <div v-else class="grid gap-3 sm:grid-cols-2">
+      <NuxtLink
+        v-for="chapter in chapters"
+        :key="chapter.key"
+        :to="`/stages/chapter/${chapter.key}`"
+        class="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      >
+        <!-- 封面：渐变 + 大图标；进度角标压在白图标可读的深色底上 -->
+        <div
+          class="relative flex aspect-[4/3] items-center justify-center"
+          :class="[chapterCoverOf(chapter.key).gradient, chapterCoverOf(chapter.key).gradientDark]"
+        >
+          <span
+            class="text-5xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
+            aria-hidden="true"
+          >
+            {{ chapterCoverOf(chapter.key).emoji }}
+          </span>
+          <span
+            class="absolute right-2.5 top-2.5 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+          >
             {{ chapter.clearedCount }} / {{ chapter.total }}
           </span>
-        </div>
-        <p class="mb-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ chapter.subtitle }}</p>
-
-        <!-- 紧凑卡片 + 宽屏双列：关卡多起来也不会滚太长（长文案一律单行截断） -->
-        <ol class="grid gap-2.5 sm:grid-cols-2">
-          <li
-            v-for="stage in chapter.stages"
-            :key="stage.id"
-            class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
-            :class="stage.unlocked ? '' : 'opacity-70'"
+          <span
+            v-if="chapter.total > 0 && chapter.clearedCount === chapter.total"
+            class="absolute left-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
           >
-            <div class="flex items-center gap-2">
-              <span
-                class="grid size-8 shrink-0 place-items-center rounded-xl shadow-sm"
-                :class="toneOf(stage.unlocked, stage.cleared)"
-              >
-                <UIcon :name="iconOf(stage)" class="h-3.5 w-3.5" />
-              </span>
-              <h3
-                class="min-w-0 flex-1 truncate text-sm font-bold text-slate-800 dark:text-slate-100"
-                :title="stage.name"
-              >
-                {{ stage.title }}
-              </h3>
-              <span
-                v-if="stage.cleared"
-                class="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-              >
-                已通关
-              </span>
-              <span
-                v-else-if="!stage.unlocked"
-                class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-              >
-                未解锁
-              </span>
-            </div>
+            <UIcon name="i-lucide-check" class="h-3 w-3" />已通关
+          </span>
+          <span class="absolute bottom-2.5 left-2.5 text-[11px] font-medium text-white/85">
+            {{ chapter.total }} 个场景
+          </span>
+        </div>
 
-            <p class="mt-1.5 line-clamp-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-              {{ stage.intro }}
-            </p>
-
-            <div class="mt-1 flex items-center gap-2 overflow-hidden">
-              <span
-                v-for="role in stage.roles"
-                :key="role.nameEn"
-                class="shrink-0 text-[10px] text-slate-500 dark:text-slate-400"
-                :title="role.name"
-              >
-                <span aria-hidden="true">{{ role.emoji }}</span
-                >{{ role.name }}
-              </span>
-            </div>
-
-            <p class="mt-1.5 line-clamp-1 text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
-              <span class="font-semibold">目标：</span>{{ stage.goal }}
-            </p>
-
-            <div class="mt-2 flex items-center gap-2">
-              <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  class="h-full rounded-full bg-linear-to-r from-sky-400 to-indigo-500 transition-all duration-500"
-                  :style="{ width: `${stage.progress}%` }"
-                />
-              </div>
-              <span class="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
-                {{ stage.minTurns }}~{{ stage.maxTurns }} 轮
-              </span>
-            </div>
-
-            <div class="mt-2 flex items-center gap-2">
-              <UButton v-if="stage.unlocked" size="xs" @click="enter(stage)">
-                {{ stage.activeSessionId ? '继续对话' : stage.cleared ? '再聊一次' : '进入对话' }}
-              </UButton>
-              <UButton
-                v-if="stage.cleared && !stage.claimed"
-                size="xs"
-                color="neutral"
-                variant="soft"
-                icon="i-lucide-gift"
-                :loading="claiming === stage.id"
-                @click="claim(stage)"
-              >
-                领 +{{ stage.rewardXp }} XP
-              </UButton>
-              <span
-                v-if="stage.legacyCorrectCount > 0"
-                class="min-w-0 flex-1 truncate text-[10px] text-slate-300 dark:text-slate-600"
-              >
-                旧版练习 {{ stage.legacyCorrectCount }} 句
-              </span>
-            </div>
-          </li>
-        </ol>
-      </section>
-    </template>
+        <!-- 章节文案 -->
+        <div class="p-3.5">
+          <div class="flex items-baseline justify-between gap-2">
+            <h2 class="min-w-0 truncate text-sm font-bold text-slate-800 dark:text-slate-100">
+              {{ chapter.name }}
+            </h2>
+          </div>
+          <p class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            {{ chapter.subtitle }}
+          </p>
+          <div class="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-sky-600 dark:text-sky-400">
+            查看章节
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
+            />
+          </div>
+        </div>
+      </NuxtLink>
+    </div>
   </div>
 </template>
