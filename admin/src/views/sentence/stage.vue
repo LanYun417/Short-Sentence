@@ -16,7 +16,6 @@ import {
   getStageSessionListApi,
 } from '@/api/stage';
 import { useTable } from '@/composables/useTable';
-import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { StageAdminChapter, StageAdminItem, StageSessionDetail, StageSessionItem } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -24,7 +23,9 @@ import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'SentenceStage' });
 
-const { tableHeight } = useTablePage();
+// 注意：本页**不**用 table-page 布局——总览 Tab 是多张章节表堆叠、会很长，table-page 会把
+// 内容区 overflow:hidden 只允许单表格内部滚动，套 el-tabs 后高度链断裂导致整页滚不动。
+// 这里整页正常滚动（content-scrollbar 默认 overflow:auto）。
 
 const activeTab = ref<'overview' | 'sessions'>('overview');
 
@@ -121,11 +122,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sentence-stage-page table-page">
+  <div class="sentence-stage-page">
     <el-tabs v-model="activeTab" class="mt-1">
       <!-- ===================== Tab1：关卡总览 ===================== -->
       <el-tab-pane label="关卡总览" name="overview">
-        <el-card v-loading="overviewLoading" shadow="never" class="mt-4 table-page__card">
+        <el-card v-loading="overviewLoading" shadow="never" class="mt-4">
           <div class="mb-3 flex items-center justify-between">
             <span class="text-[15px] font-semibold text-ink">关卡数据统计</span>
             <el-button :loading="overviewLoading" @click="loadOverview">刷新</el-button>
@@ -163,7 +164,7 @@ onMounted(() => {
 
       <!-- ===================== Tab2：对话会话抽查 ===================== -->
       <el-tab-pane label="对话会话" name="sessions">
-        <SearchForm class="mt-4 table-page__filter" @search="search" @reset="reset">
+        <SearchForm class="mt-4" @search="search" @reset="reset">
           <el-form-item label="关卡">
             <el-select v-model="query.categoryId" placeholder="全部" clearable style="width: 220px">
               <el-option v-for="opt in stageOptions" :key="opt.id" :label="opt.title" :value="opt.id" />
@@ -200,14 +201,14 @@ onMounted(() => {
           </el-form-item>
         </SearchForm>
 
-        <el-card shadow="never" class="mt-4 table-page__card">
+        <el-card shadow="never" class="mt-4">
           <div class="mb-3 flex items-center justify-between">
             <span class="text-[15px] font-semibold text-ink">对话会话（共 {{ total }} 条）</span>
             <el-button :loading="loading" @click="getList">刷新</el-button>
           </div>
 
-          <div class="table-page__table">
-            <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
+          <div>
+            <el-table v-loading="loading" :data="list" border row-key="id">
               <el-table-column prop="id" label="ID" width="70" />
               <el-table-column label="用户" min-width="140">
                 <template #default="{ row }">
@@ -261,7 +262,7 @@ onMounted(() => {
           <Pagination
             v-model:current-page="query.page"
             v-model:page-size="query.pageSize"
-            class="table-page__pagination"
+            class="mt-3"
             :total="total"
             @size-change="changePageSize"
             @current-change="changePage"
