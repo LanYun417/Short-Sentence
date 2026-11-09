@@ -62,7 +62,7 @@ const percent = computed(() => {
     <!-- 当前关卡：把剧情引入露出来，让人知道这不是普通题库 -->
     <NuxtLink
       v-if="recommended"
-      :to="`/?category=${recommended.id}`"
+      :to="`/stages/${recommended.id}`"
       class="block rounded-2xl bg-linear-to-br from-sky-50 to-indigo-50 p-3 ring-1 ring-sky-100 transition hover:ring-sky-300 dark:from-sky-950/40 dark:to-indigo-950/40 dark:ring-sky-900/60"
     >
       <p class="mb-1 text-[11px] font-medium text-sky-600 dark:text-sky-400">
@@ -77,7 +77,7 @@ const percent = computed(() => {
           <div class="h-full rounded-full bg-sky-500" :style="{ width: `${recommended.progress}%` }" />
         </div>
         <span class="shrink-0 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
-          {{ recommended.correctCount }} / {{ recommended.target }} 句
+          {{ recommended.minTurns }} 轮对话 · {{ recommended.roles.length }} 位角色
         </span>
       </div>
     </NuxtLink>
@@ -97,7 +97,7 @@ const percent = computed(() => {
         <UIcon name="i-lucide-gift" class="h-3 w-3" />
         {{ overview.claimable }} 个通关奖励待领取
       </span>
-      <span v-else class="text-[11px] text-slate-400 dark:text-slate-500"> 每关答对该场景若干句即可通关 </span>
+      <span v-else class="text-[11px] text-slate-400 dark:text-slate-500"> 进入场景对话，达成目标即可通关 </span>
       <NuxtLink
         to="/stages"
         class="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-sky-600 hover:underline dark:text-sky-400"

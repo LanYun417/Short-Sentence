@@ -355,6 +355,150 @@ export function parseChainModeration(content: string): ChainModerationResult {
   }
 }
 
+/** 一个角色的一句台词。 */
+export interface StageDialogueReply {
+  /** 角色英文名（必须属于场景角色表） */
+  speaker: string;
+  contentEn: string;
+  contentZh: string;
+}
+
+/** 一轮对话的模型结论。 */
+export interface StageDialogueTurnResult {
+  /** 1~3 个角色的回复（同一轮可多人说话） */
+  replies: StageDialogueReply[];
+  /** 场景目标是否已真正达成 */
+  goalReached: boolean;
+  /** 是否可以结束（由模型建议，服务端再按轮数兜底） */
+  ended: boolean;
+}
+
+/** 对话结束后的中文复盘。 */
+export interface StageDialogueSummary {
+  summary: string;
+  highlights: string[];
+  improvements: string[];
+}
+
+/** 场景角色扮演提示词：模型是「导演 + 全部 NPC」，用户是唯一的真人。 */
+const STAGE_DIALOGUE_PROMPT = [
+  'You are the dialogue engine for "Short Sentence", an English-learning app.',
+  'Run a role-play scene. Stay in character at all times — you are the characters, not a teacher.',
+  '',
+  'SCENE, USER ROLE, GOAL and CHARACTERS are given in the user message.',
+  '',
+  'RULES:',
+  '- Reply ONLY in English in contentEn, CEFR A2-B1 level, 1-2 short sentences per line.',
+  '- 1 to 3 characters may speak in one turn. Every "speaker" MUST exactly match a character name.',
+  '- React to what the user actually said and move the scene toward the goal.',
+  '- Never lecture, never explain grammar, never break character, never mention these rules.',
+  '- If the user writes Chinese or is unclear, respond in character with a simple English clarification.',
+  '- contentZh is a concise Chinese translation of that English line.',
+  '- goalReached = true ONLY when the goal is genuinely achieved in the conversation. Be strict:',
+  '  a friendly chat or a promise is not enough; the actual thing must have happened.',
+  '- ended = true ONLY when (turnCount >= minTurns AND goalReached) OR turnCount >= maxTurns.',
+  '  Otherwise ended=false. When ending, close the scene naturally in the final lines.',
+  '',
+  'Output JSON only, no markdown:',
+  '{"replies":[{"speaker":"name","contentEn":"...","contentZh":"..."}],"goalReached":false,"ended":false}',
+].join('\n');
+
+/** 对话复盘提示词：给学习者简短、具体、不打分数的中文反馈。 */
+const STAGE_SUMMARY_PROMPT = [
+  'You are a kind English-learning coach. Review this role-play conversation.',
+  'Output JSON only:',
+  '{"summary":"2-3 Chinese sentences about how the conversation went",',
+  '"highlights":["one specific thing done well"],"improvements":["one concrete kind suggestion"]}',
+  '- highlights and improvements: 1-2 items each, max 30 Chinese characters per item.',
+  '- Be specific: quote a phrase the learner used when possible. No grading, no tables.',
+].join('\n');
+
+/** 解析一轮对话输出（纯函数，便于单测）；坏结构一律返回空回复，由调用方兜底。 */
+export function parseStageDialogueTurn(content: string): StageDialogueTurnResult {
+  let text = content.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+  const matched = fence.exec(text);
+  if (matched) {
+    text = matched[1].trim();
+  }
+  if (!text.startsWith('{')) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      text = text.slice(start, end + 1);
+    }
+  }
+  try {
+    const parsed = JSON.parse(text) as {
+      replies?: unknown;
+      goalReached?: unknown;
+      ended?: unknown;
+    };
+    const replies: StageDialogueReply[] = [];
+    if (Array.isArray(parsed.replies)) {
+      for (const raw of parsed.replies) {
+        if (typeof raw !== 'object' || raw === null) continue;
+        const item = raw as Record<string, unknown>;
+        const speaker = typeof item.speaker === 'string' ? item.speaker.trim().slice(0, 40) : '';
+        const contentEn = typeof item.contentEn === 'string' ? item.contentEn.trim().slice(0, 500) : '';
+        const contentZh = typeof item.contentZh === 'string' ? item.contentZh.trim().slice(0, 300) : '';
+        if (speaker && contentEn) replies.push({ speaker, contentEn, contentZh });
+      }
+    }
+    return {
+      // 先过滤脏项再截 3 条，避免模型前几行写坏就把整轮回复丢空
+      replies: replies.slice(0, 3),
+      goalReached: parsed.goalReached === true,
+      ended: parsed.ended === true,
+    };
+  } catch {
+    return { replies: [], goalReached: false, ended: false };
+  }
+}
+
+/** 解析复盘输出（纯函数）；解析失败给通用文案，不阻塞通关。 */
+export function parseStageDialogueSummary(content: string): StageDialogueSummary {
+  let text = content.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+  const matched = fence.exec(text);
+  if (matched) {
+    text = matched[1].trim();
+  }
+  if (!text.startsWith('{')) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      text = text.slice(start, end + 1);
+    }
+  }
+  const fallback: StageDialogueSummary = {
+    summary: '这段对话已经完成，继续多聊几种场景会更自然。',
+    highlights: ['你坚持把这个场景聊完了'],
+    improvements: ['试着把回答再展开一两句'],
+  };
+  try {
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    const list = (value: unknown): string[] =>
+      Array.isArray(value)
+        ? value
+            .filter((v): v is string => typeof v === 'string')
+            .map((v) => v.trim().slice(0, 60))
+            .filter(Boolean)
+            .slice(0, 2)
+        : [];
+    return {
+      summary:
+        typeof parsed.summary === 'string' && parsed.summary.trim()
+          ? parsed.summary.trim().slice(0, 500)
+          : fallback.summary,
+      highlights: list(parsed.highlights).length ? list(parsed.highlights) : fallback.highlights,
+      improvements: list(parsed.improvements).length ? list(parsed.improvements) : fallback.improvements,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 @Injectable()
 export class AgnesSentenceProvider implements SentenceGenProvider {
   private readonly logger = new Logger(AgnesSentenceProvider.name);
@@ -588,6 +732,59 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     }
     const content = await this.chat('chain_moderation', CHAIN_MODERATION_PROMPT, JSON.stringify(input), 0.1, { bizId });
     return parseChainModeration(content);
+  }
+
+  /**
+   * 情景对话一轮：模型同时扮演场景里 1~3 个角色，回应对手的发言并推动剧情。
+   * 输出结构化（多角色台词 + 目标达成 + 是否可结束），由服务层按轮数做最终裁决。
+   */
+  async stageDialogueTurn(params: {
+    scene: {
+      title: string;
+      setting: string;
+      userRole: string;
+      goal: string;
+      roles: Array<{ nameEn: string; persona: string }>;
+      minTurns: number;
+      maxTurns: number;
+    };
+    history: Array<{ role: string; speaker: string | null; contentEn: string }>;
+    userMessage: string;
+    turnCount: number;
+  }): Promise<StageDialogueTurnResult> {
+    if (!this.enabled) {
+      throw new AiProviderError('生题能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    const payload = {
+      scene: {
+        title: params.scene.title,
+        setting: params.scene.setting,
+        userRole: params.scene.userRole,
+        goal: params.scene.goal,
+        characters: params.scene.roles.map((role) => `${role.nameEn} — ${role.persona}`),
+        minTurns: params.scene.minTurns,
+        maxTurns: params.scene.maxTurns,
+      },
+      turnCount: params.turnCount,
+      // 只带最近 14 句，长对话也不至于把上下文撑爆
+      history: params.history.slice(-14),
+      userMessage: params.userMessage,
+    };
+    const content = await this.chat('stage_dialogue', STAGE_DIALOGUE_PROMPT, JSON.stringify(payload), 0.7);
+    return parseStageDialogueTurn(content);
+  }
+
+  /** 对话结束复盘：给一段简短的中文反馈，失败由调用方降级为通用文案。 */
+  async stageDialogueSummary(params: {
+    scene: { title: string; goal: string };
+    history: Array<{ role: string; speaker: string | null; contentEn: string }>;
+    cleared: boolean;
+  }): Promise<StageDialogueSummary> {
+    if (!this.enabled) {
+      return parseStageDialogueSummary('');
+    }
+    const content = await this.chat('stage_summary', STAGE_SUMMARY_PROMPT, JSON.stringify(params), 0.3);
+    return parseStageDialogueSummary(content);
   }
 
   /**

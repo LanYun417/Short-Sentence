@@ -429,6 +429,8 @@ export const ModelName = {
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
   StudyStageProgress: 'StudyStageProgress',
+  StageDialogueSession: 'StageDialogueSession',
+  StageDialogueMessage: 'StageDialogueMessage',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
   User: 'User',
@@ -456,7 +458,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2572,6 +2574,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    StageDialogueSession: {
+      payload: Prisma.$StageDialogueSessionPayload<ExtArgs>
+      fields: Prisma.StageDialogueSessionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StageDialogueSessionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StageDialogueSessionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        findFirst: {
+          args: Prisma.StageDialogueSessionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StageDialogueSessionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        findMany: {
+          args: Prisma.StageDialogueSessionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>[]
+        }
+        create: {
+          args: Prisma.StageDialogueSessionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        createMany: {
+          args: Prisma.StageDialogueSessionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StageDialogueSessionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        update: {
+          args: Prisma.StageDialogueSessionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        deleteMany: {
+          args: Prisma.StageDialogueSessionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StageDialogueSessionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StageDialogueSessionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueSessionPayload>
+        }
+        aggregate: {
+          args: Prisma.StageDialogueSessionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStageDialogueSession>
+        }
+        groupBy: {
+          args: Prisma.StageDialogueSessionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageDialogueSessionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StageDialogueSessionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageDialogueSessionCountAggregateOutputType> | number
+        }
+      }
+    }
+    StageDialogueMessage: {
+      payload: Prisma.$StageDialogueMessagePayload<ExtArgs>
+      fields: Prisma.StageDialogueMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StageDialogueMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StageDialogueMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.StageDialogueMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StageDialogueMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        findMany: {
+          args: Prisma.StageDialogueMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>[]
+        }
+        create: {
+          args: Prisma.StageDialogueMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        createMany: {
+          args: Prisma.StageDialogueMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StageDialogueMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        update: {
+          args: Prisma.StageDialogueMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.StageDialogueMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StageDialogueMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StageDialogueMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageDialogueMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.StageDialogueMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStageDialogueMessage>
+        }
+        groupBy: {
+          args: Prisma.StageDialogueMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageDialogueMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StageDialogueMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageDialogueMessageCountAggregateOutputType> | number
+        }
+      }
+    }
     StudyTeam: {
       payload: Prisma.$StudyTeamPayload<ExtArgs>
       fields: Prisma.StudyTeamFieldRefs
@@ -3900,11 +4034,44 @@ export const StudyStageProgressScalarFieldEnum = {
   correctCount: 'correctCount',
   answerCount: 'answerCount',
   clearedAt: 'clearedAt',
+  dialogueClearedAt: 'dialogueClearedAt',
+  dialogueTurns: 'dialogueTurns',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalarFieldEnum)[keyof typeof StudyStageProgressScalarFieldEnum]
+
+
+export const StageDialogueSessionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  categoryId: 'categoryId',
+  status: 'status',
+  turnCount: 'turnCount',
+  goalReached: 'goalReached',
+  cleared: 'cleared',
+  summary: 'summary',
+  feedback: 'feedback',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StageDialogueSessionScalarFieldEnum = (typeof StageDialogueSessionScalarFieldEnum)[keyof typeof StageDialogueSessionScalarFieldEnum]
+
+
+export const StageDialogueMessageScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  role: 'role',
+  speaker: 'speaker',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  createdAt: 'createdAt'
+} as const
+
+export type StageDialogueMessageScalarFieldEnum = (typeof StageDialogueMessageScalarFieldEnum)[keyof typeof StageDialogueMessageScalarFieldEnum]
 
 
 export const StudyTeamScalarFieldEnum = {
@@ -4414,6 +4581,25 @@ export const AiCallLogOrderByRelevanceFieldEnum = {
 export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevanceFieldEnum)[keyof typeof AiCallLogOrderByRelevanceFieldEnum]
 
 
+export const StageDialogueSessionOrderByRelevanceFieldEnum = {
+  status: 'status',
+  summary: 'summary',
+  feedback: 'feedback'
+} as const
+
+export type StageDialogueSessionOrderByRelevanceFieldEnum = (typeof StageDialogueSessionOrderByRelevanceFieldEnum)[keyof typeof StageDialogueSessionOrderByRelevanceFieldEnum]
+
+
+export const StageDialogueMessageOrderByRelevanceFieldEnum = {
+  role: 'role',
+  speaker: 'speaker',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh'
+} as const
+
+export type StageDialogueMessageOrderByRelevanceFieldEnum = (typeof StageDialogueMessageOrderByRelevanceFieldEnum)[keyof typeof StageDialogueMessageOrderByRelevanceFieldEnum]
+
+
 export const StudyTeamOrderByRelevanceFieldEnum = {
   name: 'name',
   status: 'status',
@@ -4541,6 +4727,13 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -4733,6 +4926,8 @@ export type GlobalOmitConfig = {
   userCheckin?: Prisma.UserCheckinOmit
   aiCallLog?: Prisma.AiCallLogOmit
   studyStageProgress?: Prisma.StudyStageProgressOmit
+  stageDialogueSession?: Prisma.StageDialogueSessionOmit
+  stageDialogueMessage?: Prisma.StageDialogueMessageOmit
   studyTeam?: Prisma.StudyTeamOmit
   studyTeamMember?: Prisma.StudyTeamMemberOmit
   user?: Prisma.UserOmit

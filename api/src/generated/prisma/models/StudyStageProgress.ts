@@ -38,6 +38,7 @@ export type StudyStageProgressAvgAggregateOutputType = {
   categoryId: number | null
   correctCount: number | null
   answerCount: number | null
+  dialogueTurns: number | null
 }
 
 export type StudyStageProgressSumAggregateOutputType = {
@@ -46,6 +47,7 @@ export type StudyStageProgressSumAggregateOutputType = {
   categoryId: bigint | null
   correctCount: number | null
   answerCount: number | null
+  dialogueTurns: number | null
 }
 
 export type StudyStageProgressMinAggregateOutputType = {
@@ -55,6 +57,8 @@ export type StudyStageProgressMinAggregateOutputType = {
   correctCount: number | null
   answerCount: number | null
   clearedAt: Date | null
+  dialogueClearedAt: Date | null
+  dialogueTurns: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -66,6 +70,8 @@ export type StudyStageProgressMaxAggregateOutputType = {
   correctCount: number | null
   answerCount: number | null
   clearedAt: Date | null
+  dialogueClearedAt: Date | null
+  dialogueTurns: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -77,6 +83,8 @@ export type StudyStageProgressCountAggregateOutputType = {
   correctCount: number
   answerCount: number
   clearedAt: number
+  dialogueClearedAt: number
+  dialogueTurns: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -89,6 +97,7 @@ export type StudyStageProgressAvgAggregateInputType = {
   categoryId?: true
   correctCount?: true
   answerCount?: true
+  dialogueTurns?: true
 }
 
 export type StudyStageProgressSumAggregateInputType = {
@@ -97,6 +106,7 @@ export type StudyStageProgressSumAggregateInputType = {
   categoryId?: true
   correctCount?: true
   answerCount?: true
+  dialogueTurns?: true
 }
 
 export type StudyStageProgressMinAggregateInputType = {
@@ -106,6 +116,8 @@ export type StudyStageProgressMinAggregateInputType = {
   correctCount?: true
   answerCount?: true
   clearedAt?: true
+  dialogueClearedAt?: true
+  dialogueTurns?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -117,6 +129,8 @@ export type StudyStageProgressMaxAggregateInputType = {
   correctCount?: true
   answerCount?: true
   clearedAt?: true
+  dialogueClearedAt?: true
+  dialogueTurns?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -128,6 +142,8 @@ export type StudyStageProgressCountAggregateInputType = {
   correctCount?: true
   answerCount?: true
   clearedAt?: true
+  dialogueClearedAt?: true
+  dialogueTurns?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -226,6 +242,8 @@ export type StudyStageProgressGroupByOutputType = {
   correctCount: number
   answerCount: number
   clearedAt: Date | null
+  dialogueClearedAt: Date | null
+  dialogueTurns: number
   createdAt: Date
   updatedAt: Date
   _count: StudyStageProgressCountAggregateOutputType | null
@@ -260,6 +278,8 @@ export type StudyStageProgressWhereInput = {
   correctCount?: Prisma.IntFilter<"StudyStageProgress"> | number
   answerCount?: Prisma.IntFilter<"StudyStageProgress"> | number
   clearedAt?: Prisma.DateTimeNullableFilter<"StudyStageProgress"> | Date | string | null
+  dialogueClearedAt?: Prisma.DateTimeNullableFilter<"StudyStageProgress"> | Date | string | null
+  dialogueTurns?: Prisma.IntFilter<"StudyStageProgress"> | number
   createdAt?: Prisma.DateTimeFilter<"StudyStageProgress"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"StudyStageProgress"> | Date | string
 }
@@ -271,6 +291,8 @@ export type StudyStageProgressOrderByWithRelationInput = {
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
   clearedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dialogueClearedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -286,6 +308,8 @@ export type StudyStageProgressWhereUniqueInput = Prisma.AtLeast<{
   correctCount?: Prisma.IntFilter<"StudyStageProgress"> | number
   answerCount?: Prisma.IntFilter<"StudyStageProgress"> | number
   clearedAt?: Prisma.DateTimeNullableFilter<"StudyStageProgress"> | Date | string | null
+  dialogueClearedAt?: Prisma.DateTimeNullableFilter<"StudyStageProgress"> | Date | string | null
+  dialogueTurns?: Prisma.IntFilter<"StudyStageProgress"> | number
   createdAt?: Prisma.DateTimeFilter<"StudyStageProgress"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"StudyStageProgress"> | Date | string
 }, "id" | "userId_categoryId">
@@ -297,6 +321,8 @@ export type StudyStageProgressOrderByWithAggregationInput = {
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
   clearedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dialogueClearedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.StudyStageProgressCountOrderByAggregateInput
@@ -316,6 +342,8 @@ export type StudyStageProgressScalarWhereWithAggregatesInput = {
   correctCount?: Prisma.IntWithAggregatesFilter<"StudyStageProgress"> | number
   answerCount?: Prisma.IntWithAggregatesFilter<"StudyStageProgress"> | number
   clearedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"StudyStageProgress"> | Date | string | null
+  dialogueClearedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"StudyStageProgress"> | Date | string | null
+  dialogueTurns?: Prisma.IntWithAggregatesFilter<"StudyStageProgress"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"StudyStageProgress"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"StudyStageProgress"> | Date | string
 }
@@ -327,6 +355,8 @@ export type StudyStageProgressCreateInput = {
   correctCount?: number
   answerCount?: number
   clearedAt?: Date | string | null
+  dialogueClearedAt?: Date | string | null
+  dialogueTurns?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -338,6 +368,8 @@ export type StudyStageProgressUncheckedCreateInput = {
   correctCount?: number
   answerCount?: number
   clearedAt?: Date | string | null
+  dialogueClearedAt?: Date | string | null
+  dialogueTurns?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -349,6 +381,8 @@ export type StudyStageProgressUpdateInput = {
   correctCount?: Prisma.IntFieldUpdateOperationsInput | number
   answerCount?: Prisma.IntFieldUpdateOperationsInput | number
   clearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueClearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueTurns?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -360,6 +394,8 @@ export type StudyStageProgressUncheckedUpdateInput = {
   correctCount?: Prisma.IntFieldUpdateOperationsInput | number
   answerCount?: Prisma.IntFieldUpdateOperationsInput | number
   clearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueClearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueTurns?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -371,6 +407,8 @@ export type StudyStageProgressCreateManyInput = {
   correctCount?: number
   answerCount?: number
   clearedAt?: Date | string | null
+  dialogueClearedAt?: Date | string | null
+  dialogueTurns?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -382,6 +420,8 @@ export type StudyStageProgressUpdateManyMutationInput = {
   correctCount?: Prisma.IntFieldUpdateOperationsInput | number
   answerCount?: Prisma.IntFieldUpdateOperationsInput | number
   clearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueClearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueTurns?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -393,6 +433,8 @@ export type StudyStageProgressUncheckedUpdateManyInput = {
   correctCount?: Prisma.IntFieldUpdateOperationsInput | number
   answerCount?: Prisma.IntFieldUpdateOperationsInput | number
   clearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueClearedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dialogueTurns?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -409,6 +451,8 @@ export type StudyStageProgressCountOrderByAggregateInput = {
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
   clearedAt?: Prisma.SortOrder
+  dialogueClearedAt?: Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -419,6 +463,7 @@ export type StudyStageProgressAvgOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
 }
 
 export type StudyStageProgressMaxOrderByAggregateInput = {
@@ -428,6 +473,8 @@ export type StudyStageProgressMaxOrderByAggregateInput = {
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
   clearedAt?: Prisma.SortOrder
+  dialogueClearedAt?: Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -439,6 +486,8 @@ export type StudyStageProgressMinOrderByAggregateInput = {
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
   clearedAt?: Prisma.SortOrder
+  dialogueClearedAt?: Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -449,6 +498,7 @@ export type StudyStageProgressSumOrderByAggregateInput = {
   categoryId?: Prisma.SortOrder
   correctCount?: Prisma.SortOrder
   answerCount?: Prisma.SortOrder
+  dialogueTurns?: Prisma.SortOrder
 }
 
 
@@ -460,6 +510,8 @@ export type StudyStageProgressSelect<ExtArgs extends runtime.Types.Extensions.In
   correctCount?: boolean
   answerCount?: boolean
   clearedAt?: boolean
+  dialogueClearedAt?: boolean
+  dialogueTurns?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["studyStageProgress"]>
@@ -473,11 +525,13 @@ export type StudyStageProgressSelectScalar = {
   correctCount?: boolean
   answerCount?: boolean
   clearedAt?: boolean
+  dialogueClearedAt?: boolean
+  dialogueTurns?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type StudyStageProgressOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "categoryId" | "correctCount" | "answerCount" | "clearedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["studyStageProgress"]>
+export type StudyStageProgressOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "categoryId" | "correctCount" | "answerCount" | "clearedAt" | "dialogueClearedAt" | "dialogueTurns" | "createdAt" | "updatedAt", ExtArgs["result"]["studyStageProgress"]>
 
 export type $StudyStageProgressPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "StudyStageProgress"
@@ -504,9 +558,17 @@ export type $StudyStageProgressPayload<ExtArgs extends runtime.Types.Extensions.
      */
     answerCount: number
     /**
-     * 首次通关时间（null = 未通关；只写一次，后续答对不改写）
+     * 首次通关时间（旧版「答对 N 句」口径；仅作历史展示，不再决定解锁）
      */
     clearedAt: Date | null
+    /**
+     * 对话模式通关时间（null = 未通关；解锁与奖励以它为准）
+     */
+    dialogueClearedAt: Date | null
+    /**
+     * 最近一次通关对话的用户轮数（展示用）
+     */
+    dialogueTurns: number
     /**
      * 创建时间
      */
@@ -890,6 +952,8 @@ export interface StudyStageProgressFieldRefs {
   readonly correctCount: Prisma.FieldRef<"StudyStageProgress", 'Int'>
   readonly answerCount: Prisma.FieldRef<"StudyStageProgress", 'Int'>
   readonly clearedAt: Prisma.FieldRef<"StudyStageProgress", 'DateTime'>
+  readonly dialogueClearedAt: Prisma.FieldRef<"StudyStageProgress", 'DateTime'>
+  readonly dialogueTurns: Prisma.FieldRef<"StudyStageProgress", 'Int'>
   readonly createdAt: Prisma.FieldRef<"StudyStageProgress", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"StudyStageProgress", 'DateTime'>
 }

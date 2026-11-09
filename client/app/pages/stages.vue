@@ -2,11 +2,11 @@
 /**
  * 情景闯关地图（路由 /stages）。
  *
- * 关卡 = 场景分类：每关有剧情引入、通关剧情与「累计答对 N 句」的通关线。
- * **每章首关默认解锁，章内顺序解锁**——四章是平行入口，不逼用户从第一关顺序刷到底。
+ * 玩法：每关是一段**场景长对话**——用户扮演场景里的自己，和 1~3 个 AI 角色
+ * 围绕目标把话聊完。聊够最少轮数且达成目标才通关；四章平行，章内顺序解锁。
  *
- * 进度来自 GET /client/stages，由独立的 study_stage_progress 表维护：
- * 不从答题记录派生，因为答题记录只保留 30 天，派生会让通关进度倒退、关卡重新上锁。
+ * 进度来自 GET /client/stages（study_stage_progress.dialogueClearedAt），
+ * 与答题记录完全解耦；旧版答对句数只作历史展示。
  *
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除）。
  */
@@ -18,13 +18,9 @@ definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: '情景闯关',
-  description: '把城市生活拆成十四个情景关卡，答对一个场景的句子，就往前走一段故事。',
+  description: '进入真实生活场景，和里面的人用英语把一件事聊成。',
 });
 
-/**
- * 关卡数据走 useSsrApi（带 Cookie 令牌）：裸 useFetch 不带 Authorization，
- * SSR 与客户端都会 401，页面永远停在「正在加载关卡…」。
- */
 const { data: overview, refresh } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
 
 onMounted(async () => {
@@ -43,13 +39,19 @@ function toneOf(unlocked: boolean, cleared: boolean): string {
   return 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500';
 }
 
-/** 关卡图标：已通关打勾、未解锁上锁，其余用场景自己的图标。 */
 function iconOf(stage: StageView): string {
   if (stage.cleared) return 'i-lucide-check';
   if (!stage.unlocked) return 'i-lucide-lock';
-  return 'i-lucide-play';
+  return 'i-lucide-message-circle';
 }
 
+/** 进入（或继续）这一关的场景对话。 */
+async function enter(stage: StageView): Promise<void> {
+  if (!stage.unlocked) return;
+  await navigateTo(`/stages/${stage.id}`);
+}
+
+/** 领取通关奖励（幂等，重复领取由后端兜底）。 */
 async function claim(stage: StageView): Promise<void> {
   if (claiming.value !== null) return;
   claiming.value = stage.id;
@@ -68,11 +70,6 @@ async function claim(stage: StageView): Promise<void> {
     claiming.value = null;
   }
 }
-
-/** 去刷该场景：主刷题页按 category 参数限定范围。 */
-async function goPractice(stage: StageView): Promise<void> {
-  await navigateTo(`/?category=${stage.id}`);
-}
 </script>
 
 <template>
@@ -90,7 +87,7 @@ async function goPractice(stage: StageView): Promise<void> {
         </span>
       </div>
       <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-        一个场景就是一关。在该场景答对够数，故事就往前走一段——四章可以任选起点。
+        每一关都是一段真实场景的长对话。进入场景，和里面的人把目标聊成，故事就往前走。
       </p>
       <p
         v-if="flash"
@@ -114,12 +111,11 @@ async function goPractice(stage: StageView): Promise<void> {
 
         <ol class="space-y-3">
           <li
-            v-for="(stage, index) in chapter.stages"
+            v-for="stage in chapter.stages"
             :key="stage.id"
             class="flex gap-3"
             :class="stage.unlocked ? '' : 'opacity-70'"
           >
-            <!-- 时间轴：图标 + 向下的连线 -->
             <div class="flex w-10 shrink-0 flex-col items-center">
               <span
                 class="grid size-10 shrink-0 place-items-center rounded-2xl shadow-sm"
@@ -127,82 +123,79 @@ async function goPractice(stage: StageView): Promise<void> {
               >
                 <UIcon :name="iconOf(stage)" class="h-4 w-4" />
               </span>
-              <span v-if="index < chapter.stages.length - 1" class="mt-1 w-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              <span class="mt-1 w-px flex-1 bg-slate-200 dark:bg-slate-800" />
             </div>
 
             <div
-              class="min-w-0 flex-1 rounded-2xl bg-white p-3.5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
+              class="mb-1 flex-1 rounded-2xl bg-white p-3.5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
             >
               <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="text-[11px] text-slate-400 dark:text-slate-500">
-                    {{ stage.name }}
-                    <span v-if="stage.nameEn"> · {{ stage.nameEn }}</span>
-                  </p>
-                  <h3 class="mt-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">
-                    {{ stage.title }}
-                  </h3>
+                <div>
+                  <p class="text-[11px] font-medium text-slate-400 dark:text-slate-500">{{ stage.name }}</p>
+                  <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ stage.title }}</h3>
                 </div>
                 <span
                   v-if="stage.cleared"
-                  class="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                  class="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
                 >
                   已通关
                 </span>
                 <span
                   v-else-if="!stage.unlocked"
-                  class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                  class="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:bg-slate-800 dark:text-slate-500"
                 >
                   未解锁
                 </span>
               </div>
 
-              <p class="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                {{ stage.cleared ? stage.outro : stage.unlocked ? stage.intro : '通关上一关，这一页才会翻开。' }}
-              </p>
+              <p class="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ stage.intro }}</p>
 
-              <!-- 进度：锁定关卡不显示，避免「怎么还差这么多」的挫败 -->
-              <div v-if="stage.unlocked" class="mt-2.5 flex items-center gap-2">
-                <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div
-                    class="h-full rounded-full transition-all duration-700"
-                    :class="stage.cleared ? 'bg-emerald-500' : 'bg-sky-500'"
-                    :style="{ width: `${stage.progress}%` }"
-                  />
-                </div>
-                <span class="shrink-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  {{ stage.correctCount }} / {{ stage.target }} 句
+              <!-- 出场角色：一个场景 1~3 人 -->
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <span
+                  v-for="role in stage.roles"
+                  :key="role.nameEn"
+                  class="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <span aria-hidden="true">{{ role.emoji }}</span>
+                  {{ role.name }}
                 </span>
               </div>
 
-              <div class="mt-2.5 flex items-center justify-between gap-2">
-                <span class="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                  +{{ stage.rewardXp }} XP
-                </span>
+              <p class="mt-2 text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
+                <span class="font-semibold">目标：</span>{{ stage.goal }}
+              </p>
 
+              <div class="mt-2.5 flex items-center gap-2">
+                <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div
+                    class="h-full rounded-full bg-linear-to-r from-sky-400 to-indigo-500 transition-all duration-500"
+                    :style="{ width: `${stage.progress}%` }"
+                  />
+                </div>
+                <span class="shrink-0 text-[11px] text-slate-400 dark:text-slate-500">
+                  至少 {{ stage.minTurns }} 轮 · 最多 {{ stage.maxTurns }} 轮
+                </span>
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                <UButton v-if="stage.unlocked" size="xs" :disabled="!stage.unlocked" @click="enter(stage)">
+                  {{ stage.activeSessionId ? '继续对话' : stage.cleared ? '再聊一次' : '进入对话' }}
+                </UButton>
                 <UButton
                   v-if="stage.cleared && !stage.claimed"
                   size="xs"
+                  color="neutral"
+                  variant="soft"
                   icon="i-lucide-gift"
                   :loading="claiming === stage.id"
                   @click="claim(stage)"
                 >
-                  领取奖励
+                  领 +{{ stage.rewardXp }} XP
                 </UButton>
-                <span v-else-if="stage.cleared" class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                  奖励已领取
+                <span v-if="stage.legacyCorrectCount > 0" class="text-[10px] text-slate-300 dark:text-slate-600">
+                  旧版练习 {{ stage.legacyCorrectCount }} 句
                 </span>
-                <UButton
-                  v-else-if="stage.unlocked && stage.bankCount > 0"
-                  size="xs"
-                  variant="soft"
-                  trailing-icon="i-lucide-arrow-right"
-                  @click="goPractice(stage)"
-                >
-                  去闯关
-                </UButton>
-                <span v-else-if="stage.unlocked" class="text-[11px] text-slate-400"> 该场景题目准备中 </span>
-                <span v-else class="text-[11px] text-slate-400">通关上一关解锁</span>
               </div>
             </div>
           </li>

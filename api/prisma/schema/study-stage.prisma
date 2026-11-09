@@ -18,8 +18,12 @@ model StudyStageProgress {
   correctCount Int       @default(0) @map("correct_count") @db.Int
   /// 累计作答数（含答错）
   answerCount  Int       @default(0) @map("answer_count") @db.Int
-  /// 首次通关时间（null = 未通关；只写一次，后续答对不改写）
+  /// 首次通关时间（旧版「答对 N 句」口径；仅作历史展示，不再决定解锁）
   clearedAt    DateTime? @map("cleared_at")
+  /// 对话模式通关时间（null = 未通关；解锁与奖励以它为准）
+  dialogueClearedAt DateTime? @map("dialogue_cleared_at")
+  /// 最近一次通关对话的用户轮数（展示用）
+  dialogueTurns     Int       @default(0) @map("dialogue_turns") @db.Int
   /// 创建时间
   createdAt    DateTime  @default(now()) @map("created_at")
   /// 更新时间
@@ -29,4 +33,65 @@ model StudyStageProgress {
   @@unique([userId, categoryId])
   @@index([userId])
   @@map("study_stage_progress")
+}
+
+/// 情景对话会话（一次「场景长对话」= 一行）。
+///
+/// 玩法：用户扮演场景角色，与 1~3 个 AI 角色围绕 goal 对话；
+/// 聊够 minTurns 轮且 AI 判定目标达成才算通关（cleared=true）。
+/// 对话内容与进度分表：消息量大，且历史会话需要完整保留供复盘。
+model StageDialogueSession {
+  /// 主键
+  id           BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 用户 id（client_user）
+  userId       BigInt    @map("user_id") @db.BigInt
+  /// 场景分类 id（sentence_category）：关卡 = 场景
+  categoryId   BigInt    @map("category_id") @db.BigInt
+  /// active 进行中 / completed 已通关 / ended 未达成结束 / abandoned 重新开始
+  status       String    @default("active") @db.VarChar(20)
+  /// 用户已发言轮数（NPC 开场白不计）
+  turnCount    Int       @default(0) @map("turn_count") @db.Int
+  /// AI 是否判定目标达成
+  goalReached  Boolean   @default(false) @map("goal_reached")
+  /// 是否通关（goalReached && turnCount >= minTurns）
+  cleared      Boolean   @default(false)
+  /// 中文总结（结束时生成，2~3 句）
+  summary      String?   @db.Text
+  /// 复盘 JSON：{"highlights":["..."],"improvements":["..."]}
+  feedback     String?   @db.Text
+  /// 开始时间
+  startedAt    DateTime  @default(now()) @map("started_at")
+  /// 结束时间（null = 进行中）
+  endedAt      DateTime? @map("ended_at")
+  /// 更新时间
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  messages StageDialogueMessage[]
+
+  /// 按「用户 + 场景 + 状态」找进行中的会话
+  @@index([userId, categoryId, status])
+  @@map("stage_dialogue_session")
+}
+
+/// 情景对话消息（一行 = 一句台词）。
+model StageDialogueMessage {
+  /// 主键
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 所属会话
+  sessionId BigInt   @map("session_id") @db.BigInt
+  /// npc / user
+  role      String   @db.VarChar(10)
+  /// 说话角色 nameEn（user 消息为 null）
+  speaker   String?  @db.VarChar(40)
+  /// 英文内容
+  contentEn String   @map("content_en") @db.VarChar(500)
+  /// 中文翻译（NPC 台词必填，user 消息可空）
+  contentZh String?  @map("content_zh") @db.VarChar(300)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session StageDialogueSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, id])
+  @@map("stage_dialogue_message")
 }

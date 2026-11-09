@@ -366,31 +366,43 @@ export interface LeaderboardResult {
 /* ------------------------------ 情景闯关 ------------------------------ */
 
 /** 一个关卡（关卡 = 场景分类）。 */
+/** 场景里的一个 AI 角色。 */
+export interface StageRole {
+  nameEn: string;
+  name: string;
+  emoji: string;
+}
+
 export interface StageView {
-  /** 关卡 id = 场景分类 id，用于跳转按场景刷题 */
+  /** 关卡 id = 场景分类 id */
   id: number;
   name: string;
   nameEn: string | null;
   icon: string | null;
   /** 剧情化关卡标题 */
   title: string;
-  /** 进入关卡的剧情引入 */
   intro: string;
-  /** 通关剧情 */
   outro: string;
-  /** 通关所需累计答对数 */
-  target: number;
+  /** 本关对话目标 */
+  goal: string;
+  /** 通关所需最少用户轮数 */
+  minTurns: number;
+  /** 硬上限轮数 */
+  maxTurns: number;
+  /** 出场角色（1~3 人） */
+  roles: StageRole[];
   rewardXp: number;
-  /** 该场景累计答对数（已按 target 封顶） */
-  correctCount: number;
-  answerCount: number;
-  /** 进度百分比 0~100 */
+  /** 进度百分比（通关 100，进行中按轮数估算） */
   progress: number;
+  /** 最近一次通关对话轮数 */
+  turns: number;
+  /** 旧版答对句数（仅历史展示） */
+  legacyCorrectCount: number;
   cleared: boolean;
   unlocked: boolean;
   claimed: boolean;
-  /** 该场景当前可刷题数（0 = 题库准备中） */
-  bankCount: number;
+  /** 进行中的会话 id */
+  activeSessionId: number | null;
 }
 
 /** 一章（含若干关卡，章内顺序解锁）。 */
@@ -420,6 +432,53 @@ export interface StageClaimResult {
   alreadyClaimed: boolean;
   rewardXp: number;
   xp: number;
+}
+
+/** 一句场景对话。 */
+export interface StageDialogueMessage {
+  id: number;
+  role: 'npc' | 'user';
+  /** 说话角色 nameEn（用户为 null） */
+  speaker: string | null;
+  contentEn: string;
+  contentZh: string | null;
+  createdAt: string;
+}
+
+/** 对话结束后的中文复盘。 */
+export interface StageFeedback {
+  summary: string;
+  highlights: string[];
+  improvements: string[];
+}
+
+/** 进入关卡时返回的会话（含开场白与历史消息）。 */
+export interface StageDialogue {
+  sessionId: number;
+  status: string;
+  turnCount: number;
+  goalReached: boolean;
+  cleared: boolean;
+  title: string;
+  intro: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  roles: StageRole[];
+  messages: StageDialogueMessage[];
+  summary: string | null;
+  feedback: StageFeedback | null;
+}
+
+/** 一轮对话结果。 */
+export interface StageTurnResult {
+  replies: Array<{ speaker: string; contentEn: string; contentZh: string }>;
+  turnCount: number;
+  goalReached: boolean;
+  ended: boolean;
+  cleared: boolean;
+  summary: string | null;
+  feedback: StageFeedback | null;
 }
 
 /* ------------------------------ 句子接龙 ------------------------------ */

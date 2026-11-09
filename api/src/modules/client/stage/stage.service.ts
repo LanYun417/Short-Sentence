@@ -1,51 +1,79 @@
 /**
- * 情景闯关服务（关卡 = 场景分类）。
+ * 情景闯关服务（关卡 = 场景分类，玩法 = 场景长对话）。
  *
- * 设计要点：
- * - **进度单独落库**（`study_stage_progress`）：答题记录只保留 30 天，若派生计算
- *   会出现「一个月后关卡重新上锁、进度倒退」的荒谬体验。
- * - **解锁规则**：每章第一关默认解锁，章内顺序解锁。四章是平行入口，
- *   不逼用户按唯一顺序从头刷。
- * - **奖励幂等**：复用 GamifyService 的 XP 幂等键（`stage:{userId}:{categoryId}`），
- *   不另建领取记录表。
+ * 2026-11-09 改造：从「在该场景答对 N 句」改为 **AI 角色扮演长对话**。
+ * - 每个关卡是一段场景：用户扮演 userRole，与 1~3 个 AI 角色围绕 goal 对话；
+ * - 通关 = 聊够 minTurns 轮 **且** AI 判定目标达成；达到 maxTurns 仍未达成则结束但可重来；
+ * - 解锁规则不变（每章首关默认解锁，章内顺序解锁），但**只认对话通关**
+ *   （study_stage_progress.dialogueClearedAt）；旧版答对计数只作历史展示。
+ * - 奖励幂等仍复用 GamifyService 的 `stage:{userId}:{categoryId}`。
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { isFestivalName } from '../../../common/calendar/festivals.js';
+import {
+  AgnesSentenceProvider,
+  type StageDialogueReply,
+  type StageDialogueSummary,
+} from '../../../common/ai/agnes-sentence.provider.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { GamifyService } from '../gamify/gamify.service.js';
-import { STAGE_CHAPTERS, STAGE_STORIES, STAGE_TOTAL, type StageStory, stageStoryOf } from './stage-stories.js';
+import {
+  STAGE_CHAPTERS,
+  STAGE_STORIES,
+  STAGE_TOTAL,
+  stageRoleOf,
+  stageStoryOf,
+  type StageStory,
+} from './stage-stories.js';
+
+/** 场景角色（下发前端展示）。 */
+export interface StageRoleView {
+  nameEn: string;
+  name: string;
+  emoji: string;
+}
 
 /** 单关视图。 */
 export interface StageView {
-  /** 关卡 id = 场景分类 id（前端用它跳转按场景刷题） */
+  /** 关卡 id = 场景分类 id */
   id: number;
-  /** 场景名（如「餐饮美食」） */
   name: string;
   nameEn: string | null;
   icon: string | null;
-  /** 剧情化关卡标题 */
   title: string;
   intro: string;
-  /** 通关剧情（未通关时前端可提示「通关解锁」但不展示正文） */
   outro: string;
-  /** 通关所需累计答对数 */
-  target: number;
+  /** 本关对话目标 */
+  goal: string;
+  /** 通关所需最少用户轮数 */
+  minTurns: number;
+  /** 硬上限轮数 */
+  maxTurns: number;
+  roles: StageRoleView[];
   rewardXp: number;
-  /** 该场景累计答对数（展示时按 target 封顶） */
-  correctCount: number;
-  /** 该场景累计作答数 */
-  answerCount: number;
-  /** 进度百分比 0~100 */
-  progress: number;
-  /** 是否已通关 */
+  /** 是否已通关（对话口径） */
   cleared: boolean;
-  /** 是否已解锁（章内前一关已通关） */
+  /** 是否已解锁 */
   unlocked: boolean;
   /** 奖励是否已领取 */
   claimed: boolean;
-  /** 该场景当前可刷题数（0 = 题库准备中，前端不必引导） */
+  /** 进度百分比（通关 100；进行中按轮数估算，封顶 90） */
+  progress: number;
+  /** 最近一次通关对话的轮数 */
+  turns: number;
+  /** 旧版「答对句数」（仅历史展示，不再决定通关） */
+  legacyCorrectCount: number;
+  /** @deprecated 兼容 Android 旧版关卡页：新口径下等于 minTurns */
+  target: number;
+  /** @deprecated 兼容 Android 旧版关卡页：新口径下等于当前会话轮数 */
+  correctCount: number;
+  /** @deprecated 兼容 Android 旧版关卡页 */
+  answerCount: number;
+  /** @deprecated 兼容 Android 旧版关卡页：该场景就绪题数 */
   bankCount: number;
+  /** 进行中的会话 id（没有则 null） */
+  activeSessionId: number | null;
 }
 
 /** 章节视图。 */
@@ -61,15 +89,53 @@ export interface StageChapterView {
 /** 闯关总览。 */
 export interface StageOverview {
   chapters: StageChapterView[];
-  /** 已通关关卡数 */
   clearedStages: number;
   totalStages: number;
-  /** 已解锁但未通关的关卡数（首页引导「继续闯关」） */
+  /** 已解锁但未通关的关卡数 */
   activeStages: number;
   /** 可领取奖励的关卡数 */
   claimable: number;
-  /** 当前推荐关卡（第一关未通关的已解锁关卡） */
+  /** 当前推荐关卡（第一个已解锁未通关） */
   recommendedId: number | null;
+}
+
+/** 一句对话消息。 */
+export interface StageDialogueMessageView {
+  id: number;
+  role: 'npc' | 'user';
+  speaker: string | null;
+  contentEn: string;
+  contentZh: string | null;
+  createdAt: string;
+}
+
+/** 对话会话视图（进入关卡时返回）。 */
+export interface StageDialogueView {
+  sessionId: number;
+  status: string;
+  turnCount: number;
+  goalReached: boolean;
+  cleared: boolean;
+  title: string;
+  intro: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  roles: StageRoleView[];
+  messages: StageDialogueMessageView[];
+  summary: string | null;
+  feedback: StageDialogueSummary | null;
+}
+
+/** 一轮对话的结果。 */
+export interface StageTurnResult {
+  replies: StageDialogueReply[];
+  turnCount: number;
+  goalReached: boolean;
+  ended: boolean;
+  cleared: boolean;
+  summary: string | null;
+  feedback: StageDialogueSummary | null;
 }
 
 /** 通关奖励的 XP 幂等键。 */
@@ -77,17 +143,31 @@ function claimKey(userId: number, categoryId: number): string {
   return `stage:${userId}:${categoryId}`;
 }
 
+/** 从 DB 存的 JSON 字符串还原复盘（坏数据不影响会话读取）。 */
+function parseFeedback(raw: string | null): StageDialogueSummary | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as StageDialogueSummary;
+    return typeof parsed.summary === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class StageService {
+  private readonly logger = new Logger(StageService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamify: GamifyService,
+    private readonly ai: AgnesSentenceProvider,
   ) {}
 
-  /** 闯关地图：章节 + 关卡 + 我的进度。 */
+  /** 闯关地图：章节 + 关卡 + 我的对话进度。 */
   async getStages(userId: number): Promise<StageOverview> {
     const uid = BigInt(userId);
-    const [categories, progresses, bankCounts, claims] = await Promise.all([
+    const [categories, progresses, claims, activeSessions, bankCounts] = await Promise.all([
       this.prisma.sentenceCategory.findMany({
         where: { status: 1 },
         orderBy: [{ sort: 'asc' }, { id: 'asc' }],
@@ -95,24 +175,29 @@ export class StageService {
       }),
       this.prisma.studyStageProgress.findMany({
         where: { userId: uid },
-        select: { categoryId: true, correctCount: true, answerCount: true, clearedAt: true },
-      }),
-      this.prisma.sentence.groupBy({
-        by: ['categoryId'],
-        // 与抽题口径一致：无配图的题不下发，也不该算作「可刷」
-        where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
-        _count: { _all: true },
+        select: { categoryId: true, correctCount: true, dialogueClearedAt: true, dialogueTurns: true },
       }),
       this.prisma.clientXpLog.findMany({
         where: { userId: uid, eventKey: { startsWith: `stage:${userId}:` } },
         select: { eventKey: true },
       }),
+      this.prisma.stageDialogueSession.findMany({
+        where: { userId: uid, status: 'active' },
+        select: { id: true, categoryId: true, turnCount: true },
+      }),
+      // 兼容 Android 旧版关卡页（按场景可刷题数决定是否显示「去练习」）
+      this.prisma.sentence.groupBy({
+        by: ['categoryId'],
+        where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
+        _count: { _all: true },
+      }),
     ]);
 
     const categoryByName = new Map(categories.filter((row) => !isFestivalName(row.name)).map((row) => [row.name, row]));
     const progressByCategory = new Map(progresses.map((row) => [String(row.categoryId), row]));
-    const bankByCategory = new Map(bankCounts.map((row) => [String(row.categoryId), row._count._all]));
     const claimedSet = new Set(claims.map((row) => row.eventKey));
+    const activeByCategory = new Map(activeSessions.map((row) => [String(row.categoryId), row]));
+    const bankByCategory = new Map(bankCounts.map((row) => [String(row.categoryId), row._count._all]));
 
     const chapters: StageChapterView[] = [];
     let clearedStages = 0;
@@ -133,10 +218,12 @@ export class StageService {
 
         const id = Number(category.id);
         const progress = progressByCategory.get(String(category.id));
-        const correctCount = progress?.correctCount ?? 0;
-        const cleared = Boolean(progress?.clearedAt) || correctCount >= story.target;
+        const active = activeByCategory.get(String(category.id));
+        const cleared = Boolean(progress?.dialogueClearedAt);
         const unlocked = previousCleared;
         const claimed = claimedSet.has(claimKey(userId, id));
+        const turns = progress?.dialogueTurns ?? 0;
+        const progressPct = cleared ? 100 : Math.min(90, Math.round(((active?.turnCount ?? 0) / story.minTurns) * 100));
 
         if (cleared) {
           clearedStages += 1;
@@ -154,15 +241,23 @@ export class StageService {
           title: story.title,
           intro: story.intro,
           outro: story.outro,
-          target: story.target,
+          goal: story.goal,
+          minTurns: story.minTurns,
+          maxTurns: story.maxTurns,
+          roles: story.roles.map((role) => ({ nameEn: role.nameEn, name: role.name, emoji: role.emoji })),
           rewardXp: story.rewardXp,
-          correctCount: Math.min(correctCount, story.target),
-          answerCount: progress?.answerCount ?? 0,
-          progress: Math.min(100, Math.round((correctCount / story.target) * 100)),
           cleared,
           unlocked,
           claimed,
+          progress: progressPct,
+          turns,
+          legacyCorrectCount: progress?.correctCount ?? 0,
+          // ↓ 兼容 Android 旧版关卡页（新口径把「句」换成「轮」）
+          target: story.minTurns,
+          correctCount: active?.turnCount ?? turns,
+          answerCount: active?.turnCount ?? 0,
           bankCount: bankByCategory.get(String(category.id)) ?? 0,
+          activeSessionId: active ? Number(active.id) : null,
         });
         previousCleared = cleared;
       }
@@ -182,7 +277,6 @@ export class StageService {
     return {
       chapters,
       clearedStages,
-      // 与成就同口径：以配置的关卡数为分母，不让「运营加了分类」把进度条压下去
       totalStages: Math.min(
         STAGE_TOTAL,
         chapters.reduce((sum, item) => sum + item.total, 0),
@@ -193,43 +287,341 @@ export class StageService {
     };
   }
 
+  /* ------------------------------ 场景长对话 ------------------------------ */
+
   /**
-   * 记录一次作答对关卡进度的推进（只答对才 +1）。
-   *
-   * 调用方是答题主链路，**任何异常都不应影响答题结果**——由调用方 try/catch。
+   * 进入关卡：有进行中的会话就续聊，否则新建并把开场白写进消息表。
+   * @param restart 为 true 时把旧会话标记 abandoned 后重新开一局
    */
-  async recordAnswer(userId: number, categoryId: number, categoryName: string, isCorrect: boolean): Promise<void> {
-    const story = stageStoryOf(categoryName);
-    // 运营新加的分类还没配剧情：不记进度，避免出现「点不进去的关卡」
-    if (!story) return;
+  async startDialogue(userId: number, categoryId: number, restart = false): Promise<StageDialogueView> {
+    const story = await this.storyOfCategory(categoryId);
+    if (!story) throw AppException.notFound('关卡不存在');
+    await this.assertUnlocked(userId, categoryId);
 
     const uid = BigInt(userId);
     const cid = BigInt(categoryId);
-    const row = await this.prisma.studyStageProgress.upsert({
-      where: { userId_categoryId: { userId: uid, categoryId: cid } },
-      create: {
-        userId: uid,
-        categoryId: cid,
-        correctCount: isCorrect ? 1 : 0,
-        answerCount: 1,
+    const active = await this.prisma.stageDialogueSession.findFirst({
+      where: { userId: uid, categoryId: cid, status: 'active' },
+      orderBy: { id: 'desc' },
+    });
+
+    if (active && !restart) {
+      return this.dialogueView(active, story);
+    }
+    if (active && restart) {
+      await this.prisma.stageDialogueSession.update({
+        where: { id: active.id },
+        data: { status: 'abandoned', endedAt: new Date() },
+      });
+    }
+
+    const session = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.stageDialogueSession.create({
+        data: { userId: uid, categoryId: cid },
+        select: { id: true },
+      });
+      await tx.stageDialogueMessage.createMany({
+        data: story.opening.map((line) => ({
+          sessionId: created.id,
+          role: 'npc',
+          speaker: line.speaker,
+          contentEn: line.contentEn,
+          contentZh: line.contentZh,
+        })),
+      });
+      return created;
+    });
+    this.logger.log(`情景对话开始 user=${userId} category=${categoryId} session=${session.id}`);
+    return this.dialogueView(session, story);
+  }
+
+  /** 只读取进行中的会话（没有返回 null，用于刷新页面时判断）。 */
+  async getDialogue(userId: number, categoryId: number): Promise<StageDialogueView | null> {
+    const story = await this.storyOfCategory(categoryId);
+    if (!story) throw AppException.notFound('关卡不存在');
+    const active = await this.prisma.stageDialogueSession.findFirst({
+      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      orderBy: { id: 'desc' },
+    });
+    return active ? this.dialogueView(active, story) : null;
+  }
+
+  /**
+   * 用户说一句 → 模型以 1~3 个角色回应 → 判定是否结束。
+   *
+   * 顺序很关键：**先拿到模型输出，再一次性落库**（用户消息 + NPC 台词），
+   * AI 挂了就不写任何东西，用户可原样重发，不会留下半截对话。
+   */
+  async sendMessage(userId: number, categoryId: number, raw: string): Promise<StageTurnResult> {
+    const story = await this.storyOfCategory(categoryId);
+    if (!story) throw AppException.notFound('关卡不存在');
+    const content = (raw ?? '').replace(/\s+/g, ' ').trim();
+    if (!content) throw AppException.badRequest('先说点什么吧');
+    if (content.length > 300) throw AppException.badRequest('一句最多 300 个字符');
+
+    const uid = BigInt(userId);
+    const cid = BigInt(categoryId);
+    const session = await this.prisma.stageDialogueSession.findFirst({
+      where: { userId: uid, categoryId: cid, status: 'active' },
+      orderBy: { id: 'desc' },
+    });
+    if (!session) throw AppException.badRequest('对话已结束，请重新进入关卡');
+
+    const stored = await this.prisma.stageDialogueMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { id: 'asc' },
+      select: { role: true, speaker: true, contentEn: true },
+    });
+    const history = stored.map((row) => ({
+      role: row.role,
+      speaker: row.speaker,
+      contentEn: row.contentEn,
+    }));
+    const turnCount = session.turnCount + 1;
+
+    let result;
+    try {
+      result = await this.ai.stageDialogueTurn({
+        scene: {
+          title: story.title,
+          setting: story.setting,
+          userRole: story.userRole,
+          goal: story.goal,
+          roles: story.roles.map((role) => ({ nameEn: role.nameEn, persona: role.persona })),
+          minTurns: story.minTurns,
+          maxTurns: story.maxTurns,
+        },
+        history,
+        userMessage: content,
+        turnCount,
+      });
+    } catch (error) {
+      this.logger.warn(`情景对话 AI 调用失败 user=${userId} session=${session.id}：${String(error)}`);
+      throw AppException.serviceUnavailable('对方暂时没能回应，请再发一次');
+    }
+
+    // 模型空输出 / speaker 写错都要兜底，聊天不能因为模型抽风断掉
+    let replies = result.replies;
+    if (replies.length === 0) {
+      replies = [
+        {
+          speaker: story.roles[0]?.nameEn ?? 'NPC',
+          contentEn: 'Sorry, could you say that again?',
+          contentZh: '抱歉，能再说一遍吗？',
+        },
+      ];
+    }
+    replies = replies.map((reply) => ({
+      ...reply,
+      speaker: stageRoleOf(story, reply.speaker) ? reply.speaker : (story.roles[0]?.nameEn ?? 'NPC'),
+    }));
+
+    const goalReached = session.goalReached || result.goalReached;
+    // 结束只由服务端裁决：轮数够 + 目标达成，或撞到硬上限。模型说 ended 不算数。
+    const ended = (turnCount >= story.minTurns && goalReached) || turnCount >= story.maxTurns;
+    const cleared = ended && goalReached && turnCount >= story.minTurns;
+    const feedback = ended ? await this.summarize(story, history, content, replies, cleared) : null;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.stageDialogueMessage.createMany({
+        data: [
+          { sessionId: session.id, role: 'user', speaker: null, contentEn: content, contentZh: null },
+          ...replies.map((reply) => ({
+            sessionId: session.id,
+            role: 'npc',
+            speaker: reply.speaker,
+            contentEn: reply.contentEn,
+            contentZh: reply.contentZh || null,
+          })),
+        ],
+      });
+      await tx.stageDialogueSession.update({
+        where: { id: session.id },
+        data: {
+          turnCount,
+          goalReached,
+          cleared,
+          ...(ended
+            ? {
+                status: cleared ? 'completed' : 'ended',
+                endedAt: new Date(),
+                summary: feedback?.summary ?? null,
+                feedback: feedback ? JSON.stringify(feedback) : null,
+              }
+            : {}),
+        },
+      });
+      if (cleared) {
+        await tx.studyStageProgress.upsert({
+          where: { userId_categoryId: { userId: uid, categoryId: cid } },
+          create: { userId: uid, categoryId: cid, dialogueClearedAt: new Date(), dialogueTurns: turnCount },
+          update: { dialogueClearedAt: new Date(), dialogueTurns: turnCount },
+        });
+      }
+    });
+
+    return {
+      replies,
+      turnCount,
+      goalReached,
+      ended,
+      cleared,
+      summary: feedback?.summary ?? null,
+      feedback,
+    };
+  }
+
+  /** 主动结束（没聊满也能结束，但只有达成目标且轮数够才算通关）。 */
+  async endDialogue(userId: number, categoryId: number): Promise<StageDialogueView> {
+    const story = await this.storyOfCategory(categoryId);
+    if (!story) throw AppException.notFound('关卡不存在');
+    const session = await this.prisma.stageDialogueSession.findFirst({
+      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      orderBy: { id: 'desc' },
+    });
+    if (!session) throw AppException.badRequest('对话已经结束了');
+
+    const stored = await this.prisma.stageDialogueMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { id: 'asc' },
+      select: { role: true, speaker: true, contentEn: true },
+    });
+    const cleared = session.goalReached && session.turnCount >= story.minTurns;
+    const feedback = await this.summarize(
+      story,
+      stored.map((row) => ({ role: row.role, speaker: row.speaker, contentEn: row.contentEn })),
+      '',
+      [],
+      cleared,
+    );
+    await this.prisma.stageDialogueSession.update({
+      where: { id: session.id },
+      data: {
+        status: cleared ? 'completed' : 'ended',
+        cleared,
+        endedAt: new Date(),
+        summary: feedback.summary,
+        feedback: JSON.stringify(feedback),
       },
+    });
+    if (cleared) {
+      await this.prisma.studyStageProgress.upsert({
+        where: { userId_categoryId: { userId: BigInt(userId), categoryId: BigInt(categoryId) } },
+        create: {
+          userId: BigInt(userId),
+          categoryId: BigInt(categoryId),
+          dialogueClearedAt: new Date(),
+          dialogueTurns: session.turnCount,
+        },
+        update: { dialogueClearedAt: new Date(), dialogueTurns: session.turnCount },
+      });
+    }
+    return this.dialogueView({ id: session.id }, story);
+  }
+
+  /** 生成中文复盘；AI 不可用时用通用文案，绝不阻塞通关。 */
+  private async summarize(
+    story: StageStory,
+    history: Array<{ role: string; speaker: string | null; contentEn: string }>,
+    lastUser: string,
+    lastReplies: StageDialogueReply[],
+    cleared: boolean,
+  ): Promise<StageDialogueSummary> {
+    const tail = [
+      ...(lastUser ? [{ role: 'user', speaker: null, contentEn: lastUser }] : []),
+      ...lastReplies.map((reply) => ({ role: 'npc', speaker: reply.speaker, contentEn: reply.contentEn })),
+    ];
+    try {
+      return await this.ai.stageDialogueSummary({
+        scene: { title: story.title, goal: story.goal },
+        history: [...history, ...tail].slice(-30),
+        cleared,
+      });
+    } catch (error) {
+      this.logger.warn(`情景对话复盘生成失败：${String(error)}`);
+      return {
+        summary: cleared ? '这一关的目标你达成了，故事往前走了一段。' : '这段对话先到这里，换个说法再来一次。',
+        highlights: ['你坚持把这个场景聊完了'],
+        improvements: ['试着把回答再展开一两句'],
+      };
+    }
+  }
+
+  /** 装配会话视图（开场白/历史/复盘一次性给前端）。 */
+  private async dialogueView(session: { id: bigint }, story: StageStory): Promise<StageDialogueView> {
+    const row = await this.prisma.stageDialogueSession.findUnique({
+      where: { id: session.id },
+      select: {
+        id: true,
+        status: true,
+        turnCount: true,
+        goalReached: true,
+        cleared: true,
+        summary: true,
+        feedback: true,
+      },
+    });
+    if (!row) throw AppException.notFound('对话不存在');
+    const messages = await this.prisma.stageDialogueMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { id: 'asc' },
+      select: { id: true, role: true, speaker: true, contentEn: true, contentZh: true, createdAt: true },
+    });
+    return {
+      sessionId: Number(row.id),
+      status: row.status,
+      turnCount: row.turnCount,
+      goalReached: row.goalReached,
+      cleared: row.cleared,
+      title: story.title,
+      intro: story.intro,
+      goal: story.goal,
+      minTurns: story.minTurns,
+      maxTurns: story.maxTurns,
+      roles: story.roles.map((role) => ({ nameEn: role.nameEn, name: role.name, emoji: role.emoji })),
+      messages: messages.map((item) => ({
+        id: Number(item.id),
+        role: item.role === 'user' ? 'user' : 'npc',
+        speaker: item.speaker,
+        contentEn: item.contentEn,
+        contentZh: item.contentZh,
+        createdAt: item.createdAt.toISOString(),
+      })),
+      summary: row.summary,
+      feedback: parseFeedback(row.feedback),
+    };
+  }
+
+  /** 校验关卡是否已解锁（对话通关口径）。 */
+  private async assertUnlocked(userId: number, categoryId: number): Promise<void> {
+    const overview = await this.getStages(userId);
+    const stage = overview.chapters.flatMap((item) => item.stages).find((item) => item.id === categoryId);
+    if (!stage) throw AppException.notFound('关卡不存在');
+    if (!stage.unlocked) throw AppException.badRequest('先完成上一关的场景对话吧');
+  }
+
+  /* ------------------------------ 旧版答题统计 ------------------------------ */
+
+  /**
+   * 记录一次作答（旧版口径，仅保留历史统计）。
+   * 不再写 dialogueClearedAt，不影响解锁与通关；任何异常都不应影响答题结果。
+   */
+  async recordAnswer(userId: number, categoryId: number, categoryName: string, isCorrect: boolean): Promise<void> {
+    const story = stageStoryOf(categoryName);
+    if (!story) return;
+    const uid = BigInt(userId);
+    const cid = BigInt(categoryId);
+    await this.prisma.studyStageProgress.upsert({
+      where: { userId_categoryId: { userId: uid, categoryId: cid } },
+      create: { userId: uid, categoryId: cid, correctCount: isCorrect ? 1 : 0, answerCount: 1 },
       update: {
         answerCount: { increment: 1 },
         ...(isCorrect ? { correctCount: { increment: 1 } } : {}),
       },
-      select: { correctCount: true, clearedAt: true },
     });
-
-    // 刚越过通关线：只写一次 clearedAt，之后答对不再改写
-    if (!row.clearedAt && row.correctCount >= story.target) {
-      await this.prisma.studyStageProgress.update({
-        where: { userId_categoryId: { userId: uid, categoryId: cid } },
-        data: { clearedAt: new Date() },
-      });
-    }
   }
 
-  /** 领取通关奖励（幂等：重复领取不重复发放）。 */
+  /** 领取通关奖励（幂等；只认对话通关）。 */
   async claim(userId: number, categoryId: number): Promise<ClaimResult> {
     const story = await this.storyOfCategory(categoryId);
     if (!story) throw AppException.notFound('关卡不存在');
@@ -239,17 +631,16 @@ export class StageService {
     const [progress, user, existing] = await Promise.all([
       this.prisma.studyStageProgress.findUnique({
         where: { userId_categoryId: { userId: uid, categoryId: cid } },
-        select: { correctCount: true, clearedAt: true },
+        select: { dialogueClearedAt: true },
       }),
       this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
       this.prisma.clientXpLog.findUnique({ where: { eventKey: claimKey(userId, categoryId) }, select: { id: true } }),
     ]);
 
-    if (!progress || (!progress.clearedAt && progress.correctCount < story.target)) {
-      throw AppException.badRequest(`尚未通关，在该场景累计答对 ${story.target} 句即可领取`);
+    if (!progress?.dialogueClearedAt) {
+      throw AppException.badRequest('完成场景对话并达成目标后才能领取');
     }
     if (existing) {
-      // 已领过：rewardXp 报 0（接口语义是「本次实发」），前端据 alreadyClaimed 展示「已领取」
       return { awarded: false, alreadyClaimed: true, rewardXp: 0, xp: user?.xp ?? 0 };
     }
 
@@ -265,10 +656,10 @@ export class StageService {
     };
   }
 
-  /** 已通关关卡数（成就判定用；只数配置了剧情的场景）。 */
+  /** 已通关关卡数（成就判定用；只数对话通关）。 */
   async clearedCount(userId: number): Promise<number> {
     return this.prisma.studyStageProgress.count({
-      where: { userId: BigInt(userId), clearedAt: { not: null } },
+      where: { userId: BigInt(userId), dialogueClearedAt: { not: null } },
     });
   }
 

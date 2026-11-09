@@ -83,6 +83,8 @@ export const ModelName = {
   UserCheckin: 'UserCheckin',
   AiCallLog: 'AiCallLog',
   StudyStageProgress: 'StudyStageProgress',
+  StageDialogueSession: 'StageDialogueSession',
+  StageDialogueMessage: 'StageDialogueMessage',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
   User: 'User',
@@ -610,11 +612,44 @@ export const StudyStageProgressScalarFieldEnum = {
   correctCount: 'correctCount',
   answerCount: 'answerCount',
   clearedAt: 'clearedAt',
+  dialogueClearedAt: 'dialogueClearedAt',
+  dialogueTurns: 'dialogueTurns',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalarFieldEnum)[keyof typeof StudyStageProgressScalarFieldEnum]
+
+
+export const StageDialogueSessionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  categoryId: 'categoryId',
+  status: 'status',
+  turnCount: 'turnCount',
+  goalReached: 'goalReached',
+  cleared: 'cleared',
+  summary: 'summary',
+  feedback: 'feedback',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StageDialogueSessionScalarFieldEnum = (typeof StageDialogueSessionScalarFieldEnum)[keyof typeof StageDialogueSessionScalarFieldEnum]
+
+
+export const StageDialogueMessageScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  role: 'role',
+  speaker: 'speaker',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh',
+  createdAt: 'createdAt'
+} as const
+
+export type StageDialogueMessageScalarFieldEnum = (typeof StageDialogueMessageScalarFieldEnum)[keyof typeof StageDialogueMessageScalarFieldEnum]
 
 
 export const StudyTeamScalarFieldEnum = {
@@ -1122,6 +1157,25 @@ export const AiCallLogOrderByRelevanceFieldEnum = {
 } as const
 
 export type AiCallLogOrderByRelevanceFieldEnum = (typeof AiCallLogOrderByRelevanceFieldEnum)[keyof typeof AiCallLogOrderByRelevanceFieldEnum]
+
+
+export const StageDialogueSessionOrderByRelevanceFieldEnum = {
+  status: 'status',
+  summary: 'summary',
+  feedback: 'feedback'
+} as const
+
+export type StageDialogueSessionOrderByRelevanceFieldEnum = (typeof StageDialogueSessionOrderByRelevanceFieldEnum)[keyof typeof StageDialogueSessionOrderByRelevanceFieldEnum]
+
+
+export const StageDialogueMessageOrderByRelevanceFieldEnum = {
+  role: 'role',
+  speaker: 'speaker',
+  contentEn: 'contentEn',
+  contentZh: 'contentZh'
+} as const
+
+export type StageDialogueMessageOrderByRelevanceFieldEnum = (typeof StageDialogueMessageOrderByRelevanceFieldEnum)[keyof typeof StageDialogueMessageOrderByRelevanceFieldEnum]
 
 
 export const StudyTeamOrderByRelevanceFieldEnum = {

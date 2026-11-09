@@ -223,6 +223,20 @@ export type AiCallLog = Prisma.AiCallLogModel
  */
 export type StudyStageProgress = Prisma.StudyStageProgressModel
 /**
+ * Model StageDialogueSession
+ * 情景对话会话（一次「场景长对话」= 一行）。
+ * 
+ * 玩法：用户扮演场景角色，与 1~3 个 AI 角色围绕 goal 对话；
+ * 聊够 minTurns 轮且 AI 判定目标达成才算通关（cleared=true）。
+ * 对话内容与进度分表：消息量大，且历史会话需要完整保留供复盘。
+ */
+export type StageDialogueSession = Prisma.StageDialogueSessionModel
+/**
+ * Model StageDialogueMessage
+ * 情景对话消息（一行 = 一句台词）。
+ */
+export type StageDialogueMessage = Prisma.StageDialogueMessageModel
+/**
  * Model StudyTeam
  * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
  * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
