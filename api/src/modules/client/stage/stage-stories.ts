@@ -70,7 +70,8 @@ export interface StageStory {
   /** 开场白（多人场景可连续几句） */
   opening: StageLine[];
   /** 进入场景时给的候选英文短句（2~3 条，作为第一屏「不知道说什么」的台阶；之后由模型按剧情动态更新） */
-  starterHints: string[];
+  // 形状与 provider 的 StageDialogueHint 结构一致（不 import，避免数据文件依赖 AI 模块）
+  starterHints: Array<{ en: string; zh: string }>;
   /** 旧版「答对 N 句」通关线（仅用于旧进度统计，不再决定解锁/通关） */
   target: number;
   /** 通关奖励经验 */
@@ -129,7 +130,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Maya', contentEn: 'The coffee machine just finished warming up.', contentZh: '咖啡机刚热好。' },
     ],
-    starterHints: ["I'd like a hot coffee, please.", 'Do you have a membership card?'],
+    starterHints: [
+      { en: "I'd like a hot coffee, please.", zh: '我想要一杯热咖啡。' },
+      { en: 'Do you have a membership card?', zh: '这里有会员优惠吗？' },
+    ],
     target: 5,
     rewardXp: 30,
   },
@@ -170,7 +174,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '嘿，我住楼下。有什么坏了就敲门。',
       },
     ],
-    starterHints: ['How do I pay the water bill?', 'When will the internet be ready?'],
+    starterHints: [
+      { en: 'How do I pay the water bill?', zh: '水费该怎么交？' },
+      { en: 'When will the internet be ready?', zh: '网络什么时候能装好？' },
+    ],
     target: 5,
     rewardXp: 30,
   },
@@ -207,7 +214,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '我是值班经理。这盏灯有什么问题吗？',
       },
     ],
-    starterHints: ['This lamp does not work.', 'When will I get the refund?'],
+    starterHints: [
+      { en: 'This lamp does not work.', zh: '这盏灯不亮。' },
+      { en: 'When will I get the refund?', zh: '退款什么时候到账？' },
+    ],
     target: 6,
     rewardXp: 35,
   },
@@ -250,7 +260,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '如果时间紧，现在就告诉我。',
       },
     ],
-    starterHints: ['Could you explain the task again?', 'Can we set a deadline?'],
+    starterHints: [
+      { en: 'Could you explain the task again?', zh: '能再讲一遍任务要求吗？' },
+      { en: 'Can we set a deadline?', zh: '我们能定个交付时间吗？' },
+    ],
     target: 6,
     rewardXp: 40,
   },
@@ -291,7 +304,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '我上学期上过写作课，值得。',
       },
     ],
-    starterHints: ['What time are the classes?', 'How much is the course?'],
+    starterHints: [
+      { en: 'What time are the classes?', zh: '课程是几点上课？' },
+      { en: 'How much is the course?', zh: '这门课多少钱？' },
+    ],
     target: 8,
     rewardXp: 45,
   },
@@ -332,7 +348,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '试试 HDMI 线，我去看转接头。',
       },
     ],
-    starterHints: ['The projector is not working.', 'Can we have five more minutes?'],
+    starterHints: [
+      { en: 'The projector is not working.', zh: '投影仪连不上。' },
+      { en: 'Can we have five more minutes?', zh: '能再多给我们五分钟吗？' },
+    ],
     target: 8,
     rewardXp: 45,
   },
@@ -364,7 +383,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '你怎么认识 Jamie 的？你是第一个拿汽水的人。',
       },
     ],
-    starterHints: ["I'm here with Jamie.", 'We should hang out again.'],
+    starterHints: [
+      { en: "I'm here with Jamie.", zh: '我是跟 Jamie 一起来的。' },
+      { en: 'We should hang out again.', zh: '我们该再约一次。' },
+    ],
     target: 8,
     rewardXp: 50,
   },
@@ -401,7 +423,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Emma', contentEn: "Sorry I'm late! Have you ordered yet?", contentZh: '抱歉我来晚了！你点了吗？' },
     ],
-    starterHints: ['Could we see the menu?', 'Does this have nuts?'],
+    starterHints: [
+      { en: 'Could we see the menu?', zh: '能看一下菜单吗？' },
+      { en: 'Does this have nuts?', zh: '这个含坚果吗？' },
+    ],
     target: 8,
     rewardXp: 50,
   },
@@ -427,7 +452,10 @@ export const STAGE_STORIES: StageStory[] = [
     opening: [
       { speaker: 'Chris', contentEn: "You said you wanted to talk. I'm listening.", contentZh: '你说想谈谈。我在听。' },
     ],
-    starterHints: ['There is something I want to say.', 'How do you feel about it?'],
+    starterHints: [
+      { en: 'There is something I want to say.', zh: '有件事我想说。' },
+      { en: 'How do you feel about it?', zh: '你对此怎么看？' },
+    ],
     target: 10,
     rewardXp: 55,
   },
@@ -464,7 +492,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Clerk', contentEn: 'Next in line, please.', contentZh: '下一位，请。' },
     ],
-    starterHints: ['Comedy sounds good.', 'Two tickets, please.'],
+    starterHints: [
+      { en: 'Comedy sounds good.', zh: '喜剧听起来不错。' },
+      { en: 'Two tickets, please.', zh: '请给两张票。' },
+    ],
     target: 10,
     rewardXp: 55,
   },
@@ -503,7 +534,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Ben', contentEn: 'Same boat. The next one might be at six.', contentZh: '我也是。下一班可能六点。' },
     ],
-    starterHints: ['I missed my flight.', 'Where does my luggage go?'],
+    starterHints: [
+      { en: 'I missed my flight.', zh: '我误了航班。' },
+      { en: 'Where does my luggage go?', zh: '我的行李去哪儿了？' },
+    ],
     target: 10,
     rewardXp: 60,
   },
@@ -544,7 +578,10 @@ export const STAGE_STORIES: StageStory[] = [
         contentZh: '医生看完后我帮你约复诊。',
       },
     ],
-    starterHints: ['My throat has hurt for three days.', 'How do I take this medicine?'],
+    starterHints: [
+      { en: 'My throat has hurt for three days.', zh: '我喉咙疼了三天了。' },
+      { en: 'How do I take this medicine?', zh: '这药怎么吃？' },
+    ],
     target: 10,
     rewardXp: 60,
   },
@@ -581,7 +618,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Ryan', contentEn: "Don't worry. I started here too.", contentZh: '别担心，我也是从这儿开始的。' },
     ],
-    starterHints: ["It's my first class.", 'What is the key move here?'],
+    starterHints: [
+      { en: "It's my first class.", zh: '我第一次上这个课。' },
+      { en: 'What is the key move here?', zh: '这里的动作要领是什么？' },
+    ],
     target: 12,
     rewardXp: 65,
   },
@@ -618,7 +658,10 @@ export const STAGE_STORIES: StageStory[] = [
       },
       { speaker: 'Mr. Wu', contentEn: 'Careful, the steps are slippery.', contentZh: '小心，台阶滑。' },
     ],
-    starterHints: ["Let's build a snowman!", 'What time should we meet?'],
+    starterHints: [
+      { en: "Let's build a snowman!", zh: '我们堆雪人吧！' },
+      { en: 'What time should we meet?', zh: '我们几点见？' },
+    ],
     target: 12,
     rewardXp: 70,
   },

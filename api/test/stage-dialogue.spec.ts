@@ -31,10 +31,31 @@ describe('parseStageDialogueTurn', () => {
   it('解析动态候选短句 hints：最多 3 条、过滤纯中文/超长/非字符串', () => {
     const raw = JSON.stringify({
       replies: [],
-      hints: ['One coffee, please.', '', '好的', 'x'.repeat(100), 'How much is it?', 42],
+      hints: [
+        { en: 'One coffee, please.', zh: '一杯咖啡。' },
+        { en: '', zh: '空英文' },
+        { en: '好的', zh: 'x' },
+        { en: 'x'.repeat(100), zh: 'y'.repeat(120) },
+        'bare string hint',
+        { en: 'How much is it?', zh: '多少钱？' }, // 第 4 个有效项，被 3 条上限丢掉
+        42,
+      ],
     });
     const result = parseStageDialogueTurn(raw);
-    expect(result.hints).toEqual(['One coffee, please.', 'x'.repeat(80), 'How much is it?']);
+    expect(result.hints).toHaveLength(3);
+    expect(result.hints).toEqual([
+      { en: 'One coffee, please.', zh: '一杯咖啡。' },
+      { en: `${'x'.repeat(80)}`, zh: `${'y'.repeat(100)}` },
+      { en: 'bare string hint', zh: '' }, // 旧口径纯字符串：不丢，但没有中文
+    ]);
+  });
+
+  it('hints 缺 zh（旧口径）时保留英文、zh 为空', () => {
+    const raw = JSON.stringify({ replies: [], hints: [{ en: 'Two tickets, please.' }, 'I missed my flight.'] });
+    expect(parseStageDialogueTurn(raw).hints).toEqual([
+      { en: 'Two tickets, please.', zh: '' },
+      { en: 'I missed my flight.', zh: '' },
+    ]);
   });
 
   it('最多只收 3 个角色，且丢掉缺 speaker / 缺英文的脏项', () => {

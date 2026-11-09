@@ -454,6 +454,14 @@ export interface StageFeedback {
   improvements: string[];
 }
 
+/** 一条候选英文短句（悬停时按翻译开关显示中文）。 */
+export interface StageDialogueHint {
+  /** 英文短句（点一下填入输入框） */
+  en: string;
+  /** 中文翻译（用户关闭翻译时为空或不显示） */
+  zh: string;
+}
+
 /** 进入关卡时返回的会话（含开场白与历史消息）。 */
 export interface StageDialogue {
   sessionId: number;
@@ -464,7 +472,7 @@ export interface StageDialogue {
   /** 当前是否显示中文翻译 */
   showTranslation: boolean;
   /** 当前候选英文短句（动态更新） */
-  hints: string[];
+  hints: StageDialogueHint[];
   title: string;
   intro: string;
   goal: string;
@@ -483,8 +491,8 @@ export interface StageTurnResult {
   goalReached: boolean;
   ended: boolean;
   cleared: boolean;
-  /** 本轮模型给出的候选英文短句（动态更新） */
-  hints: string[];
+  /** 本轮模型给出的候选英文短句（含中文，动态更新） */
+  hints: StageDialogueHint[];
   summary: string | null;
   feedback: StageFeedback | null;
 }

@@ -363,6 +363,14 @@ export interface StageDialogueReply {
   contentZh: string;
 }
 
+/** 一条候选英文短句（含中文翻译，供用户开翻译时悬停查看）。 */
+export interface StageDialogueHint {
+  /** 英文短句（点一下填入输入框） */
+  en: string;
+  /** 中文翻译 */
+  zh: string;
+}
+
 /** 一轮对话的模型结论。 */
 export interface StageDialogueTurnResult {
   /** 1~3 个角色的回复（同一轮可多人说话） */
@@ -371,8 +379,8 @@ export interface StageDialogueTurnResult {
   goalReached: boolean;
   /** 是否可以结束（由模型建议，服务端再按轮数兜底） */
   ended: boolean;
-  /** 2~3 条贴合当前剧情的英文短句，作为用户下一段可以说的话的提示（动态更新） */
-  hints: string[];
+  /** 2~3 条贴合当前剧情的英文短句，作为用户下一段可以说的话的提示（动态更新，带中文） */
+  hints: StageDialogueHint[];
 }
 
 /** 对话结束后的中文复盘。 */
@@ -404,14 +412,15 @@ const STAGE_DIALOGUE_PROMPT = [
   '  Be strict: a friendly chat, a promise, or the character offering something is not enough.',
   '- ended = true ONLY when (turnCount >= minTurns AND goalReached) OR turnCount >= maxTurns.',
   '  Otherwise ended=false. When ending, close the scene naturally in the final lines.',
-  '- "hints" is a list of 2-3 SHORT English phrases (1-6 words each, CEFR A2, no translation)',
-  '  the learner could realistically say NEXT to move the scene forward or ask something natural.',
+  '- "hints" is a list of 2-3 SHORT English phrases (1-6 words each, CEFR A2) the learner could',
+  '  realistically say NEXT to move the scene forward or ask something natural. Each hint is an',
+  '  object: {"en": the English phrase, "zh": its concise Chinese translation}.',
   '  These are suggestions for the learner, NOT lines the characters say. Vary them each turn',
   '  based on what just happened — do not repeat the same hints every turn.',
   '',
   'Output JSON only, no markdown:',
   '{"replies":[{"speaker":"name","contentEn":"...","contentZh":"..."}],"goalReached":false,"ended":false,',
-  '"hints":["I will take the coffee.","Do you have a membership?","How much is it?"]}',
+  '"hints":[{"en":"I\'ll take the coffee.","zh":"我就要这杯咖啡。"},{"en":"Do you have a membership?","zh":"有会员优惠吗？"},{"en":"How much is it?","zh":"多少钱？"}]}',
 ].join('\n');
 
 /** 对话复盘提示词：给学习者简短、具体、不打分数的中文反馈。 */
@@ -457,15 +466,25 @@ export function parseStageDialogueTurn(content: string): StageDialogueTurnResult
         if (speaker && contentEn) replies.push({ speaker, contentEn, contentZh });
       }
     }
-    // hints：2~3 条贴合剧情的英文短句，过滤非字符串/超长/非英文，最多 3 条
-    const hints: string[] = [];
+    // hints：2~3 条贴合剧情的英文短句（带中文翻译）。
+    // 兼容两种形状：新口径 {en,zh} 对象；旧口径纯字符串（存量会话的 last_hints）——后者 zh 留空，
+    // 前端据此不显示悬停翻译，而不是把整份候选丢掉。
+    const hints: StageDialogueHint[] = [];
     if (Array.isArray(parsed.hints)) {
       for (const raw of parsed.hints) {
-        if (typeof raw !== 'string') continue;
-        const hint = raw.trim().replace(/\s+/g, ' ').slice(0, 80);
-        if (!hint || !/[A-Za-z]/.test(hint)) continue;
         if (hints.length >= 3) break;
-        hints.push(hint);
+        if (typeof raw === 'string') {
+          const en = raw.trim().replace(/\s+/g, ' ').slice(0, 80);
+          if (en && /[A-Za-z]/.test(en)) hints.push({ en, zh: '' });
+          continue;
+        }
+        if (typeof raw !== 'object' || raw === null) continue;
+        const item = raw as Record<string, unknown>;
+        const en = typeof item.en === 'string' ? item.en.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+        const zh = typeof item.zh === 'string' ? item.zh.trim().replace(/\s+/g, ' ').slice(0, 100) : '';
+        // 纯中文或纯符号的「短句」没有填入输入框的价值，丢掉
+        if (!en || !/[A-Za-z]/.test(en)) continue;
+        hints.push({ en, zh });
       }
     }
     return {

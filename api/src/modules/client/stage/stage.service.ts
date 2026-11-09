@@ -12,6 +12,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { isFestivalName } from '../../../common/calendar/festivals.js';
 import {
   AgnesSentenceProvider,
+  type StageDialogueHint,
   type StageDialogueReply,
   type StageDialogueSummary,
 } from '../../../common/ai/agnes-sentence.provider.js';
@@ -118,8 +119,8 @@ export interface StageDialogueView {
   cleared: boolean;
   /** 当前是否显示中文翻译（用户偏好，刷新后回显） */
   showTranslation: boolean;
-  /** 当前候选英文短句（续聊/刷新时回显，避免丢失） */
-  hints: string[];
+  /** 当前候选英文短句（含中文；续聊/刷新时回显，避免丢失） */
+  hints: StageDialogueHint[];
   title: string;
   intro: string;
   goal: string;
@@ -138,8 +139,8 @@ export interface StageTurnResult {
   goalReached: boolean;
   ended: boolean;
   cleared: boolean;
-  /** 本轮模型给出的候选英文短句（动态更新） */
-  hints: string[];
+  /** 本轮模型给出的候选英文短句（含中文，动态更新） */
+  hints: StageDialogueHint[];
   summary: string | null;
   feedback: StageDialogueSummary | null;
 }
@@ -168,16 +169,31 @@ function parseFeedback(raw: string | null): StageDialogueSummary | null {
   }
 }
 
-/** 从 DB 存的 JSON 字符串还原候选短句（坏数据回落到剧情 starterHints）。 */
-function parseHints(raw: string | null, fallback: string[]): string[] {
+/**
+ * 从 DB 存的 JSON 字符串还原候选短句。
+ * 兼容旧数据：存量 `last_hints` 是纯字符串数组，映射成 `{en, zh: ''}`——
+ * zh 为空时前端不显示悬停翻译，而不是把候选丢掉。坏数据回落到剧情 starterHints。
+ */
+function parseHints(raw: string | null, fallback: StageDialogueHint[]): StageDialogueHint[] {
   if (!raw) return fallback;
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      const out = parsed
-        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-        .slice(0, 3);
-      return out.length > 0 ? out : fallback;
+      const out: StageDialogueHint[] = [];
+      for (const item of parsed) {
+        if (out.length >= 3) break;
+        if (typeof item === 'string') {
+          const en = item.trim();
+          if (en && /[A-Za-z]/.test(en)) out.push({ en: en.slice(0, 80), zh: '' });
+          continue;
+        }
+        if (typeof item !== 'object' || item === null) continue;
+        const { en, zh } = item as Record<string, unknown>;
+        if (typeof en === 'string' && en.trim() && /[A-Za-z]/.test(en)) {
+          out.push({ en: en.trim().slice(0, 80), zh: typeof zh === 'string' ? zh.trim().slice(0, 100) : '' });
+        }
+      }
+      if (out.length > 0) return out;
     }
   } catch {
     // 落到 fallback

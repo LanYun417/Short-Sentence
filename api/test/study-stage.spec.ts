@@ -252,7 +252,11 @@ function makePrisma(goalAtTurn: number | null = 6) {
       replies: [{ speaker: 'Maya', contentEn: 'Sure, here you go.', contentZh: '好的，给你。' }],
       goalReached: goalAtTurn !== null && turnCount >= goalAtTurn,
       ended: false,
-      hints: ['One coffee, please.', 'Any food today?', 'What do you recommend?'],
+      hints: [
+        { en: 'One coffee, please.', zh: '一杯咖啡。' },
+        { en: 'Any food today?', zh: '今天要吃点什么吗？' },
+        { en: 'What do you recommend?', zh: '你有什么推荐？' },
+      ],
     })),
     stageDialogueSummary: vi.fn(async () => ({
       summary: '这一场聊得很自然。',
@@ -404,10 +408,22 @@ describe('情景闯关（对话玩法）', () => {
     const { service } = makePrisma();
     await service.startDialogue(1, 1);
     const result = await service.sendMessage(1, 1, 'Could you help me please?', false);
-    expect(result.hints).toEqual(['One coffee, please.', 'Any food today?', 'What do you recommend?']);
+    expect(result.hints).toEqual([
+      { en: 'One coffee, please.', zh: '一杯咖啡。' },
+      { en: 'Any food today?', zh: '今天要吃点什么吗？' },
+      { en: 'What do you recommend?', zh: '你有什么推荐？' },
+    ]);
     const view = await service.getDialogue(1, 1);
     expect(view?.hints).toEqual(result.hints);
     expect(view?.showTranslation).toBe(false);
+  });
+
+  it('进入场景即带回带翻译的候选短句（starterHints）', async () => {
+    const { service } = makePrisma();
+    const view = await service.startDialogue(1, 1);
+    expect(view.hints).toEqual(STAGE_STORIES[0].starterHints);
+    expect(view.hints.every((h) => h.en.length > 0 && h.zh.length > 0)).toBe(true);
+    expect(view.showTranslation).toBe(true);
   });
 
   it('全程开着翻译、最后一句才关 → translationUsed 粘住，拿不到无翻译加成', async () => {

@@ -11,7 +11,14 @@
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { apiFetch } from '~/composables/useApi';
 import AppScrollbar from '~/components/AppScrollbar.vue';
-import type { StageDialogue, StageDialogueMessage, StageFeedback, StageRole, StageTurnResult } from '~/types';
+import type {
+  StageDialogue,
+  StageDialogueHint,
+  StageDialogueMessage,
+  StageFeedback,
+  StageRole,
+  StageTurnResult,
+} from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -37,14 +44,14 @@ const draft = ref('');
 const error = ref('');
 const scroller = ref<InstanceType<typeof AppScrollbar> | null>(null);
 
-/** 候选英文短句兜底（进入场景前 / 服务端没给时用；进入后会用服务端返回的替换）。 */
-const FALLBACK_HINTS = [
-  "I'm not sure. Could you help me?",
-  'Could you say that again, please?',
-  'What do you recommend?',
+/** 候选英文短句兜底（进入场景前 / 服务端没给时用；进入后会被服务端返回的替换）。 */
+const FALLBACK_HINTS: StageDialogueHint[] = [
+  { en: "I'm not sure. Could you help me?", zh: '我不确定，你能帮我吗？' },
+  { en: 'Could you say that again, please?', zh: '能再说一遍吗？' },
+  { en: 'What do you recommend?', zh: '你有什么推荐？' },
 ];
 /** 当前候选短句（动态，来自服务端 hints；空时用兜底）。 */
-const hints = ref<string[]>(FALLBACK_HINTS);
+const hints = ref<StageDialogueHint[]>(FALLBACK_HINTS);
 /** 是否显示中文翻译（关掉后不显示 NPC 台词翻译，且通关经验 +50%）。 */
 const showTranslation = ref(true);
 
@@ -347,16 +354,23 @@ onMounted(async () => {
       <p v-if="error && messages.length" class="mb-1.5 text-xs text-rose-500">{{ error }}</p>
       <!-- 卡壳时的英文台阶（随对话动态更新，避免用户不知道说什么就退回中文） -->
       <div v-if="!ended" class="mb-2 flex flex-wrap gap-1.5">
-        <button
-          v-for="phrase in hints"
-          :key="phrase"
-          type="button"
-          :disabled="loading || sending"
-          class="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-500 ring-1 ring-slate-200 transition hover:text-sky-600 hover:ring-sky-300 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-800"
-          @click="usePhrase(phrase)"
+        <UTooltip
+          v-for="hint in hints"
+          :key="hint.en"
+          :text="hint.zh"
+          :disabled="!showTranslation || !hint.zh"
+          :delay-duration="150"
+          :popper="{ placement: 'top' }"
         >
-          {{ phrase }}
-        </button>
+          <button
+            type="button"
+            :disabled="loading || sending"
+            class="rounded-full bg-white px-2.5 py-1 text-[11px] text-slate-500 ring-1 ring-slate-200 transition hover:text-sky-600 hover:ring-sky-300 disabled:opacity-50 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-800"
+            @click="usePhrase(hint.en)"
+          >
+            {{ hint.en }}
+          </button>
+        </UTooltip>
       </div>
       <div v-if="!ended" class="flex items-end gap-2">
         <textarea
@@ -374,7 +388,7 @@ onMounted(async () => {
       <p class="mt-1.5 text-center text-[10px] text-slate-400 dark:text-slate-500">
         <template v-if="showTranslation">关掉右上「翻译」可在通关时经验 +50% · </template>
         <template v-else>已隐藏翻译，本关通关经验 +50% · </template>
-        这一关请用英语对话，卡住可点上方短句 · 聊够轮数并达成目标即可通关
+        这一关请用英语对话，卡住可点上方的短句（悬停看中文）· 聊够轮数并达成目标即可通关
       </p>
     </div>
   </div>
