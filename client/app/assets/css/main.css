@@ -34,9 +34,49 @@
   transform: rotateY(180deg);
 }
 
-/* ===== AppScrollArea：隐藏原生滚动条，改用自绘悬浮滚动条 =====
-   必须隐藏：WebKit 原生滚动条会占布局宽度，导致页面间切换时内容抖动。
-   可见的滚动条由 components/AppScrollArea.vue 自绘（绝对定位，不占宽度）。 */
+/* ===== 全站滚动条统一 =====
+   口径：能接管的滚动区（页面主内容区 AppScrollArea、局部区 AppScrollbar、拼词已选区）
+   一律隐藏原生滚动条，改用 useOverlayScrollbar 自绘的悬浮细条——绝对定位不占布局、
+   默认透明、移入或滚动时淡入、可点击拖拽，视觉与交互完全一致。 */
+
+/* 兜底：组件库内部（下拉/弹窗）、textarea 等未被接管的原生滚动条，
+   也收敛成「细 + 圆角 + 半透明」的同款视觉，避免冒出粗白条。 */
+* {
+  scrollbar-color: rgb(148 163 184 / 45%) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(148 163 184 / 45%);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(100 116 139 / 70%);
+}
+
+.dark * {
+  scrollbar-color: rgb(100 116 139 / 55%) transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgb(100 116 139 / 55%);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(148 163 184 / 75%);
+}
+
+/* 自绘滚动容器的视口：原生条彻底隐藏（类选择器优先于上面的 * 兜底）。 */
 .ss-viewport {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* 旧版 Edge / IE */

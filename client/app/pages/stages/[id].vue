@@ -10,6 +10,7 @@
  */
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { apiFetch } from '~/composables/useApi';
+import AppScrollbar from '~/components/AppScrollbar.vue';
 import type { StageDialogue, StageDialogueMessage, StageFeedback, StageRole, StageTurnResult } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -34,7 +35,7 @@ const loading = ref(true);
 const sending = ref(false);
 const draft = ref('');
 const error = ref('');
-const scroller = ref<HTMLElement | null>(null);
+const scroller = ref<InstanceType<typeof AppScrollbar> | null>(null);
 
 /** 卡壳时可直接套用的英文短句（点一下填入输入框，可再改）。 */
 const QUICK_PHRASES = [
@@ -58,8 +59,7 @@ function roleOf(speaker: string | null): StageRole {
 
 async function scrollToBottom(): Promise<void> {
   await nextTick();
-  const el = scroller.value;
-  if (el) el.scrollTop = el.scrollHeight;
+  scroller.value?.scrollToEnd();
 }
 
 /** 应用一份会话数据到页面状态。 */
@@ -216,10 +216,11 @@ onMounted(async () => {
       </div>
     </header>
 
-    <!-- 消息区 -->
-    <div
+    <!-- 消息区：用统一的悬浮滚动条，与主内容区一致 -->
+    <AppScrollbar
       ref="scroller"
-      class="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl bg-slate-50/70 p-3 ring-1 ring-slate-200/60 dark:bg-slate-950/40 dark:ring-slate-800/60"
+      class="min-h-0 flex-1 rounded-2xl bg-slate-50/70 ring-1 ring-slate-200/60 dark:bg-slate-950/40 dark:ring-slate-800/60"
+      viewport-class="space-y-3 p-3"
     >
       <p v-if="loading" class="py-12 text-center text-sm text-slate-400">正在进入场景…</p>
       <p v-else-if="error && !messages.length" class="py-12 text-center text-sm text-rose-500">{{ error }}</p>
@@ -307,7 +308,7 @@ onMounted(async () => {
           <UButton size="xs" color="neutral" variant="soft" @click="back">返回地图</UButton>
         </div>
       </div>
-    </div>
+    </AppScrollbar>
 
     <!-- 输入区 -->
     <div class="mt-3 shrink-0">

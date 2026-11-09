@@ -13,6 +13,8 @@
  * 全部走 CSS Transition，带 prefers-reduced-motion 降级。
  */
 
+import { useOverlayScrollbar } from '~/composables/useOverlayScrollbar';
+
 /** 词块：`index` 是它在原始乱序里的下标，用于移回词库时插回原位。 */
 interface WordChip {
   index: number;
@@ -81,6 +83,19 @@ function hideTip(): void {
  */
 /** 已选区滚动容器（DOM 节点，TransitionGroup 的 $el） */
 const selectedRef = ref<HTMLElement | null>(null);
+/** 自绘横向滚动条轨道（与全站悬浮滚动条同一套逻辑） */
+const trackRef = ref<HTMLElement | null>(null);
+const {
+  scrollable,
+  visible,
+  thumbStyle,
+  measure,
+  onScroll: onOverlayScroll,
+  onEnter,
+  onLeave,
+  onTrackPointerDown,
+} = useOverlayScrollbar(selectedRef, trackRef, { axis: 'x' });
+
 /** 左右是否还有可滚动空间（控制两侧按钮的可用态） */
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
@@ -146,9 +161,20 @@ watch(
   { immediate: true },
 );
 
-/** 把当前拼接结果同步给父组件（与输入框的 v-model 语义一致）。 */
+/** 把当前拼接结果同步给父组件（与输入框的 v-model 语义一致），并刷新滚动状态。 */
 function sync(): void {
   emit('update:answer', selected.value.map((chip) => chip.text).join(' '));
+  // 词块增删会改变内容宽度，ResizeObserver 不一定触发，这里主动重算滑块与左右按钮
+  nextTick(() => {
+    measure();
+    updateScrollState();
+  });
+}
+
+/** 横向滚动时同时更新左右按钮可用态与自绘滚动条。 */
+function onAssembleScroll(): void {
+  updateScrollState();
+  onOverlayScroll();
 }
 
 /**
@@ -222,19 +248,19 @@ onBeforeUnmount(() => {
       走马灯样式：左右箭头收在盒内边缘、小圆形按钮，边缘渐隐提示还有内容；
       某侧滚到头时该侧的渐隐与按钮自动隐藏。
     -->
-    <div class="relative">
+    <div class="relative" @mouseenter="onEnter" @mouseleave="onLeave">
       <TransitionGroup
         :ref="setSelectedRef"
         name="chip"
         tag="div"
-        class="no-scrollbar relative flex min-h-13 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
+        class="ss-viewport relative flex min-h-13 flex-nowrap items-center gap-1.5 overflow-x-auto rounded-2xl border border-dashed p-2.5 transition-colors"
         :class="[
           selected.length > 0
             ? 'border-sky-300 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20'
             : 'border-slate-300 bg-slate-50/70 dark:border-slate-600 dark:bg-slate-900/40',
         ]"
         aria-label="已选词块"
-        @scroll="updateScrollState"
+        @scroll="onAssembleScroll"
       >
         <span v-if="selected.length === 0" key="placeholder" class="self-center text-sm text-slate-400">
           点下方词块，按顺序拼成英文句子
@@ -255,6 +281,21 @@ onBeforeUnmount(() => {
           {{ chip.text }}
         </button>
       </TransitionGroup>
+
+      <!-- 自绘横向滚动条：与页面主滚动条同款（悬浮细条、移入/滚动淡入、可拖拽） -->
+      <div
+        v-show="scrollable"
+        ref="trackRef"
+        class="absolute inset-x-1 bottom-1 z-10 h-1.5 touch-none rounded-full transition-opacity duration-200"
+        :class="visible ? 'opacity-100' : 'opacity-0'"
+        :style="{ pointerEvents: visible ? 'auto' : 'none' }"
+        @pointerdown="onTrackPointerDown"
+      >
+        <div
+          class="absolute h-full rounded-full bg-slate-400/45 transition-colors hover:bg-slate-500/70 dark:bg-slate-500/50 dark:hover:bg-slate-400/70"
+          :style="thumbStyle"
+        />
+      </div>
 
       <!-- 左缘：渐隐遮罩 + 翻页按钮（遮罩不挡点击，仅按钮可点） -->
       <div
@@ -332,15 +373,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* 横向滑动容器隐藏滚动条（项目滚动条统一隐藏），配合左右翻页按钮使用 */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+/* 原生滚动条统一由 main.css 的 .ss-viewport 隐藏，可见滚动条走全站自绘悬浮条 */
 
 /*
  * 词块「移入答题框」动效：
