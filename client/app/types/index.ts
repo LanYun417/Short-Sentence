@@ -446,6 +446,10 @@ export interface ChainEntry {
   liked: boolean;
   mine: boolean;
   createdAt: string;
+  /** 审核状态（仅提交响应返回：visible 已展示 / pending 待人工 / rejected 未通过） */
+  status?: 'visible' | 'pending' | 'rejected';
+  /** 审核备注（仅提交响应返回） */
+  moderationNote?: string | null;
 }
 
 /** 主题详情。 */

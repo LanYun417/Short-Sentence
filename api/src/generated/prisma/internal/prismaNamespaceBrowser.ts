@@ -156,6 +156,7 @@ export const ChainEntryScalarFieldEnum = {
   likeCount: 'likeCount',
   reportCount: 'reportCount',
   status: 'status',
+  moderationNote: 'moderationNote',
   createdAt: 'createdAt'
 } as const
 
@@ -836,7 +837,8 @@ export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 export const ChainEntryOrderByRelevanceFieldEnum = {
   contentEn: 'contentEn',
   contentZh: 'contentZh',
-  status: 'status'
+  status: 'status',
+  moderationNote: 'moderationNote'
 } as const
 
 export type ChainEntryOrderByRelevanceFieldEnum = (typeof ChainEntryOrderByRelevanceFieldEnum)[keyof typeof ChainEntryOrderByRelevanceFieldEnum]

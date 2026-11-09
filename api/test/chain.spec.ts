@@ -8,6 +8,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
+import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import { aliasOf, validateEntry } from '../src/modules/client/chain/chain-content.js';
 import { CHAIN_DAILY_LIMIT, CHAIN_REPORT_HIDE_AT, ChainService } from '../src/modules/client/chain/chain.service.js';
 
@@ -62,7 +63,12 @@ describe('匿名化名', () => {
 });
 
 /** 只实现被测方法所需的假 Prisma。 */
-function makePrisma() {
+function makePrisma(
+  moderation: { decision: 'approve' | 'reject' | 'review'; reason: string } = {
+    decision: 'approve',
+    reason: '正常创作',
+  },
+) {
   const topic = { id: 1n, title: '凌晨三点', starterEn: 'At three.', promptZh: '接着写。', status: 1 };
   const entries: Array<{
     id: bigint;
@@ -73,6 +79,7 @@ function makePrisma() {
     likeCount: number;
     reportCount: number;
     status: string;
+    moderationNote?: string | null;
     createdAt: Date;
     topic?: { title: string };
   }> = [];
@@ -102,7 +109,8 @@ function makePrisma() {
           contentZh: (args.data.contentZh as string | null) ?? null,
           likeCount: 0,
           reportCount: 0,
-          status: 'visible',
+          status: (args.data.status as string) ?? 'visible',
+          moderationNote: (args.data.moderationNote as string | null) ?? null,
           createdAt: new Date('2026-11-08T00:00:00Z'),
         };
         entries.push(row);
@@ -160,7 +168,10 @@ function makePrisma() {
     },
   };
 
-  const service = new ChainService(prisma as unknown as PrismaService);
+  const service = new ChainService(
+    prisma as unknown as PrismaService,
+    { moderateChainEntry: vi.fn(async () => moderation) } as unknown as AgnesSentenceProvider,
+  );
   return { service, entries, likes };
 }
 
@@ -222,5 +233,41 @@ describe('接龙互动', () => {
     const created = await service.createEntry(1, 1, ENTRY);
     entries[0]!.status = 'hidden';
     await expect(service.toggleLike(2, created.id)).rejects.toThrow();
+  });
+});
+
+describe('接龙 AI 审核', () => {
+  it('AI 通过 → 立即可见', async () => {
+    const { service, entries } = makePrisma({ decision: 'approve', reason: '正常创作' });
+    const view = await service.createEntry(1, 1, ENTRY);
+    expect(view.status).toBe('visible');
+    expect(entries[0]?.status).toBe('visible');
+  });
+
+  it('AI 拿不准 → 转人工（pending，不展示）', async () => {
+    const { service, entries } = makePrisma({ decision: 'review', reason: '含义不明确' });
+    const view = await service.createEntry(1, 1, ENTRY);
+    expect(view.status).toBe('pending');
+    expect(entries[0]?.status).toBe('pending');
+    expect(view.moderationNote).toBe('含义不明确');
+  });
+
+  it('AI 明确拒绝 → rejected', async () => {
+    const { service, entries } = makePrisma({ decision: 'reject', reason: '含联系方式' });
+    const view = await service.createEntry(1, 1, ENTRY);
+    expect(view.status).toBe('rejected');
+    expect(entries[0]?.status).toBe('rejected');
+  });
+
+  it('AI 调用异常 → 兜底转人工，提交不失败', async () => {
+    const { service, entries } = makePrisma();
+    // 覆盖默认的 approve 假实现，模拟上游超时
+    const failing = service as unknown as { moderator: { moderateChainEntry: () => Promise<never> } };
+    failing.moderator.moderateChainEntry = async () => {
+      throw new Error('timeout');
+    };
+    const view = await service.createEntry(1, 1, ENTRY);
+    expect(view.status).toBe('pending');
+    expect(entries[0]?.status).toBe('pending');
   });
 });

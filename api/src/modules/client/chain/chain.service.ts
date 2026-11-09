@@ -13,6 +13,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { AgnesSentenceProvider, type ChainModerationResult } from '../../../common/ai/agnes-sentence.provider.js';
 import { aliasOf, validateEntry } from './chain-content.js';
 
 /** 每人每天最多提交条数。 */
@@ -47,6 +48,10 @@ export interface ChainEntryView {
   /** 是否我写的（用于前端提示，不暴露给他人） */
   mine: boolean;
   createdAt: string;
+  /** 审核状态（仅提交响应返回：visible 已展示 / pending 待人工 / rejected 未通过） */
+  status?: string;
+  /** 审核备注（AI 理由，仅提交响应返回） */
+  moderationNote?: string | null;
 }
 
 export interface ChainTopicDetail {
@@ -80,7 +85,10 @@ function isUniqueViolation(error: unknown): boolean {
 export class ChainService {
   private readonly logger = new Logger(ChainService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly moderator: AgnesSentenceProvider,
+  ) {}
 
   /** 主题列表（按 sort 升序），附可见条目数与我的提交数。 */
   async listTopics(userId: number): Promise<ChainTopicView[]> {
@@ -202,17 +210,27 @@ export class ChainService {
       throw AppException.badRequest('这句你已经写过了，换一句吧');
     }
 
+    // 入库前过一遍 AI 审核：通过→visible，拒绝→rejected，拿不准 / 调用失败→pending 转人工。
+    // 审核失败不阻塞提交：先把用户写的内容存下来交运营兜底，不因 AI 抖动就丢掉。
+    const moderation = await this.moderate(topic.title, topic.starterEn, checked);
+    const status =
+      moderation.decision === 'approve' ? 'visible' : moderation.decision === 'reject' ? 'rejected' : 'pending';
+
     const row = await this.prisma.chainEntry.create({
       data: {
         topicId: BigInt(topicId),
         userId: uid,
         contentEn: checked.contentEn,
         contentZh: checked.contentZh.length > 0 ? checked.contentZh : null,
+        status,
+        moderationNote: moderation.reason || null,
       },
       select: { id: true, contentEn: true, contentZh: true, likeCount: true, createdAt: true },
     });
 
-    this.logger.log(`接龙提交成功 topic=${topicId} user=${userId} entry=${row.id}「${topic.title}」`);
+    this.logger.log(
+      `接龙提交 topic=${topicId} user=${userId} entry=${row.id} status=${status}（${moderation.reason}）「${topic.title}」`,
+    );
     return {
       id: Number(row.id),
       alias: aliasOf(userId, topicId),
@@ -222,7 +240,32 @@ export class ChainService {
       liked: false,
       mine: true,
       createdAt: row.createdAt.toISOString(),
+      status,
+      moderationNote: moderation.reason || null,
     };
+  }
+
+  /**
+   * 接龙 AI 审核（失败兜底为转人工）。
+   * 审核是入库前的必要一步，但它的失败不该让整次提交失败——内容先存下来，
+   * 由运营在后台复核；AI 挂了不代表用户写的东西该丢。
+   */
+  private async moderate(
+    topicTitle: string,
+    starterEn: string,
+    checked: { contentEn: string; contentZh: string },
+  ): Promise<ChainModerationResult> {
+    try {
+      return await this.moderator.moderateChainEntry({
+        topicTitle,
+        starterEn,
+        contentEn: checked.contentEn,
+        contentZh: checked.contentZh || null,
+      });
+    } catch (error) {
+      this.logger.warn(`接龙 AI 审核失败，转人工：${error instanceof Error ? error.message : String(error)}`);
+      return { decision: 'review', reason: 'AI 审核不可用，转人工' };
+    }
   }
 
   /** 点赞 / 取消点赞（幂等：重复点等于取消）。 */
@@ -321,6 +364,7 @@ export class ChainService {
           likeCount: true,
           reportCount: true,
           status: true,
+          moderationNote: true,
           createdAt: true,
           topic: { select: { title: true } },
         },
@@ -338,6 +382,7 @@ export class ChainService {
         likeCount: row.likeCount,
         reportCount: row.reportCount,
         status: row.status,
+        moderationNote: row.moderationNote,
         userId: Number(row.userId),
         createdAt: row.createdAt.toISOString(),
       })),
@@ -345,8 +390,8 @@ export class ChainService {
     };
   }
 
-  /** 后台设置条目状态（visible / hidden）。 */
-  async adminSetStatus(entryId: number, status: 'visible' | 'hidden'): Promise<void> {
+  /** 后台设置条目状态（visible 通过 / rejected 拒绝 / hidden 隐藏）。 */
+  async adminSetStatus(entryId: number, status: 'visible' | 'hidden' | 'rejected'): Promise<void> {
     const exists = await this.prisma.chainEntry.findUnique({
       where: { id: BigInt(entryId) },
       select: { id: true },

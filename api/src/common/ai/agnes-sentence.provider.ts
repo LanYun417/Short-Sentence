@@ -282,6 +282,79 @@ const IMAGE_REVIEW_SYSTEM_PROMPT = [
   'Output JSON only: {"pass":true,"reason":""} or {"pass":false,"reason":"short reason, max 20 words"}',
 ].join('\n');
 
+/**
+ * 接龙内容审核结论。
+ * 三档而不是两档：AI 只对「明确可放行 / 明确不该放行」下判断，
+ * 拿不准的一律 review 交人工——宁可慢一点，也不把风险内容直接放出去。
+ */
+export interface ChainModerationResult {
+  decision: 'approve' | 'reject' | 'review';
+  /** 一句话理由（中文，≤ 40 字，给运营看） */
+  reason: string;
+}
+
+/** 接龙审核提示词：只判「续写本身」，题材自由，但触碰红线一律拒绝。 */
+const CHAIN_MODERATION_PROMPT = [
+  'You are a content moderator for "Short Sentence", a family-friendly English learning app.',
+  "Users anonymously continue each other's short story with ONE English sentence (optional Chinese translation).",
+  '',
+  'Judge ONLY the submitted continuation (and its translation). The story starter is context, not content to judge.',
+  '',
+  'REJECT if the continuation contains any of:',
+  '- sexual content, nudity, or any sexualization of minors (always reject)',
+  '- graphic violence, gore, torture, or encouragement of self-harm / suicide',
+  '- hate speech, slurs, harassment, threats, or humiliation of a person or group',
+  '- personal data or contact info: phone, email, social handles, links, addresses',
+  '- advertising, spam, scams, or repeated meaningless text',
+  '- instructions for illegal acts (drugs, weapons, hacking, evasion)',
+  '',
+  'APPROVE ordinary creative writing, including sad, lonely, scary, angry or morally ambiguous scenes,',
+  'everyday conflict, mild romance between adults, and imperfect English.',
+  'Do NOT reject merely for negativity, sadness or poor grammar.',
+  '',
+  'Return "review" instead of guessing when:',
+  '- the meaning is ambiguous or depends on context you do not have',
+  '- the text mixes languages heavily or is mostly unintelligible',
+  '- it is borderline: suggestive but not explicit, or violent but clearly fictional / comedic',
+  '- you are not confident about the decision',
+  '',
+  'Output JSON only, no markdown:',
+  '{"decision":"approve"|"reject"|"review","reason":"<=30 Chinese characters, concrete reason"}',
+].join('\n');
+
+/**
+ * 解析接龙审核输出（纯函数，便于单测）。
+ * 解析失败 / 结论不合法一律按 review 处理——不把「模型胡说」当成放行。
+ */
+export function parseChainModeration(content: string): ChainModerationResult {
+  let text = content.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+  const matched = fence.exec(text);
+  if (matched) {
+    text = matched[1].trim();
+  }
+  if (!text.startsWith('{')) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      text = text.slice(start, end + 1);
+    }
+  }
+  try {
+    const parsed = JSON.parse(text) as { decision?: unknown; reason?: unknown };
+    const reason = typeof parsed.reason === 'string' ? parsed.reason.trim().slice(0, 40) : '';
+    if (parsed.decision === 'approve') {
+      return { decision: 'approve', reason: reason || 'AI 审核通过' };
+    }
+    if (parsed.decision === 'reject') {
+      return { decision: 'reject', reason: reason || 'AI 判定不适合展示' };
+    }
+    return { decision: 'review', reason: reason || 'AI 无法确定，转人工审核' };
+  } catch {
+    return { decision: 'review', reason: 'AI 审核结果无法解析，转人工' };
+  }
+}
+
 @Injectable()
 export class AgnesSentenceProvider implements SentenceGenProvider {
   private readonly logger = new Logger(AgnesSentenceProvider.name);
@@ -500,6 +573,24 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
   }
 
   /**
+   * 接龙内容审核：判断一条匿名续写是否适合公开展示。
+   *
+   * 结论三档：approve 放行 / reject 拒绝 / review 转人工。
+   * 调用失败由调用方兜底为 review——**不能因为 AI 挂了就把内容直接放出去**，
+   * 也不能因为 AI 挂了就把用户写的东西当垃圾丢掉。
+   */
+  async moderateChainEntry(
+    input: { topicTitle: string; starterEn: string; contentEn: string; contentZh?: string | null },
+    bizId?: number,
+  ): Promise<ChainModerationResult> {
+    if (!this.enabled) {
+      return { decision: 'review', reason: 'AI 审核未配置，转人工' };
+    }
+    const content = await this.chat('chain_moderation', CHAIN_MODERATION_PROMPT, JSON.stringify(input), 0.1, { bizId });
+    return parseChainModeration(content);
+  }
+
+  /**
    * 图像内容审核：把刚生成的配图送视觉模型，判断是否适龄、有无不当内容、
    * 情侣场景是否为一男一女。fail-closed——明确 `pass:true` 才放行，其余一律不通过。
    *
@@ -542,7 +633,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     const content = await this.chat('sentence_explain', EXPLAIN_SYSTEM_PROMPT, JSON.stringify(payload), 0.4, { bizId });
 
     // 与输入等长、同顺序：模型漏掉的条目留空串，调用方跳过（绝不写空值覆盖）
-    const out = new Array<string>(items.length).fill('');
+    const out = Array.from({ length: items.length }, () => '');
     for (const item of this.extractItems(content)) {
       const raw = item as unknown as Record<string, unknown>;
       const index = Number(raw.index);

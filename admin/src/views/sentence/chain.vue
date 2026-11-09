@@ -11,7 +11,7 @@ import { deleteChainEntryApi, getChainEntryListApi, getChainTopicsApi, setChainE
 import { useTable } from '@/composables/useTable';
 import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
-import type { ChainEntryAdminItem, ChainTopicOption } from '@/types/api';
+import type { ChainEntryAdminItem, ChainEntryStatus, ChainTopicOption } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
@@ -30,15 +30,23 @@ const { loading, list, total, query, search, reset, getList, changePage, changeP
       topicId: p.topicId || undefined,
       keyword: p.keyword?.trim() || undefined,
     }),
-  { keyword: '', status: '', topicId: undefined as number | undefined },
+  // 默认只看待审核：AI 拿不准的会落到 pending，运营打开页面即进队列；清空状态可看全部
+  { keyword: '', status: 'pending', topicId: undefined as number | undefined },
 );
 
-/** 隐藏 / 恢复。 */
-async function toggleStatus(row: ChainEntryAdminItem): Promise<void> {
-  const next = row.status === 'hidden' ? 'visible' : 'hidden';
+/** 状态标签文案与配色。 */
+const STATUS_META: Record<ChainEntryStatus, { label: string; type: 'success' | 'info' | 'warning' | 'danger' }> = {
+  pending: { label: '待审核', type: 'warning' },
+  visible: { label: '已通过', type: 'success' },
+  rejected: { label: 'AI 拒绝', type: 'danger' },
+  hidden: { label: '已隐藏', type: 'info' },
+};
+
+/** 通过 / 拒绝 / 隐藏（同一入口，按目标状态给不同提示）。 */
+async function setStatus(row: ChainEntryAdminItem, next: 'visible' | 'rejected' | 'hidden'): Promise<void> {
   try {
     await setChainEntryStatusApi(row.id, next);
-    ElMessage.success(next === 'hidden' ? '已隐藏' : '已恢复');
+    ElMessage.success(next === 'visible' ? '已通过' : next === 'rejected' ? '已拒绝' : '已隐藏');
     await getList();
   } catch {
     // 错误提示由请求层统一弹出
@@ -83,8 +91,10 @@ onMounted(async () => {
         </el-select>
       </el-form-item>
       <el-form-item label="状态">
-        <el-select v-model="query.status" placeholder="全部" clearable style="width: 120px">
-          <el-option label="正常" value="visible" />
+        <el-select v-model="query.status" placeholder="全部" clearable style="width: 130px">
+          <el-option label="待审核" value="pending" />
+          <el-option label="已通过" value="visible" />
+          <el-option label="AI 拒绝" value="rejected" />
           <el-option label="已隐藏" value="hidden" />
         </el-select>
       </el-form-item>
@@ -119,24 +129,48 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
-              <el-tag :type="row.status === 'visible' ? 'success' : 'info'" size="small">
-                {{ row.status === 'visible' ? '正常' : '已隐藏' }}
+              <el-tag :type="STATUS_META[row.status as ChainEntryStatus]?.type ?? 'info'" size="small">
+                {{ STATUS_META[row.status as ChainEntryStatus]?.label ?? row.status }}
               </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="AI 备注" min-width="140" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="text-xs text-gray-500">{{ row.moderationNote || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="作者 ID" width="90" prop="userId" />
           <el-table-column label="提交时间" width="170">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button
+                v-if="row.status !== 'visible'"
+                v-permission="'sentence:chain:handle'"
+                link
+                type="success"
+                @click="setStatus(row as ChainEntryAdminItem, 'visible')"
+              >
+                通过
+              </el-button>
+              <el-button
+                v-if="row.status === 'pending'"
+                v-permission="'sentence:chain:handle'"
+                link
+                type="warning"
+                @click="setStatus(row as ChainEntryAdminItem, 'rejected')"
+              >
+                拒绝
+              </el-button>
+              <el-button
+                v-if="row.status === 'visible'"
                 v-permission="'sentence:chain:handle'"
                 link
                 type="primary"
-                @click="toggleStatus(row as ChainEntryAdminItem)"
+                @click="setStatus(row as ChainEntryAdminItem, 'hidden')"
               >
-                {{ row.status === 'hidden' ? '恢复' : '隐藏' }}
+                隐藏
               </el-button>
               <el-button
                 v-permission="'sentence:chain:handle'"

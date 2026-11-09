@@ -1631,8 +1631,8 @@ export interface HandleFeedbackPayload {
 
 /* ------------------------------ 句子接龙 ------------------------------ */
 
-/** 接龙条目状态 */
-export type ChainEntryStatus = 'visible' | 'hidden';
+/** 接龙条目状态：pending 待人工审核 / visible 已通过 / rejected AI 拒绝 / hidden 已隐藏 */
+export type ChainEntryStatus = 'visible' | 'hidden' | 'pending' | 'rejected';
 
 /** 接龙条目（后台视角：含举报数与作者 id） */
 export interface ChainEntryAdminItem {
@@ -1646,6 +1646,8 @@ export interface ChainEntryAdminItem {
   /** 被举报次数（满 3 次服务端自动隐藏） */
   reportCount: number;
   status: ChainEntryStatus;
+  /** AI 审核备注（结论理由；人工复核时参考） */
+  moderationNote: string | null;
   /** 作者 id（client_user，仅后台可见） */
   userId: number;
   createdAt: string;

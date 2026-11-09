@@ -34,13 +34,14 @@ export class ChainAdminController {
     return this.chains.adminTopics();
   }
 
-  /** 隐藏 / 恢复一条接龙。 */
+  /** 通过 / 拒绝 / 隐藏一条接龙。 */
   @Put(':id/status')
   @RequirePermissions('sentence:chain:handle')
   @OperationLog('题库管理', '审核接龙')
   async setStatus(@Param() params: IdParamDto, @Body() dto: SetChainEntryStatusDto): Promise<ResponseEnvelope<null>> {
     await this.chains.adminSetStatus(params.id, dto.status);
-    return { __raw: true, data: null, message: dto.status === 'hidden' ? '已隐藏' : '已恢复' };
+    const message = dto.status === 'visible' ? '已通过' : dto.status === 'rejected' ? '已拒绝' : '已隐藏';
+    return { __raw: true, data: null, message };
   }
 
   /** 删除一条接龙（级联清点赞与举报记录）。 */

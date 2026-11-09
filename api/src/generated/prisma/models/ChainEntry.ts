@@ -54,6 +54,7 @@ export type ChainEntryMinAggregateOutputType = {
   likeCount: number | null
   reportCount: number | null
   status: string | null
+  moderationNote: string | null
   createdAt: Date | null
 }
 
@@ -66,6 +67,7 @@ export type ChainEntryMaxAggregateOutputType = {
   likeCount: number | null
   reportCount: number | null
   status: string | null
+  moderationNote: string | null
   createdAt: Date | null
 }
 
@@ -78,6 +80,7 @@ export type ChainEntryCountAggregateOutputType = {
   likeCount: number
   reportCount: number
   status: number
+  moderationNote: number
   createdAt: number
   _all: number
 }
@@ -108,6 +111,7 @@ export type ChainEntryMinAggregateInputType = {
   likeCount?: true
   reportCount?: true
   status?: true
+  moderationNote?: true
   createdAt?: true
 }
 
@@ -120,6 +124,7 @@ export type ChainEntryMaxAggregateInputType = {
   likeCount?: true
   reportCount?: true
   status?: true
+  moderationNote?: true
   createdAt?: true
 }
 
@@ -132,6 +137,7 @@ export type ChainEntryCountAggregateInputType = {
   likeCount?: true
   reportCount?: true
   status?: true
+  moderationNote?: true
   createdAt?: true
   _all?: true
 }
@@ -231,6 +237,7 @@ export type ChainEntryGroupByOutputType = {
   likeCount: number
   reportCount: number
   status: string
+  moderationNote: string | null
   createdAt: Date
   _count: ChainEntryCountAggregateOutputType | null
   _avg: ChainEntryAvgAggregateOutputType | null
@@ -266,6 +273,7 @@ export type ChainEntryWhereInput = {
   likeCount?: Prisma.IntFilter<"ChainEntry"> | number
   reportCount?: Prisma.IntFilter<"ChainEntry"> | number
   status?: Prisma.StringFilter<"ChainEntry"> | string
+  moderationNote?: Prisma.StringNullableFilter<"ChainEntry"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ChainEntry"> | Date | string
   topic?: Prisma.XOR<Prisma.ChainTopicScalarRelationFilter, Prisma.ChainTopicWhereInput>
   likes?: Prisma.ChainEntryLikeListRelationFilter
@@ -281,6 +289,7 @@ export type ChainEntryOrderByWithRelationInput = {
   likeCount?: Prisma.SortOrder
   reportCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  moderationNote?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   topic?: Prisma.ChainTopicOrderByWithRelationInput
   likes?: Prisma.ChainEntryLikeOrderByRelationAggregateInput
@@ -300,6 +309,7 @@ export type ChainEntryWhereUniqueInput = Prisma.AtLeast<{
   likeCount?: Prisma.IntFilter<"ChainEntry"> | number
   reportCount?: Prisma.IntFilter<"ChainEntry"> | number
   status?: Prisma.StringFilter<"ChainEntry"> | string
+  moderationNote?: Prisma.StringNullableFilter<"ChainEntry"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ChainEntry"> | Date | string
   topic?: Prisma.XOR<Prisma.ChainTopicScalarRelationFilter, Prisma.ChainTopicWhereInput>
   likes?: Prisma.ChainEntryLikeListRelationFilter
@@ -315,6 +325,7 @@ export type ChainEntryOrderByWithAggregationInput = {
   likeCount?: Prisma.SortOrder
   reportCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  moderationNote?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ChainEntryCountOrderByAggregateInput
   _avg?: Prisma.ChainEntryAvgOrderByAggregateInput
@@ -335,6 +346,7 @@ export type ChainEntryScalarWhereWithAggregatesInput = {
   likeCount?: Prisma.IntWithAggregatesFilter<"ChainEntry"> | number
   reportCount?: Prisma.IntWithAggregatesFilter<"ChainEntry"> | number
   status?: Prisma.StringWithAggregatesFilter<"ChainEntry"> | string
+  moderationNote?: Prisma.StringNullableWithAggregatesFilter<"ChainEntry"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ChainEntry"> | Date | string
 }
 
@@ -346,6 +358,7 @@ export type ChainEntryCreateInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   topic: Prisma.ChainTopicCreateNestedOneWithoutEntriesInput
   likes?: Prisma.ChainEntryLikeCreateNestedManyWithoutEntryInput
@@ -361,6 +374,7 @@ export type ChainEntryUncheckedCreateInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   likes?: Prisma.ChainEntryLikeUncheckedCreateNestedManyWithoutEntryInput
   reports?: Prisma.ChainEntryReportUncheckedCreateNestedManyWithoutEntryInput
@@ -374,6 +388,7 @@ export type ChainEntryUpdateInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   topic?: Prisma.ChainTopicUpdateOneRequiredWithoutEntriesNestedInput
   likes?: Prisma.ChainEntryLikeUpdateManyWithoutEntryNestedInput
@@ -389,6 +404,7 @@ export type ChainEntryUncheckedUpdateInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   likes?: Prisma.ChainEntryLikeUncheckedUpdateManyWithoutEntryNestedInput
   reports?: Prisma.ChainEntryReportUncheckedUpdateManyWithoutEntryNestedInput
@@ -403,6 +419,7 @@ export type ChainEntryCreateManyInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
 }
 
@@ -414,6 +431,7 @@ export type ChainEntryUpdateManyMutationInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -426,6 +444,7 @@ export type ChainEntryUncheckedUpdateManyInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -454,6 +473,7 @@ export type ChainEntryCountOrderByAggregateInput = {
   likeCount?: Prisma.SortOrder
   reportCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  moderationNote?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -474,6 +494,7 @@ export type ChainEntryMaxOrderByAggregateInput = {
   likeCount?: Prisma.SortOrder
   reportCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  moderationNote?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -486,6 +507,7 @@ export type ChainEntryMinOrderByAggregateInput = {
   likeCount?: Prisma.SortOrder
   reportCount?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  moderationNote?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -584,6 +606,7 @@ export type ChainEntryCreateWithoutTopicInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   likes?: Prisma.ChainEntryLikeCreateNestedManyWithoutEntryInput
   reports?: Prisma.ChainEntryReportCreateNestedManyWithoutEntryInput
@@ -597,6 +620,7 @@ export type ChainEntryUncheckedCreateWithoutTopicInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   likes?: Prisma.ChainEntryLikeUncheckedCreateNestedManyWithoutEntryInput
   reports?: Prisma.ChainEntryReportUncheckedCreateNestedManyWithoutEntryInput
@@ -640,6 +664,7 @@ export type ChainEntryScalarWhereInput = {
   likeCount?: Prisma.IntFilter<"ChainEntry"> | number
   reportCount?: Prisma.IntFilter<"ChainEntry"> | number
   status?: Prisma.StringFilter<"ChainEntry"> | string
+  moderationNote?: Prisma.StringNullableFilter<"ChainEntry"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ChainEntry"> | Date | string
 }
 
@@ -651,6 +676,7 @@ export type ChainEntryCreateWithoutLikesInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   topic: Prisma.ChainTopicCreateNestedOneWithoutEntriesInput
   reports?: Prisma.ChainEntryReportCreateNestedManyWithoutEntryInput
@@ -665,6 +691,7 @@ export type ChainEntryUncheckedCreateWithoutLikesInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   reports?: Prisma.ChainEntryReportUncheckedCreateNestedManyWithoutEntryInput
 }
@@ -693,6 +720,7 @@ export type ChainEntryUpdateWithoutLikesInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   topic?: Prisma.ChainTopicUpdateOneRequiredWithoutEntriesNestedInput
   reports?: Prisma.ChainEntryReportUpdateManyWithoutEntryNestedInput
@@ -707,6 +735,7 @@ export type ChainEntryUncheckedUpdateWithoutLikesInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reports?: Prisma.ChainEntryReportUncheckedUpdateManyWithoutEntryNestedInput
 }
@@ -719,6 +748,7 @@ export type ChainEntryCreateWithoutReportsInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   topic: Prisma.ChainTopicCreateNestedOneWithoutEntriesInput
   likes?: Prisma.ChainEntryLikeCreateNestedManyWithoutEntryInput
@@ -733,6 +763,7 @@ export type ChainEntryUncheckedCreateWithoutReportsInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
   likes?: Prisma.ChainEntryLikeUncheckedCreateNestedManyWithoutEntryInput
 }
@@ -761,6 +792,7 @@ export type ChainEntryUpdateWithoutReportsInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   topic?: Prisma.ChainTopicUpdateOneRequiredWithoutEntriesNestedInput
   likes?: Prisma.ChainEntryLikeUpdateManyWithoutEntryNestedInput
@@ -775,6 +807,7 @@ export type ChainEntryUncheckedUpdateWithoutReportsInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   likes?: Prisma.ChainEntryLikeUncheckedUpdateManyWithoutEntryNestedInput
 }
@@ -787,6 +820,7 @@ export type ChainEntryCreateManyTopicInput = {
   likeCount?: number
   reportCount?: number
   status?: string
+  moderationNote?: string | null
   createdAt?: Date | string
 }
 
@@ -798,6 +832,7 @@ export type ChainEntryUpdateWithoutTopicInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   likes?: Prisma.ChainEntryLikeUpdateManyWithoutEntryNestedInput
   reports?: Prisma.ChainEntryReportUpdateManyWithoutEntryNestedInput
@@ -811,6 +846,7 @@ export type ChainEntryUncheckedUpdateWithoutTopicInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   likes?: Prisma.ChainEntryLikeUncheckedUpdateManyWithoutEntryNestedInput
   reports?: Prisma.ChainEntryReportUncheckedUpdateManyWithoutEntryNestedInput
@@ -824,6 +860,7 @@ export type ChainEntryUncheckedUpdateManyWithoutTopicInput = {
   likeCount?: Prisma.IntFieldUpdateOperationsInput | number
   reportCount?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  moderationNote?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -876,6 +913,7 @@ export type ChainEntrySelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   likeCount?: boolean
   reportCount?: boolean
   status?: boolean
+  moderationNote?: boolean
   createdAt?: boolean
   topic?: boolean | Prisma.ChainTopicDefaultArgs<ExtArgs>
   likes?: boolean | Prisma.ChainEntry$likesArgs<ExtArgs>
@@ -894,10 +932,11 @@ export type ChainEntrySelectScalar = {
   likeCount?: boolean
   reportCount?: boolean
   status?: boolean
+  moderationNote?: boolean
   createdAt?: boolean
 }
 
-export type ChainEntryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "topicId" | "userId" | "contentEn" | "contentZh" | "likeCount" | "reportCount" | "status" | "createdAt", ExtArgs["result"]["chainEntry"]>
+export type ChainEntryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "topicId" | "userId" | "contentEn" | "contentZh" | "likeCount" | "reportCount" | "status" | "moderationNote" | "createdAt", ExtArgs["result"]["chainEntry"]>
 export type ChainEntryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   topic?: boolean | Prisma.ChainTopicDefaultArgs<ExtArgs>
   likes?: boolean | Prisma.ChainEntry$likesArgs<ExtArgs>
@@ -942,9 +981,14 @@ export type $ChainEntryPayload<ExtArgs extends runtime.Types.Extensions.Internal
      */
     reportCount: number
     /**
-     * 状态：visible 正常 / hidden 已隐藏（举报达阈值自动置位，或运营手动）
+     * 状态：visible 正常 / pending 待人工审核 / rejected AI 拒绝 / hidden 已隐藏
+     * （入库前先过 AI 审核：通过→visible，拒绝→rejected，无法判断或调用失败→pending 转人工）
      */
     status: string
+    /**
+     * 审核备注（AI 给出的结论理由；人工审核时辅助判断，可空）
+     */
+    moderationNote: string | null
     /**
      * 创建时间
      */
@@ -1329,6 +1373,7 @@ export interface ChainEntryFieldRefs {
   readonly likeCount: Prisma.FieldRef<"ChainEntry", 'Int'>
   readonly reportCount: Prisma.FieldRef<"ChainEntry", 'Int'>
   readonly status: Prisma.FieldRef<"ChainEntry", 'String'>
+  readonly moderationNote: Prisma.FieldRef<"ChainEntry", 'String'>
   readonly createdAt: Prisma.FieldRef<"ChainEntry", 'DateTime'>
 }
     

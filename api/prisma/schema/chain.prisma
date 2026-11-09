@@ -49,8 +49,11 @@ model ChainEntry {
   likeCount   Int      @default(0) @map("like_count") @db.Int
   /// 被举报次数（一人一次，去重在 chain_entry_report 的唯一键上）
   reportCount Int      @default(0) @map("report_count") @db.Int
-  /// 状态：visible 正常 / hidden 已隐藏（举报达阈值自动置位，或运营手动）
+  /// 状态：visible 正常 / pending 待人工审核 / rejected AI 拒绝 / hidden 已隐藏
+  /// （入库前先过 AI 审核：通过→visible，拒绝→rejected，无法判断或调用失败→pending 转人工）
   status      String   @default("visible") @db.VarChar(20)
+  /// 审核备注（AI 给出的结论理由；人工审核时辅助判断，可空）
+  moderationNote String? @map("moderation_note") @db.VarChar(100)
   /// 创建时间
   createdAt   DateTime @default(now()) @map("created_at")
 

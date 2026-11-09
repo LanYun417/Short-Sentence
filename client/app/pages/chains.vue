@@ -83,7 +83,7 @@ async function submit(): Promise<void> {
   error.value = '';
   flash.value = '';
   try {
-    await apiFetch<ChainEntry>(`/client/chains/${topic.id}/entries`, {
+    const created = await apiFetch<ChainEntry>(`/client/chains/${topic.id}/entries`, {
       method: 'POST',
       body: {
         contentEn: draftEn.value.trim(),
@@ -93,7 +93,13 @@ async function submit(): Promise<void> {
     draftEn.value = '';
     draftZh.value = '';
     detail.value = await apiFetch<ChainTopicDetail>(`/client/chains/${topic.id}`);
-    flash.value = '接上了。看看别人怎么往下写。';
+    // 审核状态决定提示：通过才立即可见；转人工的不在列表里，说清楚免得用户以为没提交上
+    flash.value =
+      created.status === 'pending'
+        ? '已提交，AI 拿不准这条内容，正在人工审核；通过后会出现在接龙里。'
+        : created.status === 'rejected'
+          ? `这句没有通过内容审核${created.moderationNote ? `：${created.moderationNote}` : ''}，换一句试试。`
+          : '接上了。看看别人怎么往下写。';
     // 主题列表里的「N 句 / 我接过 N 句」同步刷新
     await refreshTopics();
   } catch (e) {

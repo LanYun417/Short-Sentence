@@ -15,8 +15,8 @@ export function getChainTopicsApi(): Promise<ChainTopicOption[]> {
   return get<ChainTopicOption[]>('/chains/topics');
 }
 
-/** 隐藏 / 恢复一条接龙 */
-export function setChainEntryStatusApi(id: number, status: 'visible' | 'hidden'): Promise<null> {
+/** 通过 / 拒绝 / 隐藏一条接龙 */
+export function setChainEntryStatusApi(id: number, status: 'visible' | 'hidden' | 'rejected'): Promise<null> {
   return put<null>(`/chains/${id}/status`, { status });
 }
 

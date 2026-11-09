@@ -29,6 +29,7 @@ export class ReportChainEntryDto {
 
 /** 后台设置条目状态。 */
 export class SetChainEntryStatusDto {
-  @IsIn(['visible', 'hidden'])
-  status!: 'visible' | 'hidden';
+  /** visible 通过 / rejected 拒绝 / hidden 隐藏 */
+  @IsIn(['visible', 'hidden', 'rejected'])
+  status!: 'visible' | 'hidden' | 'rejected';
 }
