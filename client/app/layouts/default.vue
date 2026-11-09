@@ -20,13 +20,12 @@ const { status: todayCard } = useTodayCard();
  * 导航项（含移动端底部 Tab 图标）。
  *
  * 收藏与复习**不进导航**：它们是低频的「回看 / 巩固」动作，收进「我的」页做二级入口，
- * 让导航只留核心四件事——刷题、题库、AI 拓展、我的。
- * 节日题库二十多个入口，铺在刷题页会拉长首屏，所以独立成「题库」页。
+ * 让导航只留核心三件事——刷题、功能、我的。
+ * 题库、AI 工具与情景闯关 / 句子接龙入口都收进「功能」页，避免工具型入口各占一个 Tab。
  */
 const NAV_ITEMS = [
   { to: '/', label: '刷题', icon: 'i-lucide-layers' },
-  { to: '/library', label: '题库', icon: 'i-lucide-library' },
-  { to: '/ai', label: 'AI 拓展', icon: 'i-lucide-sparkles' },
+  { to: '/features', label: '功能', icon: 'i-lucide-layout-grid' },
   { to: '/profile', label: '我的', icon: 'i-lucide-user' },
 ];
 
@@ -179,11 +178,11 @@ function onLogout(): void {
       class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden dark:border-slate-800/70 dark:bg-slate-900/90"
     >
       <div class="relative mx-auto flex max-w-3xl">
-        <!-- 指示器：随激活项滑动（宽度 = 1/4，跟着导航项数量走） -->
+        <!-- 指示器：随激活项滑动（宽度按导航项数量均分，避免写死 1/4） -->
         <span
-          class="absolute inset-y-1 left-0 w-1/4 rounded-2xl bg-sky-50 transition-transform duration-300 ease-out dark:bg-sky-500/15"
+          class="absolute inset-y-1 left-0 rounded-2xl bg-sky-50 transition-transform duration-300 ease-out dark:bg-sky-500/15"
           :class="activeIndex < 0 && 'opacity-0'"
-          :style="{ transform: `translateX(${Math.max(activeIndex, 0) * 100}%)` }"
+          :style="{ width: `${100 / NAV_ITEMS.length}%`, transform: `translateX(${Math.max(activeIndex, 0) * 100}%)` }"
         />
 
         <NuxtLink

@@ -295,9 +295,9 @@ const bankLabel = computed(() => {
   return '';
 });
 
-/** 换个题库 → 回题库页挑一个（刷题页不再常驻题库入口）。 */
+/** 换个题库 → 回「功能」页的题库 Tab 挑一个（刷题页不再常驻题库入口）。 */
 function onChangeBank(): void {
-  void navigateTo('/library');
+  void navigateTo('/features');
 }
 
 /** 当前专项节日题库的封面（用于提示条左侧缩略图；无封面时为空）。 */

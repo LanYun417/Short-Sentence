@@ -167,6 +167,7 @@ export default defineNuxtConfig({
   robots: {
     disallowNonIndexableRoutes: false,
     disallow: [
+      '/features',
       '/ai',
       '/favorites',
       '/review',
@@ -182,6 +183,7 @@ export default defineNuxtConfig({
   // sitemap：只保留公开入口。模块会自动发现全部路由，不排除就会把私有页也写进去。
   sitemap: {
     exclude: [
+      '/features',
       '/ai',
       '/favorites',
       '/review',
