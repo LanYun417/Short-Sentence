@@ -824,6 +824,13 @@ onMounted(() => {
               :label="`${opt.name}${opt.nameEn ? `（${opt.nameEn}）` : ''}`"
               :value="opt.name"
             />
+            <template #empty>
+              <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                所有启用分类都已绑定关卡（一分类一关）。
+                <router-link to="/sentence/category" class="text-primary">去「场景分类」新建一个</router-link>
+                后再回来生成。
+              </div>
+            </template>
           </el-select>
           <span v-else class="text-sm text-gray-500">{{ storyForm.category }}（不可修改）</span>
         </el-form-item>
@@ -960,6 +967,13 @@ onMounted(() => {
               :label="`${opt.name}${opt.nameEn ? `（${opt.nameEn}）` : ''}`"
               :value="opt.name"
             />
+            <template #empty>
+              <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                所有启用分类都已绑定关卡（一分类一关）。
+                <router-link to="/sentence/category" class="text-primary">去「场景分类」新建一个</router-link>
+                后再回来生成。
+              </div>
+            </template>
           </el-select>
         </el-form-item>
         <p class="text-xs leading-relaxed text-gray-400">
@@ -969,7 +983,14 @@ onMounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="aiDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="aiGenerating" @click="handleAiGenerate">生成草稿</el-button>
+        <el-button
+          type="primary"
+          :loading="aiGenerating"
+          :disabled="!aiForm.chapterKey || !aiForm.category"
+          @click="handleAiGenerate"
+        >
+          生成草稿
+        </el-button>
       </template>
     </el-dialog>
   </div>
