@@ -966,24 +966,26 @@ onMounted(() => {
       <el-form label-width="90px">
         <el-form-item label="所属剧本" required>
           <div class="flex flex-wrap items-center gap-2">
-            <el-tree-select
-              v-model="storyForm.scriptId"
-              :data="scriptTree"
-              :props="treeSelectProps"
-              node-key="value"
-              filterable
-              placeholder="场景 → 剧本（场景不可选，点开选剧本）"
-              style="flex: 1; min-width: 0"
-            >
-              <template #empty>
-                <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                  还没有剧本。点右侧「＋ 新建剧本」，或去
-                  <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
-                  先建场景。
-                </div>
-              </template>
-            </el-tree-select>
-            <el-button link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
+            <div class="min-w-0 flex-1">
+              <el-tree-select
+                v-model="storyForm.scriptId"
+                :data="scriptTree"
+                :props="treeSelectProps"
+                node-key="value"
+                filterable
+                placeholder="场景 → 剧本（场景不可选，点开选剧本）"
+                style="width: 100%"
+              >
+                <template #empty>
+                  <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                    还没有剧本。点右侧「＋ 新建剧本」，或去
+                    <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+                    先建场景。
+                  </div>
+                </template>
+              </el-tree-select>
+            </div>
+            <el-button class="shrink-0" link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
           </div>
         </el-form-item>
         <el-form-item label="关卡标题" required>
@@ -1163,24 +1165,26 @@ onMounted(() => {
       <el-form label-width="90px">
         <el-form-item label="所属剧本" required>
           <div class="flex flex-wrap items-center gap-2">
-            <el-tree-select
-              v-model="aiForm.scriptId"
-              :data="scriptTree"
-              :props="treeSelectProps"
-              node-key="value"
-              filterable
-              placeholder="场景 → 剧本（场景不可选，点开选剧本）"
-              style="flex: 1; min-width: 0"
-            >
-              <template #empty>
-                <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                  还没有剧本。点右侧「＋ 新建剧本」，或去
-                  <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
-                  先建场景。
-                </div>
-              </template>
-            </el-tree-select>
-            <el-button link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
+            <div class="min-w-0 flex-1">
+              <el-tree-select
+                v-model="aiForm.scriptId"
+                :data="scriptTree"
+                :props="treeSelectProps"
+                node-key="value"
+                filterable
+                placeholder="场景 → 剧本（场景不可选，点开选剧本）"
+                style="width: 100%"
+              >
+                <template #empty>
+                  <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                    还没有剧本。点右侧「＋ 新建剧本」，或去
+                    <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+                    先建场景。
+                  </div>
+                </template>
+              </el-tree-select>
+            </div>
+            <el-button class="shrink-0" link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
           </div>
         </el-form-item>
         <p class="text-xs leading-relaxed text-gray-400">
