@@ -120,6 +120,8 @@ export interface TaskDeps {
   generateWeeklyChainTopics: (count: number) => Promise<{ weekStart: string; created: number }>;
   /** 情景闯关剧本封面补生成（StageService.generateMissingScriptCovers；只补缺失，不覆盖已有） */
   generateMissingStageCovers: () => Promise<{ generated: number[]; skipped: number[]; failed: number[] }>;
+  /** 情景闯关场景封面补生成（SentenceGenService.generateMissingCategoryCovers；只补缺失，不覆盖已有） */
+  generateMissingSceneCovers: () => Promise<{ generated: number[]; failed: number[] }>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -256,11 +258,11 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       },
     },
     {
-      name: 'stage-script-cover',
-      title: '闯关剧本封面补生成',
+      name: 'stage-cover',
+      title: '闯关封面补生成',
       description:
-        'AI（{imageModel}）为情景闯关的剧本生成封面图（4:3 webp 入库），只补「还没有封面」的剧本，' +
-        '已有封面不覆盖——想换图去后台「情景闯关」页手动重新生成。单个失败不影响其他剧本。',
+        'AI（{imageModel}）为情景闯关补封面图（4:3 webp 入库）：先场景（sentence_category）、后剧本（stage_script），' +
+        '只补「还没有封面」的，已有封面不覆盖——想换图去后台「闯关」相关页面手动重新生成。单个失败不影响其他。',
       // 凌晨 00:30，跟在 00:10 句签生图之后错开，避免两条生图流水线并发抢额度
       schedule: {
         kind: 'daily',
@@ -269,6 +271,8 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       },
       enabled: config.stage.coverCronEnabled,
       create: (deps) => async () => {
+        // 先场景后剧本：场景卡没了封面整页观感最差；两类都只补缺失、不覆盖
+        await deps.generateMissingSceneCovers();
         await deps.generateMissingStageCovers();
       },
     },

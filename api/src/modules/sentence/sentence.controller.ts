@@ -81,6 +81,35 @@ export class SentenceController {
     return { __raw: true, data: result, message: '新增成功' };
   }
 
+  /**
+   * 一键补齐缺失的场景封面（AI 生图）。**静态路由，必须声明在 `categories/:id/cover` 之前**，
+   * 否则 `covers/generate-missing` 会被 `:id` 吃掉（Nest 按声明顺序匹配）。
+   */
+  @Post('categories/covers/generate-missing')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '补全场景封面')
+  async generateMissingCategoryCovers(): Promise<ResponseEnvelope<{ generated: number[]; failed: number[] }>> {
+    const result = await this.sentenceGen.generateMissingCategoryCovers();
+    const failed = result.failed.length;
+    return {
+      __raw: true,
+      data: result,
+      message: failed > 0 ? `已补全 ${result.generated.length} 张，${failed} 张失败（可重试）` : '缺失场景封面已补全',
+    };
+  }
+
+  /** 生成（或重新生成）某场景的封面图：生图 → 审核 → 回写分类封面。 */
+  @Post('categories/:id/cover')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '生成场景封面')
+  async generateCategoryCover(
+    @Param() params: IdParamDto,
+    @Body() body: Record<string, unknown>,
+  ): Promise<ResponseEnvelope<{ categoryId: number; coverUrl: string }>> {
+    const result = await this.sentenceGen.generateCategoryCover(params.id, body.regenerate === true);
+    return { __raw: true, data: result, message: '封面已生成' };
+  }
+
   /** 编辑分类。 */
   @Put('categories/:id')
   @RequirePermissions('sentence:category')

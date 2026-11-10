@@ -93,6 +93,8 @@ export interface CategoryItem {
   status: number;
   /** 该分类下的题目数 */
   sentenceCount: number;
+  /** 封面图 URL（闯关场景封面 / 节日题库封面；未生成为 null） */
+  coverUrl: string | null;
 }
 
 @Injectable()
@@ -387,6 +389,13 @@ export class SentenceService {
       this.prisma.sentence.groupBy({ by: ['categoryId'], _count: { _all: true } }),
     ]);
     const countMap = new Map(counts.map((row) => [Number(row.categoryId), row._count._all]));
+    // 封面 URL 逐个解析（分类就两位数，不值得为它加一条批量查询）
+    const coverUrls = new Map<number, string | null>();
+    for (const row of rows) {
+      if (row.coverFileId <= 0n) continue;
+      const file = await this.fileService.findById(Number(row.coverFileId));
+      if (file) coverUrls.set(Number(row.id), file.fileUrl);
+    }
     return rows.map((row) => ({
       id: Number(row.id),
       name: row.name,
@@ -395,6 +404,7 @@ export class SentenceService {
       sort: row.sort,
       status: row.status,
       sentenceCount: countMap.get(Number(row.id)) ?? 0,
+      coverUrl: coverUrls.get(Number(row.id)) ?? null,
     }));
   }
 

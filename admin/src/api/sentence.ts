@@ -201,6 +201,19 @@ export function updateCategoryApi(id: number, payload: SentenceCategoryPayload):
 }
 
 /** 删除场景分类（有题目引用时后端拒绝） */
+/** 生成/重新生成场景封面（AI 生图 → webp 入库 → 回写分类封面） */
+export function generateCategoryCoverApi(
+  id: number,
+  regenerate = false,
+): Promise<{ categoryId: number; coverUrl: string }> {
+  return post<{ categoryId: number; coverUrl: string }>(`/sentences/categories/${id}/cover`, { regenerate });
+}
+
+/** 一键补齐全部缺失场景封面 */
+export function generateMissingCategoryCoversApi(): Promise<{ generated: number[]; failed: number[] }> {
+  return post<{ generated: number[]; failed: number[] }>('/sentences/categories/covers/generate-missing');
+}
+
 export function deleteCategoryApi(id: number): Promise<null> {
   return del<null>(`/sentences/categories/${id}`);
 }

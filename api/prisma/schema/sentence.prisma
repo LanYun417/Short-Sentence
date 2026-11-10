@@ -58,7 +58,8 @@ model SentenceCategory {
   nameEn    String?  @map("name_en") @db.VarChar(50)
   /// 图标（bootstrap-icons 类名）
   icon      String?  @db.VarChar(100)
-  /// 节日题库封面图文件 id（0 = 无封面；仅节日分类使用，指向 sys_file）
+  /// 封面图文件 id（0 = 无封面；指向 sys_file）。一字段两用：节日分类 = 节日题库封面；
+  /// 普通分类 = 情景闯关「场景」封面（节日分类不进闯关地图，互不冲突）
   coverFileId BigInt @default(0) @map("cover_file_id") @db.BigInt
   /// 排序（升序）
   sort      Int      @default(0)

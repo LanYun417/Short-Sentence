@@ -308,7 +308,8 @@ export class StageService {
         this.prisma.sentenceCategory.findMany({
           where: { status: 1 },
           orderBy: [{ sort: 'asc' }, { id: 'asc' }],
-          select: { id: true, name: true, nameEn: true, icon: true },
+          // coverFileId：闯关场景自己的封面（AI 生成），没有时再回落「第一个剧本封面」
+          select: { id: true, name: true, nameEn: true, icon: true, coverFileId: true },
         }),
         this.prisma.stageScript.findMany({ where: { status: 1 }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] }),
         this.prisma.stageStory.findMany({ where: { status: 1 }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] }),
@@ -351,6 +352,13 @@ export class StageService {
     const coverByScript = new Map<string, string | null>();
     for (const script of scriptRows) {
       coverByScript.set(String(script.id), await this.coverUrlOf(script.coverFileId));
+    }
+    // 场景自己的封面（sentence_category.cover_file_id，AI 生成；节日分类不进地图，无冲突）
+    const sceneCoverUrls = new Map<string, string | null>();
+    for (const category of categories) {
+      if (category.coverFileId > 0n) {
+        sceneCoverUrls.set(String(category.id), await this.coverUrlOf(category.coverFileId));
+      }
     }
 
     const storiesByScript = new Map<string, typeof storyRows>();
@@ -468,7 +476,9 @@ export class StageService {
         scriptCount: sceneScripts.length,
         stageCount,
         clearedCount: sceneScripts.reduce((sum, item) => sum + item.clearedCount, 0),
-        coverUrl: sceneScripts.find((item) => item.coverUrl)?.coverUrl ?? null,
+        // 场景优先用自己的 AI 封面；没有才用第一个剧本的封面兜底
+        coverUrl:
+          sceneCoverUrls.get(String(category.id)) ?? sceneScripts.find((item) => item.coverUrl)?.coverUrl ?? null,
       });
     }
 

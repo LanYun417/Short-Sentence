@@ -34,6 +34,7 @@ import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { resolveTextChannel } from '../../common/ai/ai.config.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
+import { STAGE_COVER_STYLE_SUFFIX } from '../client/stage/stage-stories.js';
 import { SENTENCE_STATUS } from './sentence.dto.js';
 
 /**
@@ -59,6 +60,17 @@ const MAX_FAILED_CHUNKS = 5;
  */
 const IMAGE_STYLE_SUFFIX =
   'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
+
+/**
+ * 闯关场景封面提示词（场景 = sentence_category，如「职场办公」「日常生活」）。
+ *
+ * 与剧本封面（stage.service 的 scriptCoverPrompt）同一视觉语言：storybook 插画 +
+ * 统一风格后缀；顶部/底部留干净区域，方便前景压场景名与进度角标。
+ */
+function sceneCoverPromptOf(name: string, nameEn: string | null): string {
+  const en = nameEn ? ` (${nameEn})` : '';
+  return `A storybook illustration for an English-learning scenario scene titled "${name}"${en}, a recognizable everyday place or situation that represents this scene, warm inviting atmosphere, clear composition with calm space at top and bottom for a title overlay, ${STAGE_COVER_STYLE_SUFFIX}`;
+}
 
 /**
  * 规范场景提示词里的人物性别。
@@ -1593,6 +1605,85 @@ export class SentenceGenService {
       `[SentenceGen] 节日封面：共 ${festivals.length} 个节日，新生成 ${generated}，跳过 ${skipped}，失败 ${failed}`,
     );
     return { total: festivals.length, generated, skipped, failed, details };
+  }
+
+  /**
+   * 为某个**场景分类**生成闯关地图用的封面图（AI 生图 → webp → 视觉审核 → 回写分类）。
+   *
+   * 2026-11-10 情景闯关改「场景 → 剧本 → 关卡」三级后，场景（= sentence_category）
+   * 在地图上要有自己的封面；封面复用 sentence_category.cover_file_id 字段
+   * （节日题库封面同字段，但节日分类不进闯关地图，互不冲突）。
+   *
+   * @param regenerate 为 true 时即使已有封面也强制重生成
+   */
+  async generateCategoryCover(
+    categoryId: number,
+    regenerate = false,
+  ): Promise<{ categoryId: number; coverUrl: string }> {
+    const category = await this.prisma.sentenceCategory.findUnique({
+      where: { id: BigInt(categoryId) },
+      select: { id: true, name: true, nameEn: true, status: true, coverFileId: true },
+    });
+    if (!category) throw AppException.notFound('场景分类不存在');
+    if (category.status !== 1) throw AppException.badRequest('场景分类已停用');
+    if (!regenerate && category.coverFileId > 0n) {
+      const file = await this.fileService.findById(Number(category.coverFileId));
+      if (file) return { categoryId, coverUrl: file.fileUrl };
+      // file 记录被删但封面引用还在：落下去重生成
+      this.logger.warn(`[SentenceGen] 场景 ${categoryId} 的封面文件缺失，重新生成`);
+    }
+    const prompt = sceneCoverPromptOf(category.name, category.nameEn);
+    const image = await withRetry(
+      () =>
+        this.imageGen.generate(prompt, {
+          size: config.stage.coverSize,
+          ratio: config.stage.coverRatio,
+        }),
+      IMAGE_RETRY,
+    );
+    const webp = await sharp(image.buffer)
+      .resize({ width: config.stage.coverMaxWidth, withoutEnlargement: true })
+      .webp({ quality: config.stage.coverQuality })
+      .toBuffer();
+    // 与节日封面同口径：跑题 / 画字 / 写实照片的封面不能贴到用户端
+    const review = await withRetry(() => this.sentenceGen.reviewImage(webp, { scenePrompt: prompt }), IMAGE_RETRY);
+    if (!review.pass) {
+      this.logger.warn(`[SentenceGen] 场景封面审核未通过（${category.name}）: ${review.reason}`);
+      throw AppException.badRequest(`封面审核未通过：${review.reason}`);
+    }
+    const saved = await this.fileService.save(`stage-scene-cover-${categoryId}.webp`, 'image/webp', webp, null);
+    const row = await this.prisma.sentenceCategory.update({
+      where: { id: category.id },
+      data: { coverFileId: BigInt(saved.file.id) },
+    });
+    const coverUrl = (await this.fileService.findById(Number(row.coverFileId)))?.fileUrl ?? saved.file.fileUrl;
+    this.logger.log(`[SentenceGen] 场景「${category.name}」封面生成完成：${coverUrl}`);
+    return { categoryId, coverUrl };
+  }
+
+  /**
+   * 补齐缺失的场景封面（定时任务用，串行）：只生成「还没有封面」的启用分类，
+   * 单个失败不影响其他。与剧本封面补全同一任务里跑（错开时段，别抢生图配额）。
+   */
+  async generateMissingCategoryCovers(): Promise<{ generated: number[]; failed: number[] }> {
+    const categories = await this.prisma.sentenceCategory.findMany({
+      where: { status: 1, coverFileId: 0n },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true },
+    });
+    const generated: number[] = [];
+    const failed: number[] = [];
+    for (const category of categories) {
+      try {
+        await this.generateCategoryCover(Number(category.id));
+        generated.push(Number(category.id));
+      } catch (error) {
+        failed.push(Number(category.id));
+        this.logger.error(`[SentenceGen] 场景「${category.name}」封面生成失败：${this.errText(error)}`);
+      }
+    }
+    this.logger.log(`[SentenceGen] 场景封面补生成完成：新增 ${generated.length}，失败 ${failed.length}`);
+    return { generated, failed };
   }
 
   /** 无提示词时的兜底构图（两人对话场景）。 */

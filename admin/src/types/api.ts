@@ -1402,6 +1402,8 @@ export interface SentenceCategoryItem {
   sort: number;
   status: number;
   sentenceCount: number;
+  /** 封面图 URL（闯关场景封面 / 节日题库封面；未生成为 null） */
+  coverUrl: string | null;
 }
 
 /** 场景分类保存参数 */

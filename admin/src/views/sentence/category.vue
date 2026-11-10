@@ -4,7 +4,14 @@
  * 模块职责：分类列表（含题目数）/ 新增 / 编辑 / 删除（有题目引用时后端拒绝）。
  */
 import { ElMessage, ElMessageBox } from '@/utils/element';
-import { createCategoryApi, deleteCategoryApi, getCategoryListApi, updateCategoryApi } from '@/api/sentence';
+import {
+  createCategoryApi,
+  deleteCategoryApi,
+  generateCategoryCoverApi,
+  generateMissingCategoryCoversApi,
+  getCategoryListApi,
+  updateCategoryApi,
+} from '@/api/sentence';
 import type { SentenceCategoryItem, SentenceCategoryPayload } from '@/types/api';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
@@ -96,6 +103,57 @@ async function handleDelete(row: SentenceCategoryItem): Promise<void> {
 onMounted(() => {
   void load();
 });
+
+/* ------------------------------ 场景封面（AI 生图） ------------------------------ */
+
+/** 正在生成封面的分类 id 集合；'all' = 一键补全 */
+const coveringIds = ref<string[]>([]);
+
+function isCovering(key: string): boolean {
+  return coveringIds.value.includes(key);
+}
+
+/**
+ * 生成/重新生成场景封面。已有封面时 regenerate 走「重新生成」（二次确认）。
+ * 封面同时用于闯关地图的场景卡与节日题库卡（同一字段，互不冲突）。
+ */
+async function generateCover(row: SentenceCategoryItem, regenerate = false): Promise<void> {
+  if (regenerate) {
+    try {
+      await ElMessageBox.confirm('重新生成会覆盖当前封面图（旧图文件仍在 file 表，可回溯），确定吗？', '重新生成封面', {
+        type: 'warning',
+        confirmButtonText: '重新生成',
+        cancelButtonText: '取消',
+      });
+    } catch {
+      return;
+    }
+  }
+  const mark = String(row.id);
+  coveringIds.value = [...coveringIds.value, mark];
+  try {
+    await generateCategoryCoverApi(row.id, regenerate);
+    ElMessage.success('封面已生成');
+    await load();
+  } finally {
+    coveringIds.value = coveringIds.value.filter((item) => item !== mark);
+  }
+}
+
+/** 一键补齐全部缺失场景封面。 */
+async function generateAllCovers(): Promise<void> {
+  coveringIds.value = [...coveringIds.value, 'all'];
+  try {
+    const result = await generateMissingCategoryCoversApi();
+    const failed = result.failed.length;
+    ElMessage.success(
+      failed > 0 ? `已补全 ${result.generated.length} 张，${failed} 张失败（可重试）` : '缺失场景封面已补全',
+    );
+    await load();
+  } finally {
+    coveringIds.value = coveringIds.value.filter((item) => item !== 'all');
+  }
+}
 </script>
 
 <template>
@@ -105,6 +163,9 @@ onMounted(() => {
         <span class="text-[15px] font-semibold text-ink">场景分类（共 {{ list.length }} 个）</span>
         <div class="flex flex-wrap items-center gap-2">
           <el-button v-permission="'sentence:category'" type="primary" @click="handleCreate">新增分类</el-button>
+          <el-button v-permission="'sentence:category'" :loading="isCovering('all')" @click="generateAllCovers">
+            补全缺失封面
+          </el-button>
           <el-button :loading="loading" @click="load">刷新</el-button>
         </div>
       </div>
@@ -118,6 +179,22 @@ onMounted(() => {
         <el-table-column prop="icon" label="图标" min-width="120">
           <template #default="{ row }">{{ row.icon ?? '—' }}</template>
         </el-table-column>
+        <el-table-column label="封面" width="120">
+          <template #default="{ row }">
+            <div
+              class="flex h-12 w-16 items-center justify-center overflow-hidden rounded bg-gray-100 dark:bg-gray-800"
+            >
+              <img
+                v-if="row.coverUrl"
+                :src="row.coverUrl"
+                :alt="row.name"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <span v-else class="text-[10px] text-gray-400">未生成</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="sort" label="排序" width="80" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
@@ -127,8 +204,17 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="sentenceCount" label="题目数" width="90" />
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
+            <el-button
+              v-permission="'sentence:category'"
+              link
+              type="primary"
+              :loading="isCovering(String(row.id))"
+              @click="generateCover(row as SentenceCategoryItem, Boolean(row.coverUrl))"
+            >
+              {{ row.coverUrl ? '重生成封面' : '生成封面' }}
+            </el-button>
             <el-button
               v-permission="'sentence:category'"
               link
