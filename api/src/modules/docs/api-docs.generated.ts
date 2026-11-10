@@ -6192,6 +6192,943 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "情景闯关",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/stages",
+        "summary": "关卡总览（剧本分组 + 关卡 + 参与/通关/领奖统计）",
+        "permission": [
+          "stage:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/stages?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/stages/scripts",
+        "summary": "剧本列表（含停用的，附场景名/封面/关卡数与统计）",
+        "permission": [
+          "stage:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/stages/scripts?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/stages/sessions",
+        "summary": "对话会话分页列表（筛选：storyId / status / userId / noTranslation / keyword=昵称）",
+        "permission": [
+          "stage:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "noTranslation",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/stages/sessions?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/stages/sessions/:id",
+        "summary": "会话详情：完整消息流，用于抽查 AI 质量与客诉",
+        "permission": [
+          "stage:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/stages/sessions/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/stages/stories",
+        "summary": "关卡列表（含停用的，带剧本/场景与统计）",
+        "permission": [
+          "stage:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/stages/stories?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/scripts",
+        "summary": "新增剧本（挂在某个场景下）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 新增剧本",
+        "params": [
+          {
+            "name": "categoryId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "场景分类 id（sentence_category.id）",
+            "example": 1
+          },
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "log-archive"
+          },
+          {
+            "name": "blurb",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "sort",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "0 | 1",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/scripts\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"name\": \"log-archive\",\n      \"blurb\": \"示例值\",\n      \"sort\": 1,\n      \"status\": \"示例值\"\n    }'",
+          "requestBody": {
+            "categoryId": 1,
+            "name": "log-archive",
+            "blurb": "示例值",
+            "sort": 1,
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/scripts/:id/cover",
+        "summary": "生成剧本封面（AI 生图 → webp 入库 → 回写 cover_file_id）。 scriptId 必填；regenerate=true 时强制重生成",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 生成剧本封面",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "regenerate",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "为 true 时即使已有封面也强制重生成",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/scripts/1/cover\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"regenerate\": true\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "regenerate": true
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/scripts/:id/status",
+        "summary": "启停剧本（停用后整条剧本线客户端不可见，历史保留）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 启停剧本",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "0 | 1",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/scripts/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/scripts/covers/generate-missing",
+        "summary": "补齐缺失封面的静态路由，必须声明在 scripts/:id 之前",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 补全剧本封面",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/scripts/covers/generate-missing\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/sessions/:id/close",
+        "summary": "强制结束进行中的会话（不改通关与进度，只把 active 置为 ended）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 强制结束会话",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/sessions/1/close\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/stories",
+        "summary": "新增关卡（挂到某个剧本下）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 新增关卡",
+        "params": [
+          {
+            "name": "scriptId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "所属剧本 id（stage_script.id）",
+            "example": 1
+          },
+          {
+            "name": "title",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "intro",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "outro",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "userRole",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "setting",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "goal",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "minTurns",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "maxTurns",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "target",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "rewardXp",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "roles",
+            "in": "body",
+            "type": "StageRoleDto[]",
+            "required": true,
+            "description": "",
+            "example": [
+              {
+                "nameEn": "示例值",
+                "name": "log-archive",
+                "persona": "示例值",
+                "emoji": "示例值"
+              }
+            ]
+          },
+          {
+            "name": "opening",
+            "in": "body",
+            "type": "StageLineDto[]",
+            "required": true,
+            "description": "",
+            "example": [
+              {
+                "speaker": "示例值",
+                "contentEn": "示例值",
+                "contentZh": "示例值"
+              }
+            ]
+          },
+          {
+            "name": "starterHints",
+            "in": "body",
+            "type": "StageHintDto[]",
+            "required": true,
+            "description": "",
+            "example": [
+              {
+                "en": "示例值",
+                "zh": "示例值"
+              }
+            ]
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/stories\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"scriptId\": 1,\n      \"title\": \"示例值\",\n      \"intro\": \"示例值\",\n      \"outro\": \"示例值\",\n      \"userRole\": \"示例值\",\n      \"setting\": \"示例值\",\n      \"goal\": \"示例值\",\n      \"minTurns\": 1,\n      \"maxTurns\": 1,\n      \"target\": 1,\n      \"rewardXp\": 1,\n      \"roles\": [],\n      \"opening\": [],\n      \"starterHints\": []\n    }'",
+          "requestBody": {
+            "scriptId": 1,
+            "title": "示例值",
+            "intro": "示例值",
+            "outro": "示例值",
+            "userRole": "示例值",
+            "setting": "示例值",
+            "goal": "示例值",
+            "minTurns": 1,
+            "maxTurns": 1,
+            "target": 1,
+            "rewardXp": 1,
+            "roles": [],
+            "opening": [],
+            "starterHints": []
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/stories/:id/status",
+        "summary": "启停关卡（停用后客户端不可见，历史保留）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 启停关卡",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "0 | 1",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/stories/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/stories/ai-generate",
+        "summary": "AI 生成关卡草稿（静态路由）。不落库：返回整套剧情草稿，运营在编辑弹窗审核后再保存",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · AI 生成关卡草稿",
+        "params": [
+          {
+            "name": "scriptId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/stories/ai-generate\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"scriptId\": 1\n    }'",
+          "requestBody": {
+            "scriptId": 1
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/stages/stories/reorder",
+        "summary": "剧本内重排序（静态路由，必须声明在 stories/:id 之前）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 调整关卡顺序",
+        "params": [
+          {
+            "name": "scriptId",
+            "in": "body",
+            "type": "number",
+            "required": true,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "ids",
+            "in": "body",
+            "type": "number[]",
+            "required": true,
+            "description": "",
+            "example": []
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/stories/reorder\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"scriptId\": 1,\n      \"ids\": []\n    }'",
+          "requestBody": {
+            "scriptId": 1,
+            "ids": []
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/stages/scripts/:id",
+        "summary": "编辑剧本（改名/简介/排序/换场景/启停）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 编辑剧本",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "categoryId",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "log-archive"
+          },
+          {
+            "name": "blurb",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "sort",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "0 | 1",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/stages/scripts/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"categoryId\": 1,\n      \"name\": \"log-archive\",\n      \"blurb\": \"示例值\",\n      \"sort\": 1,\n      \"status\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "categoryId": 1,
+            "name": "log-archive",
+            "blurb": "示例值",
+            "sort": 1,
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/stages/stories/:id",
+        "summary": "编辑关卡（允许换剧本）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 编辑关卡",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "scriptId",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "title",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "intro",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "outro",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "userRole",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "setting",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "goal",
+            "in": "body",
+            "type": "string",
+            "required": false,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "minTurns",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "maxTurns",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "target",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "rewardXp",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "",
+            "example": 1
+          },
+          {
+            "name": "roles",
+            "in": "body",
+            "type": "StageRoleDto[]",
+            "required": false,
+            "description": "",
+            "example": [
+              {
+                "nameEn": "示例值",
+                "name": "log-archive",
+                "persona": "示例值",
+                "emoji": "示例值"
+              }
+            ]
+          },
+          {
+            "name": "opening",
+            "in": "body",
+            "type": "StageLineDto[]",
+            "required": false,
+            "description": "",
+            "example": [
+              {
+                "speaker": "示例值",
+                "contentEn": "示例值",
+                "contentZh": "示例值"
+              }
+            ]
+          },
+          {
+            "name": "starterHints",
+            "in": "body",
+            "type": "StageHintDto[]",
+            "required": false,
+            "description": "",
+            "example": [
+              {
+                "en": "示例值",
+                "zh": "示例值"
+              }
+            ]
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/stages/stories/1\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"scriptId\": 1,\n      \"title\": \"示例值\",\n      \"intro\": \"示例值\",\n      \"outro\": \"示例值\",\n      \"userRole\": \"示例值\",\n      \"setting\": \"示例值\",\n      \"goal\": \"示例值\",\n      \"minTurns\": 1,\n      \"maxTurns\": 1,\n      \"target\": 1,\n      \"rewardXp\": 1,\n      \"roles\": [],\n      \"opening\": [],\n      \"starterHints\": []\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "scriptId": 1,
+            "title": "示例值",
+            "intro": "示例值",
+            "outro": "示例值",
+            "userRole": "示例值",
+            "setting": "示例值",
+            "goal": "示例值",
+            "minTurns": 1,
+            "maxTurns": 1,
+            "target": 1,
+            "rewardXp": 1,
+            "roles": [],
+            "opening": [],
+            "starterHints": []
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/stages/scripts/:id",
+        "summary": "删除剧本（连同其下关卡一起删；进度/会话按 storyId 保留）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 删除剧本",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/stages/scripts/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/stages/stories/:id",
+        "summary": "删除关卡（物理删除；进度/会话按 storyId 保留）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 删除关卡",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/stages/stories/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "数据分析",
     "endpoints": [
       {
@@ -6887,7 +7824,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/chains/topics",
-        "summary": "主题下拉选项",
+        "summary": "主题下拉选项（条目筛选用，只列启用的）",
         "permission": [
           "sentence:chain"
         ],
@@ -6913,6 +7850,41 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X GET \"http://localhost:3000/api/chains/topics?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/chains/topics/all",
+        "summary": "主题管理列表：全部主题（含往期已停用批次），后台可见历史",
+        "permission": [
+          "sentence:chain"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/chains/topics/all?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -7603,7 +8575,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "PUT",
         "path": "/api/chains/:id/status",
-        "summary": "隐藏 / 恢复一条接龙",
+        "summary": "通过 / 拒绝 / 隐藏一条接龙",
         "permission": [
           "sentence:chain:handle"
         ],
@@ -7621,14 +8593,51 @@ export const API_DOCS: ApiDocGroup[] = [
           {
             "name": "status",
             "in": "body",
-            "type": "'visible' | 'hidden'",
+            "type": "'visible' | 'hidden' | 'rejected'",
             "required": true,
-            "description": "",
+            "description": "visible 通过 / rejected 拒绝 / hidden 隐藏",
             "example": "示例值"
           }
         ],
         "examples": {
           "curl": "curl -X PUT \"http://localhost:3000/api/chains/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "status": "示例值"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/chains/topics/:id/status",
+        "summary": "启用 / 停用一个主题（停用后客户端不再展示，仅后台可见）",
+        "permission": [
+          "sentence:chain:handle"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 启停接龙主题",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "status",
+            "in": "body",
+            "type": "0 | 1",
+            "required": true,
+            "description": "1 启用 / 0 停用",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/chains/topics/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"status\": \"示例值\"\n    }'",
           "pathParams": {
             "id": "1"
           },
@@ -7974,6 +8983,191 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/report\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "学习小队",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/teams",
+        "summary": "小队分页列表（筛选：status / keyword=队名 / minMembers）",
+        "permission": [
+          "team:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "minMembers",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/teams?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/teams/:id",
+        "summary": "小队详情：成员 + 今日打卡状态",
+        "permission": [
+          "team:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/teams/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/teams/stats",
+        "summary": "概览统计（进行中/已解散小队数、在队用户数、今日全员达成数）",
+        "permission": [
+          "team:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/teams/stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/teams/:id/dissolve",
+        "summary": "解散小队（清空成员，成员可重新匹配）",
+        "permission": [
+          "team:handle"
+        ],
+        "isPublic": false,
+        "action": "学习小队 · 解散小队",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/teams/1/dissolve\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/teams/:id/name",
+        "summary": "运营改名（修正不当队名）",
+        "permission": [
+          "team:handle"
+        ],
+        "isPublic": false,
+        "action": "学习小队 · 修改小队名",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "新小队名（service 会去空白、压缩连续空格，并按码点校验 2~20 字）",
+            "example": "log-archive"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/teams/1/name\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"name\": \"log-archive\"\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "name": "log-archive"
+          }
         }
       }
     ]
@@ -9198,7 +10392,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/stages",
-        "summary": "闯关地图（章节 + 关卡 + 我的进度 + 可领取数）",
+        "summary": "闯关地图（场景 + 剧本兼容 chapters + 我的对话进度 + 可领取数）",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -9229,6 +10423,78 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "GET",
+        "path": "/api/client/stages/:id/dialogue",
+        "summary": "刷新页面时读取进行中的对话（没有则 null）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/stages/1/dialogue\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/stages/scenes/:id",
+        "summary": "场景详情：该场景下的剧本列表（静态段，必须声明在 ':id/...' 之前）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/stages/scenes/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/stages/scripts/:id",
+        "summary": "剧本详情：该剧本下的关卡列表（含解锁/进度）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/stages/scripts/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client/stages/:id/claim",
         "summary": "领取某关通关奖励（幂等）",
@@ -9249,6 +10515,144 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/claim\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/stages/:id/dialogue",
+        "summary": "进入关卡：有会话就续聊，没有就新建并落开场白",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "restart",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/dialogue\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"restart\": true\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "restart": true
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/stages/:id/dialogue/end",
+        "summary": "主动结束对话",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/dialogue/end\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/stages/:id/dialogue/messages",
+        "summary": "发一句 → 1~3 个角色回应 → 可能结束并给出复盘",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "content",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "示例值"
+          },
+          {
+            "name": "showTranslation",
+            "in": "body",
+            "type": "boolean",
+            "required": false,
+            "description": "发送时翻译是否开启（用于无翻译通关加成反作弊；默认 true）。",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/dialogue/messages\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"content\": \"示例值\",\n      \"showTranslation\": true\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "content": "示例值",
+            "showTranslation": true
+          }
+        }
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/client/stages/:id/dialogue/translation",
+        "summary": "切换翻译显示开关（持久化到会话，用于无翻译通关加成反作弊）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "show",
+            "in": "body",
+            "type": "boolean",
+            "required": true,
+            "description": "",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PATCH \"http://localhost:3000/api/client/stages/1/dialogue/translation\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"show\": true\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "show": true
           }
         }
       }
@@ -9310,6 +10714,30 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/team/match\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/client/team/name",
+        "summary": "修改小队名（任意成员可改，改完全队可见）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "新小队名（service 会去空白、压缩连续空格，并按码点校验 2~20 字）",
+            "example": "log-archive"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PATCH \"http://localhost:3000/api/client/team/name\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"name\": \"log-archive\"\n    }'",
+          "requestBody": {
+            "name": "log-archive"
+          }
         }
       }
     ]

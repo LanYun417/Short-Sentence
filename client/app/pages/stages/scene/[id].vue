@@ -8,7 +8,7 @@
 import { computed, onMounted } from 'vue';
 import { apiFetch } from '~/composables/useApi';
 import { sceneCoverOf } from '~/utils/stage-chapters';
-import type { StageSceneDetail } from '~/types';
+import type { StageSceneDetail, StageScript } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -21,14 +21,15 @@ onMounted(async () => {
   detail.value = await apiFetch<StageSceneDetail>(`/client/stages/scenes/${categoryId.value}`).catch(() => null);
 });
 
+const scene = computed(() => detail.value?.scene ?? null);
+const scripts = computed<StageScript[]>(() => detail.value?.scripts ?? []);
+
+/** 私有页：noindex；浏览器标签前缀用场景名（数据到位后覆盖）。 */
 usePageSeo({
   title: '剧本列表',
   description: '选一本剧本，进入真实场景，和里面的人用英语把目标聊成。',
 });
 useHead({ title: computed(() => (scene.value ? scene.value.name : '剧本列表')) });
-
-const scene = computed(() => detail.value?.scene ?? null);
-const scripts = computed<StageScript[]>(() => detail.value?.scripts ?? []);
 
 function enterScript(script: StageScript): void {
   void navigateTo(`/stages/script/${script.id}`);
