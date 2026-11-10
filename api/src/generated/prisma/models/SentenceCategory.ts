@@ -612,7 +612,8 @@ export type $SentenceCategoryPayload<ExtArgs extends runtime.Types.Extensions.In
      */
     icon: string | null
     /**
-     * 节日题库封面图文件 id（0 = 无封面；仅节日分类使用，指向 sys_file）
+     * 封面图文件 id（0 = 无封面；指向 sys_file）。一字段两用：节日分类 = 节日题库封面；
+     * 普通分类 = 情景闯关「场景」封面（节日分类不进闯关地图，互不冲突）
      */
     coverFileId: bigint
     /**

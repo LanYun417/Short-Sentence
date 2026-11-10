@@ -15329,6 +15329,103 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/categories/{id}/cover": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "生成（或重新生成）某场景的封面图：生图 → 审核 → 回写分类封面",
+        "operationId": "post__api_sentences_categories__id_cover",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/categories/covers/generate-missing": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "一键补齐缺失的场景封面（AI 生图）。**静态路由，必须声明在 `categories/:id/cover` 之前**， 否则 `covers/generate-missing` 会被 `:id` 吃掉（Nest 按声明顺序匹配）",
+        "operationId": "post__api_sentences_categories_covers_generate_missing",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/explanation/backfill": {
       "post": {
         "tags": [

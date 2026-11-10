@@ -8343,6 +8343,45 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/sentences/categories/:id/cover",
+        "summary": "生成（或重新生成）某场景的封面图：生图 → 审核 → 回写分类封面",
+        "permission": [
+          "sentence:category"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 生成场景封面",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/categories/1/cover\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/categories/covers/generate-missing",
+        "summary": "一键补齐缺失的场景封面（AI 生图）。**静态路由，必须声明在 `categories/:id/cover` 之前**， 否则 `covers/generate-missing` 会被 `:id` 吃掉（Nest 按声明顺序匹配）",
+        "permission": [
+          "sentence:category"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 补全场景封面",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/categories/covers/generate-missing\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/sentences/explanation/backfill",
         "summary": "补全存量题解析（管理端手动、按批）。 为什么不用定时任务自动跑：现存题量上千，全量补一遍要花不少 token； 该花多少、什么时候花应由运营决定。每批返回 scanned/updated/remaining， 运营看着 remaining 点到 0 即可",
         "permission": [
