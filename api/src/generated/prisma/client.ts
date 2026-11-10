@@ -244,6 +244,18 @@ export type StageDialogueMessage = Prisma.StageDialogueMessageModel
  */
 export type StageChapterCover = Prisma.StageChapterCoverModel
 /**
+ * Model StageStory
+ * 情景闯关「关卡剧情」定义（一个场景分类 = 一关）。
+ * 
+ * 2026-11-10 起从代码常量（stage-stories.ts 的 STAGE_STORIES）迁移到本表，
+ * 后台可增删改查；服务启动时用代码种子**幂等回填**（category 已存在则跳过，不覆盖运营改动）。
+ * 章节（STAGE_CHAPTERS）仍留在代码里——章节带封面提示词，且只有固定 4 章。
+ * 
+ * 关卡与分类的挂钩用 `category`（= sentence_category.name）而不是 id（原因见 stage-stories.ts 头注释）。
+ * 进度/会话都按 categoryId 记录，与本表无外键，删改关卡不会伤历史数据。
+ */
+export type StageStory = Prisma.StageStoryModel
+/**
  * Model StudyTeam
  * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
  * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。

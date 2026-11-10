@@ -15,6 +15,7 @@ import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.j
 import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
 import { STAGE_STORIES } from '../src/modules/client/stage/stage-stories.js';
+import { makeStageStoryMock } from './helpers/stage-story-mock.js';
 
 interface ProgressRow {
   userId: bigint;
@@ -82,6 +83,8 @@ function makePrisma(goalAtTurn: number | null = 6) {
     stageChapterCover: {
       findMany: vi.fn(async () => []),
     },
+    // 关卡剧情表：从代码种子派生，行为与旧版一致
+    stageStory: makeStageStoryMock(),
     studyStageProgress: {
       findMany: vi.fn(async (args: { where: { userId: bigint } }) =>
         [...rows.values()].filter((row) => row.userId === args.where.userId),

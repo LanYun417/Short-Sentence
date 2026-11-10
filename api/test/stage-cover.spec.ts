@@ -17,6 +17,7 @@ import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.j
 import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
 import { STAGE_CHAPTERS, STAGE_COVER_STYLE_SUFFIX } from '../src/modules/client/stage/stage-stories.js';
+import { makeStageStoryMock } from './helpers/stage-story-mock.js';
 
 /** 生成一张最小的合法 PNG（避开 sharp 读坏图抛错，专注状态流转）。 */
 async function tinyPng(): Promise<Buffer> {
@@ -61,6 +62,9 @@ function makeService(opts?: { failOnKeys?: string[] }) {
     sentence: {
       groupBy: vi.fn(async () => []),
     },
+    // 关卡剧情表：从代码种子派生
+    stageStory: makeStageStoryMock(),
+    // 章节封面表：默认无封面，coverUrlMapOf 返回空 map
     stageChapterCover: {
       findMany: vi.fn(async ({ where }: any) => {
         if (where?.chapterKey?.in) return covers.filter((c) => where.chapterKey.in.includes(c.chapterKey));

@@ -86,6 +86,7 @@ export const ModelName = {
   StageDialogueSession: 'StageDialogueSession',
   StageDialogueMessage: 'StageDialogueMessage',
   StageChapterCover: 'StageChapterCover',
+  StageStory: 'StageStory',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
   User: 'User',
@@ -671,6 +672,32 @@ export const StageChapterCoverScalarFieldEnum = {
 export type StageChapterCoverScalarFieldEnum = (typeof StageChapterCoverScalarFieldEnum)[keyof typeof StageChapterCoverScalarFieldEnum]
 
 
+export const StageStoryScalarFieldEnum = {
+  id: 'id',
+  chapterKey: 'chapterKey',
+  category: 'category',
+  title: 'title',
+  intro: 'intro',
+  outro: 'outro',
+  userRole: 'userRole',
+  setting: 'setting',
+  goal: 'goal',
+  minTurns: 'minTurns',
+  maxTurns: 'maxTurns',
+  target: 'target',
+  rewardXp: 'rewardXp',
+  roles: 'roles',
+  opening: 'opening',
+  starterHints: 'starterHints',
+  sort: 'sort',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StageStoryScalarFieldEnum = (typeof StageStoryScalarFieldEnum)[keyof typeof StageStoryScalarFieldEnum]
+
+
 export const StudyTeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -1207,6 +1234,20 @@ export const StageChapterCoverOrderByRelevanceFieldEnum = {
 } as const
 
 export type StageChapterCoverOrderByRelevanceFieldEnum = (typeof StageChapterCoverOrderByRelevanceFieldEnum)[keyof typeof StageChapterCoverOrderByRelevanceFieldEnum]
+
+
+export const StageStoryOrderByRelevanceFieldEnum = {
+  chapterKey: 'chapterKey',
+  category: 'category',
+  title: 'title',
+  intro: 'intro',
+  outro: 'outro',
+  userRole: 'userRole',
+  setting: 'setting',
+  goal: 'goal'
+} as const
+
+export type StageStoryOrderByRelevanceFieldEnum = (typeof StageStoryOrderByRelevanceFieldEnum)[keyof typeof StageStoryOrderByRelevanceFieldEnum]
 
 
 export const StudyTeamOrderByRelevanceFieldEnum = {

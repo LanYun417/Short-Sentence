@@ -7,18 +7,25 @@
  *
  * 权限码：stage:view（查询）/ stage:handle（强制结束会话，超管直通）。
  */
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { RequirePermissions } from '../../../common/auth/permission.guard.js';
 import { OperationLog } from '../../../common/log/operation-log.decorator.js';
 import type { ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
-import { GenerateStageCoverDto } from './stage.dto.js';
+import {
+  CreateStageStoryDto,
+  GenerateStageCoverDto,
+  ReorderStageStoriesDto,
+  SetStageStoryStatusDto,
+  UpdateStageStoryDto,
+} from './stage.dto.js';
 import {
   StageService,
   type StageAdminChapter,
   type StageChapterCoverItem,
   type StageSessionAdminDetail,
+  type StageStoryAdminItem,
 } from './stage.service.js';
 
 @Controller('stages')
@@ -82,5 +89,62 @@ export class StageAdminController {
         )
       : await this.stages.generateMissingChapterCovers();
     return { __raw: true, data: result, message: '封面生成完成' };
+  }
+
+  /* ------------------------------ 关卡（stage_story）CRUD ------------------------------ */
+
+  /** 关卡列表（含停用的，带统计）。 */
+  @Get('stories')
+  @RequirePermissions('stage:view')
+  stories(): Promise<StageStoryAdminItem[]> {
+    return this.stages.adminStories();
+  }
+
+  /** 新增关卡（分类必须未被占用）。 */
+  @Post('stories')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '新增关卡')
+  async createStory(@Body() body: CreateStageStoryDto): Promise<ResponseEnvelope<{ id: number }>> {
+    const result = await this.stages.createStory(body);
+    return { __raw: true, data: result, message: '关卡已创建' };
+  }
+
+  /** 章内重排序（静态路由，必须声明在 stories/:id 之前）。 */
+  @Post('stories/reorder')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '调整关卡顺序')
+  async reorderStories(@Body() body: ReorderStageStoriesDto): Promise<ResponseEnvelope<null>> {
+    await this.stages.reorderStories(body.chapterKey, body.ids);
+    return { __raw: true, data: null, message: '顺序已更新' };
+  }
+
+  /** 编辑关卡（category 不允许修改）。 */
+  @Put('stories/:id')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '编辑关卡')
+  async updateStory(@Param() params: IdParamDto, @Body() body: UpdateStageStoryDto): Promise<ResponseEnvelope<null>> {
+    await this.stages.updateStory(params.id, body);
+    return { __raw: true, data: null, message: '关卡已更新' };
+  }
+
+  /** 启停关卡（停用后客户端不可见，历史保留）。 */
+  @Post('stories/:id/status')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '启停关卡')
+  async setStoryStatus(
+    @Param() params: IdParamDto,
+    @Body() body: SetStageStoryStatusDto,
+  ): Promise<ResponseEnvelope<null>> {
+    await this.stages.setStoryStatus(params.id, body.status);
+    return { __raw: true, data: null, message: body.status === 1 ? '关卡已启用' : '关卡已停用' };
+  }
+
+  /** 删除关卡（物理删除；进度/会话按分类记录，不受影响）。 */
+  @Delete('stories/:id')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '删除关卡')
+  async deleteStory(@Param() params: IdParamDto): Promise<ResponseEnvelope<{ sessionCount: number }>> {
+    const result = await this.stages.deleteStory(params.id);
+    return { __raw: true, data: result, message: '关卡已删除' };
   }
 }

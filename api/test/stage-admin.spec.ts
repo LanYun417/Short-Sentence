@@ -9,6 +9,7 @@ import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.prov
 import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
+import { makeStageStoryMock } from './helpers/stage-story-mock.js';
 
 function makeService() {
   const categories = [
@@ -33,6 +34,8 @@ function makeService() {
     stageChapterCover: {
       findMany: vi.fn(async () => []),
     },
+    // 关卡剧情表：从代码种子派生，行为与旧版一致
+    stageStory: makeStageStoryMock(),
     stageDialogueSession: {
       groupBy: vi.fn(async ({ by, where }: { by: string[]; where?: Record<string, unknown> }) => {
         const key = by[0];

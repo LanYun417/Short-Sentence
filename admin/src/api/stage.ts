@@ -2,7 +2,7 @@
  * 情景闯关接口（「短句」运营后台）。
  * 对应后端 `StageAdminController`（/api/stages）。
  */
-import { get, post } from './request';
+import { del, get, post, put } from './request';
 import type {
   PageResult,
   StageAdminChapter,
@@ -10,6 +10,8 @@ import type {
   StageSessionDetail,
   StageSessionItem,
   StageSessionQuery,
+  StageStoryAdminItem,
+  StageStoryPayload,
 } from '@/types/api';
 
 /** 关卡总览（章节 + 关卡 + 参与/通关/领奖统计） */
@@ -40,4 +42,36 @@ export function getStageSessionDetailApi(id: number): Promise<StageSessionDetail
 /** 强制结束进行中的会话 */
 export function closeStageSessionApi(id: number): Promise<null> {
   return post<null>(`/stages/sessions/${id}/close`);
+}
+
+/* ------------------------------ 关卡（stage_story）CRUD ------------------------------ */
+
+/** 关卡列表（含停用的，带统计） */
+export function getStageStoriesApi(): Promise<StageStoryAdminItem[]> {
+  return get<StageStoryAdminItem[]>('/stages/stories');
+}
+
+/** 新增关卡 */
+export function createStageStoryApi(payload: StageStoryPayload): Promise<{ id: number }> {
+  return post<{ id: number }>('/stages/stories', payload);
+}
+
+/** 编辑关卡（category 不允许修改） */
+export function updateStageStoryApi(id: number, payload: Partial<StageStoryPayload>): Promise<null> {
+  return put<null>(`/stages/stories/${id}`, payload);
+}
+
+/** 启停关卡 */
+export function setStageStoryStatusApi(id: number, status: 0 | 1): Promise<null> {
+  return post<null>(`/stages/stories/${id}/status`, { status });
+}
+
+/** 删除关卡（物理删除；返回关联会话数供提示） */
+export function deleteStageStoryApi(id: number): Promise<{ sessionCount: number }> {
+  return del<{ sessionCount: number }>(`/stages/stories/${id}`);
+}
+
+/** 章内重排序 */
+export function reorderStageStoriesApi(chapterKey: string, ids: number[]): Promise<null> {
+  return post<null>('/stages/stories/reorder', { chapterKey, ids });
 }

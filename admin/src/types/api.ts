@@ -1709,6 +1709,69 @@ export interface StageChapterCoverItem {
   generatedAt: string | null;
 }
 
+/** 后台-关卡出场角色 */
+export interface StageRoleItem {
+  nameEn: string;
+  name: string;
+  persona: string;
+  emoji: string;
+}
+
+/** 后台-关卡开场白一句 */
+export interface StageLineItem {
+  speaker: string;
+  contentEn: string;
+  contentZh: string;
+}
+
+/** 后台-关卡管理条目（stage_story 行 + 统计） */
+export interface StageStoryAdminItem {
+  id: number;
+  chapterKey: string;
+  chapterName: string;
+  category: string;
+  categoryId: number | null;
+  title: string;
+  intro: string;
+  outro: string;
+  userRole: string;
+  setting: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  target: number;
+  rewardXp: number;
+  roles: StageRoleItem[];
+  opening: StageLineItem[];
+  starterHints: Array<{ en: string; zh: string }>;
+  sort: number;
+  /** 1 启用 / 0 停用 */
+  status: number;
+  sessionCount: number;
+  participantCount: number;
+  clearedCount: number;
+  createdAt: string;
+}
+
+/** 新增/编辑关卡提交体（编辑时全字段可选；category 不允许修改） */
+export interface StageStoryPayload {
+  chapterKey: string;
+  category: string;
+  title: string;
+  intro: string;
+  outro: string;
+  userRole: string;
+  setting: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  target?: number;
+  rewardXp: number;
+  roles: StageRoleItem[];
+  opening: StageLineItem[];
+  starterHints: Array<{ en: string; zh: string }>;
+}
+
 /** 后台-会话查询 */
 export interface StageSessionQuery extends PageQuery {
   categoryId?: number;

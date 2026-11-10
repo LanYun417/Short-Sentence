@@ -123,3 +123,57 @@ model StageChapterCover {
 
   @@map("stage_chapter_cover")
 }
+
+/// 情景闯关「关卡剧情」定义（一个场景分类 = 一关）。
+///
+/// 2026-11-10 起从代码常量（stage-stories.ts 的 STAGE_STORIES）迁移到本表，
+/// 后台可增删改查；服务启动时用代码种子**幂等回填**（category 已存在则跳过，不覆盖运营改动）。
+/// 章节（STAGE_CHAPTERS）仍留在代码里——章节带封面提示词，且只有固定 4 章。
+///
+/// 关卡与分类的挂钩用 `category`（= sentence_category.name）而不是 id（原因见 stage-stories.ts 头注释）。
+/// 进度/会话都按 categoryId 记录，与本表无外键，删改关卡不会伤历史数据。
+model StageStory {
+  /// 主键
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 所属章节 key（与 STAGE_CHAPTERS.key 一致）
+  chapterKey  String   @map("chapter_key") @db.VarChar(30)
+  /// 对应场景分类名（sentence_category.name），全局唯一——一场景只能挂一关
+  category    String   @unique @db.VarChar(100)
+  /// 关卡标题（剧情化场景名）
+  title       String   @db.VarChar(100)
+  /// 进入关卡的剧情引入
+  intro       String   @db.Text
+  /// 通关后的剧情收束
+  outro       String   @db.Text
+  /// 用户扮演的角色（喂给模型）
+  userRole    String   @map("user_role") @db.VarChar(200)
+  /// 场景设定（喂给模型）
+  setting     String   @db.Text
+  /// 对话目标（展示 + AI 通关判定）
+  goal        String   @db.Text
+  /// 通关所需最少用户轮数
+  minTurns    Int      @map("min_turns") @db.Int
+  /// 硬上限轮数
+  maxTurns    Int      @map("max_turns") @db.Int
+  /// 旧版「答对 N 句」通关线（仅历史统计）
+  target      Int      @default(5) @db.Int
+  /// 通关奖励经验
+  rewardXp    Int      @map("reward_xp") @db.Int
+  /// 出场角色 JSON：[{nameEn,name,persona,emoji}]（1~3 人）
+  roles       Json
+  /// 开场白 JSON：[{speaker,contentEn,contentZh}]
+  opening     Json
+  /// 候选英文短句 JSON：[{en,zh}]
+  starterHints Json     @map("starter_hints")
+  /// 章内排序（越小越靠前）
+  sort        Int      @default(0) @db.Int
+  /// 1 启用 / 0 停用（停用后客户端地图与详情都不可见，历史进度保留）
+  status      Int      @default(1) @db.TinyInt
+  /// 创建时间
+  createdAt   DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([chapterKey, sort])
+  @@map("stage_story")
+}
