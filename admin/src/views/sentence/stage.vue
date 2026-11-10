@@ -615,7 +615,7 @@ onMounted(() => {
               <h3 class="text-sm font-bold text-ink">{{ chapter.name }}</h3>
               <span class="text-xs text-gray-400">{{ chapter.subtitle }}</span>
             </div>
-            <el-table :data="chapter.stages" border size="small">
+            <el-table :data="chapter.stages" border>
               <el-table-column prop="title" label="关卡" min-width="160" show-overflow-tooltip />
               <el-table-column label="目标" min-width="220" show-overflow-tooltip>
                 <template #default="{ row }">
@@ -697,7 +697,7 @@ onMounted(() => {
               <el-table-column prop="stageTitle" label="关卡" min-width="140" show-overflow-tooltip />
               <el-table-column label="状态" width="100">
                 <template #default="{ row }">
-                  <el-tag :type="SESSION_STATUS_META[row.status]?.type ?? 'info'" size="small">
+                  <el-tag :type="SESSION_STATUS_META[row.status]?.type ?? 'info'">
                     {{ SESSION_STATUS_META[row.status]?.label ?? row.status }}
                   </el-tag>
                 </template>
@@ -705,7 +705,7 @@ onMounted(() => {
               <el-table-column label="轮数" width="70" align="center" prop="turnCount" />
               <el-table-column label="通关" width="70" align="center">
                 <template #default="{ row }">
-                  <el-tag v-if="row.cleared" type="success" size="small">是</el-tag>
+                  <el-tag v-if="row.cleared" type="success">是</el-tag>
                   <span v-else class="text-gray-300">—</span>
                 </template>
               </el-table-column>
@@ -766,7 +766,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <el-table :data="scripts" border row-key="id" size="small">
+          <el-table :data="scripts" border row-key="id">
             <el-table-column label="场景" width="110" prop="categoryName" show-overflow-tooltip />
             <el-table-column label="剧本" min-width="220">
               <template #default="{ row }">
@@ -796,7 +796,7 @@ onMounted(() => {
             <el-table-column label="会话数" width="80" align="center" prop="sessionCount" />
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'">
                   {{ row.status === 1 ? '启用' : '停用' }}
                 </el-tag>
               </template>
@@ -854,7 +854,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <el-table :data="stories" border row-key="id" size="small">
+          <el-table :data="stories" border row-key="id">
             <el-table-column label="所属" min-width="200">
               <template #default="{ row }">
                 <div class="text-sm font-medium text-ink">{{ row.title }}</div>
@@ -879,7 +879,7 @@ onMounted(() => {
             </el-table-column>
             <el-table-column label="状态" width="80" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'">
                   {{ row.status === 1 ? '启用' : '停用' }}
                 </el-tag>
               </template>
@@ -963,7 +963,7 @@ onMounted(() => {
       width="720px"
       :close-on-click-modal="false"
     >
-      <el-form label-width="90px" size="small">
+      <el-form label-width="90px">
         <el-form-item label="所属剧本" required>
           <div class="flex flex-wrap items-center gap-2">
             <el-tree-select
@@ -1110,7 +1110,7 @@ onMounted(() => {
       width="520px"
       :close-on-click-modal="false"
     >
-      <el-form label-width="90px" size="small">
+      <el-form label-width="90px">
         <el-form-item label="所属场景" required>
           <el-select v-model="scriptForm.categoryId" placeholder="场景分类" filterable style="width: 300px">
             <el-option
@@ -1160,7 +1160,7 @@ onMounted(() => {
 
     <!-- AI 生成关卡：选剧本 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
     <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="520px" :close-on-click-modal="false">
-      <el-form label-width="90px" size="small">
+      <el-form label-width="90px">
         <el-form-item label="所属剧本" required>
           <div class="flex flex-wrap items-center gap-2">
             <el-tree-select

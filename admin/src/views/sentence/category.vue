@@ -198,7 +198,7 @@ async function generateAllCovers(): Promise<void> {
         <el-table-column prop="sort" label="排序" width="80" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
