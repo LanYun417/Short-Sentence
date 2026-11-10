@@ -12,6 +12,8 @@ import {
   type ClaimResult,
   type StageDialogueView,
   type StageOverview,
+  type StageSceneDetail,
+  type StageScriptDetail,
   type StageTurnResult,
 } from './stage.service.js';
 
@@ -19,10 +21,22 @@ import {
 export class StageController {
   constructor(private readonly stages: StageService) {}
 
-  /** 闯关地图（章节 + 关卡 + 我的对话进度 + 可领取数）。 */
+  /** 闯关地图（场景 + 剧本兼容 chapters + 我的对话进度 + 可领取数）。 */
   @Get()
   list(@CurrentClientUser() user: ClientUserContext): Promise<StageOverview> {
     return this.stages.getStages(user.userId);
+  }
+
+  /** 场景详情：该场景下的剧本列表（静态段，必须声明在 ':id/...' 之前）。 */
+  @Get('scenes/:id')
+  scene(@CurrentClientUser() user: ClientUserContext, @Param() params: IdParamDto): Promise<StageSceneDetail> {
+    return this.stages.getScene(user.userId, params.id);
+  }
+
+  /** 剧本详情：该剧本下的关卡列表（含解锁/进度）。 */
+  @Get('scripts/:id')
+  script(@CurrentClientUser() user: ClientUserContext, @Param() params: IdParamDto): Promise<StageScriptDetail> {
+    return this.stages.getScript(user.userId, params.id);
   }
 
   /** 刷新页面时读取进行中的对话（没有则 null）。 */

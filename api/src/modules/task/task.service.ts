@@ -180,7 +180,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       generateDailySentenceCard: () => this.sentenceCard.generateDaily(),
       sendDailyReminders: () => this.dailyReminder.run(),
       generateWeeklyChainTopics: (count: number) => this.chain.generateWeeklyTopics(count),
-      generateMissingStageCovers: () => this.stage.generateMissingChapterCovers(),
+      generateMissingStageCovers: () => this.stage.generateMissingScriptCovers(),
     };
 
     // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值

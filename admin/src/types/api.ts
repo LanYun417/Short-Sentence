@@ -1672,8 +1672,9 @@ export interface ChainTopicOption {
 /** 后台-关卡总览条目 */
 export interface StageAdminItem {
   id: number;
+  scriptId: number;
+  scriptName: string;
   categoryName: string;
-  chapter: string;
   title: string;
   goal: string;
   minTurns: number;
@@ -1689,7 +1690,7 @@ export interface StageAdminItem {
   claimableCount: number;
 }
 
-/** 后台-关卡总览章节 */
+/** 后台-关卡总览分组（一个剧本一组，兼容旧字段名 chapter） */
 export interface StageAdminChapter {
   key: string;
   name: string;
@@ -1699,14 +1700,30 @@ export interface StageAdminChapter {
   stages: StageAdminItem[];
 }
 
-/** 后台-章节封面管理条目 */
-export interface StageChapterCoverItem {
-  chapterKey: string;
-  chapterName: string;
+/** 后台-剧本管理条目 */
+export interface StageScriptAdminItem {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  name: string;
+  blurb: string;
   coverUrl: string | null;
-  /** 实际生图用的完整提示词（未生成时为该章的场景描述） */
-  prompt: string;
-  generatedAt: string | null;
+  sort: number;
+  /** 1 启用 / 0 停用 */
+  status: number;
+  stageCount: number;
+  enabledStageCount: number;
+  sessionCount: number;
+  createdAt: string;
+}
+
+/** 新增/编辑剧本提交体 */
+export interface StageScriptPayload {
+  categoryId: number;
+  name: string;
+  blurb?: string;
+  sort?: number;
+  status?: 0 | 1;
 }
 
 /** 后台-关卡出场角色 */
@@ -1727,10 +1744,11 @@ export interface StageLineItem {
 /** 后台-关卡管理条目（stage_story 行 + 统计） */
 export interface StageStoryAdminItem {
   id: number;
-  chapterKey: string;
-  chapterName: string;
-  category: string;
+  scriptId: number;
+  scriptName: string;
+  /** 剧本所属分类 id（剧本被删时为 null） */
   categoryId: number | null;
+  categoryName: string;
   title: string;
   intro: string;
   outro: string;
@@ -1753,10 +1771,9 @@ export interface StageStoryAdminItem {
   createdAt: string;
 }
 
-/** 新增/编辑关卡提交体（编辑时全字段可选；category 不允许修改） */
+/** 新增/编辑关卡提交体（编辑时全字段可选） */
 export interface StageStoryPayload {
-  chapterKey: string;
-  category: string;
+  scriptId: number;
   title: string;
   intro: string;
   outro: string;
@@ -1774,7 +1791,7 @@ export interface StageStoryPayload {
 
 /** 后台-会话查询 */
 export interface StageSessionQuery extends PageQuery {
-  categoryId?: number;
+  storyId?: number;
   status?: string;
   userId?: number;
   /** '1' = 只看「已通关且未用过翻译」 */
@@ -1788,6 +1805,8 @@ export interface StageSessionItem {
   userId: number;
   nickname: string;
   categoryId: number;
+  /** 关卡 id（stage_story.id） */
+  storyId: number;
   stageTitle: string;
   status: string;
   turnCount: number;

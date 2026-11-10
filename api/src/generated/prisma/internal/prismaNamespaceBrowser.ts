@@ -85,7 +85,7 @@ export const ModelName = {
   StudyStageProgress: 'StudyStageProgress',
   StageDialogueSession: 'StageDialogueSession',
   StageDialogueMessage: 'StageDialogueMessage',
-  StageChapterCover: 'StageChapterCover',
+  StageScript: 'StageScript',
   StageStory: 'StageStory',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
@@ -613,6 +613,7 @@ export const StudyStageProgressScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   categoryId: 'categoryId',
+  storyId: 'storyId',
   correctCount: 'correctCount',
   answerCount: 'answerCount',
   clearedAt: 'clearedAt',
@@ -628,6 +629,7 @@ export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalar
 export const StageDialogueSessionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  storyId: 'storyId',
   categoryId: 'categoryId',
   status: 'status',
   turnCount: 'turnCount',
@@ -659,23 +661,24 @@ export const StageDialogueMessageScalarFieldEnum = {
 export type StageDialogueMessageScalarFieldEnum = (typeof StageDialogueMessageScalarFieldEnum)[keyof typeof StageDialogueMessageScalarFieldEnum]
 
 
-export const StageChapterCoverScalarFieldEnum = {
+export const StageScriptScalarFieldEnum = {
   id: 'id',
-  chapterKey: 'chapterKey',
-  fileId: 'fileId',
-  prompt: 'prompt',
-  source: 'source',
-  generatedAt: 'generatedAt',
+  categoryId: 'categoryId',
+  name: 'name',
+  blurb: 'blurb',
+  coverFileId: 'coverFileId',
+  sort: 'sort',
+  status: 'status',
+  createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type StageChapterCoverScalarFieldEnum = (typeof StageChapterCoverScalarFieldEnum)[keyof typeof StageChapterCoverScalarFieldEnum]
+export type StageScriptScalarFieldEnum = (typeof StageScriptScalarFieldEnum)[keyof typeof StageScriptScalarFieldEnum]
 
 
 export const StageStoryScalarFieldEnum = {
   id: 'id',
-  chapterKey: 'chapterKey',
-  category: 'category',
+  scriptId: 'scriptId',
   title: 'title',
   intro: 'intro',
   outro: 'outro',
@@ -1227,18 +1230,15 @@ export const StageDialogueMessageOrderByRelevanceFieldEnum = {
 export type StageDialogueMessageOrderByRelevanceFieldEnum = (typeof StageDialogueMessageOrderByRelevanceFieldEnum)[keyof typeof StageDialogueMessageOrderByRelevanceFieldEnum]
 
 
-export const StageChapterCoverOrderByRelevanceFieldEnum = {
-  chapterKey: 'chapterKey',
-  prompt: 'prompt',
-  source: 'source'
+export const StageScriptOrderByRelevanceFieldEnum = {
+  name: 'name',
+  blurb: 'blurb'
 } as const
 
-export type StageChapterCoverOrderByRelevanceFieldEnum = (typeof StageChapterCoverOrderByRelevanceFieldEnum)[keyof typeof StageChapterCoverOrderByRelevanceFieldEnum]
+export type StageScriptOrderByRelevanceFieldEnum = (typeof StageScriptOrderByRelevanceFieldEnum)[keyof typeof StageScriptOrderByRelevanceFieldEnum]
 
 
 export const StageStoryOrderByRelevanceFieldEnum = {
-  chapterKey: 'chapterKey',
-  category: 'category',
   title: 'title',
   intro: 'intro',
   outro: 'outro',

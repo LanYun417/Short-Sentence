@@ -1,27 +1,34 @@
 <script setup lang="ts">
 /**
  * 情景闯关管理页（「短句」运营后台，路由 /sentence/stage）。
- * 两个 Tab：
- * 1. 关卡总览——每章一张表，看每关的参与/通关/无翻译/待领奖统计；
+ * 四个 Tab（层级 = 场景 → 剧本 → 关卡）：
+ * 1. 关卡总览——按剧本分组，看每关的参与/通关/无翻译/待领奖统计；
  * 2. 对话会话——分页抽查用户的场景对话（筛选关卡/状态/用户/无翻译），
- *    点开抽屉看完整消息流（查 AI 质量、处理客诉），可强制结束异常会话。
+ *    点开抽屉看完整消息流（查 AI 质量、处理客诉），可强制结束异常会话；
+ * 3. 剧本管理——剧本的增删改查、AI 封面生成/重生成；
+ * 4. 关卡管理——关卡的增删改查、上移下移、AI 生成草稿。
  *
- * 权限：stage:view 查看，stage:handle 强制结束（v-permission，与种子菜单一致）。
+ * 权限：stage:view 查看，stage:handle 增删改（v-permission，与种子菜单一致）。
  */
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
   aiGenerateStageStoryApi,
   closeStageSessionApi,
+  createStageScriptApi,
   createStageStoryApi,
+  deleteStageScriptApi,
   deleteStageStoryApi,
-  generateStageCoverApi,
-  getStageCoversApi,
+  generateMissingStageCoversApi,
+  generateStageScriptCoverApi,
   getStageOverviewApi,
+  getStageScriptsApi,
   getStageSessionDetailApi,
   getStageSessionListApi,
   getStageStoriesApi,
   reorderStageStoriesApi,
+  setStageScriptStatusApi,
   setStageStoryStatusApi,
+  updateStageScriptApi,
   updateStageStoryApi,
 } from '@/api/stage';
 import { getCategoryOptionsApi, type SentenceCategoryOption } from '@/api/sentence';
@@ -30,9 +37,10 @@ import { formatDateTime } from '@/utils/format';
 import type {
   StageAdminChapter,
   StageAdminItem,
-  StageChapterCoverItem,
   StageLineItem,
   StageRoleItem,
+  StageScriptAdminItem,
+  StageScriptPayload,
   StageSessionDetail,
   StageSessionItem,
   StageStoryAdminItem,
@@ -43,11 +51,11 @@ import SearchForm from '@/components/SearchForm/index.vue';
 
 defineOptions({ name: 'SentenceStage' });
 
-// 注意：本页**不**用 table-page 布局——总览 Tab 是多张章节表堆叠、会很长，table-page 会把
+// 注意：本页**不**用 table-page 布局——总览 Tab 是多张分组表堆叠、会很长，table-page 会把
 // 内容区 overflow:hidden 只允许单表格内部滚动，套 el-tabs 后高度链断裂导致整页滚不动。
 // 这里整页正常滚动（content-scrollbar 默认 overflow:auto）。
 
-const activeTab = ref<'overview' | 'sessions' | 'covers' | 'stories'>('overview');
+const activeTab = ref<'overview' | 'sessions' | 'scripts' | 'stories'>('overview');
 
 /* ------------------------------ Tab1 关卡总览 ------------------------------ */
 const chapters = ref<StageAdminChapter[]>([]);
@@ -72,355 +80,20 @@ function clearRate(stage: StageAdminItem): string {
   return `${Math.round((stage.clearedCount / stage.participantCount) * 100)}%`;
 }
 
-/* ------------------------------ Tab3：章节封面管理（AI 生图） ------------------------------ */
-const covers = ref<StageChapterCoverItem[]>([]);
-const coversLoading = ref(false);
-/** 正在生成中的标记：单章用 chapterKey，全部补全用 'all' */
-const generatingKeys = ref<string[]>([]);
-
-async function loadCovers(): Promise<void> {
-  coversLoading.value = true;
-  try {
-    covers.value = await getStageCoversApi();
-  } finally {
-    coversLoading.value = false;
-  }
-}
-
-function isGenerating(key: string): boolean {
-  return generatingKeys.value.includes(key);
-}
-
-/**
- * 生成封面。chapterKey 缺省 = 补全全部缺失封面；已有封面时 regenerate 走「重新生成」（二次确认）。
- */
-async function generateCover(chapterKey?: string, regenerate = false): Promise<void> {
-  if (regenerate) {
-    try {
-      await ElMessageBox.confirm('重新生成会覆盖当前封面图（旧图文件仍在 file 表，可回溯），确定吗？', '重新生成封面', {
-        type: 'warning',
-        confirmButtonText: '重新生成',
-        cancelButtonText: '取消',
-      });
-    } catch {
-      return;
-    }
-  }
-  const mark = chapterKey ?? 'all';
-  generatingKeys.value = [...generatingKeys.value, mark];
-  try {
-    await generateStageCoverApi({ chapterKey, regenerate });
-    ElMessage.success(chapterKey ? '封面已生成' : '缺失封面已补全');
-    await Promise.all([loadCovers(), loadOverview()]);
-  } finally {
-    generatingKeys.value = generatingKeys.value.filter((k) => k !== mark);
-  }
-}
-
-function onTabChange(name: string | number): void {
-  if (name === 'covers' && covers.value.length === 0) void loadCovers();
-  if (name === 'stories') void loadStories();
-}
-
-/* ------------------------------ Tab4：关卡管理（stage_story CRUD） ------------------------------ */
-
-const stories = ref<StageStoryAdminItem[]>([]);
-const storiesLoading = ref(false);
-const categoryOptions = ref<SentenceCategoryOption[]>([]);
-
-async function loadStories(): Promise<void> {
-  storiesLoading.value = true;
-  try {
-    const [list, cats] = await Promise.all([getStageStoriesApi(), getCategoryOptionsApi()]);
-    stories.value = list;
-    categoryOptions.value = cats;
-  } finally {
-    storiesLoading.value = false;
-  }
-}
-
-/** 章节选项：复用封面列表里的 chapterKey/chapterName（封面 Tab 懒加载，这里兜底加载一次）。 */
-const chapterOptions = computed(() =>
-  covers.value.length > 0
-    ? covers.value.map((item) => ({ key: item.chapterKey, name: item.chapterName }))
-    : stories.value.length > 0
-      ? [...new Map(stories.value.map((item) => [item.chapterKey, item.chapterName])).entries()].map(([key, name]) => ({
-          key,
-          name,
-        }))
-      : [],
-);
-
-/** 新增时可选的分类 = 尚未绑定关卡的分类。 */
-const freeCategoryOptions = computed(() => {
-  const used = new Set(stories.value.map((item) => item.category));
-  return categoryOptions.value.filter((item) => !used.has(item.name));
-});
-
-/* ------------------------------ 关卡表单弹窗 ------------------------------ */
-
-interface StoryForm {
-  chapterKey: string;
-  category: string;
-  title: string;
-  intro: string;
-  outro: string;
-  userRole: string;
-  setting: string;
-  goal: string;
-  minTurns: number;
-  maxTurns: number;
-  target: number;
-  rewardXp: number;
-  roles: StageRoleItem[];
-  opening: StageLineItem[];
-  starterHints: Array<{ en: string; zh: string }>;
-}
-
-const storyDialogVisible = ref(false);
-const storySaving = ref(false);
-const editingStoryId = ref<number | null>(null);
-
-const emptyForm = (): StoryForm => ({
-  chapterKey: chapterOptions.value[0]?.key ?? '',
-  category: '',
-  title: '',
-  intro: '',
-  outro: '',
-  userRole: '',
-  setting: '',
-  goal: '',
-  minTurns: 6,
-  maxTurns: 12,
-  target: 5,
-  rewardXp: 30,
-  roles: [{ nameEn: '', name: '', persona: '', emoji: '🧑' }],
-  opening: [],
-  starterHints: [{ en: '', zh: '' }],
-});
-
-const storyForm = ref<StoryForm>(emptyForm());
-
-async function openStoryDialog(row?: StageStoryAdminItem): Promise<void> {
-  if (covers.value.length === 0) await loadCovers();
-  if (categoryOptions.value.length === 0) {
-    try {
-      categoryOptions.value = await getCategoryOptionsApi();
-    } catch {
-      // 下拉为空时仍可手填分类名之外的字段，保存由后端兜底校验
-    }
-  }
-  editingStoryId.value = row?.id ?? null;
-  storyForm.value = row
-    ? {
-        chapterKey: row.chapterKey,
-        category: row.category,
-        title: row.title,
-        intro: row.intro,
-        outro: row.outro,
-        userRole: row.userRole,
-        setting: row.setting,
-        goal: row.goal,
-        minTurns: row.minTurns,
-        maxTurns: row.maxTurns,
-        target: row.target,
-        rewardXp: row.rewardXp,
-        roles: row.roles.map((role) => ({ ...role })),
-        opening: row.opening.map((line) => ({ ...line })),
-        starterHints: row.starterHints.map((hint) => ({ ...hint })),
-      }
-    : emptyForm();
-  storyDialogVisible.value = true;
-}
-
-function addRole(): void {
-  storyForm.value.roles.push({ nameEn: '', name: '', persona: '', emoji: '🧑' });
-}
-function removeRole(index: number): void {
-  storyForm.value.roles.splice(index, 1);
-}
-function addOpeningLine(): void {
-  storyForm.value.opening.push({ speaker: storyForm.value.roles[0]?.nameEn ?? '', contentEn: '', contentZh: '' });
-}
-function removeOpeningLine(index: number): void {
-  storyForm.value.opening.splice(index, 1);
-}
-function addHint(): void {
-  storyForm.value.starterHints.push({ en: '', zh: '' });
-}
-function removeHint(index: number): void {
-  storyForm.value.starterHints.splice(index, 1);
-}
-
-async function saveStory(): Promise<void> {
-  const form = storyForm.value;
-  if (!form.chapterKey || !form.category.trim() || !form.title.trim()) {
-    ElMessage.warning('章节、分类、标题必填');
-    return;
-  }
-  if (form.minTurns < 1 || form.maxTurns < form.minTurns) {
-    ElMessage.warning('轮数需要 minTurns >= 1 且 maxTurns >= minTurns');
-    return;
-  }
-  if (
-    form.roles.length < 1 ||
-    form.roles.some((role) => !role.nameEn.trim() || !role.name.trim() || !role.persona.trim())
-  ) {
-    ElMessage.warning('出场角色 1~3 人，英文名/中文名/人设都必填');
-    return;
-  }
-  const payload: StageStoryPayload = {
-    chapterKey: form.chapterKey,
-    category: form.category.trim(),
-    title: form.title.trim(),
-    intro: form.intro.trim(),
-    outro: form.outro.trim(),
-    userRole: form.userRole.trim(),
-    setting: form.setting.trim(),
-    goal: form.goal.trim(),
-    minTurns: form.minTurns,
-    maxTurns: form.maxTurns,
-    target: form.target,
-    rewardXp: form.rewardXp,
-    roles: form.roles.map((role) => ({ ...role, nameEn: role.nameEn.trim(), name: role.name.trim() })),
-    opening: form.opening
-      .filter((line) => line.contentEn.trim())
-      .map((line) => ({ speaker: line.speaker, contentEn: line.contentEn.trim(), contentZh: line.contentZh.trim() })),
-    starterHints: form.starterHints
-      .filter((hint) => hint.en.trim())
-      .map((hint) => ({ en: hint.en.trim(), zh: hint.zh.trim() })),
-  };
-  storySaving.value = true;
-  try {
-    if (editingStoryId.value === null) {
-      await createStageStoryApi(payload);
-      ElMessage.success('关卡已创建');
-    } else {
-      // 编辑时不传 category（后端禁止修改绑定分类）
-      const { category: _category, ...rest } = payload;
-      await updateStageStoryApi(editingStoryId.value, rest);
-      ElMessage.success('关卡已更新');
-    }
-    storyDialogVisible.value = false;
-    await Promise.all([loadStories(), loadOverview()]);
-  } finally {
-    storySaving.value = false;
-  }
-}
-
-/** 启停关卡。 */
-async function toggleStoryStatus(row: StageStoryAdminItem): Promise<void> {
-  const next = row.status === 1 ? 0 : 1;
-  if (next === 0) {
-    try {
-      await ElMessageBox.confirm(
-        `停用后该关卡在客户端地图与详情页都不可见（历史进度/会话保留）。确定停用「${row.title}」吗？`,
-        '停用关卡',
-        { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' },
-      );
-    } catch {
-      return;
-    }
-  }
-  await setStageStoryStatusApi(row.id, next as 0 | 1);
-  ElMessage.success(next === 1 ? '关卡已启用' : '关卡已停用');
-  await Promise.all([loadStories(), loadOverview()]);
-}
-
-/** 删除关卡（物理删除，提示关联会话数）。 */
-async function removeStory(row: StageStoryAdminItem): Promise<void> {
-  try {
-    await ElMessageBox.confirm(
-      `确定删除关卡「${row.title}」吗？\n删除后该分类可重新绑定新关卡；历史进度与会话按分类保留，不受影响。`,
-      '删除关卡',
-      { type: 'error', confirmButtonText: '删除', cancelButtonText: '取消' },
-    );
-  } catch {
-    return;
-  }
-  const result = await deleteStageStoryApi(row.id);
-  ElMessage.success(`关卡已删除（关联会话 ${result.sessionCount} 条保留）`);
-  await Promise.all([loadStories(), loadOverview()]);
-}
-
-/** 章内上移/下移：交换 sort 后整章按新顺序提交。 */
-async function moveStory(row: StageStoryAdminItem, direction: -1 | 1): Promise<void> {
-  const siblings = stories.value.filter((item) => item.chapterKey === row.chapterKey);
-  const index = siblings.findIndex((item) => item.id === row.id);
-  const target = index + direction;
-  if (index < 0 || target < 0 || target >= siblings.length) return;
-  const ids = siblings.map((item) => item.id);
-  [ids[index], ids[target]] = [ids[target], ids[index]];
-  await reorderStageStoriesApi(row.chapterKey, ids);
-  await Promise.all([loadStories(), loadOverview()]);
-}
-
-/* ------------------------------ AI 生成关卡草稿 ------------------------------ */
-
-const aiDialogVisible = ref(false);
-const aiGenerating = ref(false);
-const aiForm = ref<{ chapterKey: string; category: string }>({ chapterKey: '', category: '' });
-
-async function openAiDialog(): Promise<void> {
-  if (covers.value.length === 0) await loadCovers();
-  if (stories.value.length === 0) await loadStories();
-  aiForm.value = {
-    chapterKey: chapterOptions.value[0]?.key ?? '',
-    category: freeCategoryOptions.value[0]?.name ?? '',
-  };
-  aiDialogVisible.value = true;
-}
-
-/** 调 AI 生成草稿 → 填进编辑弹窗（新增态），运营审核/微调后点保存才入库。 */
-async function handleAiGenerate(): Promise<void> {
-  if (!aiForm.value.chapterKey || !aiForm.value.category) {
-    ElMessage.warning('请选择章节和场景分类');
-    return;
-  }
-  aiGenerating.value = true;
-  try {
-    const draft = await aiGenerateStageStoryApi(aiForm.value);
-    aiDialogVisible.value = false;
-    // 草稿直接铺进新增弹窗，走统一的保存链路入库
-    editingStoryId.value = null;
-    storyForm.value = {
-      chapterKey: draft.chapterKey,
-      category: draft.category,
-      title: draft.title,
-      intro: draft.intro,
-      outro: draft.outro,
-      userRole: draft.userRole,
-      setting: draft.setting,
-      goal: draft.goal,
-      minTurns: draft.minTurns,
-      maxTurns: draft.maxTurns,
-      target: draft.target ?? 5,
-      rewardXp: draft.rewardXp,
-      roles: draft.roles.map((role) => ({ ...role })),
-      opening: draft.opening.map((line) => ({ ...line })),
-      starterHints: draft.starterHints.map((hint) => ({ ...hint })),
-    };
-    storyDialogVisible.value = true;
-    ElMessage.success(`AI 已生成草稿「${draft.title}」，审核后点保存入库`);
-  } finally {
-    aiGenerating.value = false;
-  }
-}
-
-/* ------------------------------ Tab2 对话会话 ------------------------------ */
+/* ------------------------------ Tab2：对话会话抽查 ------------------------------ */
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
     getStageSessionListApi({
       page: p.page,
       pageSize: p.pageSize,
-      categoryId: p.categoryId || undefined,
+      storyId: p.storyId || undefined,
       status: p.status || undefined,
       userId: p.userId || undefined,
       noTranslation: p.noTranslation ? '1' : undefined,
       keyword: p.keyword?.trim() || undefined,
     }),
   {
-    categoryId: undefined as number | undefined,
+    storyId: undefined as number | undefined,
     status: '',
     userId: undefined as number | undefined,
     keyword: '',
@@ -467,6 +140,423 @@ async function closeSession(row: StageSessionItem): Promise<void> {
   await getList();
   if (detail.value?.id === row.id) {
     detail.value = await getStageSessionDetailApi(row.id);
+  }
+}
+
+/* ------------------------------ Tab3：剧本管理（stage_script CRUD + AI 封面） ------------------------------ */
+const scripts = ref<StageScriptAdminItem[]>([]);
+const scriptsLoading = ref(false);
+const categoryOptions = ref<SentenceCategoryOption[]>([]);
+/** 正在生成中的封面标记：单个剧本用 id，全部补全用 'all' */
+const generatingKeys = ref<string[]>([]);
+
+async function loadScripts(): Promise<void> {
+  scriptsLoading.value = true;
+  try {
+    const [list, cats] = await Promise.all([getStageScriptsApi(), getCategoryOptionsApi()]);
+    scripts.value = list;
+    categoryOptions.value = cats;
+  } finally {
+    scriptsLoading.value = false;
+  }
+}
+
+function isGenerating(key: string): boolean {
+  return generatingKeys.value.includes(key);
+}
+
+/** 生成/重新生成剧本封面。 */
+async function generateCover(scriptId?: number, regenerate = false): Promise<void> {
+  if (scriptId && regenerate) {
+    try {
+      await ElMessageBox.confirm('重新生成会覆盖当前封面图（旧图文件仍在 file 表，可回溯），确定吗？', '重新生成封面', {
+        type: 'warning',
+        confirmButtonText: '重新生成',
+        cancelButtonText: '取消',
+      });
+    } catch {
+      return;
+    }
+  }
+  const mark = scriptId !== undefined ? String(scriptId) : 'all';
+  generatingKeys.value = [...generatingKeys.value, mark];
+  try {
+    if (scriptId !== undefined) {
+      await generateStageScriptCoverApi(scriptId, regenerate);
+      ElMessage.success('封面已生成');
+    } else {
+      const result = await generateMissingStageCoversApi();
+      ElMessage.success(`缺失封面已补全：新增 ${result.generated.length} 张，跳过 ${result.skipped.length} 张`);
+    }
+    await Promise.all([loadScripts(), loadOverview()]);
+  } finally {
+    generatingKeys.value = generatingKeys.value.filter((k) => k !== mark);
+  }
+}
+
+function onTabChange(name: string | number): void {
+  if (name === 'scripts' && scripts.value.length === 0) void loadScripts();
+  if (name === 'stories') void loadStories();
+}
+
+/* ------------------------------ Tab4：关卡管理（stage_story CRUD） ------------------------------ */
+
+const stories = ref<StageStoryAdminItem[]>([]);
+const storiesLoading = ref(false);
+
+async function loadStories(): Promise<void> {
+  storiesLoading.value = true;
+  try {
+    stories.value = await getStageStoriesApi();
+  } finally {
+    storiesLoading.value = false;
+  }
+}
+
+/** 剧本下拉（按场景分组排序；剧本列表来自 Tab3 的 loadScripts）。 */
+const scriptOptions = computed(() =>
+  (scripts.value.length > 0 ? scripts.value : []).map((item) => ({
+    id: item.id,
+    name: `${item.categoryName} · ${item.name}`,
+    categoryId: item.categoryId,
+  })),
+);
+
+/* ------------------------------ 剧本表单弹窗 ------------------------------ */
+
+interface ScriptForm {
+  categoryId: number;
+  name: string;
+  blurb: string;
+  sort: number;
+  status: 0 | 1;
+}
+
+const scriptDialogVisible = ref(false);
+const scriptSaving = ref(false);
+const editingScriptId = ref<number | null>(null);
+
+const emptyScriptForm = (): ScriptForm => ({
+  categoryId: categoryOptions.value[0]?.id ?? 0,
+  name: '',
+  blurb: '',
+  sort: 0,
+  status: 1,
+});
+
+const scriptForm = ref<ScriptForm>(emptyScriptForm());
+
+function openScriptDialog(row?: StageScriptAdminItem): void {
+  editingScriptId.value = row?.id ?? null;
+  scriptForm.value = row
+    ? {
+        categoryId: row.categoryId,
+        name: row.name,
+        blurb: row.blurb,
+        sort: row.sort,
+        status: row.status as 0 | 1,
+      }
+    : emptyScriptForm();
+  scriptDialogVisible.value = true;
+}
+
+async function saveScript(): Promise<void> {
+  const form = scriptForm.value;
+  if (!form.categoryId) {
+    ElMessage.warning('请选择场景分类');
+    return;
+  }
+  if (!form.name.trim()) {
+    ElMessage.warning('剧本名必填');
+    return;
+  }
+  const payload: StageScriptPayload = {
+    categoryId: form.categoryId,
+    name: form.name.trim(),
+    blurb: form.blurb.trim(),
+    sort: form.sort,
+    status: form.status,
+  };
+  scriptSaving.value = true;
+  try {
+    if (editingScriptId.value === null) {
+      await createStageScriptApi(payload);
+      ElMessage.success('剧本已创建');
+    } else {
+      await updateStageScriptApi(editingScriptId.value, payload);
+      ElMessage.success('剧本已更新');
+    }
+    scriptDialogVisible.value = false;
+    await loadScripts();
+  } finally {
+    scriptSaving.value = false;
+  }
+}
+
+/** 启停剧本。 */
+async function toggleScriptStatus(row: StageScriptAdminItem): Promise<void> {
+  const next = row.status === 1 ? 0 : 1;
+  if (next === 0 && row.stageCount > 0) {
+    try {
+      await ElMessageBox.confirm(
+        `停用后「${row.name}」下的 ${row.stageCount} 个关卡在客户端都不可见（历史进度与会话保留）。确定停用吗？`,
+        '停用剧本',
+        { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' },
+      );
+    } catch {
+      return;
+    }
+  }
+  await setStageScriptStatusApi(row.id, next as 0 | 1);
+  ElMessage.success(next === 1 ? '剧本已启用' : '剧本已停用');
+  await loadScripts();
+}
+
+/** 删除剧本（连同其下关卡）。 */
+async function removeScript(row: StageScriptAdminItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除剧本「${row.name}」吗？\n会连同删除其 ${row.stageCount} 个关卡；历史进度与会话按关卡保留，不受影响。`,
+      '删除剧本',
+      { type: 'error', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  const result = await deleteStageScriptApi(row.id);
+  ElMessage.success(`剧本已删除（${result.deletedStories} 个关卡一并删除）`);
+  await Promise.all([loadScripts(), loadStories(), loadOverview()]);
+}
+
+/* ------------------------------ 关卡表单弹窗 ------------------------------ */
+
+interface StoryForm {
+  scriptId: number;
+  title: string;
+  intro: string;
+  outro: string;
+  userRole: string;
+  setting: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  target: number;
+  rewardXp: number;
+  roles: StageRoleItem[];
+  opening: StageLineItem[];
+  starterHints: Array<{ en: string; zh: string }>;
+}
+
+const storyDialogVisible = ref(false);
+const storySaving = ref(false);
+const editingStoryId = ref<number | null>(null);
+
+const emptyForm = (): StoryForm => ({
+  scriptId: scriptOptions.value[0]?.id ?? 0,
+  title: '',
+  intro: '',
+  outro: '',
+  userRole: '',
+  setting: '',
+  goal: '',
+  minTurns: 6,
+  maxTurns: 12,
+  target: 5,
+  rewardXp: 30,
+  roles: [{ nameEn: '', name: '', persona: '', emoji: '🧑' }],
+  opening: [],
+  starterHints: [{ en: '', zh: '' }],
+});
+
+const storyForm = ref<StoryForm>(emptyForm());
+
+async function openStoryDialog(row?: StageStoryAdminItem): Promise<void> {
+  if (scripts.value.length === 0) await loadScripts();
+  editingStoryId.value = row?.id ?? null;
+  storyForm.value = row
+    ? {
+        scriptId: row.scriptId,
+        title: row.title,
+        intro: row.intro,
+        outro: row.outro,
+        userRole: row.userRole,
+        setting: row.setting,
+        goal: row.goal,
+        minTurns: row.minTurns,
+        maxTurns: row.maxTurns,
+        target: row.target,
+        rewardXp: row.rewardXp,
+        roles: row.roles.map((role) => ({ ...role })),
+        opening: row.opening.map((line) => ({ ...line })),
+        starterHints: row.starterHints.map((hint) => ({ ...hint })),
+      }
+    : emptyForm();
+  storyDialogVisible.value = true;
+}
+
+function addRole(): void {
+  storyForm.value.roles.push({ nameEn: '', name: '', persona: '', emoji: '🧑' });
+}
+function removeRole(index: number): void {
+  storyForm.value.roles.splice(index, 1);
+}
+function addOpeningLine(): void {
+  storyForm.value.opening.push({ speaker: storyForm.value.roles[0]?.nameEn ?? '', contentEn: '', contentZh: '' });
+}
+function removeOpeningLine(index: number): void {
+  storyForm.value.opening.splice(index, 1);
+}
+function addHint(): void {
+  storyForm.value.starterHints.push({ en: '', zh: '' });
+}
+function removeHint(index: number): void {
+  storyForm.value.starterHints.splice(index, 1);
+}
+
+async function saveStory(): Promise<void> {
+  const form = storyForm.value;
+  if (!form.scriptId || !form.title.trim()) {
+    ElMessage.warning('剧本、标题必填');
+    return;
+  }
+  if (form.minTurns < 1 || form.maxTurns < form.minTurns) {
+    ElMessage.warning('轮数需要 minTurns >= 1 且 maxTurns >= minTurns');
+    return;
+  }
+  if (
+    form.roles.length < 1 ||
+    form.roles.some((role) => !role.nameEn.trim() || !role.name.trim() || !role.persona.trim())
+  ) {
+    ElMessage.warning('出场角色 1~3 人，英文名/中文名/人设都必填');
+    return;
+  }
+  const payload: StageStoryPayload = {
+    scriptId: form.scriptId,
+    title: form.title.trim(),
+    intro: form.intro.trim(),
+    outro: form.outro.trim(),
+    userRole: form.userRole.trim(),
+    setting: form.setting.trim(),
+    goal: form.goal.trim(),
+    minTurns: form.minTurns,
+    maxTurns: form.maxTurns,
+    target: form.target,
+    rewardXp: form.rewardXp,
+    roles: form.roles.map((role) => ({ ...role, nameEn: role.nameEn.trim(), name: role.name.trim() })),
+    opening: form.opening
+      .filter((line) => line.contentEn.trim())
+      .map((line) => ({ speaker: line.speaker, contentEn: line.contentEn.trim(), contentZh: line.contentZh.trim() })),
+    starterHints: form.starterHints
+      .filter((hint) => hint.en.trim())
+      .map((hint) => ({ en: hint.en.trim(), zh: hint.zh.trim() })),
+  };
+  storySaving.value = true;
+  try {
+    if (editingStoryId.value === null) {
+      await createStageStoryApi(payload);
+      ElMessage.success('关卡已创建');
+    } else {
+      await updateStageStoryApi(editingStoryId.value, payload);
+      ElMessage.success('关卡已更新');
+    }
+    storyDialogVisible.value = false;
+    await Promise.all([loadStories(), loadOverview()]);
+  } finally {
+    storySaving.value = false;
+  }
+}
+
+/** 启停关卡。 */
+async function toggleStoryStatus(row: StageStoryAdminItem): Promise<void> {
+  const next = row.status === 1 ? 0 : 1;
+  if (next === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `停用后该关卡在客户端地图与对话页都不可见（历史进度/会话保留）。确定停用「${row.title}」吗？`,
+        '停用关卡',
+        { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' },
+      );
+    } catch {
+      return;
+    }
+  }
+  await setStageStoryStatusApi(row.id, next as 0 | 1);
+  ElMessage.success(next === 1 ? '关卡已启用' : '关卡已停用');
+  await Promise.all([loadStories(), loadOverview()]);
+}
+
+/** 删除关卡（物理删除，提示关联会话数）。 */
+async function removeStory(row: StageStoryAdminItem): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除关卡「${row.title}」吗？\n删除后进度与会话按关卡记录，历史数据保留，但该关卡不可再进入。`,
+      '删除关卡',
+      { type: 'error', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  const result = await deleteStageStoryApi(row.id);
+  ElMessage.success(`关卡已删除（关联会话 ${result.sessionCount} 条保留）`);
+  await Promise.all([loadStories(), loadOverview()]);
+}
+
+/** 剧本内上移/下移：交换 sort 后整组按新顺序提交。 */
+async function moveStory(row: StageStoryAdminItem, direction: -1 | 1): Promise<void> {
+  const siblings = stories.value.filter((item) => item.scriptId === row.scriptId);
+  const index = siblings.findIndex((item) => item.id === row.id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= siblings.length) return;
+  const ids = siblings.map((item) => item.id);
+  [ids[index], ids[target]] = [ids[target], ids[index]];
+  await reorderStageStoriesApi(row.scriptId, ids);
+  await Promise.all([loadStories(), loadOverview()]);
+}
+
+/* ------------------------------ AI 生成关卡草稿 ------------------------------ */
+
+const aiDialogVisible = ref(false);
+const aiGenerating = ref(false);
+const aiForm = ref<{ scriptId: number }>({ scriptId: 0 });
+
+async function openAiDialog(): Promise<void> {
+  if (scripts.value.length === 0) await loadScripts();
+  aiForm.value = { scriptId: scriptOptions.value[0]?.id ?? 0 };
+  aiDialogVisible.value = true;
+}
+
+/** 调 AI 生成草稿 → 填进编辑弹窗（新增态），运营审核/微调后点保存才入库。 */
+async function handleAiGenerate(): Promise<void> {
+  if (!aiForm.value.scriptId) {
+    ElMessage.warning('请选择剧本');
+    return;
+  }
+  aiGenerating.value = true;
+  try {
+    const draft = await aiGenerateStageStoryApi(aiForm.value.scriptId);
+    aiDialogVisible.value = false;
+    // 草稿直接铺进新增弹窗，走统一的保存链路入库
+    editingStoryId.value = null;
+    storyForm.value = {
+      scriptId: draft.scriptId,
+      title: draft.title,
+      intro: draft.intro,
+      outro: draft.outro,
+      userRole: draft.userRole,
+      setting: draft.setting,
+      goal: draft.goal,
+      minTurns: draft.minTurns,
+      maxTurns: draft.maxTurns,
+      target: draft.target ?? 5,
+      rewardXp: draft.rewardXp,
+      roles: draft.roles.map((role) => ({ ...role })),
+      opening: draft.opening.map((line) => ({ ...line })),
+      starterHints: draft.starterHints.map((hint) => ({ ...hint })),
+    };
+    storyDialogVisible.value = true;
+    ElMessage.success(`AI 已生成草稿「${draft.title}」，审核后点保存入库`);
+  } finally {
+    aiGenerating.value = false;
   }
 }
 
@@ -521,7 +611,7 @@ onMounted(() => {
       <el-tab-pane label="对话会话" name="sessions">
         <SearchForm class="mt-4" @search="search" @reset="reset">
           <el-form-item label="关卡">
-            <el-select v-model="query.categoryId" placeholder="全部" clearable style="width: 220px">
+            <el-select v-model="query.storyId" placeholder="全部" clearable filterable style="width: 240px">
               <el-option v-for="opt in stageOptions" :key="opt.id" :label="opt.title" :value="opt.id" />
             </el-select>
           </el-form-item>
@@ -625,58 +715,97 @@ onMounted(() => {
         </el-card>
       </el-tab-pane>
 
-      <!-- ===================== Tab3：章节封面管理（AI 生图） ===================== -->
-      <el-tab-pane label="封面管理" name="covers">
-        <el-card v-loading="coversLoading" shadow="never" class="mt-4">
+      <!-- ===================== Tab3：剧本管理（CRUD + AI 封面） ===================== -->
+      <el-tab-pane label="剧本管理" name="scripts">
+        <el-card v-loading="scriptsLoading" shadow="never" class="mt-4">
           <div class="mb-3 flex items-center justify-between">
-            <span class="text-[15px] font-semibold text-ink">章节封面（AI 生图，4:3 webp）</span>
+            <span class="text-[15px] font-semibold text-ink">剧本列表（共 {{ scripts.length }} 个，挂在场景下）</span>
             <div class="flex gap-2">
-              <el-button :loading="coversLoading" @click="loadCovers">刷新</el-button>
+              <el-button :loading="scriptsLoading" @click="loadScripts">刷新</el-button>
               <el-button
                 v-permission="'stage:handle'"
-                type="primary"
                 :loading="isGenerating('all')"
                 @click="generateCover(undefined, false)"
               >
                 补全缺失封面
               </el-button>
+              <el-button v-permission="'stage:handle'" type="primary" @click="openScriptDialog()">新增剧本</el-button>
             </div>
           </div>
 
-          <div
-            v-for="item in covers"
-            :key="item.chapterKey"
-            class="mb-3 flex items-center gap-4 rounded-xl border border-gray-200 p-3 last:mb-0 dark:border-gray-700"
-          >
-            <!-- 缩略图：有图显示图，无图显示占位 -->
-            <div
-              class="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-            >
-              <img
-                v-if="item.coverUrl"
-                :src="item.coverUrl"
-                :alt="item.chapterName"
-                class="h-full w-full object-cover"
-                loading="lazy"
-              />
-              <span v-else class="px-1 text-center text-xs text-gray-400">未生成</span>
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="text-sm font-semibold text-ink">{{ item.chapterName }}</div>
-              <div class="mt-0.5 text-xs text-gray-400">
-                {{ item.generatedAt ? `生成于 ${formatDateTime(item.generatedAt)}` : '尚未生成' }}
-              </div>
-              <div class="mt-1 truncate text-xs text-gray-400" :title="item.prompt">提示词：{{ item.prompt }}</div>
-            </div>
-            <el-button
-              v-permission="'stage:handle'"
-              size="small"
-              :loading="isGenerating(item.chapterKey)"
-              @click="generateCover(item.chapterKey, Boolean(item.coverUrl))"
-            >
-              {{ item.coverUrl ? '重新生成' : '生成封面' }}
-            </el-button>
-          </div>
+          <el-table :data="scripts" border row-key="id" size="small">
+            <el-table-column label="场景" width="110" prop="categoryName" show-overflow-tooltip />
+            <el-table-column label="剧本" min-width="220">
+              <template #default="{ row }">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-gray-100 dark:bg-gray-800"
+                  >
+                    <img
+                      v-if="row.coverUrl"
+                      :src="row.coverUrl"
+                      :alt="row.name"
+                      class="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                    <span v-else class="text-[10px] text-gray-400">无封面</span>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium text-ink">{{ row.name }}</div>
+                    <div class="truncate text-xs text-gray-400">{{ row.blurb || '—' }}</div>
+                  </div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="关卡(启用/全部)" width="130" align="center">
+              <template #default="{ row }">{{ row.enabledStageCount }} / {{ row.stageCount }}</template>
+            </el-table-column>
+            <el-table-column label="会话数" width="80" align="center" prop="sessionCount" />
+            <el-table-column label="状态" width="80" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                  {{ row.status === 1 ? '启用' : '停用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="270" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  v-permission="'stage:handle'"
+                  link
+                  type="primary"
+                  :loading="isGenerating(String(row.id))"
+                  @click="generateCover(row.id as number, Boolean(row.coverUrl))"
+                >
+                  {{ row.coverUrl ? '重生成封面' : '生成封面' }}
+                </el-button>
+                <el-button
+                  v-permission="'stage:handle'"
+                  link
+                  type="primary"
+                  @click="openScriptDialog(row as StageScriptAdminItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  v-permission="'stage:handle'"
+                  link
+                  :type="row.status === 1 ? 'warning' : 'success'"
+                  @click="toggleScriptStatus(row as StageScriptAdminItem)"
+                >
+                  {{ row.status === 1 ? '停用' : '启用' }}
+                </el-button>
+                <el-button
+                  v-permission="'stage:handle'"
+                  link
+                  type="danger"
+                  @click="removeScript(row as StageScriptAdminItem)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </el-card>
       </el-tab-pane>
 
@@ -693,15 +822,10 @@ onMounted(() => {
           </div>
 
           <el-table :data="stories" border row-key="id" size="small">
-            <el-table-column label="章节" width="120" show-overflow-tooltip>
-              <template #default="{ row }">{{ row.chapterName }}</template>
-            </el-table-column>
-            <el-table-column label="关卡" min-width="170">
+            <el-table-column label="所属" min-width="200">
               <template #default="{ row }">
                 <div class="text-sm font-medium text-ink">{{ row.title }}</div>
-                <div class="text-xs text-gray-400">
-                  {{ row.category }}#{{ row.categoryId ?? '已删除' }} · {{ row.roles.length }} 角色
-                </div>
+                <div class="text-xs text-gray-400">{{ row.categoryName }} · {{ row.scriptName }}</div>
               </template>
             </el-table-column>
             <el-table-column label="目标" min-width="180" show-overflow-tooltip>
@@ -805,34 +929,22 @@ onMounted(() => {
       :close-on-click-modal="false"
     >
       <el-form label-width="90px" size="small">
-        <el-form-item label="所属章节" required>
-          <el-select v-model="storyForm.chapterKey" placeholder="选择章节" style="width: 220px">
-            <el-option v-for="opt in chapterOptions" :key="opt.key" :label="opt.name" :value="opt.key" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="绑定分类" required>
+        <el-form-item label="所属剧本" required>
           <el-select
-            v-if="editingStoryId === null"
-            v-model="storyForm.category"
-            placeholder="选一个尚未绑定关卡的场景分类"
+            v-model="storyForm.scriptId"
+            placeholder="选择剧本（场景 · 剧本名）"
             filterable
-            style="width: 320px"
+            style="width: 340px"
           >
-            <el-option
-              v-for="opt in freeCategoryOptions"
-              :key="opt.id"
-              :label="`${opt.name}${opt.nameEn ? `（${opt.nameEn}）` : ''}`"
-              :value="opt.name"
-            />
+            <el-option v-for="opt in scriptOptions" :key="opt.id" :label="opt.name" :value="opt.id" />
             <template #empty>
               <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                所有启用分类都已绑定关卡（一分类一关）。
-                <router-link to="/sentence/category" class="text-primary">去「场景分类」新建一个</router-link>
-                后再回来生成。
+                还没有剧本。去「剧本管理」Tab 新增（或去
+                <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+                先建场景）。
               </div>
             </template>
           </el-select>
-          <span v-else class="text-sm text-gray-500">{{ storyForm.category }}（不可修改）</span>
         </el-form-item>
         <el-form-item label="关卡标题" required>
           <el-input v-model="storyForm.title" maxlength="100" placeholder="如：便利店的清晨" style="width: 320px" />
@@ -951,44 +1063,82 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <!-- AI 生成关卡：选章节 + 未绑定分类 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
-    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="440px" :close-on-click-modal="false">
+    <!-- 剧本编辑弹窗（新增/编辑共用） -->
+    <el-dialog
+      v-model="scriptDialogVisible"
+      :title="editingScriptId === null ? '新增剧本' : '编辑剧本'"
+      width="520px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="90px" size="small">
-        <el-form-item label="所属章节" required>
-          <el-select v-model="aiForm.chapterKey" placeholder="选择章节" style="width: 240px">
-            <el-option v-for="opt in chapterOptions" :key="opt.key" :label="opt.name" :value="opt.key" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="场景分类" required>
-          <el-select v-model="aiForm.category" placeholder="选一个尚未绑定关卡的分类" filterable style="width: 280px">
+        <el-form-item label="所属场景" required>
+          <el-select v-model="scriptForm.categoryId" placeholder="场景分类" filterable style="width: 300px">
             <el-option
-              v-for="opt in freeCategoryOptions"
+              v-for="opt in categoryOptions"
               :key="opt.id"
               :label="`${opt.name}${opt.nameEn ? `（${opt.nameEn}）` : ''}`"
-              :value="opt.name"
+              :value="opt.id"
             />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="剧本名" required>
+          <el-input v-model="scriptForm.name" maxlength="100" placeholder="如：程序员的一天" style="width: 300px" />
+        </el-form-item>
+        <el-form-item label="简介">
+          <el-input
+            v-model="scriptForm.blurb"
+            type="textarea"
+            :rows="2"
+            maxlength="500"
+            placeholder="一句话介绍这条身份线"
+          />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="scriptForm.sort" :min="0" :max="9999" controls-position="right" />
+          <span class="ml-2 text-xs text-gray-400">越小越靠前</span>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-switch
+            v-model="scriptForm.status"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="启用"
+            inactive-text="停用"
+          />
+        </el-form-item>
+        <p class="text-xs leading-relaxed text-gray-400">
+          剧本挂在场景分类下（没有合适场景可去
+          <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+          新建）；封面创建后可到本 Tab 用 AI 生成。
+        </p>
+      </el-form>
+      <template #footer>
+        <el-button @click="scriptDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="scriptSaving" @click="saveScript">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- AI 生成关卡：选剧本 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
+    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="440px" :close-on-click-modal="false">
+      <el-form label-width="90px" size="small">
+        <el-form-item label="所属剧本" required>
+          <el-select v-model="aiForm.scriptId" placeholder="选择剧本（场景 · 剧本名）" filterable style="width: 300px">
+            <el-option v-for="opt in scriptOptions" :key="opt.id" :label="opt.name" :value="opt.id" />
             <template #empty>
               <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                所有启用分类都已绑定关卡（一分类一关）。
-                <router-link to="/sentence/category" class="text-primary">去「场景分类」新建一个</router-link>
-                后再回来生成。
+                还没有剧本。先去「剧本管理」Tab 新增一个剧本。
               </div>
             </template>
           </el-select>
         </el-form-item>
         <p class="text-xs leading-relaxed text-gray-400">
-          AI 会根据章节语气和分类场景生成一整套关卡剧情（标题/引入/目标/角色/开场白/候选短句），
+          AI 会根据剧本所属场景和剧本定位生成一整套关卡剧情（标题/引入/目标/角色/开场白/候选短句），
           生成后自动铺进编辑弹窗，**审核修改后点保存才会入库**。
         </p>
       </el-form>
       <template #footer>
         <el-button @click="aiDialogVisible = false">取消</el-button>
-        <el-button
-          type="primary"
-          :loading="aiGenerating"
-          :disabled="!aiForm.chapterKey || !aiForm.category"
-          @click="handleAiGenerate"
-        >
+        <el-button type="primary" :loading="aiGenerating" :disabled="!aiForm.scriptId" @click="handleAiGenerate">
           生成草稿
         </el-button>
       </template>

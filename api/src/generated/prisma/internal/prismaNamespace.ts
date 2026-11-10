@@ -431,7 +431,7 @@ export const ModelName = {
   StudyStageProgress: 'StudyStageProgress',
   StageDialogueSession: 'StageDialogueSession',
   StageDialogueMessage: 'StageDialogueMessage',
-  StageChapterCover: 'StageChapterCover',
+  StageScript: 'StageScript',
   StageStory: 'StageStory',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
@@ -460,7 +460,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageChapterCover" | "stageStory" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2708,69 +2708,69 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    StageChapterCover: {
-      payload: Prisma.$StageChapterCoverPayload<ExtArgs>
-      fields: Prisma.StageChapterCoverFieldRefs
+    StageScript: {
+      payload: Prisma.$StageScriptPayload<ExtArgs>
+      fields: Prisma.StageScriptFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.StageChapterCoverFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload> | null
+          args: Prisma.StageScriptFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.StageChapterCoverFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         findFirst: {
-          args: Prisma.StageChapterCoverFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload> | null
+          args: Prisma.StageScriptFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.StageChapterCoverFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         findMany: {
-          args: Prisma.StageChapterCoverFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>[]
+          args: Prisma.StageScriptFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>[]
         }
         create: {
-          args: Prisma.StageChapterCoverCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         createMany: {
-          args: Prisma.StageChapterCoverCreateManyArgs<ExtArgs>
+          args: Prisma.StageScriptCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         delete: {
-          args: Prisma.StageChapterCoverDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         update: {
-          args: Prisma.StageChapterCoverUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         deleteMany: {
-          args: Prisma.StageChapterCoverDeleteManyArgs<ExtArgs>
+          args: Prisma.StageScriptDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.StageChapterCoverUpdateManyArgs<ExtArgs>
+          args: Prisma.StageScriptUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         upsert: {
-          args: Prisma.StageChapterCoverUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageChapterCoverPayload>
+          args: Prisma.StageScriptUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StageScriptPayload>
         }
         aggregate: {
-          args: Prisma.StageChapterCoverAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateStageChapterCover>
+          args: Prisma.StageScriptAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStageScript>
         }
         groupBy: {
-          args: Prisma.StageChapterCoverGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.StageChapterCoverGroupByOutputType>[]
+          args: Prisma.StageScriptGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageScriptGroupByOutputType>[]
         }
         count: {
-          args: Prisma.StageChapterCoverCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.StageChapterCoverCountAggregateOutputType> | number
+          args: Prisma.StageScriptCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StageScriptCountAggregateOutputType> | number
         }
       }
     }
@@ -4167,6 +4167,7 @@ export const StudyStageProgressScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   categoryId: 'categoryId',
+  storyId: 'storyId',
   correctCount: 'correctCount',
   answerCount: 'answerCount',
   clearedAt: 'clearedAt',
@@ -4182,6 +4183,7 @@ export type StudyStageProgressScalarFieldEnum = (typeof StudyStageProgressScalar
 export const StageDialogueSessionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
+  storyId: 'storyId',
   categoryId: 'categoryId',
   status: 'status',
   turnCount: 'turnCount',
@@ -4213,23 +4215,24 @@ export const StageDialogueMessageScalarFieldEnum = {
 export type StageDialogueMessageScalarFieldEnum = (typeof StageDialogueMessageScalarFieldEnum)[keyof typeof StageDialogueMessageScalarFieldEnum]
 
 
-export const StageChapterCoverScalarFieldEnum = {
+export const StageScriptScalarFieldEnum = {
   id: 'id',
-  chapterKey: 'chapterKey',
-  fileId: 'fileId',
-  prompt: 'prompt',
-  source: 'source',
-  generatedAt: 'generatedAt',
+  categoryId: 'categoryId',
+  name: 'name',
+  blurb: 'blurb',
+  coverFileId: 'coverFileId',
+  sort: 'sort',
+  status: 'status',
+  createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type StageChapterCoverScalarFieldEnum = (typeof StageChapterCoverScalarFieldEnum)[keyof typeof StageChapterCoverScalarFieldEnum]
+export type StageScriptScalarFieldEnum = (typeof StageScriptScalarFieldEnum)[keyof typeof StageScriptScalarFieldEnum]
 
 
 export const StageStoryScalarFieldEnum = {
   id: 'id',
-  chapterKey: 'chapterKey',
-  category: 'category',
+  scriptId: 'scriptId',
   title: 'title',
   intro: 'intro',
   outro: 'outro',
@@ -4781,18 +4784,15 @@ export const StageDialogueMessageOrderByRelevanceFieldEnum = {
 export type StageDialogueMessageOrderByRelevanceFieldEnum = (typeof StageDialogueMessageOrderByRelevanceFieldEnum)[keyof typeof StageDialogueMessageOrderByRelevanceFieldEnum]
 
 
-export const StageChapterCoverOrderByRelevanceFieldEnum = {
-  chapterKey: 'chapterKey',
-  prompt: 'prompt',
-  source: 'source'
+export const StageScriptOrderByRelevanceFieldEnum = {
+  name: 'name',
+  blurb: 'blurb'
 } as const
 
-export type StageChapterCoverOrderByRelevanceFieldEnum = (typeof StageChapterCoverOrderByRelevanceFieldEnum)[keyof typeof StageChapterCoverOrderByRelevanceFieldEnum]
+export type StageScriptOrderByRelevanceFieldEnum = (typeof StageScriptOrderByRelevanceFieldEnum)[keyof typeof StageScriptOrderByRelevanceFieldEnum]
 
 
 export const StageStoryOrderByRelevanceFieldEnum = {
-  chapterKey: 'chapterKey',
-  category: 'category',
   title: 'title',
   intro: 'intro',
   outro: 'outro',
@@ -5132,7 +5132,7 @@ export type GlobalOmitConfig = {
   studyStageProgress?: Prisma.StudyStageProgressOmit
   stageDialogueSession?: Prisma.StageDialogueSessionOmit
   stageDialogueMessage?: Prisma.StageDialogueMessageOmit
-  stageChapterCover?: Prisma.StageChapterCoverOmit
+  stageScript?: Prisma.StageScriptOmit
   stageStory?: Prisma.StageStoryOmit
   studyTeam?: Prisma.StudyTeamOmit
   studyTeamMember?: Prisma.StudyTeamMemberOmit

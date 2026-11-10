@@ -1,20 +1,23 @@
 // use prisma-next
 
-/// 情景闯关进度（一行 = 用户在某场景关卡上的累计进度）。
+/// 情景闯关进度（一行 = 用户在某关卡的对话进度；storyId 为空的行为旧版答题统计）。
 ///
 /// **为什么不从 sentence_record 派生**：答题记录默认只保留 30 天
 /// （每日 00:20 清理 `< now-30d`），派生口径会让用户一个月后「通关进度倒退」，
 /// 关卡也会重新上锁。本表只增不减，是解锁与通关奖励的权威依据。
 ///
-/// 与答题/打卡/句签同口径，刻意不与 client_user 建 Prisma 关系，按 userId 显式查询。
+/// 2026-11-10 重构：玩法主键从 categoryId 改为 storyId（一个分类下可以有多个剧本/关卡），
+/// 旧版答题统计（correctCount/answerCount）仍按分类记一行（storyId=null）。
 model StudyStageProgress {
   /// 主键
   id           BigInt    @id @default(autoincrement()) @db.BigInt
   /// 用户 id（client_user）
   userId       BigInt    @map("user_id") @db.BigInt
-  /// 场景分类 id（sentence_category）：关卡 = 场景
+  /// 场景分类 id（sentence_category）：统计维度，保留
   categoryId   BigInt    @map("category_id") @db.BigInt
-  /// 累计答对数（只增不减，用于通关判定与进度展示）
+  /// 关卡 id（stage_story）：对话进度按关卡记；null = 旧版答题统计行
+  storyId      BigInt?   @map("story_id") @db.BigInt
+  /// 累计答对数（只增不减，用于旧版进度展示）
   correctCount Int       @default(0) @map("correct_count") @db.Int
   /// 累计作答数（含答错）
   answerCount  Int       @default(0) @map("answer_count") @db.Int
@@ -29,9 +32,9 @@ model StudyStageProgress {
   /// 更新时间
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  /// 一个用户在一个场景只有一行
-  @@unique([userId, categoryId])
-  @@index([userId])
+  /// 一个用户在一个关卡只有一行（storyId 为 null 的旧行不受此约束，MySQL 唯一索引允许多个 NULL）
+  @@unique([userId, storyId])
+  @@index([userId, categoryId])
   @@map("study_stage_progress")
 }
 
@@ -45,7 +48,9 @@ model StageDialogueSession {
   id           BigInt    @id @default(autoincrement()) @db.BigInt
   /// 用户 id（client_user）
   userId       BigInt    @map("user_id") @db.BigInt
-  /// 场景分类 id（sentence_category）：关卡 = 场景
+  /// 关卡 id（stage_story）：一关一局，进度与解锁按它记
+  storyId      BigInt    @map("story_id") @db.BigInt
+  /// 场景分类 id（sentence_category）：统计维度（按场景汇总会话数）
   categoryId   BigInt    @map("category_id") @db.BigInt
   /// active 进行中 / completed 已通关 / ended 未达成结束 / abandoned 重新开始
   status       String    @default("active") @db.VarChar(20)
@@ -74,8 +79,9 @@ model StageDialogueSession {
 
   messages StageDialogueMessage[]
 
-  /// 按「用户 + 场景 + 状态」找进行中的会话
-  @@index([userId, categoryId, status])
+  /// 按「用户 + 关卡 + 状态」找进行中的会话
+  @@index([userId, storyId, status])
+  @@index([categoryId])
   @@map("stage_dialogue_session")
 }
 
@@ -103,42 +109,45 @@ model StageDialogueMessage {
 }
 
 /// 情景闯关「章节封面」：一章一张 AI 生成图，存 file 表，这里只留 chapter_key → file_id 映射。
-/// 章节定义在代码里（stage-stories.ts 的 STAGE_CHAPTERS），不入库；本表只管封面图落点，
-/// 幂等键 = chapter_key 唯一，重复生成走 regenerate 覆盖。
-model StageChapterCover {
+/// 情景闯关「剧本」：挂在场景（sentence_category）下的一条身份/故事线。
+///
+/// 层级：场景（分类）→ 剧本（本表）→ 关卡（stage_story）。
+/// 一个场景可以有多个剧本（如「职场办公」下：程序员的一天 / 便利店店员 / 销售拜访），
+/// 一个剧本下可以有多关；关卡主键是自身 id，进度/会话都按 storyId 记，与分类解耦。
+model StageScript {
   /// 主键
   id          BigInt   @id @default(autoincrement()) @db.BigInt
-  /// 章节 key（与 STAGE_CHAPTERS.key 一致），全局唯一
-  chapterKey  String   @unique @map("chapter_key") @db.VarChar(30)
-  /// 封面图文件 id（file 表）
-  fileId      BigInt   @map("file_id") @db.BigInt
-  /// 生成时用的提示词（留档便于复现/对比）
-  prompt      String   @db.Text
-  /// 来源（目前恒为 ai）
-  source      String   @default("ai") @db.VarChar(20)
-  /// 生成时间
-  generatedAt DateTime @default(now()) @map("generated_at")
+  /// 所属场景分类 id（sentence_category）
+  categoryId  BigInt   @map("category_id") @db.BigInt
+  /// 剧本名（如「程序员的一天」）
+  name        String   @db.VarChar(100)
+  /// 简介（一句话，展示在剧本卡上）
+  blurb       String   @default("") @db.VarChar(500)
+  /// 封面图文件 id（file 表；0 = 未生成，客户端回落渐变+图标）
+  coverFileId BigInt   @default(0) @map("cover_file_id") @db.BigInt
+  /// 场景内排序（越小越靠前）
+  sort        Int      @default(0) @db.Int
+  /// 1 启用 / 0 停用（停用后客户端不可见，历史进度保留）
+  status      Int      @default(1) @db.TinyInt
+  /// 创建时间
+  createdAt   DateTime @default(now()) @map("created_at")
   /// 更新时间
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@map("stage_chapter_cover")
+  @@index([categoryId, sort])
+  @@map("stage_script")
 }
 
-/// 情景闯关「关卡剧情」定义（一个场景分类 = 一关）。
+/// 情景闯关「关卡」：一个剧本下的一关（一段可对话的剧情）。
 ///
-/// 2026-11-10 起从代码常量（stage-stories.ts 的 STAGE_STORIES）迁移到本表，
-/// 后台可增删改查；服务启动时用代码种子**幂等回填**（category 已存在则跳过，不覆盖运营改动）。
-/// 章节（STAGE_CHAPTERS）仍留在代码里——章节带封面提示词，且只有固定 4 章。
-///
-/// 关卡与分类的挂钩用 `category`（= sentence_category.name）而不是 id（原因见 stage-stories.ts 头注释）。
-/// 进度/会话都按 categoryId 记录，与本表无外键，删改关卡不会伤历史数据。
+/// 2026-11-10 重构：从「一分类一关卡」改为「剧本下多关卡」，主键是自身 id，
+/// 进度/会话按 storyId 记录，删改关卡不会伤历史数据。
+/// 服务启动时用代码种子 STAGE_STORIES **幂等回填**（同剧本下同名标题跳过，不覆盖运营改动）。
 model StageStory {
   /// 主键
   id          BigInt   @id @default(autoincrement()) @db.BigInt
-  /// 所属章节 key（与 STAGE_CHAPTERS.key 一致）
-  chapterKey  String   @map("chapter_key") @db.VarChar(30)
-  /// 对应场景分类名（sentence_category.name），全局唯一——一场景只能挂一关
-  category    String   @unique @db.VarChar(100)
+  /// 所属剧本 id（stage_script）
+  scriptId    BigInt   @map("script_id") @db.BigInt
   /// 关卡标题（剧情化场景名）
   title       String   @db.VarChar(100)
   /// 进入关卡的剧情引入
@@ -165,7 +174,7 @@ model StageStory {
   opening     Json
   /// 候选英文短句 JSON：[{en,zh}]
   starterHints Json     @map("starter_hints")
-  /// 章内排序（越小越靠前）
+  /// 剧本内排序（越小越靠前）
   sort        Int      @default(0) @db.Int
   /// 1 启用 / 0 停用（停用后客户端地图与详情都不可见，历史进度保留）
   status      Int      @default(1) @db.TinyInt
@@ -174,6 +183,6 @@ model StageStory {
   /// 更新时间
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@index([chapterKey, sort])
+  @@index([scriptId, sort])
   @@map("stage_story")
 }

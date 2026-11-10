@@ -3,8 +3,8 @@
  *
  * 分两层：
  * 1. parseStageStoryDraft（纯函数）：围栏容忍、坏 JSON/缺字段 → null、开场白 speaker 落地、数值夹取；
- * 2. StageService.generateStoryDraft：章节/分类校验 + 已绑定 409，草稿带 chapterKey/category 回传、
- *    把同章已有标题喂给 provider 做去重。
+ * 2. StageService.generateStoryDraft(scriptId)：剧本/分类校验，草稿带 scriptId 回传、
+ *    把同剧本已有标题喂给 provider 做去重。
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
@@ -15,8 +15,8 @@ import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.j
 import type { FileService } from '../src/common/file/file.service.js';
 import type { StageStoryDraft } from '../src/common/ai/ai.types.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
-import { STAGE_CHAPTERS, STAGE_STORIES } from '../src/modules/client/stage/stage-stories.js';
-import { makeStageStoryMock } from './helpers/stage-story-mock.js';
+import { STAGE_STORIES } from '../src/modules/client/stage/stage-stories.js';
+import { makeStageScriptMock, makeStageStoryMock, seedScriptRows, seedStoryRows } from './helpers/stage-story-mock.js';
 
 const VALID_DRAFT = {
   title: '雨夜的最后一班公交',
@@ -53,23 +53,22 @@ describe('parseStageStoryDraft 解析', () => {
   it('坏 JSON / 非对象 / 缺必填字段 → null', () => {
     expect(parseStageStoryDraft('not json at all')).toBeNull();
     expect(parseStageStoryDraft('[1,2,3]')).toBeNull();
-    const noGoal = { ...VALID_DRAFT, goal: '' };
-    expect(parseStageStoryDraft(JSON.stringify(noGoal))).toBeNull();
-    const noRoles = { ...VALID_DRAFT, roles: [] };
-    expect(parseStageStoryDraft(JSON.stringify(noRoles))).toBeNull();
+    expect(parseStageStoryDraft(JSON.stringify({ ...VALID_DRAFT, goal: '' }))).toBeNull();
+    expect(parseStageStoryDraft(JSON.stringify({ ...VALID_DRAFT, roles: [] }))).toBeNull();
   });
 
   it('开场白 speaker 不在角色里的行被丢弃；候选短句非英文被丢弃，全清则 null', () => {
     const withGhost = {
       ...VALID_DRAFT,
-      opening: [...VALID_DRAFT.opening, { speaker: 'Ghost', contentEn: 'Boo', contentZh: ' uh' }],
+      opening: [...VALID_DRAFT.opening, { speaker: 'Ghost', contentEn: 'Boo', contentZh: '呜' }],
     };
     const draft = parseStageStoryDraft(JSON.stringify(withGhost));
     expect(draft?.opening).toHaveLength(1);
     expect(draft?.opening[0].speaker).toBe('Leo');
 
-    const noHints = { ...VALID_DRAFT, starterHints: [{ en: '中文没有英文', zh: 'x' }] };
-    expect(parseStageStoryDraft(JSON.stringify(noHints))).toBeNull();
+    expect(
+      parseStageStoryDraft(JSON.stringify({ ...VALID_DRAFT, starterHints: [{ en: '中文', zh: 'x' }] })),
+    ).toBeNull();
   });
 
   it('数值夹取：minTurns/maxTurns/rewardXp 越界收口，emoji 缺省', () => {
@@ -82,7 +81,7 @@ describe('parseStageStoryDraft 解析', () => {
     };
     const draft = parseStageStoryDraft(JSON.stringify(wild));
     expect(draft?.minTurns).toBe(50);
-    expect(draft?.maxTurns).toBe(50); // maxTurns 被夹到 [minTurns,100]
+    expect(draft?.maxTurns).toBe(50);
     expect(draft?.rewardXp).toBe(10000);
     expect(draft?.roles[0].emoji).toBe('🧑');
   });
@@ -90,19 +89,19 @@ describe('parseStageStoryDraft 解析', () => {
 
 /* ------------------------------ service 层 ------------------------------ */
 
-const EXTRA_CATEGORY = '全新场景';
-
 function makeService() {
-  const categoryNames = [...new Set([...STAGE_STORIES.map((item) => item.category), EXTRA_CATEGORY])];
-  const categories = categoryNames.map((name, index) => ({
-    id: BigInt(index + 1),
-    name,
+  const scripts = seedScriptRows();
+  const stories = seedStoryRows(scripts);
+  const stageScript = makeStageScriptMock(scripts);
+  const stageStory = makeStageStoryMock(stories);
+  const categories = scripts.map((row, index) => ({
+    id: row.categoryId,
+    name: row.name.replace(' · 默认剧本', ''),
     nameEn: null,
     icon: null,
     status: 1,
     sort: index,
   }));
-  const stageStory = makeStageStoryMock();
 
   const prisma: any = {
     sentenceCategory: {
@@ -110,25 +109,25 @@ function makeService() {
       findUnique: vi.fn(async (args: any) => categories.find((c) => c.id === args.where.id) ?? null),
       findFirst: vi.fn(async (args: any) => categories.find((c) => c.name === args.where.name) ?? null),
     },
+    stageScript,
+    stageStory,
     studyStageProgress: {
       findMany: vi.fn(async () => []),
+      findFirst: vi.fn(async () => null),
       groupBy: vi.fn(async () => []),
       count: vi.fn(async () => 0),
     },
-    clientXpLog: { findMany: vi.fn(async () => []) },
     stageDialogueSession: {
+      findFirst: vi.fn(async () => null),
       findMany: vi.fn(async () => []),
       groupBy: vi.fn(async () => []),
       count: vi.fn(async () => 0),
     },
+    clientXpLog: { findMany: vi.fn(async () => []), findUnique: vi.fn(async () => null) },
+    clientUser: { findUnique: vi.fn(async () => ({ xp: 0 })) },
     sentence: { groupBy: vi.fn(async () => []) },
-    stageChapterCover: { findMany: vi.fn(async () => []) },
-    stageStory,
     $queryRaw: vi.fn(async () => []),
-    $transaction: async (arg: unknown) => {
-      if (typeof arg === 'function') return (arg as (tx: unknown) => Promise<unknown>)(prisma);
-      return Promise.all(arg as Promise<unknown>[]);
-    },
+    $transaction: async (arg: any) => (typeof arg === 'function' ? arg(prisma) : Promise.all(arg)),
   };
 
   const gamify = { awardXp: vi.fn(), checkAchievements: vi.fn() };
@@ -149,28 +148,38 @@ function makeService() {
     imageGen as unknown as AgnesImageProvider,
     fileService as unknown as FileService,
   );
-  return { service, prisma, stageStory, ai };
+  return { service, prisma, scripts, stories, stageScript, stageStory, ai };
 }
 
 describe('generateStoryDraft：校验 + 草稿回传', () => {
-  it('正常生成：草稿带 chapterKey/category，provider 收到章节名与同章已有标题', async () => {
-    const { service, ai } = makeService();
-    const result = await service.generateStoryDraft('arrive', EXTRA_CATEGORY);
-    expect(result.chapterKey).toBe('arrive');
-    expect(result.category).toBe(EXTRA_CATEGORY);
+  it('正常生成：草稿带 scriptId，provider 收到「场景+剧本」名与同剧本已有标题', async () => {
+    const { service, ai, scripts, stories } = makeService();
+    const scriptId = Number(scripts[0].id);
+    const result = await service.generateStoryDraft(scriptId);
+    expect(result.scriptId).toBe(scriptId);
     expect(result.title).toBe(VALID_DRAFT.title);
     expect(ai.generateStageStory).toHaveBeenCalledTimes(1);
-    const [chapterName, categoryName, existingTitles] = ai.generateStageStory.mock.calls[0];
-    expect(chapterName).toBe(STAGE_CHAPTERS.find((c) => c.key === 'arrive')!.name);
-    expect(categoryName).toBe(EXTRA_CATEGORY);
-    // 同章已有标题喂给模型做去重
-    expect(existingTitles).toEqual(STAGE_STORIES.filter((s) => s.chapter === 'arrive').map((s) => s.title));
+    const [sceneLabel, categoryName, existingTitles] = ai.generateStageStory.mock.calls[0];
+    expect(sceneLabel).toContain(scripts[0].name);
+    expect(categoryName).toBe(scripts[0].name.replace(' · 默认剧本', ''));
+    expect(existingTitles).toEqual(stories.filter((row) => row.scriptId === scripts[0].id).map((row) => row.title));
   });
 
-  it('章节不存在 → 400；分类不存在 → 400；分类已绑定关卡 → 409', async () => {
+  it('剧本不存在 → 400', async () => {
     const { service } = makeService();
-    await expect(service.generateStoryDraft('nope', EXTRA_CATEGORY)).rejects.toMatchObject({ code: 400 });
-    await expect(service.generateStoryDraft('arrive', '不存在的分类')).rejects.toMatchObject({ code: 400 });
-    await expect(service.generateStoryDraft('arrive', '日常生活')).rejects.toMatchObject({ code: 409 });
+    await expect(service.generateStoryDraft(9999)).rejects.toMatchObject({ code: 400 });
+  });
+
+  it('剧本所属分类被停用 → 400', async () => {
+    const { service, prisma, scripts } = makeService();
+    const category = prisma.sentenceCategory.findUnique;
+    category.mockResolvedValueOnce({ name: '日常生活', status: 0 });
+    await expect(service.generateStoryDraft(Number(scripts[0].id))).rejects.toMatchObject({ code: 400 });
+  });
+});
+
+describe('种子覆盖度', () => {
+  it('STAGE_STORIES 的 14 关都挂在各自分类的默认剧本下', () => {
+    expect(STAGE_STORIES).toHaveLength(14);
   });
 });

@@ -1,45 +1,43 @@
 <script setup lang="ts">
 /**
- * 章节详情（路由 /stages/chapter/:key）：点开地图上的章节封面后到这里。
+ * 剧本详情（路由 /stages/script/:scriptId）：点开场景里的剧本卡后到这里。
  *
- * 上面是本章的封面横幅 + 进度，下面是本章所有关卡的紧凑卡片（双列）。
- * 关卡卡片逻辑与旧版 /stages 内联展开时完全一致，只是搬到了独立页。
+ * 上面是剧本封面横幅 + 场景/进度，下面这本剧本所有关卡的紧凑卡片（双列）。
+ * 关卡卡片逻辑与旧版章节详情页完全一致，只是数据源改成剧本维度。
  *
- * 为什么拆页而不是在地图上展开：地图页要保持「一章一屏封面」的一览感，
+ * 为什么拆页而不是在地图上展开：地图要保持「一场景一屏卡」的一览感，
  * 关卡卡片本身有高度，全铺开就把封面墙冲没了；关卡随运营增加时也更可控。
  */
 import { computed, onMounted, ref } from 'vue';
 import { apiFetch } from '~/composables/useApi';
-import { chapterCoverOf } from '~/utils/stage-chapters';
-import type { StageClaimResult, StageOverview, StageView } from '~/types';
+import { sceneCoverOf } from '~/utils/stage-chapters';
+import type { StageClaimResult, StageScriptDetail, StageView } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
 const route = useRoute();
-const chapterKey = computed(() => String(route.params.key));
+const scriptId = computed(() => Number(route.params.id));
 
-const { data: overview, refresh } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
+const detail = ref<StageScriptDetail | null>(null);
 
 onMounted(async () => {
-  if (!overview.value) {
-    overview.value = await apiFetch<StageOverview>('/client/stages').catch(() => null);
-  }
+  detail.value = await apiFetch<StageScriptDetail>(`/client/stages/scripts/${scriptId.value}`).catch(() => null);
 });
 
-const chapter = computed(() => overview.value?.chapters.find((item) => item.key === chapterKey.value) ?? null);
-const cover = computed(() => chapterCoverOf(chapterKey.value));
-const stages = computed<StageView[]>(() => chapter.value?.stages ?? []);
+const script = computed(() => detail.value?.script ?? null);
+const stages = computed<StageView[]>(() => detail.value?.stages ?? []);
+/** 封面兜底：剧本没生成封面时按场景 id 轮换渐变 + 大图标。 */
+const cover = computed(() => sceneCoverOf(script.value?.categoryId ?? 0));
 
 const claiming = ref<number | null>(null);
 const flash = ref('');
 
-/** 私有页：noindex；浏览器标签前缀用章节名（数据到位后由下方 useHead 覆盖）。 */
+/** 私有页：noindex；浏览器标签前缀用剧本名（数据到位后由下方 useHead 覆盖）。 */
 usePageSeo({
-  title: '章节详情',
-  description: '进入这一章的真实场景，和里面的人用英语把目标聊成。',
+  title: '剧本详情',
+  description: '进入这本剧本的真实场景，和里面的人用英语把目标聊成。',
 });
-// 标签标题带上章节名（SEO 无意义——本页 noindex，只为切标签时好认）
-useHead({ title: computed(() => (chapter.value ? chapter.value.name : '章节详情')) });
+useHead({ title: computed(() => (script.value ? script.value.name : '剧本详情')) });
 
 function toneOf(unlocked: boolean, cleared: boolean): string {
   if (cleared) return 'bg-emerald-500 text-white';
@@ -72,7 +70,6 @@ async function claim(stage: StageView): Promise<void> {
       : result.awarded
         ? `领取成功，+${result.rewardXp} XP${bonusPart}`
         : '今日经验已达上限，明天再来领取';
-    await refresh();
   } catch (error) {
     flash.value = error instanceof Error ? error.message : '领取失败，请稍后重试';
   } finally {
@@ -83,10 +80,13 @@ async function claim(stage: StageView): Promise<void> {
 
 <template>
   <div class="mx-auto max-w-3xl px-4 py-6 sm:py-8">
-    <div v-if="!chapter" class="py-16 text-center text-sm text-slate-400">
-      <p v-if="!overview">正在加载章节…</p>
-      <p v-else>
-        没找到这一章。
+    <div v-if="!detail" class="py-16 text-center text-sm text-slate-400">
+      <p>正在加载剧本…</p>
+    </div>
+
+    <div v-else-if="!script" class="py-16 text-center text-sm text-slate-400">
+      <p>
+        没找到这本剧本。
         <NuxtLink to="/stages" class="text-sky-600 dark:text-sky-400">返回闯关地图</NuxtLink>
       </p>
     </div>
@@ -98,27 +98,27 @@ async function claim(stage: StageView): Promise<void> {
         :class="[cover.gradient, cover.gradientDark]"
       >
         <img
-          v-if="chapter.coverUrl"
-          :src="chapter.coverUrl"
-          :alt="chapter.name"
+          v-if="script.coverUrl"
+          :src="script.coverUrl"
+          :alt="script.name"
           class="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
         />
-        <div v-if="chapter.coverUrl" class="absolute inset-0 bg-black/40" />
+        <div v-if="script.coverUrl" class="absolute inset-0 bg-black/40" />
         <div class="relative">
           <NuxtLink
-            to="/stages"
+            :to="`/stages/scene/${script.categoryId}`"
             class="inline-flex items-center gap-0.5 text-xs font-medium text-white/80 transition hover:text-white"
           >
             <UIcon name="i-lucide-chevron-left" class="h-3.5 w-3.5" />
-            全部章节
+            {{ detail.scene.name || '全部场景' }}
           </NuxtLink>
           <div class="mt-2 flex items-end justify-between gap-3">
             <div class="min-w-0">
-              <h1 class="text-xl font-bold drop-shadow-sm">{{ chapter.name }}</h1>
-              <p class="mt-1 max-w-md text-xs leading-relaxed text-white/85">{{ chapter.subtitle }}</p>
+              <h1 class="text-xl font-bold drop-shadow-sm">{{ script.name }}</h1>
+              <p class="mt-1 max-w-md text-xs leading-relaxed text-white/85">{{ script.blurb }}</p>
             </div>
-            <span v-if="!chapter.coverUrl" class="shrink-0 text-4xl drop-shadow-sm" aria-hidden="true">{{
+            <span v-if="!script.coverUrl" class="shrink-0 text-4xl drop-shadow-sm" aria-hidden="true">{{
               cover.emoji
             }}</span>
           </div>
@@ -126,11 +126,11 @@ async function claim(stage: StageView): Promise<void> {
             <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
               <div
                 class="h-full rounded-full bg-white transition-all duration-500"
-                :style="{ width: `${chapter.total > 0 ? (chapter.clearedCount / chapter.total) * 100 : 0}%` }"
+                :style="{ width: `${detail.total > 0 ? (detail.clearedCount / detail.total) * 100 : 0}%` }"
               />
             </div>
             <span class="shrink-0 text-[11px] font-semibold text-white/90">
-              {{ chapter.clearedCount }} / {{ chapter.total }} 关
+              {{ detail.clearedCount }} / {{ detail.total }} 关
             </span>
           </div>
         </div>
@@ -148,7 +148,7 @@ async function claim(stage: StageView): Promise<void> {
         对话里关掉「翻译」开关，通关时经验 +50%
       </p>
 
-      <!-- 本章关卡：紧凑卡片 + 宽屏双列 -->
+      <!-- 本剧本关卡：紧凑卡片 + 宽屏双列 -->
       <ol class="grid gap-2.5 sm:grid-cols-2">
         <li
           v-for="stage in stages"

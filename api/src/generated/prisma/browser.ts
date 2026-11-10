@@ -189,13 +189,14 @@ export type UserCheckin = Prisma.UserCheckinModel
 export type AiCallLog = Prisma.AiCallLogModel
 /**
  * Model StudyStageProgress
- * 情景闯关进度（一行 = 用户在某场景关卡上的累计进度）。
+ * 情景闯关进度（一行 = 用户在某关卡的对话进度；storyId 为空的行为旧版答题统计）。
  * 
  * **为什么不从 sentence_record 派生**：答题记录默认只保留 30 天
  * （每日 00:20 清理 `< now-30d`），派生口径会让用户一个月后「通关进度倒退」，
  * 关卡也会重新上锁。本表只增不减，是解锁与通关奖励的权威依据。
  * 
- * 与答题/打卡/句签同口径，刻意不与 client_user 建 Prisma 关系，按 userId 显式查询。
+ * 2026-11-10 重构：玩法主键从 categoryId 改为 storyId（一个分类下可以有多个剧本/关卡），
+ * 旧版答题统计（correctCount/answerCount）仍按分类记一行（storyId=null）。
  */
 export type StudyStageProgress = Prisma.StudyStageProgressModel
 /**
@@ -213,22 +214,22 @@ export type StageDialogueSession = Prisma.StageDialogueSessionModel
  */
 export type StageDialogueMessage = Prisma.StageDialogueMessageModel
 /**
- * Model StageChapterCover
+ * Model StageScript
  * 情景闯关「章节封面」：一章一张 AI 生成图，存 file 表，这里只留 chapter_key → file_id 映射。
- * 章节定义在代码里（stage-stories.ts 的 STAGE_CHAPTERS），不入库；本表只管封面图落点，
- * 幂等键 = chapter_key 唯一，重复生成走 regenerate 覆盖。
+ * 情景闯关「剧本」：挂在场景（sentence_category）下的一条身份/故事线。
+ * 
+ * 层级：场景（分类）→ 剧本（本表）→ 关卡（stage_story）。
+ * 一个场景可以有多个剧本（如「职场办公」下：程序员的一天 / 便利店店员 / 销售拜访），
+ * 一个剧本下可以有多关；关卡主键是自身 id，进度/会话都按 storyId 记，与分类解耦。
  */
-export type StageChapterCover = Prisma.StageChapterCoverModel
+export type StageScript = Prisma.StageScriptModel
 /**
  * Model StageStory
- * 情景闯关「关卡剧情」定义（一个场景分类 = 一关）。
+ * 情景闯关「关卡」：一个剧本下的一关（一段可对话的剧情）。
  * 
- * 2026-11-10 起从代码常量（stage-stories.ts 的 STAGE_STORIES）迁移到本表，
- * 后台可增删改查；服务启动时用代码种子**幂等回填**（category 已存在则跳过，不覆盖运营改动）。
- * 章节（STAGE_CHAPTERS）仍留在代码里——章节带封面提示词，且只有固定 4 章。
- * 
- * 关卡与分类的挂钩用 `category`（= sentence_category.name）而不是 id（原因见 stage-stories.ts 头注释）。
- * 进度/会话都按 categoryId 记录，与本表无外键，删改关卡不会伤历史数据。
+ * 2026-11-10 重构：从「一分类一关卡」改为「剧本下多关卡」，主键是自身 id，
+ * 进度/会话按 storyId 记录，删改关卡不会伤历史数据。
+ * 服务启动时用代码种子 STAGE_STORIES **幂等回填**（同剧本下同名标题跳过，不覆盖运营改动）。
  */
 export type StageStory = Prisma.StageStoryModel
 /**

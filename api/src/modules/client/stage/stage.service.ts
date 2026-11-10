@@ -26,7 +26,6 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { GamifyService } from '../gamify/gamify.service.js';
 import {
-  STAGE_CHAPTERS,
   STAGE_COVER_STYLE_SUFFIX,
   STAGE_STORIES,
   stageRoleOf,
@@ -44,8 +43,13 @@ export interface StageRoleView {
 
 /** 单关视图。 */
 export interface StageView {
-  /** 关卡 id = 场景分类 id */
+  /** 关卡 id（stage_story.id）：对话/领奖接口都用它 */
   id: number;
+  /** 所属剧本 id */
+  scriptId: number;
+  /** 所属场景分类 id（统计/题库入口用） */
+  categoryId: number;
+  /** 场景分类名（旧客户端展示用） */
   name: string;
   nameEn: string | null;
   icon: string | null;
@@ -84,7 +88,46 @@ export interface StageView {
   activeSessionId: number | null;
 }
 
-/** 章节视图。 */
+/** 剧本视图（场景 → 剧本 → 关卡 的第二层）。 */
+export interface StageScriptView {
+  /** 剧本 id（stage_script.id） */
+  id: number;
+  /** 所属场景分类 id */
+  categoryId: number;
+  name: string;
+  blurb: string;
+  /** AI 生成的封面图 URL；未生成时为 null（前端回落渐变+图标） */
+  coverUrl: string | null;
+  /** 该剧本下可见关卡数 */
+  stageCount: number;
+  /** 我已通关的关卡数 */
+  clearedCount: number;
+  /** 该剧本是否全部通关 */
+  completed: boolean;
+}
+
+/** 场景视图（顶层：场景分类 + 其下剧本/关卡汇总）。 */
+export interface StageSceneView {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  /** 该场景下启用的剧本数 */
+  scriptCount: number;
+  /** 该场景下可见关卡数 */
+  stageCount: number;
+  /** 我已通关的关卡数 */
+  clearedCount: number;
+  /** 场景卡封面 = 第一个有封面的剧本封面（都没有则 null） */
+  coverUrl: string | null;
+}
+
+/**
+ * 章节视图（**兼容旧客户端**）。
+ *
+ * 重构后层级是 场景 → 剧本 → 关卡；旧版客户端仍把「剧本」当章节渲染，
+ * 所以总览里继续下发 `chapters`，一个剧本 = 一个 chapter（key=`script-{id}`）。
+ */
 export interface StageChapterView {
   key: string;
   name: string;
@@ -98,6 +141,9 @@ export interface StageChapterView {
 
 /** 闯关总览。 */
 export interface StageOverview {
+  /** 顶层场景（新客户端地图首页用） */
+  scenes: StageSceneView[];
+  /** 剧本平铺（兼容旧客户端：一个剧本 = 一个 chapter） */
   chapters: StageChapterView[];
   clearedStages: number;
   totalStages: number;
@@ -105,8 +151,24 @@ export interface StageOverview {
   activeStages: number;
   /** 可领取奖励的关卡数 */
   claimable: number;
-  /** 当前推荐关卡（第一个已解锁未通关） */
+  /** 当前推荐关卡（第一个已解锁未通关；story id） */
   recommendedId: number | null;
+}
+
+/** 场景详情（场景 → 剧本列表）。 */
+export interface StageSceneDetail {
+  scene: StageSceneView;
+  scripts: StageScriptView[];
+}
+
+/** 剧本详情（剧本 → 关卡列表）。 */
+export interface StageScriptDetail {
+  script: StageScriptView;
+  /** 所属场景（展示用） */
+  scene: Pick<StageSceneView, 'id' | 'name' | 'nameEn' | 'icon'>;
+  stages: StageView[];
+  clearedCount: number;
+  total: number;
 }
 
 /** 一句对话消息。 */
@@ -222,68 +284,107 @@ export class StageService {
     private readonly fileService: FileService,
   ) {}
 
-  /** 闯关地图：章节 + 关卡 + 我的对话进度。 */
-  async getStages(userId: number): Promise<StageOverview> {
-    const uid = BigInt(userId);
-    const [categories, progresses, claims, activeSessions, bankCounts, coverUrls, stories] = await Promise.all([
-      this.prisma.sentenceCategory.findMany({
-        where: { status: 1 },
-        orderBy: [{ sort: 'asc' }, { id: 'asc' }],
-        select: { id: true, name: true, nameEn: true, icon: true },
-      }),
-      this.prisma.studyStageProgress.findMany({
-        where: { userId: uid },
-        select: { categoryId: true, correctCount: true, dialogueClearedAt: true, dialogueTurns: true },
-      }),
-      this.prisma.clientXpLog.findMany({
-        where: { userId: uid, eventKey: { startsWith: `stage:${userId}:` } },
-        select: { eventKey: true },
-      }),
-      this.prisma.stageDialogueSession.findMany({
-        where: { userId: uid, status: 'active' },
-        select: { id: true, categoryId: true, turnCount: true },
-      }),
-      // 兼容 Android 旧版关卡页（按场景可刷题数决定是否显示「去练习」）
-      this.prisma.sentence.groupBy({
-        by: ['categoryId'],
-        where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
-        _count: { _all: true },
-      }),
-      // 章节封面：一章一张 AI 图，已生成则下发 URL，前端有图用图、无图回落渐变+emoji
-      this.coverUrlMapOf(),
-      // 关卡剧情：从 stage_story 表读（启用的），章内按 sort 排序
-      this.listStories(1),
-    ]);
+  /* ------------------------------ 地图组装（场景 → 剧本 → 关卡） ------------------------------ */
 
-    const categoryByName = new Map(categories.filter((row) => !isFestivalName(row.name)).map((row) => [row.name, row]));
-    const progressByCategory = new Map(progresses.map((row) => [String(row.categoryId), row]));
+  /**
+   * 一次性把地图所需数据捞齐并组装好：分类 / 剧本 / 关卡 / 我的进度 / 领奖 / 会话 / 题库数。
+   * getStages、getScene、getScript 共用，避免三份重复查询。
+   */
+  private async buildMap(userId: number): Promise<{
+    scenes: StageSceneView[];
+    scripts: Array<StageScriptView & { stages: StageView[] }>;
+    chapters: StageChapterView[];
+    totals: {
+      clearedStages: number;
+      totalStages: number;
+      activeStages: number;
+      claimable: number;
+      recommendedId: number | null;
+    };
+  }> {
+    const uid = BigInt(userId);
+    const [categories, scriptRows, storyRows, storyProgress, legacyProgress, claims, activeSessions, bankCounts] =
+      await Promise.all([
+        this.prisma.sentenceCategory.findMany({
+          where: { status: 1 },
+          orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+          select: { id: true, name: true, nameEn: true, icon: true },
+        }),
+        this.prisma.stageScript.findMany({ where: { status: 1 }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] }),
+        this.prisma.stageStory.findMany({ where: { status: 1 }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] }),
+        // 对话进度（按关卡）
+        this.prisma.studyStageProgress.findMany({
+          where: { userId: uid, storyId: { not: null } },
+          select: { storyId: true, categoryId: true, dialogueClearedAt: true, dialogueTurns: true },
+        }),
+        // 旧版答题统计（按分类，storyId 为空）
+        this.prisma.studyStageProgress.findMany({
+          where: { userId: uid, storyId: null },
+          select: { categoryId: true, correctCount: true },
+        }),
+        this.prisma.clientXpLog.findMany({
+          where: { userId: uid, eventKey: { startsWith: `stage:${userId}:` } },
+          select: { eventKey: true },
+        }),
+        this.prisma.stageDialogueSession.findMany({
+          where: { userId: uid, status: 'active' },
+          select: { id: true, storyId: true, turnCount: true },
+        }),
+        // 兼容 Android 旧版关卡页（按场景可刷题数决定是否显示「去练习」）
+        this.prisma.sentence.groupBy({
+          by: ['categoryId'],
+          where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
+          _count: { _all: true },
+        }),
+      ]);
+
+    const categoryById = new Map(
+      categories.filter((row) => !isFestivalName(row.name)).map((row) => [String(row.id), row]),
+    );
+    const progressByStory = new Map(storyProgress.map((row) => [String(row.storyId), row]));
+    const legacyByCategory = new Map(legacyProgress.map((row) => [String(row.categoryId), row.correctCount]));
     const claimedSet = new Set(claims.map((row) => row.eventKey));
-    const activeByCategory = new Map(activeSessions.map((row) => [String(row.categoryId), row]));
+    const activeByStory = new Map(activeSessions.map((row) => [String(row.storyId), row]));
     const bankByCategory = new Map(bankCounts.map((row) => [String(row.categoryId), row._count._all]));
 
-    const chapters: StageChapterView[] = [];
+    // 封面 URL（剧本 coverFileId → file 表）
+    const coverByScript = new Map<string, string | null>();
+    for (const script of scriptRows) {
+      coverByScript.set(String(script.id), await this.coverUrlOf(script.coverFileId));
+    }
+
+    const storiesByScript = new Map<string, typeof storyRows>();
+    for (const story of storyRows) {
+      const key = String(story.scriptId);
+      const list = storiesByScript.get(key) ?? [];
+      list.push(story);
+      storiesByScript.set(key, list);
+    }
+
     let clearedStages = 0;
     let activeStages = 0;
     let claimable = 0;
     let recommendedId: number | null = null;
 
-    for (const chapter of STAGE_CHAPTERS) {
-      const storiesOfChapter = stories.filter((item) => item.chapter === chapter.key);
+    const scripts: Array<StageScriptView & { stages: StageView[] }> = [];
+    const chapters: StageChapterView[] = [];
+
+    for (const script of scriptRows) {
+      const category = categoryById.get(String(script.categoryId));
+      // 分类被删/禁用/节日分类时跳过整个剧本，而不是造一个点不进去的空剧本
+      if (!category) continue;
+      const stories = storiesByScript.get(String(script.id)) ?? [];
       const stages: StageView[] = [];
-      // 章内顺序解锁：上一关未通关，下一关锁住
+      // 剧本内顺序解锁：上一关未通关，下一关锁住；每个剧本第一关默认解锁
       let previousCleared = true;
 
-      for (const story of storiesOfChapter) {
-        const category = categoryByName.get(story.category);
-        // 分类被删/禁用/改名时跳过该关，而不是造一个点不进去的空关卡
-        if (!category) continue;
-
-        const id = Number(category.id);
-        const progress = progressByCategory.get(String(category.id));
-        const active = activeByCategory.get(String(category.id));
+      for (const story of stories) {
+        const storyId = Number(story.id);
+        const progress = progressByStory.get(String(story.id));
+        const active = activeByStory.get(String(story.id));
         const cleared = Boolean(progress?.dialogueClearedAt);
         const unlocked = previousCleared;
-        const claimed = claimedSet.has(claimKey(userId, id));
+        const claimed = claimedSet.has(claimKey(userId, storyId));
         const turns = progress?.dialogueTurns ?? 0;
         const progressPct = cleared ? 100 : Math.min(90, Math.round(((active?.turnCount ?? 0) / story.minTurns) * 100));
 
@@ -291,12 +392,14 @@ export class StageService {
           clearedStages += 1;
         } else if (unlocked) {
           activeStages += 1;
-          if (recommendedId === null) recommendedId = id;
+          if (recommendedId === null) recommendedId = storyId;
         }
         if (cleared && !claimed) claimable += 1;
 
         stages.push({
-          id,
+          id: storyId,
+          scriptId: Number(script.id),
+          categoryId: Number(category.id),
           name: category.name,
           nameEn: category.nameEn,
           icon: category.icon,
@@ -306,14 +409,14 @@ export class StageService {
           goal: story.goal,
           minTurns: story.minTurns,
           maxTurns: story.maxTurns,
-          roles: story.roles.map((role) => ({ nameEn: role.nameEn, name: role.name, emoji: role.emoji })),
+          roles: this.rolesOf(story.roles),
           rewardXp: story.rewardXp,
           cleared,
           unlocked,
           claimed,
           progress: progressPct,
           turns,
-          legacyCorrectCount: progress?.correctCount ?? 0,
+          legacyCorrectCount: legacyByCategory.get(String(category.id)) ?? 0,
           // ↓ 兼容 Android 旧版关卡页（新口径把「句」换成「轮」）
           target: story.minTurns,
           correctCount: active?.turnCount ?? turns,
@@ -324,45 +427,103 @@ export class StageService {
         previousCleared = cleared;
       }
 
-      if (stages.length > 0) {
-        chapters.push({
-          key: chapter.key,
-          name: chapter.name,
-          subtitle: chapter.subtitle,
-          coverUrl: coverUrls.get(chapter.key) ?? null,
-          stages,
-          clearedCount: stages.filter((item) => item.cleared).length,
-          total: stages.length,
-        });
-      }
+      if (stages.length === 0) continue;
+      const clearedCount = stages.filter((item) => item.cleared).length;
+      const scriptView: StageScriptView & { stages: StageView[] } = {
+        id: Number(script.id),
+        categoryId: Number(category.id),
+        name: script.name,
+        blurb: script.blurb,
+        coverUrl: coverByScript.get(String(script.id)) ?? null,
+        stageCount: stages.length,
+        clearedCount,
+        completed: clearedCount === stages.length,
+        stages,
+      };
+      scripts.push(scriptView);
+      // 兼容旧客户端：一个剧本 = 一个 chapter
+      chapters.push({
+        key: `script-${script.id}`,
+        name: script.name,
+        subtitle: script.blurb,
+        coverUrl: scriptView.coverUrl,
+        stages,
+        clearedCount,
+        total: stages.length,
+      });
+    }
+
+    // 场景汇总（按分类顺序输出，只保留有剧本的场景）
+    const scenes: StageSceneView[] = [];
+    for (const category of categories) {
+      if (isFestivalName(category.name)) continue;
+      const sceneScripts = scripts.filter((item) => item.categoryId === Number(category.id));
+      if (sceneScripts.length === 0) continue;
+      const stageCount = sceneScripts.reduce((sum, item) => sum + item.stageCount, 0);
+      scenes.push({
+        id: Number(category.id),
+        name: category.name,
+        nameEn: category.nameEn,
+        icon: category.icon,
+        scriptCount: sceneScripts.length,
+        stageCount,
+        clearedCount: sceneScripts.reduce((sum, item) => sum + item.clearedCount, 0),
+        coverUrl: sceneScripts.find((item) => item.coverUrl)?.coverUrl ?? null,
+      });
     }
 
     return {
+      scenes,
+      scripts,
       chapters,
-      clearedStages,
-      // STAGE_TOTAL 曾是代码常量 STAGE_STORIES.length；故事迁到 stage_story 表后，总数以启用关卡数为准
-      totalStages: chapters.reduce((sum, item) => sum + item.total, 0),
-      activeStages,
-      claimable,
-      recommendedId,
+      totals: {
+        clearedStages,
+        totalStages: chapters.reduce((sum, item) => sum + item.total, 0),
+        activeStages,
+        claimable,
+        recommendedId,
+      },
     };
   }
 
-  /* ------------------------------ 章节封面（AI 生图） ------------------------------ */
-
-  /** 章节 key → 封面 URL 映射（未生成为缺席；file 记录被删则视为 null）。 */
-  private async coverUrlMapOf(): Promise<Map<string, string>> {
-    const rows = await this.prisma.stageChapterCover.findMany({
-      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
-      select: { chapterKey: true, fileId: true },
-    });
-    const map = new Map<string, string>();
-    for (const row of rows) {
-      const url = await this.coverUrlOf(row.fileId);
-      if (url) map.set(row.chapterKey, url);
-    }
-    return map;
+  /** 闯关地图：场景 + 剧本（兼容 chapters）+ 我的对话进度。 */
+  async getStages(userId: number): Promise<StageOverview> {
+    const map = await this.buildMap(userId);
+    return { scenes: map.scenes, chapters: map.chapters, ...map.totals };
   }
+
+  /** 场景详情：该场景下的剧本列表。 */
+  async getScene(userId: number, categoryId: number): Promise<StageSceneDetail> {
+    const map = await this.buildMap(userId);
+    const scene = map.scenes.find((item) => item.id === categoryId);
+    if (!scene) throw AppException.notFound('场景不存在');
+    return {
+      scene,
+      scripts: map.scripts.filter((item) => item.categoryId === categoryId).map(({ stages: _stages, ...view }) => view),
+    };
+  }
+
+  /** 剧本详情：该剧本下的关卡列表（含解锁/进度）。 */
+  async getScript(userId: number, scriptId: number): Promise<StageScriptDetail> {
+    const map = await this.buildMap(userId);
+    const script = map.scripts.find((item) => item.id === scriptId);
+    if (!script) throw AppException.notFound('剧本不存在');
+    const scene = map.scenes.find((item) => item.id === script.categoryId);
+    return {
+      script: (({ stages: _stages, ...view }) => view)(script),
+      scene: {
+        id: script.categoryId,
+        name: scene?.name ?? '',
+        nameEn: scene?.nameEn ?? null,
+        icon: scene?.icon ?? null,
+      },
+      stages: script.stages,
+      clearedCount: script.clearedCount,
+      total: script.stageCount,
+    };
+  }
+
+  /* ------------------------------ 剧本封面（AI 生图） ------------------------------ */
 
   /** 由文件 id 解析封面访问 URL（0/缺失返回 null）。 */
   private async coverUrlOf(fileId: bigint): Promise<string | null> {
@@ -371,27 +532,29 @@ export class StageService {
     return file?.fileUrl ?? null;
   }
 
+  /** 剧本封面生图提示词：场景 + 剧本名 + 统一风格后缀（硬性 no text）。 */
+  private scriptCoverPrompt(sceneName: string, scriptName: string): string {
+    return `A storybook illustration for an English-learning scenario story titled "${scriptName}", set in the everyday-life scene "${sceneName}", ${STAGE_COVER_STYLE_SUFFIX}`;
+  }
+
   /**
-   * 生成（或重新生成）某章封面：AI 生图 → sharp 转 webp → file 表落盘 →
-   * stage_chapter_cover 按 chapter_key 唯一 upsert（重复生成覆盖旧图引用）。
+   * 生成（或重新生成）某剧本封面：AI 生图 → sharp 转 webp → file 表落盘 → 回写 stage_script.cover_file_id。
    * @param regenerate 为 true 时即使已有封面也强制重生成
    */
-  async generateChapterCover(
-    chapterKey: string,
-    regenerate = false,
-  ): Promise<{ chapterKey: string; coverUrl: string }> {
-    const chapter = STAGE_CHAPTERS.find((item) => item.key === chapterKey);
-    if (!chapter) throw AppException.notFound(`章节不存在：${chapterKey}`);
-
-    const existing = await this.prisma.stageChapterCover.findUnique({ where: { chapterKey } });
-    if (existing && !regenerate) {
-      const url = await this.coverUrlOf(existing.fileId);
-      if (url) return { chapterKey, coverUrl: url };
-      // file 记录已被删但封面行还在：落下去重生成
-      this.logger.warn(`[Stage] 章节 ${chapterKey} 的封面文件缺失，重新生成`);
+  async generateScriptCover(scriptId: number, regenerate = false): Promise<{ scriptId: number; coverUrl: string }> {
+    const script = await this.prisma.stageScript.findUnique({ where: { id: BigInt(scriptId) } });
+    if (!script) throw AppException.notFound('剧本不存在');
+    if (script.coverFileId > 0n && !regenerate) {
+      const url = await this.coverUrlOf(script.coverFileId);
+      if (url) return { scriptId, coverUrl: url };
+      // file 记录已被删但封面引用还在：落下去重生成
+      this.logger.warn(`[Stage] 剧本 ${scriptId} 的封面文件缺失，重新生成`);
     }
-
-    const prompt = `${chapter.coverPrompt}, ${STAGE_COVER_STYLE_SUFFIX}`;
+    const category = await this.prisma.sentenceCategory.findUnique({
+      where: { id: script.categoryId },
+      select: { name: true },
+    });
+    const prompt = this.scriptCoverPrompt(category?.name ?? 'daily life', script.name);
     const image = await withRetry(
       () =>
         this.imageGen.generate(prompt, {
@@ -404,142 +567,138 @@ export class StageService {
       .resize({ width: config.stage.coverMaxWidth, withoutEnlargement: true })
       .webp({ quality: config.stage.coverQuality })
       .toBuffer();
-    const saved = await this.fileService.save(`stage-cover-${chapterKey}.webp`, 'image/webp', webp, null);
-
-    const row = await this.prisma.stageChapterCover.upsert({
-      where: { chapterKey },
-      create: { chapterKey, fileId: BigInt(saved.file.id), prompt },
-      update: { fileId: BigInt(saved.file.id), prompt },
+    const saved = await this.fileService.save(`stage-script-cover-${scriptId}.webp`, 'image/webp', webp, null);
+    const row = await this.prisma.stageScript.update({
+      where: { id: script.id },
+      data: { coverFileId: BigInt(saved.file.id) },
     });
-    const coverUrl = (await this.coverUrlOf(row.fileId)) ?? saved.file.fileUrl;
-    this.logger.log(`[Stage] 章节 ${chapterKey}（${chapter.name}）封面生成完成：${coverUrl}`);
-    return { chapterKey, coverUrl };
+    const coverUrl = (await this.coverUrlOf(row.coverFileId)) ?? saved.file.fileUrl;
+    this.logger.log(`[Stage] 剧本 #${scriptId}「${script.name}」封面生成完成：${coverUrl}`);
+    return { scriptId, coverUrl };
   }
 
   /**
-   * 补齐缺失的章节封面（定时任务用）：只生成「还没有封面行」的章节，
-   * 已有封面不覆盖——想换图走后台手动「重新生成」。单章失败不影响其他章。
+   * 补齐缺失的剧本封面（定时任务用）：只生成「还没有封面」的启用剧本，
+   * 已有封面不覆盖——想换图走后台手动「重新生成」。单个失败不影响其他剧本。
    */
-  async generateMissingChapterCovers(): Promise<{ generated: string[]; skipped: string[]; failed: string[] }> {
-    const existing = await this.prisma.stageChapterCover.findMany({
-      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
-      select: { chapterKey: true },
+  async generateMissingScriptCovers(): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
+    const scripts = await this.prisma.stageScript.findMany({
+      where: { status: 1 },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+      select: { id: true, coverFileId: true },
     });
-    const has = new Set(existing.map((row) => row.chapterKey));
-    const generated: string[] = [];
-    const skipped: string[] = [];
-    const failed: string[] = [];
-    for (const chapter of STAGE_CHAPTERS) {
-      if (has.has(chapter.key)) {
-        skipped.push(chapter.key);
+    const generated: number[] = [];
+    const skipped: number[] = [];
+    const failed: number[] = [];
+    for (const script of scripts) {
+      if (script.coverFileId > 0n) {
+        skipped.push(Number(script.id));
         continue;
       }
       try {
-        await this.generateChapterCover(chapter.key);
-        generated.push(chapter.key);
+        await this.generateScriptCover(Number(script.id));
+        generated.push(Number(script.id));
       } catch (error) {
-        failed.push(chapter.key);
-        this.logger.error(`[Stage] 章节 ${chapter.key} 封面生成失败：${(error as Error).message}`);
+        failed.push(Number(script.id));
+        this.logger.error(`[Stage] 剧本 #${script.id} 封面生成失败：${(error as Error).message}`);
       }
     }
     this.logger.log(
-      `[Stage] 封面补生成完成：新增 ${generated.length} 张，跳过 ${skipped.length} 张，失败 ${failed.length} 张`,
+      `[Stage] 剧本封面补生成完成：新增 ${generated.length} 张，跳过 ${skipped.length} 张，失败 ${failed.length} 张`,
     );
     return { generated, skipped, failed };
   }
 
-  /** 后台-封面管理列表：每章一行（含未生成的），带封面 URL 与生成信息。 */
-  async adminCovers(): Promise<StageChapterCoverItem[]> {
-    const rows = await this.prisma.stageChapterCover.findMany({
-      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
-      select: { chapterKey: true, fileId: true, prompt: true, generatedAt: true },
-    });
-    const byKey = new Map(rows.map((row) => [row.chapterKey, row]));
-    const items: StageChapterCoverItem[] = [];
-    for (const chapter of STAGE_CHAPTERS) {
-      const row = byKey.get(chapter.key);
-      items.push({
-        chapterKey: chapter.key,
-        chapterName: chapter.name,
-        coverUrl: row ? await this.coverUrlOf(row.fileId) : null,
-        prompt: row?.prompt ?? chapter.coverPrompt,
-        generatedAt: row ? row.generatedAt.toISOString() : null,
-      });
-    }
-    return items;
-  }
+  /* ------------------------------ 剧本 / 关卡（stage_script / stage_story，后台可 CRUD） ------------------------------ */
 
-  /* ------------------------------ 关卡剧情（stage_story 表，后台可 CRUD） ------------------------------ */
-
-  /** 服务启动时用代码种子 STAGE_STORIES 幂等回填 stage_story：category 已存在则跳过，不覆盖运营改动。 */
+  /**
+   * 服务启动时用代码种子幂等回填：每个分类建一个「默认剧本」（已有同名则复用），
+   * 剧本下已有任一关卡就跳过（不覆盖运营改动，也避免运营改名后被重复补种）。
+   */
   async onModuleInit(): Promise<void> {
-    const existing = await this.prisma.stageStory.findMany({ select: { category: true } });
-    const has = new Set(existing.map((row) => row.category));
-    const missing = STAGE_STORIES.filter((item) => !has.has(item.category));
-    if (missing.length === 0) return;
-    await this.prisma.stageStory.createMany({
-      data: missing.map((item) => ({
-        chapterKey: item.chapter,
-        category: item.category,
-        title: item.title,
-        intro: item.intro,
-        outro: item.outro,
-        userRole: item.userRole,
-        setting: item.setting,
-        goal: item.goal,
-        minTurns: item.minTurns,
-        maxTurns: item.maxTurns,
-        target: item.target,
-        rewardXp: item.rewardXp,
-        roles: item.roles as never,
-        opening: item.opening as never,
-        starterHints: item.starterHints as never,
-        sort: STAGE_STORIES.indexOf(item) + 1,
-      })),
-      skipDuplicates: true,
-    });
-    this.logger.log(`[Stage] stage_story 种子回填 ${missing.length} 条关卡（已有 ${has.size} 条跳过）`);
+    const categories = await this.prisma.sentenceCategory.findMany({ select: { id: true, name: true } });
+    const categoryByName = new Map(categories.map((row) => [row.name, row.id]));
+    let createdScripts = 0;
+    let createdStories = 0;
+
+    for (const seed of STAGE_STORIES) {
+      const categoryId = categoryByName.get(seed.category);
+      if (!categoryId) continue;
+      const scriptName = `${seed.category} · 默认剧本`;
+      let script = await this.prisma.stageScript.findFirst({
+        where: { categoryId, name: scriptName },
+        select: { id: true },
+      });
+      if (!script) {
+        script = await this.prisma.stageScript.create({
+          data: { categoryId, name: scriptName, blurb: '从代码种子自动生成的默认剧本', sort: 0, status: 1 },
+          select: { id: true },
+        });
+        createdScripts += 1;
+      }
+      // 该分类的默认剧本下已有任一关卡（运营已维护过）就不再补种——改名/改序都不受影响
+      const exists = await this.prisma.stageStory.findFirst({ where: { scriptId: script.id }, select: { id: true } });
+      if (exists) continue;
+      await this.prisma.stageStory.create({
+        data: {
+          scriptId: script.id,
+          title: seed.title,
+          intro: seed.intro,
+          outro: seed.outro,
+          userRole: seed.userRole,
+          setting: seed.setting,
+          goal: seed.goal,
+          minTurns: seed.minTurns,
+          maxTurns: seed.maxTurns,
+          target: seed.target,
+          rewardXp: seed.rewardXp,
+          roles: seed.roles as never,
+          opening: seed.opening as never,
+          starterHints: seed.starterHints as never,
+          sort: 1,
+        },
+      });
+      createdStories += 1;
+    }
+    if (createdScripts > 0 || createdStories > 0) {
+      this.logger.log(`[Stage] 种子回填：新增剧本 ${createdScripts} 个、关卡 ${createdStories} 关`);
+    }
   }
 
-  /** 读取关卡表并映射为剧情结构。status 传 1 只取启用；排序 = 章节顺序 → sort → id。 */
-  private async listStories(status?: number): Promise<StageStory[]> {
+  /** 读取剧本（可按状态过滤），按 场景顺序 → 剧本 sort → id 排序。 */
+  private async listScripts(status?: number): Promise<Array<StageScriptRow>> {
+    const rows = await this.prisma.stageScript.findMany({ where: status === undefined ? {} : { status } });
+    const categories = await this.prisma.sentenceCategory.findMany({
+      select: { id: true, sort: true },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
+    });
+    const categoryOrder = new Map(categories.map((row, index) => [String(row.id), index]));
+    return rows.sort(
+      (a, b) =>
+        (categoryOrder.get(String(a.categoryId)) ?? 99) - (categoryOrder.get(String(b.categoryId)) ?? 99) ||
+        a.sort - b.sort ||
+        Number(a.id - b.id),
+    );
+  }
+
+  /** 读取某剧本（或全部）的关卡，按 sort → id 排序。 */
+  private async listStories(scriptId?: number, status?: number): Promise<Array<StageStoryRow>> {
     const rows = await this.prisma.stageStory.findMany({
-      where: status === undefined ? {} : { status },
+      where: {
+        ...(scriptId !== undefined ? { scriptId: BigInt(scriptId) } : {}),
+        ...(status !== undefined ? { status } : {}),
+      },
+      orderBy: [{ sort: 'asc' }, { id: 'asc' }],
     });
-    const chapterOrder = new Map(STAGE_CHAPTERS.map((item, index) => [item.key, index]));
-    return rows
-      .map((row) => this.toStory(row))
-      .sort(
-        (a, b) =>
-          (chapterOrder.get(a.chapter) ?? 99) - (chapterOrder.get(b.chapter) ?? 99) || (a.sort ?? 0) - (b.sort ?? 0),
-      );
+    return rows;
   }
 
-  /** stage_story 行 → StageStory（Json 字段做兜底解析，坏数据不炸整页）。 */
-  private toStory(row: {
-    chapterKey: string;
-    category: string;
-    title: string;
-    intro: string;
-    outro: string;
-    userRole: string;
-    setting: string;
-    goal: string;
-    minTurns: number;
-    maxTurns: number;
-    target: number;
-    rewardXp: number;
-    roles: unknown;
-    opening: unknown;
-    starterHints: unknown;
-    sort?: number;
-  }): StageStory & { sort: number } {
-    const asRoles = Array.isArray(row.roles) ? (row.roles as StageRole[]) : [];
-    const asOpening = Array.isArray(row.opening) ? (row.opening as StageLine[]) : [];
-    const asHints = Array.isArray(row.starterHints) ? (row.starterHints as Array<{ en: string; zh: string }>) : [];
+  /** stage_story 行 → 对话链路用的剧情结构（Json 字段做兜底解析，坏数据不炸整页）。 */
+  private toStory(row: StageStoryRow): StageStory {
     return {
-      chapter: row.chapterKey,
-      category: row.category,
+      // 剧情结构里 chapter/category 已无业务含义（层级改由 script 承载），保留字段以兼容对话 prompt
+      chapter: '',
+      category: '',
       title: row.title,
       intro: row.intro,
       outro: row.outro,
@@ -550,32 +709,33 @@ export class StageService {
       maxTurns: row.maxTurns,
       target: row.target,
       rewardXp: row.rewardXp,
-      roles: asRoles,
-      opening: asOpening,
-      starterHints: asHints,
-      sort: row.sort ?? 0,
+      roles: Array.isArray(row.roles) ? (row.roles as unknown as StageRole[]) : [],
+      opening: Array.isArray(row.opening) ? (row.opening as unknown as StageLine[]) : [],
+      starterHints: Array.isArray(row.starterHints)
+        ? (row.starterHints as unknown as Array<{ en: string; zh: string }>)
+        : [],
     };
   }
 
-  /** 按分类 id 取启用的关卡剧情（对话链路入口）。 */
-  private async storyOfCategory(categoryId: number): Promise<StageStory | undefined> {
-    const category = await this.prisma.sentenceCategory.findUnique({
-      where: { id: BigInt(categoryId) },
-      select: { name: true },
-    });
-    if (!category) return undefined;
-    const row = await this.prisma.stageStory.findUnique({
-      where: { category: category.name },
-    });
+  /** 角色列表（只下发展示字段）。 */
+  private rolesOf(raw: unknown): StageRoleView[] {
+    if (!Array.isArray(raw)) return [];
+    return (raw as unknown as StageRole[]).map((role) => ({ nameEn: role.nameEn, name: role.name, emoji: role.emoji }));
+  }
+
+  /** 按 storyId 取启用关卡（对话链路入口），顺带把所属剧本/场景带出来。 */
+  private async storyOfId(storyId: number): Promise<{ story: StageStory; script: StageScriptRow } | undefined> {
+    const row = await this.prisma.stageStory.findUnique({ where: { id: BigInt(storyId) } });
     if (!row || row.status !== 1) return undefined;
-    return this.toStory(row);
+    const script = await this.prisma.stageScript.findUnique({ where: { id: row.scriptId } });
+    if (!script || script.status !== 1) return undefined;
+    return { story: this.toStory(row), script };
   }
 
   /** 校验并归一化关卡提交数据（新增/编辑共用）。返回可直接写库的 data。 */
-  private validateStoryInput(input: CreateStageStoryInput): Record<string, unknown> {
-    if (!STAGE_CHAPTERS.some((item) => item.key === input.chapterKey)) {
-      throw AppException.badRequest(`章节不存在：${input.chapterKey}`);
-    }
+  private async validateStoryInput(input: CreateStageStoryInput): Promise<Record<string, unknown>> {
+    const script = await this.prisma.stageScript.findUnique({ where: { id: BigInt(input.scriptId) } });
+    if (!script) throw AppException.badRequest(`剧本不存在：${input.scriptId}`);
     if (!Array.isArray(input.roles) || input.roles.length < 1 || input.roles.length > 3) {
       throw AppException.badRequest('出场角色需要 1~3 人');
     }
@@ -596,8 +756,7 @@ export class StageService {
     }
     if (input.rewardXp < 0 || input.rewardXp > 10000) throw AppException.badRequest('rewardXp 需在 0~10000 之间');
     return {
-      chapterKey: input.chapterKey,
-      category: input.category.trim(),
+      scriptId: BigInt(input.scriptId),
       title: input.title.trim(),
       intro: input.intro.trim(),
       outro: input.outro.trim(),
@@ -614,99 +773,217 @@ export class StageService {
     };
   }
 
-  /** 后台-关卡列表（含停用的，附分类 id 与会话/参与/通关统计）。 */
-  async adminStories(): Promise<StageStoryAdminItem[]> {
-    const [rows, categories, sessionCounts, participantRaw, clearedCounts] = await Promise.all([
-      this.prisma.stageStory.findMany(),
+  /* ------------------------------ 后台：剧本 CRUD ------------------------------ */
+
+  /** 后台-剧本列表（含停用，附场景名/封面/关卡数与参与统计）。 */
+  async adminScripts(): Promise<StageScriptAdminItem[]> {
+    const [scripts, categories, storyRows, sessionCounts] = await Promise.all([
+      this.listScripts(),
       this.prisma.sentenceCategory.findMany({ select: { id: true, name: true } }),
-      this.prisma.stageDialogueSession.groupBy({ by: ['categoryId'], _count: { _all: true } }),
-      this.prisma.stageDialogueSession.groupBy({ by: ['userId', 'categoryId'], _count: { _all: true } }),
+      this.prisma.stageStory.findMany({ select: { id: true, scriptId: true, status: true } }),
+      this.prisma.stageDialogueSession.groupBy({ by: ['storyId'], _count: { _all: true } }),
+    ]);
+    const categoryNameOf = new Map(categories.map((row) => [String(row.id), row.name]));
+    const sessionOf = new Map(sessionCounts.map((row) => [String(row.storyId), row._count._all]));
+    const storiesOfScript = new Map<string, Array<{ id: bigint; status: number }>>();
+    for (const story of storyRows) {
+      const key = String(story.scriptId);
+      const list = storiesOfScript.get(key) ?? [];
+      list.push(story);
+      storiesOfScript.set(key, list);
+    }
+    const items: StageScriptAdminItem[] = [];
+    for (const script of scripts) {
+      const stories = storiesOfScript.get(String(script.id)) ?? [];
+      items.push({
+        id: Number(script.id),
+        categoryId: Number(script.categoryId),
+        categoryName: categoryNameOf.get(String(script.categoryId)) ?? '（分类已删除）',
+        name: script.name,
+        blurb: script.blurb,
+        coverUrl: await this.coverUrlOf(script.coverFileId),
+        sort: script.sort,
+        status: script.status,
+        stageCount: stories.length,
+        enabledStageCount: stories.filter((row) => row.status === 1).length,
+        sessionCount: stories.reduce((sum, row) => sum + (sessionOf.get(String(row.id)) ?? 0), 0),
+        createdAt: script.createdAt.toISOString(),
+      });
+    }
+    return items;
+  }
+
+  /** 后台-新增剧本：场景必须存在且启用，落到该场景 sort 末尾。 */
+  async createScript(input: CreateStageScriptInput): Promise<{ id: number }> {
+    const category = await this.prisma.sentenceCategory.findUnique({
+      where: { id: BigInt(input.categoryId) },
+      select: { id: true, status: true },
+    });
+    if (!category) throw AppException.badRequest(`场景分类不存在：${input.categoryId}`);
+    if (category.status !== 1) throw AppException.badRequest('场景分类已停用');
+    const name = input.name.trim();
+    if (!name) throw AppException.badRequest('剧本名不能为空');
+    const duplicate = await this.prisma.stageScript.findFirst({
+      where: { categoryId: BigInt(input.categoryId), name },
+      select: { id: true },
+    });
+    if (duplicate) throw AppException.conflict(`该场景下已有同名剧本「${name}」`);
+    const last = await this.prisma.stageScript.aggregate({
+      where: { categoryId: BigInt(input.categoryId) },
+      _max: { sort: true },
+    });
+    const row = await this.prisma.stageScript.create({
+      data: {
+        categoryId: BigInt(input.categoryId),
+        name,
+        blurb: input.blurb?.trim() ?? '',
+        sort: input.sort ?? (last._max.sort ?? 0) + 1,
+        status: input.status ?? 1,
+      },
+    });
+    this.logger.log(`[Stage] 新增剧本 #${row.id}「${row.name}」（场景 ${input.categoryId}）`);
+    return { id: Number(row.id) };
+  }
+
+  /** 后台-编辑剧本：改名/简介/排序/启停；换场景会改变归属，允许但需校验。 */
+  async updateScript(id: number, input: UpdateStageScriptInput): Promise<void> {
+    const row = await this.prisma.stageScript.findUnique({ where: { id: BigInt(id) } });
+    if (!row) throw AppException.notFound('剧本不存在');
+    if (input.categoryId !== undefined && Number(row.categoryId) !== input.categoryId) {
+      const category = await this.prisma.sentenceCategory.findUnique({
+        where: { id: BigInt(input.categoryId) },
+        select: { id: true, status: true },
+      });
+      if (!category) throw AppException.badRequest(`场景分类不存在：${input.categoryId}`);
+      if (category.status !== 1) throw AppException.badRequest('场景分类已停用');
+    }
+    const name = input.name?.trim();
+    if (name !== undefined && name.length === 0) throw AppException.badRequest('剧本名不能为空');
+    const categoryId = input.categoryId !== undefined ? BigInt(input.categoryId) : row.categoryId;
+    if (name !== undefined && name !== row.name) {
+      const duplicate = await this.prisma.stageScript.findFirst({
+        where: { categoryId, name, NOT: { id: row.id } },
+        select: { id: true },
+      });
+      if (duplicate) throw AppException.conflict(`该场景下已有同名剧本「${name}」`);
+    }
+    await this.prisma.stageScript.update({
+      where: { id: row.id },
+      data: {
+        ...(input.categoryId !== undefined ? { categoryId } : {}),
+        ...(name !== undefined ? { name } : {}),
+        ...(input.blurb !== undefined ? { blurb: input.blurb.trim() } : {}),
+        ...(input.sort !== undefined ? { sort: input.sort } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+      },
+    });
+    this.logger.log(`[Stage] 编辑剧本 #${row.id}「${row.name}」`);
+  }
+
+  /** 后台-启停剧本：停用后客户端整条剧本线不可见，历史进度保留。 */
+  async setScriptStatus(id: number, status: 0 | 1): Promise<void> {
+    const row = await this.prisma.stageScript.findUnique({ where: { id: BigInt(id) } });
+    if (!row) throw AppException.notFound('剧本不存在');
+    await this.prisma.stageScript.update({ where: { id: row.id }, data: { status } });
+    this.logger.log(`[Stage] 剧本 #${row.id}「${row.name}」${status === 1 ? '启用' : '停用'}`);
+  }
+
+  /** 后台-删除剧本：连同其下关卡一起删（进度/会话按 storyId 记，保留不伤历史）。 */
+  async deleteScript(id: number): Promise<{ deletedStories: number }> {
+    const row = await this.prisma.stageScript.findUnique({ where: { id: BigInt(id) } });
+    if (!row) throw AppException.notFound('剧本不存在');
+    const deleted = await this.prisma.stageStory.deleteMany({ where: { scriptId: row.id } });
+    await this.prisma.stageScript.delete({ where: { id: row.id } });
+    this.logger.log(`[Stage] 删除剧本 #${row.id}「${row.name}」及其 ${deleted.count} 个关卡`);
+    return { deletedStories: deleted.count };
+  }
+
+  /* ------------------------------ 后台：关卡 CRUD ------------------------------ */
+
+  /** 后台-关卡列表（含停用的，附剧本/场景名与统计）。 */
+  async adminStories(): Promise<StageStoryAdminItem[]> {
+    const [rows, scripts, categories, sessionCounts, participantRaw, clearedCounts] = await Promise.all([
+      this.prisma.stageStory.findMany(),
+      this.prisma.stageScript.findMany({ select: { id: true, name: true, categoryId: true } }),
+      this.prisma.sentenceCategory.findMany({ select: { id: true, name: true } }),
+      this.prisma.stageDialogueSession.groupBy({ by: ['storyId'], _count: { _all: true } }),
+      this.prisma.stageDialogueSession.groupBy({ by: ['userId', 'storyId'], _count: { _all: true } }),
       this.prisma.studyStageProgress.groupBy({
-        by: ['categoryId'],
+        by: ['storyId'],
         where: { dialogueClearedAt: { not: null } },
         _count: { _all: true },
       }),
     ]);
-    const categoryByName = new Map(categories.map((row) => [row.name, Number(row.id)]));
-    const chapterNameOf = new Map(STAGE_CHAPTERS.map((item) => [item.key, item.name]));
-    const sessionOf = new Map(sessionCounts.map((row) => [String(row.categoryId), row._count._all]));
-    const clearedOf = new Map(clearedCounts.map((row) => [String(row.categoryId), row._count._all]));
+    const scriptOf = new Map(scripts.map((row) => [String(row.id), row]));
+    const categoryNameOf = new Map(categories.map((row) => [String(row.id), row.name]));
+    const sessionOf = new Map(sessionCounts.map((row) => [String(row.storyId), row._count._all]));
+    const clearedOf = new Map(clearedCounts.map((row) => [String(row.storyId), row._count._all]));
     const participantOf = new Map<string, number>();
     for (const row of participantRaw) {
-      const key = String(row.categoryId);
+      const key = String(row.storyId);
       participantOf.set(key, (participantOf.get(key) ?? 0) + 1);
     }
-    const chapterOrder = new Map(STAGE_CHAPTERS.map((item, index) => [item.key, index]));
+    const scriptOrder = new Map(scripts.map((row, index) => [String(row.id), index]));
     return rows
-      .map((row) => ({
-        id: Number(row.id),
-        chapterKey: row.chapterKey,
-        chapterName: chapterNameOf.get(row.chapterKey) ?? row.chapterKey,
-        category: row.category,
-        categoryId: categoryByName.get(row.category) ?? null,
-        title: row.title,
-        intro: row.intro,
-        outro: row.outro,
-        userRole: row.userRole,
-        setting: row.setting,
-        goal: row.goal,
-        minTurns: row.minTurns,
-        maxTurns: row.maxTurns,
-        target: row.target,
-        rewardXp: row.rewardXp,
-        roles: Array.isArray(row.roles) ? (row.roles as unknown as StageRole[]) : [],
-        opening: Array.isArray(row.opening) ? (row.opening as unknown as StageLine[]) : [],
-        starterHints: Array.isArray(row.starterHints)
-          ? (row.starterHints as unknown as Array<{ en: string; zh: string }>)
-          : [],
-        sort: row.sort,
-        status: row.status,
-        sessionCount: sessionOf.get(String(categoryByName.get(row.category) ?? 0n)) ?? 0,
-        participantCount: participantOf.get(String(categoryByName.get(row.category) ?? 0n)) ?? 0,
-        clearedCount: clearedOf.get(String(categoryByName.get(row.category) ?? 0n)) ?? 0,
-        createdAt: row.createdAt.toISOString(),
-      }))
+      .map((row) => {
+        const script = scriptOf.get(String(row.scriptId));
+        return {
+          id: Number(row.id),
+          scriptId: Number(row.scriptId),
+          scriptName: script?.name ?? '（剧本已删除）',
+          categoryId: script ? Number(script.categoryId) : null,
+          categoryName: script ? (categoryNameOf.get(String(script.categoryId)) ?? '（分类已删除）') : '（剧本已删除）',
+          title: row.title,
+          intro: row.intro,
+          outro: row.outro,
+          userRole: row.userRole,
+          setting: row.setting,
+          goal: row.goal,
+          minTurns: row.minTurns,
+          maxTurns: row.maxTurns,
+          target: row.target,
+          rewardXp: row.rewardXp,
+          roles: Array.isArray(row.roles) ? (row.roles as unknown as StageRole[]) : [],
+          opening: Array.isArray(row.opening) ? (row.opening as unknown as StageLine[]) : [],
+          starterHints: Array.isArray(row.starterHints)
+            ? (row.starterHints as unknown as Array<{ en: string; zh: string }>)
+            : [],
+          sort: row.sort,
+          status: row.status,
+          sessionCount: sessionOf.get(String(row.id)) ?? 0,
+          participantCount: participantOf.get(String(row.id)) ?? 0,
+          clearedCount: clearedOf.get(String(row.id)) ?? 0,
+          createdAt: row.createdAt.toISOString(),
+        };
+      })
       .sort(
         (a, b) =>
-          (chapterOrder.get(a.chapterKey) ?? 99) - (chapterOrder.get(b.chapterKey) ?? 99) ||
+          (scriptOrder.get(String(a.scriptId)) ?? 99) - (scriptOrder.get(String(b.scriptId)) ?? 99) ||
           a.sort - b.sort ||
           a.id - b.id,
       );
   }
 
-  /** 后台-新增关卡：分类必须真实存在且未被其他关卡占用，落到该章 sort 末尾。 */
+  /** 后台-新增关卡：落到该剧本 sort 末尾。 */
   async createStory(input: CreateStageStoryInput): Promise<{ id: number }> {
-    const data = this.validateStoryInput(input);
-    const category = await this.prisma.sentenceCategory.findFirst({
-      where: { name: data.category as string },
-      select: { id: true, status: true },
-    });
-    if (!category) throw AppException.badRequest(`场景分类不存在：${data.category}`);
-    if (category.status !== 1) throw AppException.badRequest(`场景分类已停用：${data.category}`);
-    const taken = await this.prisma.stageStory.findUnique({ where: { category: data.category as string } });
-    if (taken) throw AppException.conflict(`该分类已绑定关卡「${taken.title}」`);
+    const data = await this.validateStoryInput(input);
     const last = await this.prisma.stageStory.aggregate({
-      where: { chapterKey: data.chapterKey as string },
+      where: { scriptId: BigInt(input.scriptId) },
       _max: { sort: true },
     });
     const row = await this.prisma.stageStory.create({
       data: { ...data, sort: (last._max.sort ?? 0) + 1, status: 1 } as never,
     });
-    this.logger.log(`[Stage] 新增关卡 #${row.id}「${row.title}」（${row.category} / ${row.chapterKey}）`);
+    this.logger.log(`[Stage] 新增关卡 #${row.id}「${row.title}」（剧本 ${input.scriptId}）`);
     return { id: Number(row.id) };
   }
 
-  /** 后台-编辑关卡：category 不允许改（进度/会话按 categoryId 挂，改了会断历史）。 */
+  /** 后台-编辑关卡：未提交字段回落到旧值，再整体校验；允许换剧本。 */
   async updateStory(id: number, input: UpdateStageStoryInput): Promise<void> {
     const row = await this.prisma.stageStory.findUnique({ where: { id: BigInt(id) } });
     if (!row) throw AppException.notFound('关卡不存在');
-    if (input.category !== undefined && input.category.trim() !== row.category) {
-      throw AppException.badRequest('不允许修改关卡绑定的分类（历史进度按分类记录）');
-    }
-    // 未提交的字段回落到旧值，再整体走新增同款校验
     const merged = {
-      chapterKey: input.chapterKey ?? row.chapterKey,
-      category: row.category,
+      scriptId: input.scriptId ?? Number(row.scriptId),
       title: input.title ?? row.title,
       intro: input.intro ?? row.intro,
       outro: input.outro ?? row.outro,
@@ -724,7 +1001,7 @@ export class StageService {
         zh: string;
       }>,
     };
-    const data = this.validateStoryInput(merged);
+    const data = await this.validateStoryInput(merged);
     await this.prisma.stageStory.update({ where: { id: row.id }, data: data as never });
     this.logger.log(`[Stage] 编辑关卡 #${row.id}「${row.title}」`);
   }
@@ -737,33 +1014,26 @@ export class StageService {
     this.logger.log(`[Stage] 关卡 #${row.id}「${row.title}」${status === 1 ? '启用' : '停用'}`);
   }
 
-  /** 后台-删除关卡：物理删除（进度/会话挂 categoryId，不受影响；分类随之可重新绑定）。 */
+  /** 后台-删除关卡：物理删除（进度/会话按 storyId 记，保留不伤历史）。 */
   async deleteStory(id: number): Promise<{ sessionCount: number }> {
     const row = await this.prisma.stageStory.findUnique({ where: { id: BigInt(id) } });
     if (!row) throw AppException.notFound('关卡不存在');
-    const category = await this.prisma.sentenceCategory.findFirst({
-      where: { name: row.category },
-      select: { id: true },
-    });
-    const sessionCount = category
-      ? await this.prisma.stageDialogueSession.count({ where: { categoryId: category.id } })
-      : 0;
+    const sessionCount = await this.prisma.stageDialogueSession.count({ where: { storyId: row.id } });
     await this.prisma.stageStory.delete({ where: { id: row.id } });
     this.logger.log(`[Stage] 删除关卡 #${row.id}「${row.title}」（关联会话 ${sessionCount} 条保留）`);
     return { sessionCount };
   }
 
-  /** 后台-章内排序：ids 必须全部属于该章节，按数组顺序重写 sort。 */
-  async reorderStories(chapterKey: string, ids: number[]): Promise<void> {
-    if (!STAGE_CHAPTERS.some((item) => item.key === chapterKey)) {
-      throw AppException.badRequest(`章节不存在：${chapterKey}`);
-    }
+  /** 后台-剧本内排序：ids 必须全部属于该剧本，按数组顺序重写 sort。 */
+  async reorderStories(scriptId: number, ids: number[]): Promise<void> {
+    const script = await this.prisma.stageScript.findUnique({ where: { id: BigInt(scriptId) }, select: { id: true } });
+    if (!script) throw AppException.badRequest(`剧本不存在：${scriptId}`);
     const rows = await this.prisma.stageStory.findMany({
       where: { id: { in: ids.map((id) => BigInt(id)) } },
-      select: { id: true, chapterKey: true },
+      select: { id: true, scriptId: true },
     });
-    if (rows.length !== ids.length || rows.some((row) => row.chapterKey !== chapterKey)) {
-      throw AppException.badRequest('ids 必须全部属于该章节');
+    if (rows.length !== ids.length || rows.some((row) => row.scriptId !== script.id)) {
+      throw AppException.badRequest('ids 必须全部属于该剧本');
     }
     await this.prisma.$transaction(
       ids.map((id, index) => this.prisma.stageStory.update({ where: { id: BigInt(id) }, data: { sort: index + 1 } })),
@@ -771,52 +1041,48 @@ export class StageService {
   }
 
   /**
-   * 后台-AI 生成关卡草稿：校验章节/分类后调文本模型出一整套剧情，**不落库**——
+   * 后台-AI 生成关卡草稿：校验剧本后调文本模型出一整套剧情，**不落库**——
    * 返回草稿由运营在编辑弹窗里审核/微调，确认后再走 createStory 入库。
    */
-  async generateStoryDraft(
-    chapterKey: string,
-    category: string,
-  ): Promise<StageStoryDraft & { chapterKey: string; category: string }> {
-    const chapter = STAGE_CHAPTERS.find((item) => item.key === chapterKey);
-    if (!chapter) throw AppException.badRequest(`章节不存在：${chapterKey}`);
-    const categoryName = category.trim();
-    const categoryRow = await this.prisma.sentenceCategory.findFirst({
-      where: { name: categoryName },
-      select: { id: true, status: true },
+  async generateStoryDraft(scriptId: number): Promise<StageStoryDraft & { scriptId: number }> {
+    const script = await this.prisma.stageScript.findUnique({ where: { id: BigInt(scriptId) } });
+    if (!script) throw AppException.badRequest(`剧本不存在：${scriptId}`);
+    const category = await this.prisma.sentenceCategory.findUnique({
+      where: { id: script.categoryId },
+      select: { name: true, status: true },
     });
-    if (!categoryRow) throw AppException.badRequest(`场景分类不存在：${categoryName}`);
-    if (categoryRow.status !== 1) throw AppException.badRequest(`场景分类已停用：${categoryName}`);
-    const taken = await this.prisma.stageStory.findUnique({ where: { category: categoryName } });
-    if (taken) throw AppException.conflict(`该分类已绑定关卡「${taken.title}」`);
+    if (!category) throw AppException.badRequest('剧本所属场景分类不存在');
+    if (category.status !== 1) throw AppException.badRequest('剧本所属场景分类已停用');
     const existing = await this.prisma.stageStory.findMany({
-      where: { chapterKey },
+      where: { scriptId: script.id },
       select: { title: true },
     });
     const draft = await this.ai.generateStageStory(
-      chapter.name,
-      categoryName,
+      `场景「${category.name}」下的剧本「${script.name}」`,
+      category.name,
       existing.map((row) => row.title),
     );
-    this.logger.log(`[Stage] AI 生成关卡草稿「${draft.title}」（${chapterKey}/${categoryName}），待审核`);
-    return { ...draft, chapterKey, category: categoryName };
+    this.logger.log(`[Stage] AI 生成关卡草稿「${draft.title}」（剧本 ${scriptId}），待审核`);
+    return { ...draft, scriptId };
   }
 
   /* ------------------------------ 场景长对话 ------------------------------ */
 
   /**
    * 进入关卡：有进行中的会话就续聊，否则新建并把开场白写进消息表。
+   * @param storyId 关卡 id（stage_story.id）
    * @param restart 为 true 时把旧会话标记 abandoned 后重新开一局
    */
-  async startDialogue(userId: number, categoryId: number, restart = false): Promise<StageDialogueView> {
-    const story = await this.storyOfCategory(categoryId);
-    if (!story) throw AppException.notFound('关卡不存在');
-    await this.assertUnlocked(userId, categoryId);
+  async startDialogue(userId: number, storyId: number, restart = false): Promise<StageDialogueView> {
+    const found = await this.storyOfId(storyId);
+    if (!found) throw AppException.notFound('关卡不存在');
+    const { story, script } = found;
+    await this.assertUnlocked(userId, storyId);
 
     const uid = BigInt(userId);
-    const cid = BigInt(categoryId);
+    const sid = BigInt(storyId);
     const active = await this.prisma.stageDialogueSession.findFirst({
-      where: { userId: uid, categoryId: cid, status: 'active' },
+      where: { userId: uid, storyId: sid, status: 'active' },
       orderBy: { id: 'desc' },
     });
 
@@ -834,7 +1100,9 @@ export class StageService {
       const created = await tx.stageDialogueSession.create({
         data: {
           userId: uid,
-          categoryId: cid,
+          storyId: sid,
+          // categoryId 仅作统计维度（按场景汇总会话数），玩法进度按 storyId 记
+          categoryId: script.categoryId,
           // 默认开启翻译；translationUsed 在用户实际「开着翻译发消息」时才置位，
           // 这样「进局就关掉翻译」仍可拿到无翻译加成，而「全程开着、最后一句才关」会被粘住。
           showTranslation: true,
@@ -854,19 +1122,19 @@ export class StageService {
       });
       return created;
     });
-    this.logger.log(`情景对话开始 user=${userId} category=${categoryId} session=${session.id}`);
+    this.logger.log(`情景对话开始 user=${userId} story=${storyId} session=${session.id}`);
     return this.dialogueView(session, story);
   }
 
   /** 只读取进行中的会话（没有返回 null，用于刷新页面时判断）。 */
-  async getDialogue(userId: number, categoryId: number): Promise<StageDialogueView | null> {
-    const story = await this.storyOfCategory(categoryId);
-    if (!story) throw AppException.notFound('关卡不存在');
+  async getDialogue(userId: number, storyId: number): Promise<StageDialogueView | null> {
+    const found = await this.storyOfId(storyId);
+    if (!found) throw AppException.notFound('关卡不存在');
     const active = await this.prisma.stageDialogueSession.findFirst({
-      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      where: { userId: BigInt(userId), storyId: BigInt(storyId), status: 'active' },
       orderBy: { id: 'desc' },
     });
-    return active ? this.dialogueView(active, story) : null;
+    return active ? this.dialogueView(active, found.story) : null;
   }
 
   /**
@@ -875,9 +1143,10 @@ export class StageService {
    * 顺序很关键：**先拿到模型输出，再一次性落库**（用户消息 + NPC 台词），
    * AI 挂了就不写任何东西，用户可原样重发，不会留下半截对话。
    */
-  async sendMessage(userId: number, categoryId: number, raw: string, showTranslation = true): Promise<StageTurnResult> {
-    const story = await this.storyOfCategory(categoryId);
-    if (!story) throw AppException.notFound('关卡不存在');
+  async sendMessage(userId: number, storyId: number, raw: string, showTranslation = true): Promise<StageTurnResult> {
+    const found = await this.storyOfId(storyId);
+    if (!found) throw AppException.notFound('关卡不存在');
+    const story = found.story;
     const content = (raw ?? '').replace(/\s+/g, ' ').trim();
     if (!content) throw AppException.badRequest('先说点什么吧');
     if (content.length > 300) throw AppException.badRequest('一句最多 300 个字符');
@@ -891,9 +1160,10 @@ export class StageService {
     }
 
     const uid = BigInt(userId);
-    const cid = BigInt(categoryId);
+    const sid = BigInt(storyId);
+    const storyCategoryId = found.script.categoryId;
     const session = await this.prisma.stageDialogueSession.findFirst({
-      where: { userId: uid, categoryId: cid, status: 'active' },
+      where: { userId: uid, storyId: sid, status: 'active' },
       orderBy: { id: 'desc' },
     });
     if (!session) throw AppException.badRequest('对话已结束，请重新进入关卡');
@@ -997,8 +1267,14 @@ export class StageService {
       });
       if (cleared) {
         await tx.studyStageProgress.upsert({
-          where: { userId_categoryId: { userId: uid, categoryId: cid } },
-          create: { userId: uid, categoryId: cid, dialogueClearedAt: new Date(), dialogueTurns: turnCount },
+          where: { userId_storyId: { userId: uid, storyId: sid } },
+          create: {
+            userId: uid,
+            storyId: sid,
+            categoryId: storyCategoryId,
+            dialogueClearedAt: new Date(),
+            dialogueTurns: turnCount,
+          },
           update: { dialogueClearedAt: new Date(), dialogueTurns: turnCount },
         });
       }
@@ -1017,11 +1293,12 @@ export class StageService {
   }
 
   /** 主动结束（没聊满也能结束，但只有达成目标且轮数够才算通关）。 */
-  async endDialogue(userId: number, categoryId: number): Promise<StageDialogueView> {
-    const story = await this.storyOfCategory(categoryId);
-    if (!story) throw AppException.notFound('关卡不存在');
+  async endDialogue(userId: number, storyId: number): Promise<StageDialogueView> {
+    const found = await this.storyOfId(storyId);
+    if (!found) throw AppException.notFound('关卡不存在');
+    const story = found.story;
     const session = await this.prisma.stageDialogueSession.findFirst({
-      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      where: { userId: BigInt(userId), storyId: BigInt(storyId), status: 'active' },
       orderBy: { id: 'desc' },
     });
     if (!session) throw AppException.badRequest('对话已经结束了');
@@ -1051,10 +1328,11 @@ export class StageService {
     });
     if (cleared) {
       await this.prisma.studyStageProgress.upsert({
-        where: { userId_categoryId: { userId: BigInt(userId), categoryId: BigInt(categoryId) } },
+        where: { userId_storyId: { userId: BigInt(userId), storyId: BigInt(storyId) } },
         create: {
           userId: BigInt(userId),
-          categoryId: BigInt(categoryId),
+          storyId: BigInt(storyId),
+          categoryId: found.script.categoryId,
           dialogueClearedAt: new Date(),
           dialogueTurns: session.turnCount,
         },
@@ -1141,10 +1419,10 @@ export class StageService {
     };
   }
 
-  /** 校验关卡是否已解锁（对话通关口径）。 */
-  private async assertUnlocked(userId: number, categoryId: number): Promise<void> {
+  /** 校验关卡是否已解锁（剧本内顺序解锁）。 */
+  private async assertUnlocked(userId: number, storyId: number): Promise<void> {
     const overview = await this.getStages(userId);
-    const stage = overview.chapters.flatMap((item) => item.stages).find((item) => item.id === categoryId);
+    const stage = overview.chapters.flatMap((item) => item.stages).find((item) => item.id === storyId);
     if (!stage) throw AppException.notFound('关卡不存在');
     if (!stage.unlocked) throw AppException.badRequest('先完成上一关的场景对话吧');
   }
@@ -1156,38 +1434,52 @@ export class StageService {
    * 不再写 dialogueClearedAt，不影响解锁与通关；任何异常都不应影响答题结果。
    */
   async recordAnswer(userId: number, categoryId: number, categoryName: string, isCorrect: boolean): Promise<void> {
-    // 只记录「已绑定关卡」的分类（答题链路对每题都会调过来，未绑定直接跳过）
-    const bound = await this.prisma.stageStory.findUnique({ where: { category: categoryName }, select: { id: true } });
-    if (!bound) return;
+    // 只记录「有剧本归属」的场景（答题链路对每题都会调过来，未归属直接跳过）
+    const script = await this.prisma.stageScript.findFirst({
+      where: { categoryId: BigInt(categoryId), status: 1 },
+      select: { id: true },
+    });
+    if (!script) return;
     const uid = BigInt(userId);
     const cid = BigInt(categoryId);
-    await this.prisma.studyStageProgress.upsert({
-      where: { userId_categoryId: { userId: uid, categoryId: cid } },
-      create: { userId: uid, categoryId: cid, correctCount: isCorrect ? 1 : 0, answerCount: 1 },
-      update: {
-        answerCount: { increment: 1 },
-        ...(isCorrect ? { correctCount: { increment: 1 } } : {}),
-      },
+    // 旧版答题统计按分类记一行（storyId 为空），与关卡对话进度分开
+    const existing = await this.prisma.studyStageProgress.findFirst({
+      where: { userId: uid, categoryId: cid, storyId: null },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.studyStageProgress.update({
+        where: { id: existing.id },
+        data: {
+          answerCount: { increment: 1 },
+          ...(isCorrect ? { correctCount: { increment: 1 } } : {}),
+        },
+      });
+      return;
+    }
+    await this.prisma.studyStageProgress.create({
+      data: { userId: uid, categoryId: cid, correctCount: isCorrect ? 1 : 0, answerCount: 1 },
     });
   }
 
   /** 领取通关奖励（幂等；只认对话通关）。无翻译通关额外加成。 */
-  async claim(userId: number, categoryId: number): Promise<ClaimResult> {
-    const story = await this.storyOfCategory(categoryId);
-    if (!story) throw AppException.notFound('关卡不存在');
+  async claim(userId: number, storyId: number): Promise<ClaimResult> {
+    const found = await this.storyOfId(storyId);
+    if (!found) throw AppException.notFound('关卡不存在');
+    const story = found.story;
 
     const uid = BigInt(userId);
-    const cid = BigInt(categoryId);
+    const sid = BigInt(storyId);
     const [progress, user, existing, clearing] = await Promise.all([
       this.prisma.studyStageProgress.findUnique({
-        where: { userId_categoryId: { userId: uid, categoryId: cid } },
+        where: { userId_storyId: { userId: uid, storyId: sid } },
         select: { dialogueClearedAt: true },
       }),
       this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } }),
-      this.prisma.clientXpLog.findUnique({ where: { eventKey: claimKey(userId, categoryId) }, select: { id: true } }),
+      this.prisma.clientXpLog.findUnique({ where: { eventKey: claimKey(userId, storyId) }, select: { id: true } }),
       // 找出通关的那一局（最近一次 cleared 的会话），用它的 translationUsed 判定是否无翻译通关
       this.prisma.stageDialogueSession.findFirst({
-        where: { userId: uid, categoryId: cid, cleared: true },
+        where: { userId: uid, storyId: sid, cleared: true },
         orderBy: { endedAt: 'desc' },
         select: { translationUsed: true },
       }),
@@ -1204,11 +1496,9 @@ export class StageService {
     const noTranslation = !clearing?.translationUsed;
     const bonus = noTranslation ? Math.round(story.rewardXp * NO_TRANSLATION_BONUS_RATIO) : 0;
 
-    const baseAwarded = await this.gamify.awardXp(userId, 'stage_clear', claimKey(userId, categoryId), story.rewardXp);
+    const baseAwarded = await this.gamify.awardXp(userId, 'stage_clear', claimKey(userId, storyId), story.rewardXp);
     const bonusAwarded =
-      bonus > 0
-        ? await this.gamify.awardXp(userId, 'stage_no_translation', bonusKey(userId, categoryId), bonus)
-        : false;
+      bonus > 0 ? await this.gamify.awardXp(userId, 'stage_no_translation', bonusKey(userId, storyId), bonus) : false;
     const latest =
       baseAwarded || bonusAwarded
         ? await this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } })
@@ -1227,9 +1517,9 @@ export class StageService {
    * 开启翻译即把 translationUsed 置位（粘性，不可撤销）——防止「全程开着、最后一句才关」骗加成。
    * 关闭翻译不清空 translationUsed，已用过就仍是用过。
    */
-  async setTranslation(userId: number, categoryId: number, show: boolean): Promise<{ showTranslation: boolean }> {
+  async setTranslation(userId: number, storyId: number, show: boolean): Promise<{ showTranslation: boolean }> {
     const session = await this.prisma.stageDialogueSession.findFirst({
-      where: { userId: BigInt(userId), categoryId: BigInt(categoryId), status: 'active' },
+      where: { userId: BigInt(userId), storyId: BigInt(storyId), status: 'active' },
       orderBy: { id: 'desc' },
     });
     if (!session) throw AppException.badRequest('没有进行中的对话');
@@ -1259,95 +1549,96 @@ export class StageService {
       orderBy: [{ sort: 'asc' }, { id: 'asc' }],
       select: { id: true, name: true },
     });
-    const categoryByName = new Map(categories.map((row) => [row.name, row]));
+    const categoryById = new Map(categories.map((row) => [String(row.id), row]));
 
     // 一次性聚合各关卡的会话/进度统计，避免每关一条查询
     const [sessionAll, sessionActive, sessionCleared, sessionNoTrans, clearedProgress, participantRaw, claimKeys] =
       await Promise.all([
-        this.prisma.stageDialogueSession.groupBy({ by: ['categoryId'], _count: { _all: true } }),
+        this.prisma.stageDialogueSession.groupBy({ by: ['storyId'], _count: { _all: true } }),
         this.prisma.stageDialogueSession.groupBy({
-          by: ['categoryId'],
+          by: ['storyId'],
           where: { status: 'active' },
           _count: { _all: true },
         }),
         this.prisma.stageDialogueSession.groupBy({
-          by: ['categoryId'],
+          by: ['storyId'],
           where: { cleared: true },
           _count: { _all: true },
           _avg: { turnCount: true },
         }),
         this.prisma.stageDialogueSession.groupBy({
-          by: ['categoryId'],
+          by: ['storyId'],
           where: { cleared: true, translationUsed: false },
           _count: { _all: true },
         }),
         this.prisma.studyStageProgress.groupBy({
-          by: ['categoryId'],
+          by: ['storyId'],
           where: { dialogueClearedAt: { not: null } },
           _count: { _all: true },
         }),
         // 参与人数 = 去重用户数，Prisma 的 count(distinct) 按关卡逐条太碎，用一条原生聚合
-        this.prisma.$queryRaw<Array<{ cid: bigint; cnt: bigint | number }>>`
-          SELECT category_id AS cid, COUNT(DISTINCT user_id) AS cnt
+        this.prisma.$queryRaw<Array<{ sid: bigint; cnt: bigint | number }>>`
+          SELECT story_id AS sid, COUNT(DISTINCT user_id) AS cnt
           FROM stage_dialogue_session
-          GROUP BY category_id`,
-        // 领奖数：eventKey = `stage:{userId}:{categoryId}`；startsWith 'stage:' 天然排除 stage-bonus:
+          GROUP BY story_id`,
+        // 领奖数：eventKey = `stage:{userId}:{storyId}`；startsWith 'stage:' 天然排除 stage-bonus:
         this.prisma.clientXpLog.findMany({ where: { eventKey: { startsWith: 'stage:' } }, select: { eventKey: true } }),
       ]);
 
-    const countOf = (rows: Array<{ categoryId: bigint; _count: { _all: number } }>, cid: bigint): number =>
-      rows.find((row) => row.categoryId === cid)?._count._all ?? 0;
+    const countOf = (rows: Array<{ storyId: bigint | null; _count: { _all: number } }>, sid: bigint): number =>
+      rows.find((row) => row.storyId === sid)?._count._all ?? 0;
     const avgOf = (
-      rows: Array<{ categoryId: bigint; _avg: { turnCount: number | null } }>,
-      cid: bigint,
+      rows: Array<{ storyId: bigint | null; _avg: { turnCount: number | null } }>,
+      sid: bigint,
     ): number | null => {
-      const hit = rows.find((row) => row.categoryId === cid);
+      const hit = rows.find((row) => row.storyId === sid);
       return hit?._avg.turnCount ?? null;
     };
-    const participantOf = new Map<string, number>(participantRaw.map((row) => [String(row.cid), Number(row.cnt)]));
+    const participantOf = new Map<string, number>(participantRaw.map((row) => [String(row.sid), Number(row.cnt)]));
     const claimedOf = new Map<string, number>();
     for (const row of claimKeys) {
-      // 解析 `stage:{userId}:{categoryId}` 的末段 categoryId
+      // 解析 `stage:{userId}:{storyId}` 的末段 storyId
       const parts = row.eventKey.split(':');
-      const cid = parts[2];
-      if (cid) claimedOf.set(cid, (claimedOf.get(cid) ?? 0) + 1);
+      const sid = parts[2];
+      if (sid) claimedOf.set(sid, (claimedOf.get(sid) ?? 0) + 1);
     }
 
+    const [scripts, stories] = await Promise.all([this.listScripts(1), this.listStories(undefined, 1)]);
     const chapters: StageAdminChapter[] = [];
-    const [coverUrls, stories] = await Promise.all([this.coverUrlMapOf(), this.listStories(1)]);
-    for (const chapter of STAGE_CHAPTERS) {
+    for (const script of scripts) {
+      const category = categoryById.get(String(script.categoryId));
+      if (!category) continue;
       const stages: StageAdminOverviewItem[] = [];
-      for (const story of stories.filter((item) => item.chapter === chapter.key)) {
-        const category = categoryByName.get(story.category);
-        if (!category) continue;
-        const cid = category.id;
-        const cleared = countOf(clearedProgress as never, cid);
-        const claimed = claimedOf.get(String(cid)) ?? 0;
+      for (const story of stories.filter((item) => item.scriptId === script.id)) {
+        const sid = story.id;
+        const cleared = countOf(clearedProgress as never, sid);
+        const claimed = claimedOf.get(String(sid)) ?? 0;
         stages.push({
-          id: Number(cid),
+          id: Number(sid),
+          scriptId: Number(script.id),
+          scriptName: script.name,
           categoryName: category.name,
-          chapter: chapter.key,
           title: story.title,
           goal: story.goal,
           minTurns: story.minTurns,
           maxTurns: story.maxTurns,
           rewardXp: story.rewardXp,
-          sessionCount: countOf(sessionAll as never, cid),
-          activeSessionCount: countOf(sessionActive as never, cid),
-          participantCount: participantOf.get(String(cid)) ?? 0,
+          sessionCount: countOf(sessionAll as never, sid),
+          activeSessionCount: countOf(sessionActive as never, sid),
+          participantCount: participantOf.get(String(sid)) ?? 0,
           clearedCount: cleared,
-          clearedSessionCount: countOf(sessionCleared as never, cid),
-          avgClearedTurns: avgOf(sessionCleared as never, cid),
-          noTranslationClearedCount: countOf(sessionNoTrans as never, cid),
+          clearedSessionCount: countOf(sessionCleared as never, sid),
+          avgClearedTurns: avgOf(sessionCleared as never, sid),
+          noTranslationClearedCount: countOf(sessionNoTrans as never, sid),
           claimableCount: Math.max(0, cleared - claimed),
         });
       }
       if (stages.length > 0) {
         chapters.push({
-          key: chapter.key,
-          name: chapter.name,
-          subtitle: chapter.subtitle,
-          coverUrl: coverUrls.get(chapter.key) ?? null,
+          key: `script-${script.id}`,
+          name: script.name,
+          subtitle: script.blurb,
+          coverUrl: await this.coverUrlOf(script.coverFileId),
           stages,
         });
       }
@@ -1395,6 +1686,7 @@ export class StageService {
         select: {
           id: true,
           userId: true,
+          storyId: true,
           categoryId: true,
           status: true,
           turnCount: true,
@@ -1422,12 +1714,12 @@ export class StageService {
         row.name,
       ]),
     );
-    // 关卡标题/目标从 stage_story 表取（关卡被删时回落分类名）
+    // 关卡标题从 stage_story 表取（关卡被删时回落分类名）
     const storyRows = await this.prisma.stageStory.findMany({
-      where: { category: { in: [...categoryNames.values()] } },
-      select: { category: true, title: true, goal: true },
+      where: { id: { in: rows.map((row) => row.storyId) } },
+      select: { id: true, title: true },
     });
-    const storyOfName = new Map(storyRows.map((row) => [row.category, row]));
+    const storyTitleOf = new Map(storyRows.map((row) => [String(row.id), row.title]));
 
     const list: StageSessionAdminItem[] = rows.map((row) => {
       const categoryName = categoryNames.get(String(row.categoryId)) ?? '';
@@ -1436,7 +1728,8 @@ export class StageService {
         userId: Number(row.userId),
         nickname: nicknameOf.get(String(row.userId)) ?? `用户${Number(row.userId)}`,
         categoryId: Number(row.categoryId),
-        stageTitle: storyOfName.get(categoryName)?.title ?? categoryName,
+        storyId: Number(row.storyId),
+        stageTitle: storyTitleOf.get(String(row.storyId)) ?? categoryName,
         status: row.status,
         turnCount: row.turnCount,
         goalReached: row.goalReached,
@@ -1458,6 +1751,7 @@ export class StageService {
       select: {
         id: true,
         userId: true,
+        storyId: true,
         categoryId: true,
         status: true,
         turnCount: true,
@@ -1471,7 +1765,7 @@ export class StageService {
       },
     });
     if (!session) throw AppException.notFound('会话不存在');
-    const [messages, user, category] = await Promise.all([
+    const [messages, user, category, story] = await Promise.all([
       this.prisma.stageDialogueMessage.findMany({
         where: { sessionId: session.id },
         orderBy: { id: 'asc' },
@@ -1479,18 +1773,17 @@ export class StageService {
       }),
       this.prisma.clientUser.findUnique({ where: { id: session.userId }, select: { nickname: true } }),
       this.prisma.sentenceCategory.findUnique({ where: { id: session.categoryId }, select: { name: true } }),
+      this.prisma.stageStory.findUnique({
+        where: { id: session.storyId },
+        select: { title: true, goal: true },
+      }),
     ]);
-    const story = category
-      ? await this.prisma.stageStory.findUnique({
-          where: { category: category.name },
-          select: { title: true, goal: true },
-        })
-      : null;
     return {
       id: Number(session.id),
       userId: Number(session.userId),
       nickname: user?.nickname ?? `用户${Number(session.userId)}`,
       categoryId: Number(session.categoryId),
+      storyId: Number(session.storyId),
       stageTitle: story?.title ?? category?.name ?? '',
       goal: story?.goal ?? '',
       status: session.status,
@@ -1547,8 +1840,9 @@ export interface ClaimResult {
 /** 后台-关卡总览条目。 */
 export interface StageAdminOverviewItem {
   id: number;
+  scriptId: number;
+  scriptName: string;
   categoryName: string;
-  chapter: string;
   title: string;
   goal: string;
   minTurns: number;
@@ -1572,7 +1866,7 @@ export interface StageAdminOverviewItem {
   claimableCount: number;
 }
 
-/** 后台-关卡总览章节。 */
+/** 后台-关卡总览分组（一个剧本一组，兼容旧字段名 chapter）。 */
 export interface StageAdminChapter {
   key: string;
   name: string;
@@ -1582,21 +1876,40 @@ export interface StageAdminChapter {
   stages: StageAdminOverviewItem[];
 }
 
-/** 后台-章节封面管理条目。 */
-export interface StageChapterCoverItem {
-  chapterKey: string;
-  chapterName: string;
+/** 后台-剧本管理条目。 */
+export interface StageScriptAdminItem {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  name: string;
+  blurb: string;
   coverUrl: string | null;
-  /** 实际生图用的完整提示词（含风格后缀；未生成时为该章的场景描述） */
-  prompt: string;
-  generatedAt: string | null;
+  sort: number;
+  /** 1 启用 / 0 停用 */
+  status: number;
+  /** 剧本下关卡总数（含停用） */
+  stageCount: number;
+  enabledStageCount: number;
+  sessionCount: number;
+  createdAt: string;
 }
+
+/** 新增/编辑剧本的提交数据。 */
+export interface CreateStageScriptInput {
+  categoryId: number;
+  name: string;
+  blurb?: string;
+  sort?: number;
+  status?: 0 | 1;
+}
+
+/** 编辑剧本：全字段可选。 */
+export type UpdateStageScriptInput = Partial<CreateStageScriptInput>;
 
 /** 新增/编辑关卡的提交数据（DTO 与 service 共用的形状）。 */
 export interface CreateStageStoryInput {
-  chapterKey: string;
-  /** 绑定的场景分类名（sentence_category.name）；编辑时不可修改 */
-  category: string;
+  /** 所属剧本 id（stage_script.id） */
+  scriptId: number;
   title: string;
   intro: string;
   outro: string;
@@ -1612,17 +1925,17 @@ export interface CreateStageStoryInput {
   starterHints: Array<{ en: string; zh: string }>;
 }
 
-/** 编辑关卡：全字段可选（category 除外，见 updateStory）。 */
+/** 编辑关卡：全字段可选（允许换剧本）。 */
 export type UpdateStageStoryInput = Partial<CreateStageStoryInput>;
 
 /** 后台-关卡管理条目。 */
 export interface StageStoryAdminItem {
   id: number;
-  chapterKey: string;
-  chapterName: string;
-  category: string;
-  /** 分类 id（分类被删时为 null） */
+  scriptId: number;
+  scriptName: string;
+  /** 剧本所属分类 id（剧本被删时为 null） */
   categoryId: number | null;
+  categoryName: string;
   title: string;
   intro: string;
   outro: string;
@@ -1645,12 +1958,50 @@ export interface StageStoryAdminItem {
   createdAt: string;
 }
 
+/** stage_script 行（内部组装用）。 */
+interface StageScriptRow {
+  id: bigint;
+  categoryId: bigint;
+  name: string;
+  blurb: string;
+  coverFileId: bigint;
+  sort: number;
+  status: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** stage_story 行（内部组装用）。 */
+interface StageStoryRow {
+  id: bigint;
+  scriptId: bigint;
+  title: string;
+  intro: string;
+  outro: string;
+  userRole: string;
+  setting: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  target: number;
+  rewardXp: number;
+  roles: unknown;
+  opening: unknown;
+  starterHints: unknown;
+  sort: number;
+  status: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /** 后台-会话列表条目。 */
 export interface StageSessionAdminItem {
   id: number;
   userId: number;
   nickname: string;
   categoryId: number;
+  /** 关卡 id（stage_story.id） */
+  storyId: number;
   stageTitle: string;
   status: string;
   turnCount: number;

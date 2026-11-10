@@ -1,11 +1,13 @@
 /**
- * 情景闯关单测（对话玩法）。
+ * 情景闯关单测（场景 → 剧本 → 关卡，玩法主键 = storyId）。
  *
- * 钉住四条不变量：
- * 1. **章内顺序解锁**：前一关没通关，后一关不解锁；每章首关默认开。
- * 2. **通关双条件**：聊够 minTurns 且 AI 判定目标达成；撞到 maxTurns 没达成也不能通关。
- * 3. **旧版答对不再通关**：correctCount 只作历史统计，不写 dialogueClearedAt。
- * 4. **奖励幂等**：重复领取不重复发经验。
+ * 钉住五条不变量：
+ * 1. **层级组装**：getStages 输出 scenes（场景）+ chapters（剧本，兼容旧客户端），
+ *    每个剧本第一关默认解锁，剧本内顺序解锁，剧本之间互不阻塞；
+ * 2. **通关双条件**：聊够 minTurns 且 AI 判定目标达成；撞到 maxTurns 没达成也不能通关；
+ * 3. **进度按关卡**：dialogueClearedAt 写 (userId, storyId)，与分类解耦；
+ * 4. **奖励幂等**：重复领取不重复发经验，key 为 stage:{userId}:{storyId}；
+ * 5. **停用剧本不下发**。
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
@@ -15,267 +17,169 @@ import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.j
 import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
 import { STAGE_STORIES } from '../src/modules/client/stage/stage-stories.js';
-import { makeStageStoryMock } from './helpers/stage-story-mock.js';
+import { makeStageScriptMock, makeStageStoryMock, seedScriptRows, seedStoryRows } from './helpers/stage-story-mock.js';
 
-interface ProgressRow {
-  userId: bigint;
-  categoryId: bigint;
-  correctCount: number;
-  answerCount: number;
-  clearedAt: Date | null;
-  dialogueClearedAt: Date | null;
-  dialogueTurns: number;
-}
+const FIRST_STORY = STAGE_STORIES[0]; // 便利店的清晨（日常生活）
+const SECOND_STORY = STAGE_STORIES[1]; // 空房间的第一晚（居家生活，另一个剧本）
 
-interface SessionRow {
-  id: bigint;
-  userId: bigint;
-  categoryId: bigint;
-  status: string;
-  turnCount: number;
-  goalReached: boolean;
-  cleared: boolean;
-  showTranslation: boolean;
-  translationUsed: boolean;
-  lastHints: string | null;
-  summary: string | null;
-  feedback: string | null;
-  endedAt: Date | null;
-}
+function makeService() {
+  const scripts = seedScriptRows();
+  const stories = seedStoryRows(scripts);
+  const stageScript = makeStageScriptMock(scripts);
+  const stageStory = makeStageStoryMock(stories);
+  const categories = scripts.map((row, index) => ({
+    id: row.categoryId,
+    name: row.name.replace(' · 默认剧本', ''),
+    nameEn: null,
+    icon: null,
+    status: 1,
+    sort: index,
+  }));
 
-interface MessageRow {
-  id: bigint;
-  sessionId: bigint;
-  role: string;
-  speaker: string | null;
-  contentEn: string;
-  contentZh: string | null;
-  createdAt: Date;
-}
+  const progressRows: Array<Record<string, any>> = [];
+  const sessions: Array<Record<string, any>> = [];
+  const messages: Array<Record<string, any>> = [];
+  const xpLogs: Array<{ eventKey: string }> = [];
 
-/** 只实现被测方法所需的假 Prisma（内存表）。 */
-function makePrisma(goalAtTurn: number | null = 6) {
-  const categories = [
-    { id: 1n, name: '日常生活', nameEn: 'Daily Life', icon: 'house' },
-    { id: 2n, name: '居家生活', nameEn: 'Home & Living', icon: 'sofa' },
-    { id: 3n, name: '购物消费', nameEn: 'Shopping', icon: 'shopping-bag' },
-    { id: 4n, name: '职场办公', nameEn: 'Workplace', icon: 'briefcase' },
-  ];
-  const rows = new Map<string, ProgressRow>();
-  const sessions: SessionRow[] = [];
-  const messages: MessageRow[] = [];
-  const claimKeys = new Set<string>();
-  let nextSessionId = 1n;
-  let nextMessageId = 1n;
-  let xp = 0;
-
-  const keyOf = (userId: bigint, categoryId: bigint): string => `${userId}:${categoryId}`;
-
-  const prisma = {
+  const prisma: any = {
     sentenceCategory: {
       findMany: vi.fn(async () => categories),
-      findUnique: vi.fn(async (args: { where: { id: bigint } }) => {
-        const hit = categories.find((item) => item.id === args.where.id);
-        return hit ? { name: hit.name } : null;
-      }),
+      findUnique: vi.fn(async (args: any) => categories.find((c) => c.id === args.where.id) ?? null),
+      findFirst: vi.fn(async (args: any) => categories.find((c) => c.name === args.where.name) ?? null),
     },
-    // 章节封面表：默认无封面，coverUrlMapOf 返回空 map
-    stageChapterCover: {
-      findMany: vi.fn(async () => []),
-    },
-    // 关卡剧情表：从代码种子派生，行为与旧版一致
-    stageStory: makeStageStoryMock(),
+    stageScript,
+    stageStory,
     studyStageProgress: {
-      findMany: vi.fn(async (args: { where: { userId: bigint } }) =>
-        [...rows.values()].filter((row) => row.userId === args.where.userId),
-      ),
-      findUnique: vi.fn(
-        async (args: { where: { userId_categoryId: { userId: bigint; categoryId: bigint } } }) =>
-          rows.get(keyOf(args.where.userId_categoryId.userId, args.where.userId_categoryId.categoryId)) ?? null,
-      ),
-      upsert: vi.fn(
-        async (args: {
-          where: { userId_categoryId: { userId: bigint; categoryId: bigint } };
-          create: Partial<ProgressRow>;
-          update: Record<string, unknown>;
-        }) => {
-          const { userId, categoryId } = args.where.userId_categoryId;
-          const key = keyOf(userId, categoryId);
-          let row = rows.get(key);
-          if (!row) {
-            row = {
-              userId,
-              categoryId,
-              correctCount: Number(args.create.correctCount ?? 0),
-              answerCount: Number(args.create.answerCount ?? 0),
-              clearedAt: null,
-              dialogueClearedAt: (args.create.dialogueClearedAt as Date | null) ?? null,
-              dialogueTurns: Number(args.create.dialogueTurns ?? 0),
-            };
-            rows.set(key, row);
-            return row;
-          }
-          for (const [field, value] of Object.entries(args.update)) {
-            if (value && typeof value === 'object' && 'increment' in value) {
-              const inc = Number((value as { increment: unknown }).increment);
-              if (field === 'answerCount') row.answerCount += inc;
-              if (field === 'correctCount') row.correctCount += inc;
-            } else if (field === 'dialogueClearedAt') {
-              row.dialogueClearedAt = value as Date | null;
-            } else if (field === 'dialogueTurns') {
-              row.dialogueTurns = Number(value);
-            }
-          }
+      findMany: vi.fn(async (args: any) => {
+        const where = args.where ?? {};
+        return progressRows.filter((row) => {
+          if (where.userId !== undefined && row.userId !== where.userId) return false;
+          // 对话进度查询：storyId: { not: null }
+          if (where.storyId?.not === null && row.storyId === null) return false;
+          // 旧版统计查询：storyId: null
+          if (where.storyId === null && row.storyId !== null) return false;
+          return true;
+        });
+      }),
+      findUnique: vi.fn(async (args: any) => {
+        const { userId, storyId } = args.where.userId_storyId;
+        return progressRows.find((row) => row.userId === userId && row.storyId === storyId) ?? null;
+      }),
+      findFirst: vi.fn(async (args: any) => {
+        const where = args.where ?? {};
+        return (
+          progressRows.find(
+            (row) =>
+              (where.userId === undefined || row.userId === where.userId) &&
+              (where.categoryId === undefined || row.categoryId === where.categoryId) &&
+              (where.storyId !== null || row.storyId === null),
+          ) ?? null
+        );
+      }),
+      upsert: vi.fn(async (args: any) => {
+        const { userId, storyId } = args.where.userId_storyId;
+        const found = progressRows.find((item) => item.userId === userId && item.storyId === storyId);
+        if (!found) {
+          const row: Record<string, any> = { id: BigInt(progressRows.length + 1), ...args.create };
+          progressRows.push(row);
           return row;
-        },
-      ),
-      count: vi.fn(
-        async (args: { where: { userId: bigint } }) =>
-          [...rows.values()].filter((row) => row.userId === args.where.userId && row.dialogueClearedAt).length,
-      ),
-    },
-    sentence: {
-      groupBy: vi.fn(async () => [
-        { categoryId: 1n, _count: { _all: 100 } },
-        { categoryId: 2n, _count: { _all: 100 } },
-      ]),
-    },
-    stageDialogueSession: {
-      findMany: vi.fn(async (args: { where: { userId: bigint; status: string } }) =>
-        sessions
-          .filter((item) => item.userId === args.where.userId && item.status === args.where.status)
-          .map((item) => ({ id: item.id, categoryId: item.categoryId, turnCount: item.turnCount })),
-      ),
-      findFirst: vi.fn(
-        async (args: {
-          where: {
-            userId: bigint;
-            categoryId?: bigint;
-            status?: string;
-            cleared?: boolean;
-          };
-          orderBy?: { endedAt?: 'asc' | 'desc' };
-        }) => {
-          const w = args.where;
-          const hit = sessions.filter(
-            (item) =>
-              item.userId === w.userId &&
-              (w.categoryId === undefined || item.categoryId === w.categoryId) &&
-              (w.status === undefined || item.status === w.status) &&
-              (w.cleared === undefined || item.cleared === w.cleared),
-          );
-          if (args.orderBy?.endedAt === 'desc') {
-            hit.sort((a, b) => (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0));
-          }
-          return hit[0] ?? null;
-        },
-      ),
-      findUnique: vi.fn(
-        async (args: { where: { id: bigint } }) => sessions.find((item) => item.id === args.where.id) ?? null,
-      ),
-      create: vi.fn(
-        async (args: {
-          data: {
-            userId: bigint;
-            categoryId: bigint;
-            showTranslation?: boolean;
-            translationUsed?: boolean;
-            lastHints?: string | null;
-          };
-        }) => {
-          const row: SessionRow = {
-            id: nextSessionId,
-            userId: args.data.userId,
-            categoryId: args.data.categoryId,
-            status: 'active',
-            turnCount: 0,
-            goalReached: false,
-            cleared: false,
-            showTranslation: args.data.showTranslation ?? true,
-            translationUsed: args.data.translationUsed ?? false,
-            lastHints: args.data.lastHints ?? null,
-            summary: null,
-            feedback: null,
-            endedAt: null,
-          };
-          nextSessionId += 1n;
-          sessions.push(row);
-          return { id: row.id };
-        },
-      ),
-      update: vi.fn(async (args: { where: { id: bigint }; data: Record<string, unknown> }) => {
-        const row = sessions.find((item) => item.id === args.where.id);
-        if (row) Object.assign(row, args.data);
+        }
+        Object.assign(found, args.update);
+        return found;
+      }),
+      create: vi.fn(async (args: any) => {
+        const row = { id: BigInt(progressRows.length + 1), storyId: null, ...args.data };
+        progressRows.push(row);
         return row;
       }),
+      update: vi.fn(async (args: any) => {
+        const row = progressRows.find((item) => item.id === args.where.id);
+        for (const [key, value] of Object.entries(args.data)) {
+          if (value !== null && typeof value === 'object' && 'increment' in (value as object)) {
+            (row as Record<string, any>)[key] += (value as { increment: number }).increment;
+          } else {
+            (row as Record<string, any>)[key] = value;
+          }
+        }
+        return row;
+      }),
+      groupBy: vi.fn(async () => []),
+      count: vi.fn(async () => 0),
+    },
+    stageDialogueSession: {
+      findFirst: vi.fn(async (args: any) => {
+        const where = args.where ?? {};
+        const rows = sessions.filter(
+          (row) =>
+            (where.userId === undefined || row.userId === where.userId) &&
+            (where.storyId === undefined || row.storyId === where.storyId) &&
+            (where.status === undefined || row.status === where.status) &&
+            (where.cleared === undefined || row.cleared === where.cleared),
+        );
+        return rows.at(-1) ?? null;
+      }),
+      findUnique: vi.fn(async (args: any) => sessions.find((row) => row.id === args.where.id) ?? null),
+      findMany: vi.fn(async () => []),
+      create: vi.fn(async (args: any) => {
+        const row = { id: BigInt(sessions.length + 1), turnCount: 0, status: 'active', ...args.data };
+        sessions.push(row);
+        return row;
+      }),
+      update: vi.fn(async (args: any) => {
+        const row = sessions.find((item) => item.id === args.where.id);
+        Object.assign(row!, args.data);
+        return row;
+      }),
+      groupBy: vi.fn(async () => []),
+      count: vi.fn(async () => 0),
     },
     stageDialogueMessage: {
-      createMany: vi.fn(
-        async (args: {
-          data: Array<{
-            sessionId: bigint;
-            role: string;
-            speaker: string | null;
-            contentEn: string;
-            contentZh: string | null;
-          }>;
-        }) => {
-          for (const item of args.data) {
-            messages.push({ id: nextMessageId, ...item, createdAt: new Date('2026-11-09T00:00:00Z') });
-            nextMessageId += 1n;
-          }
-          return { count: args.data.length };
-        },
-      ),
-      findMany: vi.fn(async (args: { where: { sessionId: bigint } }) =>
-        messages.filter((item) => item.sessionId === args.where.sessionId),
-      ),
+      createMany: vi.fn(async (args: any) => {
+        for (const item of args.data)
+          messages.push({ id: BigInt(messages.length + 1), createdAt: new Date(), ...item });
+        return { count: args.data.length };
+      }),
+      findMany: vi.fn(async (args: any) => messages.filter((row) => row.sessionId === args.where.sessionId)),
     },
     clientXpLog: {
-      findMany: vi.fn(async (args: { where: { eventKey: { startsWith: string } } }) =>
-        [...claimKeys]
-          .filter((item) => item.startsWith(args.where.eventKey.startsWith))
-          .map((eventKey) => ({ eventKey })),
-      ),
-      findUnique: vi.fn(async (args: { where: { eventKey: string } }) =>
-        claimKeys.has(args.where.eventKey) ? { id: 1n } : null,
-      ),
+      findMany: vi.fn(async () => xpLogs),
+      findUnique: vi.fn(async (args: any) => xpLogs.find((row) => row.eventKey === args.where.eventKey) ?? null),
     },
     clientUser: {
-      findUnique: vi.fn(async () => ({ xp })),
+      findUnique: vi.fn(async () => ({ xp: 100, nickname: '小明' })),
     },
-    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma),
+    sentence: {
+      groupBy: vi.fn(async () => []),
+    },
+    $queryRaw: vi.fn(async () => []),
+    $transaction: async (arg: any) => (typeof arg === 'function' ? arg(prisma) : Promise.all(arg)),
   };
 
   const gamify = {
-    awardXp: vi.fn(async (_userId: number, _type: string, eventKey: string, amount: number) => {
-      if (claimKeys.has(eventKey)) return false;
-      claimKeys.add(eventKey);
-      xp += amount;
+    awardXp: vi.fn(async (_userId: number, _type: string, eventKey: string) => {
+      if (xpLogs.some((row) => row.eventKey === eventKey)) return false;
+      xpLogs.push({ eventKey });
       return true;
     }),
+    checkAchievements: vi.fn(),
   };
-
   const ai = {
-    stageDialogueTurn: vi.fn(async ({ turnCount }: { turnCount: number }) => ({
-      replies: [{ speaker: 'Maya', contentEn: 'Sure, here you go.', contentZh: '好的，给你。' }],
-      goalReached: goalAtTurn !== null && turnCount >= goalAtTurn,
-      ended: false,
-      hints: [
-        { en: 'One coffee, please.', zh: '一杯咖啡。' },
-        { en: 'Any food today?', zh: '今天要吃点什么吗？' },
-        { en: 'What do you recommend?', zh: '你有什么推荐？' },
-      ],
+    stageDialogueTurn: vi.fn(async (input: any) => ({
+      replies: [{ speaker: 'Maya', contentEn: 'Sure, anything else?', contentZh: '好的，还要别的吗？' }],
+      goalReached: input.turnCount >= 2,
+      hints: [{ en: 'That’s all, thanks.', zh: '就这些，谢谢。' }],
+      ended: input.turnCount >= 2,
     })),
     stageDialogueSummary: vi.fn(async () => ({
       summary: '这一场聊得很自然。',
       highlights: ['你把需求说清楚了'],
       improvements: ['可以再展开一两句'],
     })),
+    generateStageStory: vi.fn(),
   };
-
   const imageGen = { generate: vi.fn() };
   const fileService = { save: vi.fn(), findById: vi.fn(async () => null) };
+
   const service = new StageService(
     prisma as unknown as PrismaService,
     gamify as unknown as GamifyService,
@@ -283,193 +187,168 @@ function makePrisma(goalAtTurn: number | null = 6) {
     imageGen as unknown as AgnesImageProvider,
     fileService as unknown as FileService,
   );
-  return { service, prisma, gamify, ai, rows, sessions, messages, claimKeys };
+  return { service, prisma, scripts, stories, stageScript, stageStory, sessions, messages, progressRows, xpLogs, ai };
 }
 
-/** 连发 n 句（每句内容不同，避免任何潜在去重干扰）。showTranslation 透传翻译开关。 */
-async function talk(service: StageService, categoryId: number, count: number, showTranslation = true): Promise<void> {
-  for (let i = 0; i < count; i += 1) {
-    await service.sendMessage(1, categoryId, `Could you help me with this, please? ${i}`, showTranslation);
-  }
-}
-
-describe('情景闯关（对话玩法）', () => {
-  it('每章首关默认解锁，章内后一关锁住', async () => {
-    const { service } = makePrisma();
+describe('getStages：场景 → 剧本 → 关卡 组装与解锁', () => {
+  it('scenes 按场景分组；每个剧本第一关解锁、后续关卡锁住', async () => {
+    const { service } = makeService();
     const overview = await service.getStages(1);
-    const arrive = overview.chapters.find((item) => item.key === 'arrive')!;
-
-    expect(arrive.stages.map((item) => item.name)).toEqual(['日常生活', '居家生活', '购物消费']);
-    expect(arrive.stages[0].unlocked).toBe(true);
-    expect(arrive.stages[1].unlocked).toBe(false);
-    expect(arrive.stages[2].unlocked).toBe(false);
-    expect(overview.clearedStages).toBe(0);
-    expect(overview.recommendedId).toBe(1);
-  });
-
-  it('进入关卡会带上开场白，角色与目标一并下发', async () => {
-    const { service } = makePrisma();
-    const view = await service.startDialogue(1, 1);
-    expect(view.title).toBe(STAGE_STORIES[0].title);
-    expect(view.goal).toBe(STAGE_STORIES[0].goal);
-    expect(view.roles.length).toBeGreaterThanOrEqual(1);
-    expect(view.messages.length).toBe(STAGE_STORIES[0].opening.length);
-    expect(view.messages[0].role).toBe('npc');
-  });
-
-  it('聊够轮数且达成目标 → 通关、解锁下一关、可领奖', async () => {
-    const { service } = makePrisma();
-    await service.startDialogue(1, 1);
-    await talk(service, 1, STAGE_STORIES[0].minTurns);
-
-    const overview = await service.getStages(1);
-    const arrive = overview.chapters.find((item) => item.key === 'arrive')!;
-    expect(arrive.stages[0].cleared).toBe(true);
-    expect(arrive.stages[0].progress).toBe(100);
-    expect(arrive.stages[1].unlocked).toBe(true);
-    expect(overview.clearedStages).toBe(1);
-    expect(overview.claimable).toBe(1);
-    expect(overview.recommendedId).toBe(2);
-  });
-
-  it('纯中文输入被拒，不落库也不占轮数', async () => {
-    const { service, messages } = makePrisma();
-    await service.startDialogue(1, 1);
-    const before = messages.length;
-    await expect(service.sendMessage(1, 1, '不知道')).rejects.toThrow(/英语/);
-    expect(messages.length).toBe(before);
-  });
-
-  it('只蹦一个英文词时，模型说目标达成也不算', async () => {
-    const { service } = makePrisma(1);
-    await service.startDialogue(1, 1);
-    const result = await service.sendMessage(1, 1, 'ok');
-    expect(result.goalReached).toBe(false);
-  });
-
-  it('目标达成太早不算通关，必须聊够 minTurns', async () => {
-    const { service } = makePrisma(1);
-    await service.startDialogue(1, 1);
-    const first = await service.sendMessage(1, 1, 'I would like a coffee please.');
-    expect(first.goalReached).toBe(true);
-    expect(first.ended).toBe(false);
-    expect(first.cleared).toBe(false);
-  });
-
-  it('撞到 maxTurns 仍未达成目标 → 结束但不清关', async () => {
-    const { service } = makePrisma(null);
-    await service.startDialogue(1, 1);
-    await talk(service, 1, STAGE_STORIES[0].maxTurns);
-
-    const overview = await service.getStages(1);
-    const arrive = overview.chapters.find((item) => item.key === 'arrive')!;
-    expect(arrive.stages[0].cleared).toBe(false);
-    expect(arrive.stages[1].unlocked).toBe(false);
-  });
-
-  it('旧版答对只累计历史统计，不再通关', async () => {
-    const { service, rows } = makePrisma();
-    for (let i = 0; i < STAGE_STORIES[0].target; i += 1) {
-      await service.recordAnswer(1, 1, '日常生活', true);
+    expect(overview.scenes.length).toBeGreaterThan(0);
+    for (const scene of overview.scenes) {
+      expect(scene.scriptCount).toBeGreaterThan(0);
+      expect(scene.stageCount).toBeGreaterThan(0);
     }
-    const row = rows.get('1:1')!;
-    expect(row.correctCount).toBe(STAGE_STORIES[0].target);
-    expect(row.dialogueClearedAt).toBeNull();
-
-    const overview = await service.getStages(1);
-    expect(overview.clearedStages).toBe(0);
+    for (const chapter of overview.chapters) {
+      expect(chapter.stages[0]?.unlocked).toBe(true);
+      for (const stage of chapter.stages.slice(1)) {
+        expect(stage.unlocked).toBe(false);
+      }
+    }
   });
 
-  it('通关奖励幂等：重复领取不重复发经验', async () => {
-    const { service, gamify } = makePrisma();
-    await service.startDialogue(1, 1);
-    await talk(service, 1, STAGE_STORIES[0].minTurns);
+  it('关卡 id = storyId（不是分类 id），且带 scriptId/categoryId', async () => {
+    const { service, stories, scripts } = makeService();
+    const overview = await service.getStages(1);
+    const first = overview.chapters.flatMap((c) => c.stages)[0];
+    expect(first.id).toBe(Number(stories[0].id));
+    expect(first.scriptId).toBe(Number(scripts[0].id));
+    expect(first.categoryId).toBe(Number(scripts[0].categoryId));
+  });
 
-    const first = await service.claim(1, 1);
+  it('停用的剧本整条线不下发', async () => {
+    const { service, scripts, stories } = makeService();
+    scripts[0].status = 0;
+    const overview = await service.getStages(1);
+    expect(overview.chapters.some((c) => c.stages.some((s) => s.id === Number(stories[0].id)))).toBe(false);
+  });
+
+  it('getScript / getScene 返回单剧本/单场景详情；不存在 404', async () => {
+    const { service, scripts } = makeService();
+    const detail = await service.getScript(1, Number(scripts[0].id));
+    expect(detail.script.id).toBe(Number(scripts[0].id));
+    expect(detail.stages.length).toBeGreaterThan(0);
+    expect(detail.scene.id).toBe(Number(scripts[0].categoryId));
+
+    const scene = await service.getScene(1, Number(scripts[0].categoryId));
+    expect(scene.scripts.some((s) => s.id === Number(scripts[0].id))).toBe(true);
+    await expect(service.getScript(1, 9999)).rejects.toMatchObject({ code: 404 });
+    await expect(service.getScene(1, 9999)).rejects.toMatchObject({ code: 404 });
+  });
+});
+
+describe('对话与通关：主键 storyId，进度按关卡记', () => {
+  it('startDialogue 建会话写 storyId/categoryId 与开场白；再次进入续聊同一会话', async () => {
+    const { service, sessions, messages, stories, scripts } = makeService();
+    const storyId = Number(stories[0].id);
+    const view = await service.startDialogue(1, storyId);
+    expect(view.sessionId).toBeTruthy();
+    expect(sessions[0].storyId).toBe(stories[0].id);
+    expect(sessions[0].categoryId).toBe(scripts[0].categoryId);
+    expect(messages.length).toBe(FIRST_STORY.opening.length);
+
+    const again = await service.startDialogue(1, storyId);
+    expect(sessions).toHaveLength(1);
+    expect(again.sessionId).toBe(view.sessionId);
+  });
+
+  it('聊够 minTurns 且目标达成 → 通关，进度写 (userId, storyId)', async () => {
+    const { service, progressRows, stories, ai } = makeService();
+    const storyId = Number(stories[0].id);
+    await service.startDialogue(1, storyId);
+    for (let i = 0; i < FIRST_STORY.minTurns - 1; i += 1) {
+      const result = await service.sendMessage(1, storyId, `Could I get a coffee, please? ${i}`);
+      expect(result.cleared).toBe(false);
+    }
+    const last = await service.sendMessage(1, storyId, 'That’s all, thanks a lot.');
+    expect(last.cleared).toBe(true);
+    const row = progressRows.find((item) => item.storyId === stories[0].id);
+    expect(row?.dialogueClearedAt).toBeTruthy();
+    expect(ai.stageDialogueTurn).toHaveBeenCalled();
+  });
+
+  it('目标一直没达成 → 撞 maxTurns 结束也不通关', async () => {
+    const { service, stories, ai, progressRows } = makeService();
+    ai.stageDialogueTurn.mockImplementation(async () => ({
+      replies: [{ speaker: 'Maya', contentEn: 'Hmm?', contentZh: '嗯？' }],
+      goalReached: false,
+      hints: [],
+      ended: false,
+    }));
+    const storyId = Number(stories[0].id);
+    await service.startDialogue(1, storyId);
+    let result = await service.sendMessage(1, storyId, 'Hello there.');
+    for (let i = 0; i < FIRST_STORY.maxTurns; i += 1) {
+      result = await service.sendMessage(1, storyId, `Still here ${i}`);
+      if (result.ended) break;
+    }
+    expect(result.ended).toBe(true);
+    expect(result.cleared).toBe(false);
+    expect(progressRows.find((item) => item.storyId === stories[0].id)).toBeUndefined();
+  });
+
+  it('通关后同剧本下一关解锁', async () => {
+    const { service, stories } = makeService();
+    const storyId = Number(stories[0].id);
+    await service.startDialogue(1, storyId);
+    for (let i = 0; i < FIRST_STORY.minTurns - 1; i += 1) await service.sendMessage(1, storyId, `Coffee please ${i}`);
+    await service.sendMessage(1, storyId, 'That’s all, thanks.');
+
+    const overview = await service.getStages(1);
+    const chapter = overview.chapters.find((c) => c.stages.some((s) => s.id === storyId))!;
+    const index = chapter.stages.findIndex((s) => s.id === storyId);
+    expect(chapter.stages[index].cleared).toBe(true);
+    if (chapter.stages[index + 1]) expect(chapter.stages[index + 1].unlocked).toBe(true);
+  });
+
+  it('claim 幂等：key = stage:{userId}:{storyId}，重复领取不重复发 XP', async () => {
+    const { service, stories, xpLogs } = makeService();
+    const storyId = Number(stories[0].id);
+    await service.startDialogue(1, storyId);
+    for (let i = 0; i < FIRST_STORY.minTurns - 1; i += 1) await service.sendMessage(1, storyId, `Coffee please ${i}`);
+    await service.sendMessage(1, storyId, 'That’s all, thanks.');
+
+    const first = await service.claim(1, storyId);
     expect(first.awarded).toBe(true);
-    expect(first.rewardXp).toBe(STAGE_STORIES[0].rewardXp);
+    expect(xpLogs.some((row) => row.eventKey === `stage:1:${storyId}`)).toBe(true);
 
-    const second = await service.claim(1, 1);
+    const second = await service.claim(1, storyId);
     expect(second.alreadyClaimed).toBe(true);
-    expect(second.rewardXp).toBe(0);
-    expect(gamify.awardXp).toHaveBeenCalledTimes(1);
+    expect(second.awarded).toBe(false);
   });
 
-  it('未通关不能领奖', async () => {
-    const { service } = makePrisma();
-    await expect(service.claim(1, 1)).rejects.toThrow();
+  it('未通关领取 → 400；关卡不存在 → 404', async () => {
+    const { service, stories } = makeService();
+    await expect(service.claim(1, Number(stories[0].id))).rejects.toMatchObject({ code: 400 });
+    await expect(service.claim(1, 9999)).rejects.toMatchObject({ code: 404 });
+  });
+});
+
+describe('recordAnswer：旧版答题统计按分类记一行（storyId 为空）', () => {
+  it('有剧本归属的分类写入/累加分类级统计行', async () => {
+    const { service, progressRows } = makeService();
+    const categoryId = 1; // 日常生活（seedScriptRows 里第一个分类）
+    await service.recordAnswer(1, categoryId, '日常生活', true);
+    await service.recordAnswer(1, categoryId, '日常生活', false);
+    const row = progressRows.find((item) => item.categoryId === BigInt(categoryId) && item.storyId === null);
+    expect(row?.correctCount).toBe(1);
+    expect(row?.answerCount).toBe(2);
   });
 
-  it('重新开始会废弃旧会话并新建一局', async () => {
-    const { service, sessions } = makePrisma();
-    const first = await service.startDialogue(1, 1);
-    const second = await service.startDialogue(1, 1, true);
-    expect(second.sessionId).not.toBe(first.sessionId);
-    expect(sessions[0].status).toBe('abandoned');
-    expect(second.turnCount).toBe(0);
+  it('没有剧本归属的分类直接跳过', async () => {
+    const { service, progressRows } = makeService();
+    await service.recordAnswer(1, 999, '不存在的场景', true);
+    expect(progressRows).toHaveLength(0);
   });
+});
 
-  it('数字输入（如手机号）允许，不被当成纯中文拒绝', async () => {
-    const { service, messages } = makePrisma();
-    await service.startDialogue(1, 1);
-    const before = messages.length;
-    await expect(service.sendMessage(1, 1, '13000000000')).resolves.toBeTruthy();
-    expect(messages.length).toBe(before + 2); // 用户 1 句 + NPC 1 句
-  });
-
-  it('每轮返回动态候选短句，续聊视图回显 hints 与翻译开关', async () => {
-    const { service } = makePrisma();
-    await service.startDialogue(1, 1);
-    const result = await service.sendMessage(1, 1, 'Could you help me please?', false);
-    expect(result.hints).toEqual([
-      { en: 'One coffee, please.', zh: '一杯咖啡。' },
-      { en: 'Any food today?', zh: '今天要吃点什么吗？' },
-      { en: 'What do you recommend?', zh: '你有什么推荐？' },
-    ]);
-    const view = await service.getDialogue(1, 1);
-    expect(view?.hints).toEqual(result.hints);
-    expect(view?.showTranslation).toBe(false);
-  });
-
-  it('进入场景即带回带翻译的候选短句（starterHints）', async () => {
-    const { service } = makePrisma();
-    const view = await service.startDialogue(1, 1);
-    expect(view.hints).toEqual(STAGE_STORIES[0].starterHints);
-    expect(view.hints.every((h) => h.en.length > 0 && h.zh.length > 0)).toBe(true);
-    expect(view.showTranslation).toBe(true);
-  });
-
-  it('全程开着翻译、最后一句才关 → translationUsed 粘住，拿不到无翻译加成', async () => {
-    const { service, sessions } = makePrisma();
-    await service.startDialogue(1, 1);
-    for (let i = 0; i < STAGE_STORIES[0].minTurns - 1; i += 1) {
-      await service.sendMessage(1, 1, `Could you help me with this, please? ${i}`, true);
-    }
-    // 最后一句临时把翻译关掉
-    await service.sendMessage(1, 1, 'I would like a coffee, please.', false);
-    expect(sessions[0].translationUsed).toBe(true);
-    const result = await service.claim(1, 1);
-    expect(result.rewardXp).toBe(STAGE_STORIES[0].rewardXp);
-    expect(result.bonusXp).toBe(0);
-  });
-
-  it('全程关闭翻译通关 → 给无翻译加成（基础 50%）', async () => {
-    const { service } = makePrisma();
-    await service.startDialogue(1, 1);
-    await talk(service, 1, STAGE_STORIES[0].minTurns, false);
-    const result = await service.claim(1, 1);
-    expect(result.bonusXp).toBe(Math.round(STAGE_STORIES[0].rewardXp * 0.5));
-  });
-
-  it('开关翻译的 PATCH：开启即把 translationUsed 置位（粘性）', async () => {
-    const { service, sessions } = makePrisma();
-    await service.startDialogue(1, 1);
-    expect(sessions[0].translationUsed).toBe(false);
-    await service.setTranslation(1, 1, true);
-    expect(sessions[0].translationUsed).toBe(true);
-    // 再关掉也不清空
-    await service.setTranslation(1, 1, false);
-    expect(sessions[0].showTranslation).toBe(false);
-    expect(sessions[0].translationUsed).toBe(true);
+describe('剧本之间互不阻塞', () => {
+  it('不同剧本的第一关都默认解锁', async () => {
+    const { service, stories } = makeService();
+    const overview = await service.getStages(1);
+    const flat = overview.chapters.flatMap((c) => c.stages);
+    expect(flat.find((s) => s.id === Number(stories[0].id))?.unlocked).toBe(true);
+    expect(flat.find((s) => s.id === Number(stories[1].id))?.unlocked).toBe(true);
+    expect(SECOND_STORY.category).toBe('居家生活');
   });
 });

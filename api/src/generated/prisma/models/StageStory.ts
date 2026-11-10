@@ -14,14 +14,11 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model StageStory
- * 情景闯关「关卡剧情」定义（一个场景分类 = 一关）。
+ * 情景闯关「关卡」：一个剧本下的一关（一段可对话的剧情）。
  * 
- * 2026-11-10 起从代码常量（stage-stories.ts 的 STAGE_STORIES）迁移到本表，
- * 后台可增删改查；服务启动时用代码种子**幂等回填**（category 已存在则跳过，不覆盖运营改动）。
- * 章节（STAGE_CHAPTERS）仍留在代码里——章节带封面提示词，且只有固定 4 章。
- * 
- * 关卡与分类的挂钩用 `category`（= sentence_category.name）而不是 id（原因见 stage-stories.ts 头注释）。
- * 进度/会话都按 categoryId 记录，与本表无外键，删改关卡不会伤历史数据。
+ * 2026-11-10 重构：从「一分类一关卡」改为「剧本下多关卡」，主键是自身 id，
+ * 进度/会话按 storyId 记录，删改关卡不会伤历史数据。
+ * 服务启动时用代码种子 STAGE_STORIES **幂等回填**（同剧本下同名标题跳过，不覆盖运营改动）。
  */
 export type StageStoryModel = runtime.Types.Result.DefaultSelection<Prisma.$StageStoryPayload>
 
@@ -35,6 +32,7 @@ export type AggregateStageStory = {
 
 export type StageStoryAvgAggregateOutputType = {
   id: number | null
+  scriptId: number | null
   minTurns: number | null
   maxTurns: number | null
   target: number | null
@@ -45,6 +43,7 @@ export type StageStoryAvgAggregateOutputType = {
 
 export type StageStorySumAggregateOutputType = {
   id: bigint | null
+  scriptId: bigint | null
   minTurns: number | null
   maxTurns: number | null
   target: number | null
@@ -55,8 +54,7 @@ export type StageStorySumAggregateOutputType = {
 
 export type StageStoryMinAggregateOutputType = {
   id: bigint | null
-  chapterKey: string | null
-  category: string | null
+  scriptId: bigint | null
   title: string | null
   intro: string | null
   outro: string | null
@@ -75,8 +73,7 @@ export type StageStoryMinAggregateOutputType = {
 
 export type StageStoryMaxAggregateOutputType = {
   id: bigint | null
-  chapterKey: string | null
-  category: string | null
+  scriptId: bigint | null
   title: string | null
   intro: string | null
   outro: string | null
@@ -95,8 +92,7 @@ export type StageStoryMaxAggregateOutputType = {
 
 export type StageStoryCountAggregateOutputType = {
   id: number
-  chapterKey: number
-  category: number
+  scriptId: number
   title: number
   intro: number
   outro: number
@@ -120,6 +116,7 @@ export type StageStoryCountAggregateOutputType = {
 
 export type StageStoryAvgAggregateInputType = {
   id?: true
+  scriptId?: true
   minTurns?: true
   maxTurns?: true
   target?: true
@@ -130,6 +127,7 @@ export type StageStoryAvgAggregateInputType = {
 
 export type StageStorySumAggregateInputType = {
   id?: true
+  scriptId?: true
   minTurns?: true
   maxTurns?: true
   target?: true
@@ -140,8 +138,7 @@ export type StageStorySumAggregateInputType = {
 
 export type StageStoryMinAggregateInputType = {
   id?: true
-  chapterKey?: true
-  category?: true
+  scriptId?: true
   title?: true
   intro?: true
   outro?: true
@@ -160,8 +157,7 @@ export type StageStoryMinAggregateInputType = {
 
 export type StageStoryMaxAggregateInputType = {
   id?: true
-  chapterKey?: true
-  category?: true
+  scriptId?: true
   title?: true
   intro?: true
   outro?: true
@@ -180,8 +176,7 @@ export type StageStoryMaxAggregateInputType = {
 
 export type StageStoryCountAggregateInputType = {
   id?: true
-  chapterKey?: true
-  category?: true
+  scriptId?: true
   title?: true
   intro?: true
   outro?: true
@@ -290,8 +285,7 @@ export type StageStoryGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 
 export type StageStoryGroupByOutputType = {
   id: bigint
-  chapterKey: string
-  category: string
+  scriptId: bigint
   title: string
   intro: string
   outro: string
@@ -336,8 +330,7 @@ export type StageStoryWhereInput = {
   OR?: Prisma.StageStoryWhereInput[]
   NOT?: Prisma.StageStoryWhereInput | Prisma.StageStoryWhereInput[]
   id?: Prisma.BigIntFilter<"StageStory"> | bigint | number
-  chapterKey?: Prisma.StringFilter<"StageStory"> | string
-  category?: Prisma.StringFilter<"StageStory"> | string
+  scriptId?: Prisma.BigIntFilter<"StageStory"> | bigint | number
   title?: Prisma.StringFilter<"StageStory"> | string
   intro?: Prisma.StringFilter<"StageStory"> | string
   outro?: Prisma.StringFilter<"StageStory"> | string
@@ -359,8 +352,7 @@ export type StageStoryWhereInput = {
 
 export type StageStoryOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  chapterKey?: Prisma.SortOrder
-  category?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   intro?: Prisma.SortOrder
   outro?: Prisma.SortOrder
@@ -383,11 +375,10 @@ export type StageStoryOrderByWithRelationInput = {
 
 export type StageStoryWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
-  category?: string
   AND?: Prisma.StageStoryWhereInput | Prisma.StageStoryWhereInput[]
   OR?: Prisma.StageStoryWhereInput[]
   NOT?: Prisma.StageStoryWhereInput | Prisma.StageStoryWhereInput[]
-  chapterKey?: Prisma.StringFilter<"StageStory"> | string
+  scriptId?: Prisma.BigIntFilter<"StageStory"> | bigint | number
   title?: Prisma.StringFilter<"StageStory"> | string
   intro?: Prisma.StringFilter<"StageStory"> | string
   outro?: Prisma.StringFilter<"StageStory"> | string
@@ -405,12 +396,11 @@ export type StageStoryWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.IntFilter<"StageStory"> | number
   createdAt?: Prisma.DateTimeFilter<"StageStory"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"StageStory"> | Date | string
-}, "id" | "category">
+}, "id">
 
 export type StageStoryOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  chapterKey?: Prisma.SortOrder
-  category?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   intro?: Prisma.SortOrder
   outro?: Prisma.SortOrder
@@ -440,8 +430,7 @@ export type StageStoryScalarWhereWithAggregatesInput = {
   OR?: Prisma.StageStoryScalarWhereWithAggregatesInput[]
   NOT?: Prisma.StageStoryScalarWhereWithAggregatesInput | Prisma.StageStoryScalarWhereWithAggregatesInput[]
   id?: Prisma.BigIntWithAggregatesFilter<"StageStory"> | bigint | number
-  chapterKey?: Prisma.StringWithAggregatesFilter<"StageStory"> | string
-  category?: Prisma.StringWithAggregatesFilter<"StageStory"> | string
+  scriptId?: Prisma.BigIntWithAggregatesFilter<"StageStory"> | bigint | number
   title?: Prisma.StringWithAggregatesFilter<"StageStory"> | string
   intro?: Prisma.StringWithAggregatesFilter<"StageStory"> | string
   outro?: Prisma.StringWithAggregatesFilter<"StageStory"> | string
@@ -463,8 +452,7 @@ export type StageStoryScalarWhereWithAggregatesInput = {
 
 export type StageStoryCreateInput = {
   id?: bigint | number
-  chapterKey: string
-  category: string
+  scriptId: bigint | number
   title: string
   intro: string
   outro: string
@@ -486,8 +474,7 @@ export type StageStoryCreateInput = {
 
 export type StageStoryUncheckedCreateInput = {
   id?: bigint | number
-  chapterKey: string
-  category: string
+  scriptId: bigint | number
   title: string
   intro: string
   outro: string
@@ -509,8 +496,7 @@ export type StageStoryUncheckedCreateInput = {
 
 export type StageStoryUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  chapterKey?: Prisma.StringFieldUpdateOperationsInput | string
-  category?: Prisma.StringFieldUpdateOperationsInput | string
+  scriptId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   intro?: Prisma.StringFieldUpdateOperationsInput | string
   outro?: Prisma.StringFieldUpdateOperationsInput | string
@@ -532,8 +518,7 @@ export type StageStoryUpdateInput = {
 
 export type StageStoryUncheckedUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  chapterKey?: Prisma.StringFieldUpdateOperationsInput | string
-  category?: Prisma.StringFieldUpdateOperationsInput | string
+  scriptId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   intro?: Prisma.StringFieldUpdateOperationsInput | string
   outro?: Prisma.StringFieldUpdateOperationsInput | string
@@ -555,8 +540,7 @@ export type StageStoryUncheckedUpdateInput = {
 
 export type StageStoryCreateManyInput = {
   id?: bigint | number
-  chapterKey: string
-  category: string
+  scriptId: bigint | number
   title: string
   intro: string
   outro: string
@@ -578,8 +562,7 @@ export type StageStoryCreateManyInput = {
 
 export type StageStoryUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  chapterKey?: Prisma.StringFieldUpdateOperationsInput | string
-  category?: Prisma.StringFieldUpdateOperationsInput | string
+  scriptId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   intro?: Prisma.StringFieldUpdateOperationsInput | string
   outro?: Prisma.StringFieldUpdateOperationsInput | string
@@ -601,8 +584,7 @@ export type StageStoryUpdateManyMutationInput = {
 
 export type StageStoryUncheckedUpdateManyInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
-  chapterKey?: Prisma.StringFieldUpdateOperationsInput | string
-  category?: Prisma.StringFieldUpdateOperationsInput | string
+  scriptId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   title?: Prisma.StringFieldUpdateOperationsInput | string
   intro?: Prisma.StringFieldUpdateOperationsInput | string
   outro?: Prisma.StringFieldUpdateOperationsInput | string
@@ -630,8 +612,7 @@ export type StageStoryOrderByRelevanceInput = {
 
 export type StageStoryCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  chapterKey?: Prisma.SortOrder
-  category?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   intro?: Prisma.SortOrder
   outro?: Prisma.SortOrder
@@ -653,6 +634,7 @@ export type StageStoryCountOrderByAggregateInput = {
 
 export type StageStoryAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   minTurns?: Prisma.SortOrder
   maxTurns?: Prisma.SortOrder
   target?: Prisma.SortOrder
@@ -663,8 +645,7 @@ export type StageStoryAvgOrderByAggregateInput = {
 
 export type StageStoryMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  chapterKey?: Prisma.SortOrder
-  category?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   intro?: Prisma.SortOrder
   outro?: Prisma.SortOrder
@@ -683,8 +664,7 @@ export type StageStoryMaxOrderByAggregateInput = {
 
 export type StageStoryMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  chapterKey?: Prisma.SortOrder
-  category?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   intro?: Prisma.SortOrder
   outro?: Prisma.SortOrder
@@ -703,6 +683,7 @@ export type StageStoryMinOrderByAggregateInput = {
 
 export type StageStorySumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  scriptId?: Prisma.SortOrder
   minTurns?: Prisma.SortOrder
   maxTurns?: Prisma.SortOrder
   target?: Prisma.SortOrder
@@ -715,8 +696,7 @@ export type StageStorySumOrderByAggregateInput = {
 
 export type StageStorySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  chapterKey?: boolean
-  category?: boolean
+  scriptId?: boolean
   title?: boolean
   intro?: boolean
   outro?: boolean
@@ -740,8 +720,7 @@ export type StageStorySelect<ExtArgs extends runtime.Types.Extensions.InternalAr
 
 export type StageStorySelectScalar = {
   id?: boolean
-  chapterKey?: boolean
-  category?: boolean
+  scriptId?: boolean
   title?: boolean
   intro?: boolean
   outro?: boolean
@@ -761,7 +740,7 @@ export type StageStorySelectScalar = {
   updatedAt?: boolean
 }
 
-export type StageStoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "chapterKey" | "category" | "title" | "intro" | "outro" | "userRole" | "setting" | "goal" | "minTurns" | "maxTurns" | "target" | "rewardXp" | "roles" | "opening" | "starterHints" | "sort" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["stageStory"]>
+export type StageStoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "scriptId" | "title" | "intro" | "outro" | "userRole" | "setting" | "goal" | "minTurns" | "maxTurns" | "target" | "rewardXp" | "roles" | "opening" | "starterHints" | "sort" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["stageStory"]>
 
 export type $StageStoryPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "StageStory"
@@ -772,13 +751,9 @@ export type $StageStoryPayload<ExtArgs extends runtime.Types.Extensions.Internal
      */
     id: bigint
     /**
-     * 所属章节 key（与 STAGE_CHAPTERS.key 一致）
+     * 所属剧本 id（stage_script）
      */
-    chapterKey: string
-    /**
-     * 对应场景分类名（sentence_category.name），全局唯一——一场景只能挂一关
-     */
-    category: string
+    scriptId: bigint
     /**
      * 关卡标题（剧情化场景名）
      */
@@ -832,7 +807,7 @@ export type $StageStoryPayload<ExtArgs extends runtime.Types.Extensions.Internal
      */
     starterHints: runtime.JsonValue
     /**
-     * 章内排序（越小越靠前）
+     * 剧本内排序（越小越靠前）
      */
     sort: number
     /**
@@ -1217,8 +1192,7 @@ export interface Prisma__StageStoryClient<T, Null = never, ExtArgs extends runti
  */
 export interface StageStoryFieldRefs {
   readonly id: Prisma.FieldRef<"StageStory", 'BigInt'>
-  readonly chapterKey: Prisma.FieldRef<"StageStory", 'String'>
-  readonly category: Prisma.FieldRef<"StageStory", 'String'>
+  readonly scriptId: Prisma.FieldRef<"StageStory", 'BigInt'>
   readonly title: Prisma.FieldRef<"StageStory", 'String'>
   readonly intro: Prisma.FieldRef<"StageStory", 'String'>
   readonly outro: Prisma.FieldRef<"StageStory", 'String'>

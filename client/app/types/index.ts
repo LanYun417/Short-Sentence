@@ -365,7 +365,7 @@ export interface LeaderboardResult {
 
 /* ------------------------------ 情景闯关 ------------------------------ */
 
-/** 一个关卡（关卡 = 场景分类）。 */
+/** 一个关卡（挂在剧本下；id = stage_story.id）。 */
 /** 场景里的一个 AI 角色。 */
 export interface StageRole {
   nameEn: string;
@@ -374,8 +374,13 @@ export interface StageRole {
 }
 
 export interface StageView {
-  /** 关卡 id = 场景分类 id */
+  /** 关卡 id（stage_story.id） */
   id: number;
+  /** 所属剧本 id */
+  scriptId: number;
+  /** 所属场景分类 id */
+  categoryId: number;
+  /** 场景分类名 */
   name: string;
   nameEn: string | null;
   icon: string | null;
@@ -405,7 +410,38 @@ export interface StageView {
   activeSessionId: number | null;
 }
 
-/** 一章（含若干关卡，章内顺序解锁）。 */
+/** 一个剧本（挂在场景下，包含若干关卡）。 */
+export interface StageScript {
+  /** 剧本 id（stage_script.id） */
+  id: number;
+  /** 所属场景分类 id */
+  categoryId: number;
+  name: string;
+  blurb: string;
+  /** AI 生成的封面图 URL；未生成时为 null（前端回落渐变+图标） */
+  coverUrl: string | null;
+  /** 剧本下可见关卡数 */
+  stageCount: number;
+  /** 我已通关的关卡数 */
+  clearedCount: number;
+  /** 是否全部通关 */
+  completed: boolean;
+}
+
+/** 一个场景（顶层：场景分类 + 其下剧本/关卡汇总）。 */
+export interface StageScene {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  icon: string | null;
+  scriptCount: number;
+  stageCount: number;
+  clearedCount: number;
+  /** 场景卡封面 = 第一个有封面的剧本封面（都没有则 null） */
+  coverUrl: string | null;
+}
+
+/** 一章（兼容旧字段；重构后 = 一个剧本，key 形如 `script-{id}`）。 */
 export interface StageChapter {
   key: string;
   name: string;
@@ -419,6 +455,9 @@ export interface StageChapter {
 
 /** 闯关总览。 */
 export interface StageOverview {
+  /** 顶层场景（地图首页用） */
+  scenes: StageScene[];
+  /** 剧本平铺（兼容旧客户端） */
   chapters: StageChapter[];
   clearedStages: number;
   totalStages: number;
@@ -426,6 +465,21 @@ export interface StageOverview {
   claimable: number;
   /** 推荐关卡 id（第一个已解锁未通关的关卡） */
   recommendedId: number | null;
+}
+
+/** 场景详情（场景 → 剧本列表）。 */
+export interface StageSceneDetail {
+  scene: StageScene;
+  scripts: StageScript[];
+}
+
+/** 剧本详情（剧本 → 关卡列表）。 */
+export interface StageScriptDetail {
+  script: StageScript;
+  scene: Pick<StageScene, 'id' | 'name' | 'nameEn' | 'icon'>;
+  stages: StageView[];
+  clearedCount: number;
+  total: number;
 }
 
 /** 领取通关奖励结果。 */

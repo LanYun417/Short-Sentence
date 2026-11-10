@@ -33,6 +33,7 @@ export type AggregateStageDialogueSession = {
 export type StageDialogueSessionAvgAggregateOutputType = {
   id: number | null
   userId: number | null
+  storyId: number | null
   categoryId: number | null
   turnCount: number | null
 }
@@ -40,6 +41,7 @@ export type StageDialogueSessionAvgAggregateOutputType = {
 export type StageDialogueSessionSumAggregateOutputType = {
   id: bigint | null
   userId: bigint | null
+  storyId: bigint | null
   categoryId: bigint | null
   turnCount: number | null
 }
@@ -47,6 +49,7 @@ export type StageDialogueSessionSumAggregateOutputType = {
 export type StageDialogueSessionMinAggregateOutputType = {
   id: bigint | null
   userId: bigint | null
+  storyId: bigint | null
   categoryId: bigint | null
   status: string | null
   turnCount: number | null
@@ -65,6 +68,7 @@ export type StageDialogueSessionMinAggregateOutputType = {
 export type StageDialogueSessionMaxAggregateOutputType = {
   id: bigint | null
   userId: bigint | null
+  storyId: bigint | null
   categoryId: bigint | null
   status: string | null
   turnCount: number | null
@@ -83,6 +87,7 @@ export type StageDialogueSessionMaxAggregateOutputType = {
 export type StageDialogueSessionCountAggregateOutputType = {
   id: number
   userId: number
+  storyId: number
   categoryId: number
   status: number
   turnCount: number
@@ -103,6 +108,7 @@ export type StageDialogueSessionCountAggregateOutputType = {
 export type StageDialogueSessionAvgAggregateInputType = {
   id?: true
   userId?: true
+  storyId?: true
   categoryId?: true
   turnCount?: true
 }
@@ -110,6 +116,7 @@ export type StageDialogueSessionAvgAggregateInputType = {
 export type StageDialogueSessionSumAggregateInputType = {
   id?: true
   userId?: true
+  storyId?: true
   categoryId?: true
   turnCount?: true
 }
@@ -117,6 +124,7 @@ export type StageDialogueSessionSumAggregateInputType = {
 export type StageDialogueSessionMinAggregateInputType = {
   id?: true
   userId?: true
+  storyId?: true
   categoryId?: true
   status?: true
   turnCount?: true
@@ -135,6 +143,7 @@ export type StageDialogueSessionMinAggregateInputType = {
 export type StageDialogueSessionMaxAggregateInputType = {
   id?: true
   userId?: true
+  storyId?: true
   categoryId?: true
   status?: true
   turnCount?: true
@@ -153,6 +162,7 @@ export type StageDialogueSessionMaxAggregateInputType = {
 export type StageDialogueSessionCountAggregateInputType = {
   id?: true
   userId?: true
+  storyId?: true
   categoryId?: true
   status?: true
   turnCount?: true
@@ -258,6 +268,7 @@ export type StageDialogueSessionGroupByArgs<ExtArgs extends runtime.Types.Extens
 export type StageDialogueSessionGroupByOutputType = {
   id: bigint
   userId: bigint
+  storyId: bigint
   categoryId: bigint
   status: string
   turnCount: number
@@ -299,6 +310,7 @@ export type StageDialogueSessionWhereInput = {
   NOT?: Prisma.StageDialogueSessionWhereInput | Prisma.StageDialogueSessionWhereInput[]
   id?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
   userId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
+  storyId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
   categoryId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
   status?: Prisma.StringFilter<"StageDialogueSession"> | string
   turnCount?: Prisma.IntFilter<"StageDialogueSession"> | number
@@ -318,6 +330,7 @@ export type StageDialogueSessionWhereInput = {
 export type StageDialogueSessionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
@@ -341,6 +354,7 @@ export type StageDialogueSessionWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.StageDialogueSessionWhereInput[]
   NOT?: Prisma.StageDialogueSessionWhereInput | Prisma.StageDialogueSessionWhereInput[]
   userId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
+  storyId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
   categoryId?: Prisma.BigIntFilter<"StageDialogueSession"> | bigint | number
   status?: Prisma.StringFilter<"StageDialogueSession"> | string
   turnCount?: Prisma.IntFilter<"StageDialogueSession"> | number
@@ -360,6 +374,7 @@ export type StageDialogueSessionWhereUniqueInput = Prisma.AtLeast<{
 export type StageDialogueSessionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
@@ -386,6 +401,7 @@ export type StageDialogueSessionScalarWhereWithAggregatesInput = {
   NOT?: Prisma.StageDialogueSessionScalarWhereWithAggregatesInput | Prisma.StageDialogueSessionScalarWhereWithAggregatesInput[]
   id?: Prisma.BigIntWithAggregatesFilter<"StageDialogueSession"> | bigint | number
   userId?: Prisma.BigIntWithAggregatesFilter<"StageDialogueSession"> | bigint | number
+  storyId?: Prisma.BigIntWithAggregatesFilter<"StageDialogueSession"> | bigint | number
   categoryId?: Prisma.BigIntWithAggregatesFilter<"StageDialogueSession"> | bigint | number
   status?: Prisma.StringWithAggregatesFilter<"StageDialogueSession"> | string
   turnCount?: Prisma.IntWithAggregatesFilter<"StageDialogueSession"> | number
@@ -404,6 +420,7 @@ export type StageDialogueSessionScalarWhereWithAggregatesInput = {
 export type StageDialogueSessionCreateInput = {
   id?: bigint | number
   userId: bigint | number
+  storyId: bigint | number
   categoryId: bigint | number
   status?: string
   turnCount?: number
@@ -423,6 +440,7 @@ export type StageDialogueSessionCreateInput = {
 export type StageDialogueSessionUncheckedCreateInput = {
   id?: bigint | number
   userId: bigint | number
+  storyId: bigint | number
   categoryId: bigint | number
   status?: string
   turnCount?: number
@@ -442,6 +460,7 @@ export type StageDialogueSessionUncheckedCreateInput = {
 export type StageDialogueSessionUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -461,6 +480,7 @@ export type StageDialogueSessionUpdateInput = {
 export type StageDialogueSessionUncheckedUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -480,6 +500,7 @@ export type StageDialogueSessionUncheckedUpdateInput = {
 export type StageDialogueSessionCreateManyInput = {
   id?: bigint | number
   userId: bigint | number
+  storyId: bigint | number
   categoryId: bigint | number
   status?: string
   turnCount?: number
@@ -498,6 +519,7 @@ export type StageDialogueSessionCreateManyInput = {
 export type StageDialogueSessionUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -516,6 +538,7 @@ export type StageDialogueSessionUpdateManyMutationInput = {
 export type StageDialogueSessionUncheckedUpdateManyInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -540,6 +563,7 @@ export type StageDialogueSessionOrderByRelevanceInput = {
 export type StageDialogueSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
@@ -558,6 +582,7 @@ export type StageDialogueSessionCountOrderByAggregateInput = {
 export type StageDialogueSessionAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
 }
@@ -565,6 +590,7 @@ export type StageDialogueSessionAvgOrderByAggregateInput = {
 export type StageDialogueSessionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
@@ -583,6 +609,7 @@ export type StageDialogueSessionMaxOrderByAggregateInput = {
 export type StageDialogueSessionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
@@ -601,6 +628,7 @@ export type StageDialogueSessionMinOrderByAggregateInput = {
 export type StageDialogueSessionSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  storyId?: Prisma.SortOrder
   categoryId?: Prisma.SortOrder
   turnCount?: Prisma.SortOrder
 }
@@ -631,6 +659,7 @@ export type StageDialogueSessionUpdateOneRequiredWithoutMessagesNestedInput = {
 export type StageDialogueSessionCreateWithoutMessagesInput = {
   id?: bigint | number
   userId: bigint | number
+  storyId: bigint | number
   categoryId: bigint | number
   status?: string
   turnCount?: number
@@ -649,6 +678,7 @@ export type StageDialogueSessionCreateWithoutMessagesInput = {
 export type StageDialogueSessionUncheckedCreateWithoutMessagesInput = {
   id?: bigint | number
   userId: bigint | number
+  storyId: bigint | number
   categoryId: bigint | number
   status?: string
   turnCount?: number
@@ -683,6 +713,7 @@ export type StageDialogueSessionUpdateToOneWithWhereWithoutMessagesInput = {
 export type StageDialogueSessionUpdateWithoutMessagesInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -701,6 +732,7 @@ export type StageDialogueSessionUpdateWithoutMessagesInput = {
 export type StageDialogueSessionUncheckedUpdateWithoutMessagesInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  storyId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   categoryId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   status?: Prisma.StringFieldUpdateOperationsInput | string
   turnCount?: Prisma.IntFieldUpdateOperationsInput | number
@@ -750,6 +782,7 @@ export type StageDialogueSessionCountOutputTypeCountMessagesArgs<ExtArgs extends
 export type StageDialogueSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
+  storyId?: boolean
   categoryId?: boolean
   status?: boolean
   turnCount?: boolean
@@ -772,6 +805,7 @@ export type StageDialogueSessionSelect<ExtArgs extends runtime.Types.Extensions.
 export type StageDialogueSessionSelectScalar = {
   id?: boolean
   userId?: boolean
+  storyId?: boolean
   categoryId?: boolean
   status?: boolean
   turnCount?: boolean
@@ -787,7 +821,7 @@ export type StageDialogueSessionSelectScalar = {
   updatedAt?: boolean
 }
 
-export type StageDialogueSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "categoryId" | "status" | "turnCount" | "goalReached" | "cleared" | "showTranslation" | "translationUsed" | "lastHints" | "summary" | "feedback" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["stageDialogueSession"]>
+export type StageDialogueSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "storyId" | "categoryId" | "status" | "turnCount" | "goalReached" | "cleared" | "showTranslation" | "translationUsed" | "lastHints" | "summary" | "feedback" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["stageDialogueSession"]>
 export type StageDialogueSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   messages?: boolean | Prisma.StageDialogueSession$messagesArgs<ExtArgs>
   _count?: boolean | Prisma.StageDialogueSessionCountOutputTypeDefaultArgs<ExtArgs>
@@ -808,7 +842,11 @@ export type $StageDialogueSessionPayload<ExtArgs extends runtime.Types.Extension
      */
     userId: bigint
     /**
-     * 场景分类 id（sentence_category）：关卡 = 场景
+     * 关卡 id（stage_story）：一关一局，进度与解锁按它记
+     */
+    storyId: bigint
+    /**
+     * 场景分类 id（sentence_category）：统计维度（按场景汇总会话数）
      */
     categoryId: bigint
     /**
@@ -1231,6 +1269,7 @@ export interface Prisma__StageDialogueSessionClient<T, Null = never, ExtArgs ext
 export interface StageDialogueSessionFieldRefs {
   readonly id: Prisma.FieldRef<"StageDialogueSession", 'BigInt'>
   readonly userId: Prisma.FieldRef<"StageDialogueSession", 'BigInt'>
+  readonly storyId: Prisma.FieldRef<"StageDialogueSession", 'BigInt'>
   readonly categoryId: Prisma.FieldRef<"StageDialogueSession", 'BigInt'>
   readonly status: Prisma.FieldRef<"StageDialogueSession", 'String'>
   readonly turnCount: Prisma.FieldRef<"StageDialogueSession", 'Int'>

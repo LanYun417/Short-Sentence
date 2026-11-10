@@ -1,30 +1,29 @@
 <script setup lang="ts">
 /**
- * 情景闯关地图（路由 /stages）——**章节封面墙**。
+ * 情景闯关地图（路由 /stages）——**场景 → 剧本 → 关卡**的第一级：场景卡列表。
  *
- * 一章一张封面（渐变 + 大图标 + 导语 + 进度），点开进入 `/stages/chapter/:key`
- * 看这一章的关卡。关卡卡片本身有高度，全铺在地图上会把封面墙冲散，所以拆成两级：
- * 地图只负责「选章节」，关卡收在章节详情页（关卡随运营增加时也更可控）。
+ * 每个场景分类一张卡（点开进入 `/stages/scene/:categoryId` 看剧本），剧本页再点开关卡，
+ * 关卡卡片逻辑收在剧本详情页（关卡随运营增加时更可控）。
  *
  * 玩法：每关是一段**场景长对话**——用户扮演场景里的自己，和 1~3 个 AI 角色
- * 围绕目标把话聊完。聊够最少轮数且达成目标才通关；四章平行，章内顺序解锁。
+ * 围绕目标把话聊完。聊够最少轮数且达成目标才通关；剧本之间平行，剧本内顺序解锁。
  *
  * 进度来自 GET /client/stages（study_stage_progress.dialogueClearedAt），
  * 与答题记录完全解耦；旧版答对句数只作历史展示。
  *
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除，
- * `/stages/*` 同时覆盖章节详情页）。
+ * `/stages/*` 同时覆盖场景/剧本详情页）。
  */
 import { computed, onMounted } from 'vue';
 import { apiFetch } from '~/composables/useApi';
-import { chapterCoverOf } from '~/utils/stage-chapters';
+import { sceneCoverOf } from '~/utils/stage-chapters';
 import type { StageOverview, StageView } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
 usePageSeo({
   title: '情景闯关',
-  description: '每一章是一段生活。进入真实场景，和里面的人用英语把一件事聊成。',
+  description: '每一个场景是一段生活。进入真实场景，和里面的人用英语把一件事聊成。',
 });
 
 const { data: overview } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
@@ -35,6 +34,7 @@ onMounted(async () => {
   }
 });
 
+const scenes = computed(() => overview.value?.scenes ?? []);
 const chapters = computed(() => overview.value?.chapters ?? []);
 const allStages = computed<StageView[]>(() => chapters.value.flatMap((item) => item.stages));
 /** 推荐关卡（第一个已解锁未通关）：给老用户一条「直奔当前关」的捷径。 */
@@ -45,11 +45,8 @@ const recommendedStage = computed<StageView | null>(
 const firstClaimable = computed<StageView | null>(
   () => allStages.value.find((item) => item.cleared && !item.claimed) ?? null,
 );
-const firstClaimableChapter = computed<string | null>(() => {
-  const stage = firstClaimable.value;
-  if (!stage) return null;
-  return chapters.value.find((item) => item.stages.some((s) => s.id === stage.id))?.key ?? null;
-});
+/** 待领奖关卡所属剧本（跳转目标）。 */
+const firstClaimableScriptId = computed<number | null>(() => firstClaimable.value?.scriptId ?? null);
 </script>
 
 <template>
@@ -67,7 +64,7 @@ const firstClaimableChapter = computed<string | null>(() => {
         </span>
       </div>
       <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-        每一章是一段生活。点开封面进入章节，和场景里的人用英语把目标聊成，故事就往前走。
+        每一个场景下都有几本不同的剧本。选一个剧本，和里面的人用英语把目标聊成，故事就往前走。
       </p>
       <p class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-sky-600 dark:text-sky-300">
         <UIcon name="i-lucide-languages" class="h-3 w-3" />
@@ -101,8 +98,8 @@ const firstClaimableChapter = computed<string | null>(() => {
         </NuxtLink>
 
         <NuxtLink
-          v-if="overview && overview.claimable > 0 && firstClaimableChapter"
-          :to="`/stages/chapter/${firstClaimableChapter}`"
+          v-if="overview && overview.claimable > 0 && firstClaimableScriptId"
+          :to="`/stages/script/${firstClaimableScriptId}`"
           class="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2.5 ring-1 ring-amber-200/70 transition hover:ring-amber-300 dark:bg-amber-950/30 dark:ring-amber-900/60"
         >
           <UIcon name="i-lucide-gift" class="h-4 w-4 shrink-0 text-amber-500" />
@@ -116,65 +113,60 @@ const firstClaimableChapter = computed<string | null>(() => {
 
     <div v-if="!overview" class="py-16 text-center text-sm text-slate-400">正在加载关卡…</div>
 
-    <!-- 章节封面墙：一章一张，双列；章节多了就往下一排排，不会把页面拖长 -->
-    <div v-else class="grid gap-3 sm:grid-cols-2">
+    <!-- 场景卡列表：一个场景一张，双列；场景多了就往下一排排，不会把页面拖长 -->
+    <div v-else-if="scenes.length > 0" class="grid gap-3 sm:grid-cols-2">
       <NuxtLink
-        v-for="chapter in chapters"
-        :key="chapter.key"
-        :to="`/stages/chapter/${chapter.key}`"
+        v-for="scene in scenes"
+        :key="scene.id"
+        :to="`/stages/scene/${scene.id}`"
         class="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       >
-        <!-- 封面：有 AI 生成图就用图，否则回落渐变 + 大图标；进度角标压在深色底上保证可读 -->
+        <!-- 封面：有 AI 生成图（取第一个有封面的剧本）就用图，否则回落渐变 + 大图标 -->
         <div
           class="relative flex aspect-[4/3] items-center justify-center overflow-hidden"
-          :class="[chapterCoverOf(chapter.key).gradient, chapterCoverOf(chapter.key).gradientDark]"
+          :class="[sceneCoverOf(scene.id).gradient, sceneCoverOf(scene.id).gradientDark]"
         >
           <img
-            v-if="chapter.coverUrl"
-            :src="chapter.coverUrl"
-            :alt="chapter.name"
+            v-if="scene.coverUrl"
+            :src="scene.coverUrl"
+            :alt="scene.name"
             class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
           <div
-            v-if="chapter.coverUrl"
+            v-if="scene.coverUrl"
             class="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10"
           />
           <span
-            v-if="!chapter.coverUrl"
+            v-if="!scene.coverUrl"
             class="text-5xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
             aria-hidden="true"
           >
-            {{ chapterCoverOf(chapter.key).emoji }}
+            {{ scene.icon || sceneCoverOf(scene.id).emoji }}
           </span>
           <span
             class="absolute right-2.5 top-2.5 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
           >
-            {{ chapter.clearedCount }} / {{ chapter.total }}
+            {{ scene.clearedCount }} / {{ scene.stageCount }}
           </span>
           <span
-            v-if="chapter.total > 0 && chapter.clearedCount === chapter.total"
+            v-if="scene.stageCount > 0 && scene.clearedCount === scene.stageCount"
             class="absolute left-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"
           >
             <UIcon name="i-lucide-check" class="h-3 w-3" />已通关
           </span>
           <span class="absolute bottom-2.5 left-2.5 text-[11px] font-medium text-white/85">
-            {{ chapter.total }} 个场景
+            {{ scene.scriptCount }} 个剧本 · {{ scene.stageCount }} 关
           </span>
         </div>
 
-        <!-- 章节文案 -->
+        <!-- 场景文案 -->
         <div class="p-3.5">
-          <div class="flex items-baseline justify-between gap-2">
-            <h2 class="min-w-0 truncate text-sm font-bold text-slate-800 dark:text-slate-100">
-              {{ chapter.name }}
-            </h2>
-          </div>
-          <p class="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-            {{ chapter.subtitle }}
-          </p>
+          <h2 class="min-w-0 truncate text-sm font-bold text-slate-800 dark:text-slate-100">
+            {{ scene.name }}
+          </h2>
           <div class="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-sky-600 dark:text-sky-400">
-            查看章节
+            查看剧本
             <UIcon
               name="i-lucide-chevron-right"
               class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
@@ -183,5 +175,7 @@ const firstClaimableChapter = computed<string | null>(() => {
         </div>
       </NuxtLink>
     </div>
+
+    <div v-else class="py-16 text-center text-sm text-slate-400">闯关内容正在准备中，敬请期待</div>
   </div>
 </template>

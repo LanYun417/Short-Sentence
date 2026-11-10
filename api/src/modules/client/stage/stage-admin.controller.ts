@@ -1,11 +1,12 @@
 /**
  * 情景闯关管理控制器（/api/stages）——运营后台用。
  *
+ * 层级：场景（sentence_category，在「场景分类」页管理）→ 剧本（stage_script）→ 关卡（stage_story）。
  * 与客户端 StageController 共用同一个 StageService，放在同一目录。
  * 路由刻意不用 /client 前缀，和后台其它模块（/api/chains 等）一致；
  * 客户端走 /api/client/stages，两者路径天然不冲突。
  *
- * 权限码：stage:view（查询）/ stage:handle（强制结束会话，超管直通）。
+ * 权限码：stage:view（查询）/ stage:handle（增删改、生成封面，超管直通）。
  */
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { RequirePermissions } from '../../../common/auth/permission.guard.js';
@@ -15,16 +16,19 @@ import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
 import {
   AiGenerateStageStoryDto,
+  CreateStageScriptDto,
   CreateStageStoryDto,
-  GenerateStageCoverDto,
+  GenerateScriptCoverDto,
   ReorderStageStoriesDto,
+  SetStageScriptStatusDto,
   SetStageStoryStatusDto,
+  UpdateStageScriptDto,
   UpdateStageStoryDto,
 } from './stage.dto.js';
 import {
   StageService,
   type StageAdminChapter,
-  type StageChapterCoverItem,
+  type StageScriptAdminItem,
   type StageSessionAdminDetail,
   type StageStoryAdminItem,
 } from './stage.service.js';
@@ -33,14 +37,14 @@ import {
 export class StageAdminController {
   constructor(private readonly stages: StageService) {}
 
-  /** 关卡总览（章节 + 关卡 + 参与/通关/领奖统计）。 */
+  /** 关卡总览（剧本分组 + 关卡 + 参与/通关/领奖统计）。 */
   @Get()
   @RequirePermissions('stage:view')
   overview(): Promise<StageAdminChapter[]> {
     return this.stages.adminOverview();
   }
 
-  /** 对话会话分页列表（筛选：categoryId / status / userId / noTranslation / keyword=昵称）。 */
+  /** 对话会话分页列表（筛选：storyId / status / userId / noTranslation / keyword=昵称）。 */
   @Get('sessions')
   @RequirePermissions('stage:view')
   async sessions(@Query() query: Record<string, unknown>) {
@@ -65,43 +69,88 @@ export class StageAdminController {
     return { __raw: true, data: null, message: '已结束该会话' };
   }
 
-  /** 章节封面管理列表：每章一行，含封面 URL / 生成时间 / 提示词。 */
-  @Get('covers')
+  /* ------------------------------ 剧本（stage_script） ------------------------------ */
+
+  /** 剧本列表（含停用的，附场景名/封面/关卡数与统计）。 */
+  @Get('scripts')
   @RequirePermissions('stage:view')
-  covers(): Promise<StageChapterCoverItem[]> {
-    return this.stages.adminCovers();
+  scripts(): Promise<StageScriptAdminItem[]> {
+    return this.stages.adminScripts();
+  }
+
+  /** 新增剧本（挂在某个场景下）。 */
+  @Post('scripts')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '新增剧本')
+  async createScript(@Body() body: CreateStageScriptDto): Promise<ResponseEnvelope<{ id: number }>> {
+    const result = await this.stages.createScript(body);
+    return { __raw: true, data: result, message: '剧本已创建' };
+  }
+
+  /** 补齐缺失封面的静态路由，必须声明在 scripts/:id 之前。 */
+  @Post('scripts/covers/generate-missing')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '补全剧本封面')
+  async generateMissingCovers() {
+    const result = await this.stages.generateMissingScriptCovers();
+    return { __raw: true, data: result, message: '缺失封面已补全' };
+  }
+
+  /** 编辑剧本（改名/简介/排序/换场景/启停）。 */
+  @Put('scripts/:id')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '编辑剧本')
+  async updateScript(@Param() params: IdParamDto, @Body() body: UpdateStageScriptDto): Promise<ResponseEnvelope<null>> {
+    await this.stages.updateScript(params.id, body);
+    return { __raw: true, data: null, message: '剧本已更新' };
+  }
+
+  /** 启停剧本（停用后整条剧本线客户端不可见，历史保留）。 */
+  @Post('scripts/:id/status')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '启停剧本')
+  async setScriptStatus(
+    @Param() params: IdParamDto,
+    @Body() body: SetStageScriptStatusDto,
+  ): Promise<ResponseEnvelope<null>> {
+    await this.stages.setScriptStatus(params.id, body.status);
+    return { __raw: true, data: null, message: body.status === 1 ? '剧本已启用' : '剧本已停用' };
+  }
+
+  /** 删除剧本（连同其下关卡一起删；进度/会话按 storyId 保留）。 */
+  @Delete('scripts/:id')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '删除剧本')
+  async deleteScript(@Param() params: IdParamDto): Promise<ResponseEnvelope<{ deletedStories: number }>> {
+    const result = await this.stages.deleteScript(params.id);
+    return { __raw: true, data: result, message: '剧本已删除' };
   }
 
   /**
-   * 生成章节封面（AI 生图 → webp 入库 → upsert 封面行）。
-   * chapterKey 缺省时补齐全部「尚无封面」的章节；regenerate=true 时强制重生成。
+   * 生成剧本封面（AI 生图 → webp 入库 → 回写 cover_file_id）。
+   * scriptId 必填；regenerate=true 时强制重生成。
    */
-  @Post('covers/generate')
+  @Post('scripts/:id/cover')
   @RequirePermissions('stage:handle')
-  @OperationLog('情景闯关', '生成章节封面')
-  async generateCover(@Body() body: GenerateStageCoverDto) {
-    if (body.chapterKey) {
-      const result = await this.stages.generateChapterCover(body.chapterKey, Boolean(body.regenerate));
-      return { __raw: true, data: result, message: '封面已生成' };
-    }
-    const result = body.regenerate
-      ? await Promise.all(
-          (await this.stages.adminCovers()).map((item) => this.stages.generateChapterCover(item.chapterKey, true)),
-        )
-      : await this.stages.generateMissingChapterCovers();
-    return { __raw: true, data: result, message: '封面生成完成' };
+  @OperationLog('情景闯关', '生成剧本封面')
+  async generateScriptCover(
+    @Param() params: IdParamDto,
+    @Body() body: GenerateScriptCoverDto,
+  ): Promise<ResponseEnvelope<{ scriptId: number; coverUrl: string }>> {
+    const result = await this.stages.generateScriptCover(params.id, Boolean(body.regenerate));
+    return { __raw: true, data: result, message: '封面已生成' };
   }
 
-  /* ------------------------------ 关卡（stage_story）CRUD ------------------------------ */
+  /* ------------------------------ 关卡（stage_story） ------------------------------ */
 
-  /** 关卡列表（含停用的，带统计）。 */
+  /** 关卡列表（含停用的，带剧本/场景与统计）。 */
   @Get('stories')
   @RequirePermissions('stage:view')
   stories(): Promise<StageStoryAdminItem[]> {
     return this.stages.adminStories();
   }
 
-  /** 新增关卡（分类必须未被占用）。 */
+  /** 新增关卡（挂到某个剧本下）。 */
   @Post('stories')
   @RequirePermissions('stage:handle')
   @OperationLog('情景闯关', '新增关卡')
@@ -110,27 +159,25 @@ export class StageAdminController {
     return { __raw: true, data: result, message: '关卡已创建' };
   }
 
-  /** 章内重排序（静态路由，必须声明在 stories/:id 之前）。 */
+  /** 剧本内重排序（静态路由，必须声明在 stories/:id 之前）。 */
   @Post('stories/reorder')
   @RequirePermissions('stage:handle')
   @OperationLog('情景闯关', '调整关卡顺序')
   async reorderStories(@Body() body: ReorderStageStoriesDto): Promise<ResponseEnvelope<null>> {
-    await this.stages.reorderStories(body.chapterKey, body.ids);
+    await this.stages.reorderStories(body.scriptId, body.ids);
     return { __raw: true, data: null, message: '顺序已更新' };
   }
 
-  /**
-   * AI 生成关卡草稿（静态路由）。不落库：返回整套剧情草稿，运营在编辑弹窗审核后再保存。
-   */
+  /** AI 生成关卡草稿（静态路由）。不落库：返回整套剧情草稿，运营在编辑弹窗审核后再保存。 */
   @Post('stories/ai-generate')
   @RequirePermissions('stage:handle')
   @OperationLog('情景闯关', 'AI 生成关卡草稿')
   async aiGenerateStory(@Body() body: AiGenerateStageStoryDto) {
-    const data = await this.stages.generateStoryDraft(body.chapterKey, body.category);
+    const data = await this.stages.generateStoryDraft(body.scriptId);
     return { __raw: true, data, message: '草稿已生成，请审核后保存' };
   }
 
-  /** 编辑关卡（category 不允许修改）。 */
+  /** 编辑关卡（允许换剧本）。 */
   @Put('stories/:id')
   @RequirePermissions('stage:handle')
   @OperationLog('情景闯关', '编辑关卡')
@@ -151,7 +198,7 @@ export class StageAdminController {
     return { __raw: true, data: null, message: body.status === 1 ? '关卡已启用' : '关卡已停用' };
   }
 
-  /** 删除关卡（物理删除；进度/会话按分类记录，不受影响）。 */
+  /** 删除关卡（物理删除；进度/会话按 storyId 保留）。 */
   @Delete('stories/:id')
   @RequirePermissions('stage:handle')
   @OperationLog('情景闯关', '删除关卡')

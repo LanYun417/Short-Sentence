@@ -43,18 +43,71 @@ export class StageTranslationDto {
   show!: boolean;
 }
 
-/** 生成/重新生成章节封面。chapterKey 缺省 = 全部章节（仅补缺失，除非 regenerate）。 */
-export class GenerateStageCoverDto {
-  /** 章节 key（缺省 = 全部章节）；与 STAGE_CHAPTERS.key 一致 */
-  @IsOptional()
-  @IsString()
-  @Length(1, 30)
-  chapterKey?: string;
-
+/** 生成/重新生成剧本封面。 */
+export class GenerateScriptCoverDto {
   /** 为 true 时即使已有封面也强制重生成 */
   @IsOptional()
   @IsBoolean()
   regenerate?: boolean;
+}
+
+/** 新增剧本（挂在某个场景分类下）。 */
+export class CreateStageScriptDto {
+  /** 场景分类 id（sentence_category.id） */
+  @IsInt()
+  categoryId!: number;
+
+  @IsString()
+  @Length(1, 100)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  blurb?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  sort?: number;
+
+  @IsOptional()
+  @IsIn([0, 1])
+  status?: 0 | 1;
+}
+
+/** 编辑剧本：全字段可选。 */
+export class UpdateStageScriptDto {
+  @IsOptional()
+  @IsInt()
+  categoryId?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  blurb?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  sort?: number;
+
+  @IsOptional()
+  @IsIn([0, 1])
+  status?: 0 | 1;
+}
+
+/** 启停剧本。 */
+export class SetStageScriptStatusDto {
+  @IsIn([0, 1])
+  status!: 0 | 1;
 }
 
 /* ------------------------------ 关卡（stage_story）CRUD ------------------------------ */
@@ -106,14 +159,9 @@ export class StageHintDto {
 
 /** 新增关卡。 */
 export class CreateStageStoryDto {
-  @IsString()
-  @Length(1, 30)
-  chapterKey!: string;
-
-  /** 绑定的场景分类名（sentence_category.name） */
-  @IsString()
-  @Length(1, 100)
-  category!: string;
+  /** 所属剧本 id（stage_script.id） */
+  @IsInt()
+  scriptId!: number;
 
   @IsString()
   @Length(1, 100)
@@ -183,14 +231,8 @@ export class CreateStageStoryDto {
 /** 编辑关卡：全字段可选；category 不允许修改（service 拦截）。 */
 export class UpdateStageStoryDto {
   @IsOptional()
-  @IsString()
-  @Length(1, 30)
-  chapterKey?: string;
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 100)
-  category?: string;
+  @IsInt()
+  scriptId?: number;
 
   @IsOptional()
   @IsString()
@@ -277,9 +319,8 @@ export class SetStageStoryStatusDto {
 
 /** 章内重排序：ids 按数组顺序重写 sort。 */
 export class ReorderStageStoriesDto {
-  @IsString()
-  @Length(1, 30)
-  chapterKey!: string;
+  @IsInt()
+  scriptId!: number;
 
   @IsArray()
   @ArrayMinSize(1)
@@ -287,13 +328,8 @@ export class ReorderStageStoriesDto {
   ids!: number[];
 }
 
-/** AI 生成关卡草稿：指定章节 + 未绑定的场景分类，返回草稿（不落库，审核后另存）。 */
+/** AI 生成关卡草稿：指定剧本，返回草稿（不落库，审核后另存）。 */
 export class AiGenerateStageStoryDto {
-  @IsString()
-  @Length(1, 30)
-  chapterKey!: string;
-
-  @IsString()
-  @Length(1, 100)
-  category!: string;
+  @IsInt()
+  scriptId!: number;
 }

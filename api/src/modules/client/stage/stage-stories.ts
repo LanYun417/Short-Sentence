@@ -10,20 +10,9 @@
  * 每个关卡是一段 AI 角色扮演——用户扮演 `userRole`，与 1~3 个角色围绕 `goal`
  * 聊够 `minTurns` 轮并达成目标才算通关；`target` 仅保留给旧版答题统计。
  *
- * 关卡顺序 = 本文件数组顺序；**每章第一关默认解锁**，章内顺序解锁。
- * 四章是平行入口（安顿 / 谋生 / 相逢 / 远行），不会逼用户从头顺着刷。
+ * 关卡顺序 = 本文件数组顺序（服务启动时按此顺序回填到各「默认剧本」下）。
+ * 2026-11-10 重构：层级改为 场景（分类）→ 剧本（stage_script）→ 关卡（stage_story），本文件只作种子。
  */
-
-/** 章节定义。 */
-export interface StageChapter {
-  key: string;
-  /** 章节名（含序号，直接展示） */
-  name: string;
-  /** 章节导语：一句话交代这一幕的处境 */
-  subtitle: string;
-  /** AI 封面生图提示词（英文场景描述；生图时会拼上统一风格后缀，不含任何文字） */
-  coverPrompt: string;
-}
 
 /**
  * 章节封面统一风格后缀：拼在每章 coverPrompt 后面。
@@ -88,37 +77,6 @@ export interface StageStory {
   /** 通关奖励经验 */
   rewardXp: number;
 }
-
-export const STAGE_CHAPTERS: StageChapter[] = [
-  {
-    key: 'arrive',
-    name: '第一章 · 落脚',
-    subtitle: '一只行李箱，一间租来的房。先把日子过起来。',
-    coverPrompt:
-      'A lone suitcase standing in a small sunlit rented room with bare wooden floor and a single window with morning light, a potted plant on the sill, cozy and hopeful atmosphere, warm amber tones',
-  },
-  {
-    key: 'work',
-    name: '第二章 · 谋生',
-    subtitle: '从第一封邮件开始，你在城市里有了位置。',
-    coverPrompt:
-      'A tidy desk by a large office window overlooking a city skyline at dawn, an open laptop with a glowing screen, a coffee cup, notebook and pen, clean blue and steel tones, sense of a fresh start at work',
-  },
-  {
-    key: 'meet',
-    name: '第三章 · 相逢',
-    subtitle: '语言真正活起来的时刻，是有人回应你。',
-    coverPrompt:
-      'Two steaming teacups on a wooden table by a rainy window at dusk, warm lamplight, soft pink and gold tones, intimate and cozy, a feeling of two people finally talking',
-  },
-  {
-    key: 'wander',
-    name: '第四章 · 远行',
-    subtitle: '熟悉之后，城市开始向外延伸。',
-    coverPrompt:
-      'A small airplane wing over a sea of clouds at golden sunrise, an open road winding through green hills far below, vast teal and gold palette, feeling of departure and wide-open horizons',
-  },
-];
 
 export const STAGE_STORIES: StageStory[] = [
   // ---- 第一章 · 落脚 ----
