@@ -65,19 +65,29 @@ export default defineNuxtConfig({
 
   // 图标：实测 **SSR 并不内联 SVG**——服务端只输出 <span class="iconify"> 占位，
   // 最终图样（含首屏图标，靠客户端水合替换）**全部来自客户端静态包**。
-  // 该包由 clientBundle.scan 构建期扫描源码生成，且**运行时没有兜底端点**：
+  // 该包由 clientBundle.scan 构建期扫描源码生成，且**运行期没有兜底端点**：
   // `/api/_nuxt_icon/...` 被 devProxy 转给 NestJS（404），`/_nuxt_icon/...` Nitro 未注册（404），
   // 外网 api.iconify.design 在国内不可达——因此**不在包里的图标名会彻底渲染空白**
   // （曾反复出现「修改密码按钮图标不显示」）。
   // - serverBundle: 'local'：SSR 侧持有本地 lucide 集合（判定/能力用），但输出仍是占位；
-  // - clientBundle.scan: true：构建期扫描源码，把用到的图标打进客户端静态包。
-  // ⚠️ 坑：**新加的图标名必须重新构建 / 重启 dev server 才会进包**——dev server 运行期
+  // - clientBundle.scan：构建期扫描源码，把用到的图标打进客户端静态包。
+  // ⚠️ 坑 1：**scan 默认只扫 vue/jsx/tsx/md/mdc/mdx，纯 .ts 文件不扫**——图标名只出现在
+  // composable / 常量表（如 useQuestionSession 的 ANSWER_MODES/DIFFICULTIES）里时不会进包，
+  // 运行时整块空白（2026-11-10 的 sprout/keyboard/blocks 三个图标即此坑：难度与作答方式
+  // 选择器的图标全裂）。这里把 `ts` 显式加进 globInclude 根治。
+  // ⚠️ 坑 2：**新加的图标名必须重新构建 / 重启 dev server 才会进包**——dev server 运行期
   // 改源码不会重新扫描该包。所以**运行期才渲染的图标**（如滚动后才出现的按钮）要优先选
   // 已在包内的图标（Nuxt UI 内置那批恒在包内），否则 dev 期直接空白。
+  // ⚠️ 坑 3（保险）：`icons` 白名单强制进包，与 glob 双保险。
   icon: {
     serverBundle: 'local',
     clientBundle: {
-      scan: true,
+      scan: {
+        globInclude: ['**/*.{vue,jsx,tsx,md,mdc,mdx,ts}'],
+      },
+      // 兜底白名单：历史上只在 .ts 常量表里出现过的图标（正常已被 globInclude 覆盖，
+      // 这里显式钉住，防止将来改动扫描配置时回归）。
+      icons: ['lucide:sprout', 'lucide:keyboard', 'lucide:blocks'],
     },
   },
 

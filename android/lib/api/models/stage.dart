@@ -76,6 +76,7 @@ class StageChapter {
 class StageView {
   const StageView({
     required this.id,
+    required this.categoryId,
     required this.name,
     required this.nameEn,
     required this.icon,
@@ -93,8 +94,10 @@ class StageView {
     required this.bankCount,
   });
 
-  /// 关卡 id = 场景分类 id（用于跳转按场景刷题）
+  /// 关卡 id（stage_story.id）：对话/领奖接口都用它
   final int id;
+  /// 所属场景分类 id（跳转按场景刷题用；关卡与分类已解绑，勿再拿 id 当分类）
+  final int categoryId;
   final String name;
   final String? nameEn;
   final String? icon;
@@ -114,6 +117,7 @@ class StageView {
   factory StageView.fromJson(Map<String, dynamic> json) {
     return StageView(
       id: json['id'] as int? ?? 0,
+      categoryId: json['categoryId'] as int? ?? 0,
       name: json['name'] as String? ?? '',
       nameEn: json['nameEn'] as String?,
       icon: json['icon'] as String?,

@@ -1,7 +1,7 @@
-/// 情景闯关页（路由 /stages）：关卡 = 场景，带剧情与通关奖励。
+/// 情景闯关页（路由 /stages）：关卡挂在剧本下（场景 → 剧本 → 关卡）。
 ///
-/// 数据来自 GET /client/stages（需登录）。每章首关默认解锁、章内顺序解锁，
-/// 四章是平行入口；点「去闯关」把刷题页切到该场景并回到首页 Tab。
+/// 数据来自 GET /client/stages（需登录）。每个剧本首关默认解锁、剧本内顺序解锁，
+/// 剧本之间平行；点「去练习」把刷题页切到该关卡所属场景（stage.categoryId）并回到首页 Tab。
 ///
 /// 进度由后端 `study_stage_progress` 表维护（不从答题记录派生）：
 /// 答题记录只保留 30 天，派生会让通关进度倒退、关卡重新上锁。
@@ -62,7 +62,7 @@ class _StagePageState extends ConsumerState<StagePage> {
 
   /// 去闯关：锁定该场景，回到首页（刷题 Tab）。
   void _practice(StageView stage) {
-    unawaited(ref.read(quizControllerProvider.notifier).setCategory(stage.id));
+    unawaited(ref.read(quizControllerProvider.notifier).setCategory(stage.categoryId));
     ref.read(shellControllerProvider.notifier).go(0);
     context.go('/');
   }
