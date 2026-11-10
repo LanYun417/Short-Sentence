@@ -26,6 +26,7 @@ import {
   type SentenceCardTheme,
   type SentenceDraft,
   type SentenceGenProvider,
+  type StageStoryDraft,
 } from './ai.types.js';
 
 /** 单条草稿的最小可用判定。 */
@@ -87,6 +88,94 @@ export function parseChainTopicBatch(content: string): ChainTopicDraft[] {
     out.push({ title, starterEn, promptZh });
   }
   return out;
+}
+
+/** 把任意值夹到 [min,max] 的整数；非数字返回 fallback。 */
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const num = typeof value === 'string' ? Number(value) : value;
+  if (typeof num !== 'number' || !Number.isFinite(num)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(num)));
+}
+
+/**
+ * 解析 AI 生成的「情景闯关关卡」草稿（导出便于单测）。
+ *
+ * 容忍 ```json 围栏与夹带文字；逐字段校验 + 截断/夹取，**不合格整体返回 null**（宁缺毋滥，
+ * 由 generateStageStory 重试），与 parseChainTopicBatch 的逐条丢弃不同——一关是一个整体。
+ * 规则：必填文案齐备、角色 1~3 人、开场白 speaker 必须落在角色 nameEn 里、候选短句至少 1 条且含英文。
+ */
+export function parseStageStoryDraft(content: string): StageStoryDraft | null {
+  let text = content.trim();
+  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+  const matched = fence.exec(text);
+  if (matched) text = matched[1].trim();
+  if (!text.startsWith('{')) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    text = text.slice(start, end + 1);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
+  const raw = parsed as Record<string, unknown>;
+
+  const title = str(raw.title, 100);
+  const intro = str(raw.intro, 1000);
+  const outro = str(raw.outro, 1000);
+  const userRole = str(raw.userRole, 200);
+  const setting = str(raw.setting, 1000);
+  const goal = str(raw.goal, 500);
+  // 必填文案缺一不可
+  if (!title || !intro || !outro || !userRole || !setting || !goal) return null;
+
+  if (!Array.isArray(raw.roles)) return null;
+  const roles: StageStoryDraft['roles'] = [];
+  for (const item of raw.roles.slice(0, 3)) {
+    if (typeof item !== 'object' || item === null) continue;
+    const role = item as Record<string, unknown>;
+    const nameEn = str(role.nameEn, 40);
+    const name = str(role.name, 40);
+    const persona = str(role.persona, 500);
+    if (!nameEn || !name || !persona) continue;
+    roles.push({ nameEn, name, persona, emoji: str(role.emoji, 10) || '🧑' });
+  }
+  if (roles.length < 1) return null;
+  const roleNames = new Set(roles.map((role) => role.nameEn));
+
+  const opening: StageStoryDraft['opening'] = [];
+  if (Array.isArray(raw.opening)) {
+    for (const item of raw.opening.slice(0, 10)) {
+      if (typeof item !== 'object' || item === null) continue;
+      const line = item as Record<string, unknown>;
+      const speaker = str(line.speaker, 40);
+      const contentEn = str(line.contentEn, 300);
+      if (!roleNames.has(speaker) || !contentEn) continue;
+      opening.push({ speaker, contentEn, contentZh: str(line.contentZh, 200) });
+    }
+  }
+
+  const starterHints: StageStoryDraft['starterHints'] = [];
+  if (Array.isArray(raw.starterHints)) {
+    for (const item of raw.starterHints.slice(0, 8)) {
+      if (typeof item !== 'object' || item === null) continue;
+      const hint = item as Record<string, unknown>;
+      const en = str(hint.en, 200).replace(/\s+/g, ' ');
+      if (!en || !/[A-Za-z]/.test(en)) continue;
+      starterHints.push({ en, zh: str(hint.zh, 200) });
+    }
+  }
+  if (starterHints.length < 1) return null;
+
+  const minTurns = clampInt(raw.minTurns, 1, 50, 6);
+  const maxTurns = clampInt(raw.maxTurns, minTurns, 100, Math.min(100, minTurns * 2));
+  const rewardXp = clampInt(raw.rewardXp, 0, 10000, 30);
+
+  return { title, intro, outro, userRole, setting, goal, minTurns, maxTurns, rewardXp, roles, opening, starterHints };
 }
 
 /**
@@ -1376,6 +1465,81 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       this.logger.warn(`[Chain] 第 ${attempt}/${maxAttempts} 批主题全部与已有重复，重试`);
     }
     throw new AiProviderError('接龙主题连续重复，已放弃本次生成', { retryable: true });
+  }
+
+  /**
+   * AI 生成一个「情景闯关关卡」草稿（后台「AI 生成关卡」用，**不落库**，由运营审核后保存）。
+   *
+   * @param chapterName 章节名（如「第一章 · 落脚」），喂给 prompt 定语气
+   * @param categoryName 绑定的场景分类名（如「日常生活」），决定关卡玩什么
+   * @param existingTitles 同章已有关卡标题，喂给模型做去重
+   *
+   * 与接龙主题一样：prompt 的「不得重复」是软约束，这里生成后用代码硬比对标题撞重，
+   * 撞了重试最多 3 次；仍撞则抛错，宁可这次不生成，也别给运营一条重复的关卡。
+   */
+  async generateStageStory(
+    chapterName: string,
+    categoryName: string,
+    existingTitles: string[],
+  ): Promise<StageStoryDraft> {
+    if (!this.enabled) {
+      throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    }
+    const existingBlock =
+      existingTitles.length === 0 ? '(none yet)' : existingTitles.map((item, i) => `${i + 1}. ${item}`).join('\n');
+
+    const systemPrompt = [
+      'You are the story writer for "Short Sentence", an English-learning app. Users play「情景闯关」:',
+      'scenario levels where they role-play a character in a realistic daily-life scene and chat in English with 1-3 NPCs',
+      'until they complete the goal.',
+      '',
+      `You write ONE new level for the chapter ${chapterName}, set in the scene category「${categoryName}」.`,
+      'Hard requirements:',
+      '1. Output JSON only: a single object, exactly this shape, no explanations, no markdown outside the JSON:',
+      '   {"title":"","intro":"","outro":"","userRole":"","setting":"","goal":"","minTurns":6,"maxTurns":12,"rewardXp":30,',
+      '    "roles":[{"nameEn":"","name":"","persona":"","emoji":""}],',
+      '    "opening":[{"speaker":"","contentEn":"","contentZh":""}],',
+      '    "starterHints":[{"en":"","zh":""}]}',
+      '2. All Chinese fields (title/intro/outro/userRole/setting/goal/contentZh/zh) in Simplified Chinese.',
+      '   contentEn / nameEn / hint.en in English, CEFR A2~B1, natural spoken English a learner can imitate.',
+      '3. title: vivid and concrete, 6~16 Chinese characters, a specific moment — e.g. 「便利店的清晨」「雨夜的最后一班公交」.',
+      '4. intro/outro: 1~3 sentences each, present tense, set the scene / close the scene warmly.',
+      '5. userRole: who the USER plays, one short phrase (e.g. 「刚搬来的住户」).',
+      '6. setting: 2~4 sentences describing time, place, atmosphere — this is fed to the dialogue model, be concrete.',
+      '7. goal: ONE clear thing the user must accomplish in the conversation (what to ask/buy/decide), so the judge model can verify it.',
+      '8. minTurns 4~10, maxTurns = minTurns + 4~8 (hard cap). rewardXp 20~60.',
+      '9. roles: 1~3 NPCs. nameEn is a short Western first name (used as speaker key). persona: 1~2 sentences in Chinese',
+      '   (personality + speaking style). emoji: one emoji fitting the character.',
+      "10. opening: 1~3 opening lines; every speaker MUST be one of the roles' nameEn. contentEn ends mid-thought so the user has something to reply to.",
+      '11. starterHints: 2~3 short English sentences (5~12 words) the user can say first, each with Chinese translation.',
+      '12. Everyday-life, warm and relatable — NOT fantasy, sci-fi, horror, or tragedy.',
+      '13. DIVERSITY: these levels already exist in this chapter (do NOT reuse, paraphrase, or get near-synonymous with any title):',
+      existingBlock,
+      '    Pick a different moment, place, and situation from all of them.',
+    ].join('\n');
+
+    const userContent = `Write one new scenario level for chapter ${chapterName} in the scene category「${categoryName}」. It must not resemble any existing level listed above.`;
+
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const retryHint =
+        attempt === 1
+          ? ''
+          : '\n\nIMPORTANT: your previous draft duplicated an existing level title or was malformed. Produce a clearly different, valid JSON object.';
+      const content = await this.chat('stage_story_gen', systemPrompt, `${userContent}${retryHint}`, 0.9);
+      const draft = parseStageStoryDraft(content);
+      if (!draft) {
+        this.logger.warn(`[Stage] 第 ${attempt}/${maxAttempts} 次关卡草稿不可解析，重试`);
+        continue;
+      }
+      const key = normalizeChainText(draft.title);
+      if (existingTitles.some((item) => normalizeChainText(item) === key)) {
+        this.logger.warn(`[Stage] 第 ${attempt}/${maxAttempts} 次关卡标题与已有重复，重试`);
+        continue;
+      }
+      return draft;
+    }
+    throw new AiProviderError('关卡草稿连续重复或不可解析，已放弃本次生成', { retryable: true });
   }
 
   /**

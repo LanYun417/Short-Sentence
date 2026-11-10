@@ -75,3 +75,8 @@ export function deleteStageStoryApi(id: number): Promise<{ sessionCount: number 
 export function reorderStageStoriesApi(chapterKey: string, ids: number[]): Promise<null> {
   return post<null>('/stages/stories/reorder', { chapterKey, ids });
 }
+
+/** AI 生成关卡草稿（不落库；返回整套剧情，审核后再走新增接口保存） */
+export function aiGenerateStageStoryApi(params: { chapterKey: string; category: string }): Promise<StageStoryPayload> {
+  return post<StageStoryPayload>('/stages/stories/ai-generate', params);
+}

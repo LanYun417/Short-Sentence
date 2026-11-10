@@ -10,6 +10,7 @@
  */
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
+  aiGenerateStageStoryApi,
   closeStageSessionApi,
   createStageStoryApi,
   deleteStageStoryApi,
@@ -354,6 +355,58 @@ async function moveStory(row: StageStoryAdminItem, direction: -1 | 1): Promise<v
   await Promise.all([loadStories(), loadOverview()]);
 }
 
+/* ------------------------------ AI 生成关卡草稿 ------------------------------ */
+
+const aiDialogVisible = ref(false);
+const aiGenerating = ref(false);
+const aiForm = ref<{ chapterKey: string; category: string }>({ chapterKey: '', category: '' });
+
+async function openAiDialog(): Promise<void> {
+  if (covers.value.length === 0) await loadCovers();
+  if (stories.value.length === 0) await loadStories();
+  aiForm.value = {
+    chapterKey: chapterOptions.value[0]?.key ?? '',
+    category: freeCategoryOptions.value[0]?.name ?? '',
+  };
+  aiDialogVisible.value = true;
+}
+
+/** 调 AI 生成草稿 → 填进编辑弹窗（新增态），运营审核/微调后点保存才入库。 */
+async function handleAiGenerate(): Promise<void> {
+  if (!aiForm.value.chapterKey || !aiForm.value.category) {
+    ElMessage.warning('请选择章节和场景分类');
+    return;
+  }
+  aiGenerating.value = true;
+  try {
+    const draft = await aiGenerateStageStoryApi(aiForm.value);
+    aiDialogVisible.value = false;
+    // 草稿直接铺进新增弹窗，走统一的保存链路入库
+    editingStoryId.value = null;
+    storyForm.value = {
+      chapterKey: draft.chapterKey,
+      category: draft.category,
+      title: draft.title,
+      intro: draft.intro,
+      outro: draft.outro,
+      userRole: draft.userRole,
+      setting: draft.setting,
+      goal: draft.goal,
+      minTurns: draft.minTurns,
+      maxTurns: draft.maxTurns,
+      target: draft.target ?? 5,
+      rewardXp: draft.rewardXp,
+      roles: draft.roles.map((role) => ({ ...role })),
+      opening: draft.opening.map((line) => ({ ...line })),
+      starterHints: draft.starterHints.map((hint) => ({ ...hint })),
+    };
+    storyDialogVisible.value = true;
+    ElMessage.success(`AI 已生成草稿「${draft.title}」，审核后点保存入库`);
+  } finally {
+    aiGenerating.value = false;
+  }
+}
+
 /* ------------------------------ Tab2 对话会话 ------------------------------ */
 const { loading, list, total, query, search, reset, getList, changePage, changePageSize } = useTable(
   (p) =>
@@ -634,6 +687,7 @@ onMounted(() => {
             <span class="text-[15px] font-semibold text-ink">关卡列表（共 {{ stories.length }} 关，停用的灰显）</span>
             <div class="flex gap-2">
               <el-button :loading="storiesLoading" @click="loadStories">刷新</el-button>
+              <el-button v-permission="'stage:handle'" @click="openAiDialog">AI 生成关卡</el-button>
               <el-button v-permission="'stage:handle'" type="primary" @click="openStoryDialog()">新增关卡</el-button>
             </div>
           </div>
@@ -887,6 +941,35 @@ onMounted(() => {
       <template #footer>
         <el-button @click="storyDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="storySaving" @click="saveStory">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- AI 生成关卡：选章节 + 未绑定分类 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
+    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="440px" :close-on-click-modal="false">
+      <el-form label-width="90px" size="small">
+        <el-form-item label="所属章节" required>
+          <el-select v-model="aiForm.chapterKey" placeholder="选择章节" style="width: 240px">
+            <el-option v-for="opt in chapterOptions" :key="opt.key" :label="opt.name" :value="opt.key" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="场景分类" required>
+          <el-select v-model="aiForm.category" placeholder="选一个尚未绑定关卡的分类" filterable style="width: 280px">
+            <el-option
+              v-for="opt in freeCategoryOptions"
+              :key="opt.id"
+              :label="`${opt.name}${opt.nameEn ? `（${opt.nameEn}）` : ''}`"
+              :value="opt.name"
+            />
+          </el-select>
+        </el-form-item>
+        <p class="text-xs leading-relaxed text-gray-400">
+          AI 会根据章节语气和分类场景生成一整套关卡剧情（标题/引入/目标/角色/开场白/候选短句），
+          生成后自动铺进编辑弹窗，**审核修改后点保存才会入库**。
+        </p>
+      </el-form>
+      <template #footer>
+        <el-button @click="aiDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="aiGenerating" @click="handleAiGenerate">生成草稿</el-button>
       </template>
     </el-dialog>
   </div>

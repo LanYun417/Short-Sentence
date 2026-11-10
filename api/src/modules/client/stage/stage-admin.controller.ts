@@ -14,6 +14,7 @@ import type { ResponseEnvelope } from '../../../common/http/response.interceptor
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
 import {
+  AiGenerateStageStoryDto,
   CreateStageStoryDto,
   GenerateStageCoverDto,
   ReorderStageStoriesDto,
@@ -116,6 +117,17 @@ export class StageAdminController {
   async reorderStories(@Body() body: ReorderStageStoriesDto): Promise<ResponseEnvelope<null>> {
     await this.stages.reorderStories(body.chapterKey, body.ids);
     return { __raw: true, data: null, message: '顺序已更新' };
+  }
+
+  /**
+   * AI 生成关卡草稿（静态路由）。不落库：返回整套剧情草稿，运营在编辑弹窗审核后再保存。
+   */
+  @Post('stories/ai-generate')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', 'AI 生成关卡草稿')
+  async aiGenerateStory(@Body() body: AiGenerateStageStoryDto) {
+    const data = await this.stages.generateStoryDraft(body.chapterKey, body.category);
+    return { __raw: true, data, message: '草稿已生成，请审核后保存' };
   }
 
   /** 编辑关卡（category 不允许修改）。 */

@@ -286,3 +286,14 @@ export class ReorderStageStoriesDto {
   @IsInt({ each: true })
   ids!: number[];
 }
+
+/** AI 生成关卡草稿：指定章节 + 未绑定的场景分类，返回草稿（不落库，审核后另存）。 */
+export class AiGenerateStageStoryDto {
+  @IsString()
+  @Length(1, 30)
+  chapterKey!: string;
+
+  @IsString()
+  @Length(1, 100)
+  category!: string;
+}

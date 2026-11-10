@@ -21,6 +21,7 @@ import {
   type StageDialogueSummary,
 } from '../../../common/ai/agnes-sentence.provider.js';
 import { withRetry } from '../../../common/ai/concurrency.js';
+import type { StageStoryDraft } from '../../../common/ai/ai.types.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { GamifyService } from '../gamify/gamify.service.js';
@@ -767,6 +768,38 @@ export class StageService {
     await this.prisma.$transaction(
       ids.map((id, index) => this.prisma.stageStory.update({ where: { id: BigInt(id) }, data: { sort: index + 1 } })),
     );
+  }
+
+  /**
+   * 后台-AI 生成关卡草稿：校验章节/分类后调文本模型出一整套剧情，**不落库**——
+   * 返回草稿由运营在编辑弹窗里审核/微调，确认后再走 createStory 入库。
+   */
+  async generateStoryDraft(
+    chapterKey: string,
+    category: string,
+  ): Promise<StageStoryDraft & { chapterKey: string; category: string }> {
+    const chapter = STAGE_CHAPTERS.find((item) => item.key === chapterKey);
+    if (!chapter) throw AppException.badRequest(`章节不存在：${chapterKey}`);
+    const categoryName = category.trim();
+    const categoryRow = await this.prisma.sentenceCategory.findFirst({
+      where: { name: categoryName },
+      select: { id: true, status: true },
+    });
+    if (!categoryRow) throw AppException.badRequest(`场景分类不存在：${categoryName}`);
+    if (categoryRow.status !== 1) throw AppException.badRequest(`场景分类已停用：${categoryName}`);
+    const taken = await this.prisma.stageStory.findUnique({ where: { category: categoryName } });
+    if (taken) throw AppException.conflict(`该分类已绑定关卡「${taken.title}」`);
+    const existing = await this.prisma.stageStory.findMany({
+      where: { chapterKey },
+      select: { title: true },
+    });
+    const draft = await this.ai.generateStageStory(
+      chapter.name,
+      categoryName,
+      existing.map((row) => row.title),
+    );
+    this.logger.log(`[Stage] AI 生成关卡草稿「${draft.title}」（${chapterKey}/${categoryName}），待审核`);
+    return { ...draft, chapterKey, category: categoryName };
   }
 
   /* ------------------------------ 场景长对话 ------------------------------ */

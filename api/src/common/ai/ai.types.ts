@@ -144,6 +144,34 @@ export interface ChainTopicDraft {
   promptZh: string;
 }
 
+/** AI 生成的「情景闯关关卡」草稿（与 stage_story 表字段一一对应，入库前由运营审核）。 */
+export interface StageStoryDraft {
+  /** 关卡标题（中文，有画面感） */
+  title: string;
+  /** 进入关卡的剧情引入（中文） */
+  intro: string;
+  /** 通关后的剧情收束（中文） */
+  outro: string;
+  /** 用户扮演的角色（中文） */
+  userRole: string;
+  /** 场景设定（中文，喂给模型） */
+  setting: string;
+  /** 对话目标（中文，展示 + AI 通关判定） */
+  goal: string;
+  /** 通关所需最少用户轮数 */
+  minTurns: number;
+  /** 硬上限轮数 */
+  maxTurns: number;
+  /** 通关奖励经验 */
+  rewardXp: number;
+  /** 出场角色 1~3 人 */
+  roles: Array<{ nameEn: string; name: string; persona: string; emoji: string }>;
+  /** 开场白（speaker 必须是某个角色的 nameEn） */
+  opening: Array<{ speaker: string; contentEn: string; contentZh: string }>;
+  /** 进入场景时的候选英文短句 */
+  starterHints: Array<{ en: string; zh: string }>;
+}
+
 /** 生图结果（原始字节，转 webp 与入库由调用方负责）。 */
 export interface GeneratedImage {
   buffer: Buffer;
