@@ -589,10 +589,14 @@ export class StageService {
   }
 
   /**
-   * 补齐缺失的剧本封面（定时任务用）：只生成「还没有封面」的启用剧本，
-   * 已有封面不覆盖——想换图走后台手动「重新生成」。单个失败不影响其他剧本。
+   * 批量生成剧本封面（定时任务 / 后台按钮共用）：
+   * - `force=false`：只补「还没有封面」的启用剧本，已有封面不覆盖（一键补全）；
+   * - `force=true`：全部启用剧本强制重生成（批量重新生图，会覆盖已有图）。
+   * 单个失败不影响其他剧本，结果里分 generated / skipped / failed 三档。
    */
-  async generateMissingScriptCovers(): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
+  async batchGenerateScriptCovers(
+    force: boolean,
+  ): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
     const scripts = await this.prisma.stageScript.findMany({
       where: { status: 1 },
       orderBy: [{ sort: 'asc' }, { id: 'asc' }],
@@ -602,12 +606,12 @@ export class StageService {
     const skipped: number[] = [];
     const failed: number[] = [];
     for (const script of scripts) {
-      if (script.coverFileId > 0n) {
+      if (!force && script.coverFileId > 0n) {
         skipped.push(Number(script.id));
         continue;
       }
       try {
-        await this.generateScriptCover(Number(script.id));
+        await this.generateScriptCover(Number(script.id), force);
         generated.push(Number(script.id));
       } catch (error) {
         failed.push(Number(script.id));
@@ -615,9 +619,19 @@ export class StageService {
       }
     }
     this.logger.log(
-      `[Stage] 剧本封面补生成完成：新增 ${generated.length} 张，跳过 ${skipped.length} 张，失败 ${failed.length} 张`,
+      `[Stage] 剧本封面批量生成完成（force=${force}）：新增 ${generated.length} 张，跳过 ${skipped.length} 张，失败 ${failed.length} 张`,
     );
     return { generated, skipped, failed };
+  }
+
+  /** 补齐缺失的剧本封面（定时任务用）：只生成「还没有封面」的启用剧本。 */
+  async generateMissingScriptCovers(): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
+    return this.batchGenerateScriptCovers(false);
+  }
+
+  /** 批量重新生成全部启用剧本的封面（覆盖已有图，走足 AI 配额，谨慎使用）。 */
+  async regenerateAllScriptCovers(): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
+    return this.batchGenerateScriptCovers(true);
   }
 
   /* ------------------------------ 剧本 / 关卡（stage_script / stage_story，后台可 CRUD） ------------------------------ */

@@ -96,6 +96,19 @@ export class StageAdminController {
     return { __raw: true, data: result, message: '缺失封面已补全' };
   }
 
+  /** 批量重新生成全部启用剧本的封面（覆盖已有图；静态路由，同样必须声明在 scripts/:id 之前）。 */
+  @Post('scripts/covers/regenerate-all')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '批量重生剧本封面')
+  async regenerateAllCovers() {
+    const result = await this.stages.regenerateAllScriptCovers();
+    return {
+      __raw: true,
+      data: result,
+      message: `已重生成 ${result.generated.length} 张，失败 ${result.failed.length} 张`,
+    };
+  }
+
   /** 编辑剧本（改名/简介/排序/换场景/启停）。 */
   @Put('scripts/:id')
   @RequirePermissions('stage:handle')

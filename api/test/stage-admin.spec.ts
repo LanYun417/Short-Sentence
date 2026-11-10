@@ -99,7 +99,10 @@ function makeService() {
   const gamify = { awardXp: vi.fn(), checkAchievements: vi.fn() };
   const ai = { stageDialogueTurn: vi.fn(), stageDialogueSummary: vi.fn(), generateStageStory: vi.fn() };
   const imageGen = { generate: vi.fn() };
-  const fileService = { save: vi.fn(), findById: vi.fn(async () => null) };
+  const fileService = {
+    save: vi.fn(),
+    findById: vi.fn(async (_id?: number): Promise<{ fileUrl: string } | null> => null),
+  };
   const service = new StageService(
     prisma as unknown as PrismaService,
     gamify as unknown as GamifyService,
@@ -107,7 +110,7 @@ function makeService() {
     imageGen as unknown as AgnesImageProvider,
     fileService as unknown as FileService,
   );
-  return { service, prisma, scripts, stories, sessions, messages, categories };
+  return { service, prisma, scripts, stories, sessions, messages, categories, imageGen, fileService };
 }
 
 describe('adminOverview：按剧本分组', () => {
@@ -182,5 +185,59 @@ describe('adminSessionList / Detail：按 storyId 工作', () => {
     expect(sessions[0].status).toBe('ended');
     expect(sessions[0].cleared).toBe(false);
     expect(sessions[0].endedAt).toBeTruthy();
+  });
+});
+
+describe('批量生成剧本封面（补全缺失 / 批量重生）', () => {
+  /** 造一张真实 PNG buffer，喂给 normalizeGeneratedImage 走真实 sharp 链路。 */
+  async function pngBuffer(): Promise<Buffer> {
+    const sharp = (await import('sharp')).default;
+    return sharp({ create: { width: 800, height: 600, channels: 3, background: '#88a' } })
+      .png()
+      .toBuffer();
+  }
+
+  it('force=false 只补缺失封面，已有封面（且文件存在）的跳过', async () => {
+    const { service, scripts, imageGen, fileService } = makeService();
+    scripts[0].coverFileId = 100n;
+    scripts[1].coverFileId = 101n;
+    fileService.findById.mockImplementation(async (id?: number) =>
+      id !== undefined && id >= 100 ? { fileUrl: `http://x/${id}.webp` } : null,
+    );
+    imageGen.generate.mockResolvedValue({ buffer: await pngBuffer() });
+    fileService.save.mockResolvedValue({ file: { id: 900n, fileUrl: 'http://x/new.webp' } });
+
+    const result = await service.generateMissingScriptCovers();
+    expect(result.skipped).toEqual([1, 2]);
+    expect(result.generated).toHaveLength(scripts.length - 2);
+    expect(result.failed).toEqual([]);
+  });
+
+  it('force=true 全部启用剧本都重生成，已有封面也不跳过', async () => {
+    const { service, scripts, imageGen, fileService } = makeService();
+    for (const row of scripts) row.coverFileId = 100n + row.id;
+    fileService.findById.mockResolvedValue({ fileUrl: 'http://x/old.webp' });
+    imageGen.generate.mockResolvedValue({ buffer: await pngBuffer() });
+    fileService.save.mockResolvedValue({ file: { id: 901n, fileUrl: 'http://x/new.webp' } });
+
+    const result = await service.regenerateAllScriptCovers();
+    expect(result.generated).toHaveLength(scripts.length);
+    expect(result.skipped).toEqual([]);
+    expect(result.failed).toEqual([]);
+    // 每个剧本的 cover_file_id 都被回写成新文件
+    expect(scripts.every((row) => row.coverFileId === 901n)).toBe(true);
+  });
+
+  it('单个剧本生图失败进 failed，不影响其他剧本', async () => {
+    const { service, scripts, imageGen, fileService } = makeService();
+    imageGen.generate.mockImplementation(async () => {
+      if (imageGen.generate.mock.calls.length === 2) throw new Error('quota exceeded');
+      return { buffer: await pngBuffer() };
+    });
+    fileService.save.mockResolvedValue({ file: { id: 902n, fileUrl: 'http://x/new.webp' } });
+
+    const result = await service.regenerateAllScriptCovers();
+    expect(result.failed).toEqual([2]);
+    expect(result.generated).toHaveLength(scripts.length - 1);
   });
 });

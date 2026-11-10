@@ -6546,6 +6546,19 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/stages/scripts/covers/regenerate-all",
+        "summary": "批量重新生成全部启用剧本的封面（覆盖已有图；静态路由，同样必须声明在 scripts/:id 之前）",
+        "permission": [
+          "stage:handle"
+        ],
+        "isPublic": false,
+        "action": "情景闯关 · 批量重生剧本封面",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/stages/scripts/covers/regenerate-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/stages/sessions/:id/close",
         "summary": "强制结束进行中的会话（不改通关与进度，只把 active 置为 ended）",
         "permission": [

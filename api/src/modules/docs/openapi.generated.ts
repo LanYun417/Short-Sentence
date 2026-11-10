@@ -12195,6 +12195,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/stages/scripts/covers/regenerate-all": {
+      "post": {
+        "tags": [
+          "情景闯关"
+        ],
+        "summary": "批量重新生成全部启用剧本的封面（覆盖已有图；静态路由，同样必须声明在 scripts/:id 之前）",
+        "operationId": "post__api_stages_scripts_covers_regenerate_all",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/stages/sessions/{id}/close": {
       "post": {
         "tags": [

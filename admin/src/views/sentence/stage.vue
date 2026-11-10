@@ -19,6 +19,7 @@ import {
   deleteStageScriptApi,
   deleteStageStoryApi,
   generateMissingStageCoversApi,
+  regenerateAllStageCoversApi,
   generateStageScriptCoverApi,
   getStageOverviewApi,
   getStageScriptsApi,
@@ -153,7 +154,7 @@ async function closeSession(row: StageSessionItem): Promise<void> {
 const scripts = ref<StageScriptAdminItem[]>([]);
 const scriptsLoading = ref(false);
 const categoryOptions = ref<SentenceCategoryOption[]>([]);
-/** 正在生成中的封面标记：单个剧本用 id，全部补全用 'all' */
+/** 正在生成中的封面标记：单个剧本用 id，补全缺失用 'missing'，批量重生用 'all' */
 const generatingKeys = ref<string[]>([]);
 
 async function loadScripts(): Promise<void> {
@@ -184,7 +185,7 @@ async function generateCover(scriptId?: number, regenerate = false): Promise<voi
       return;
     }
   }
-  const mark = scriptId !== undefined ? String(scriptId) : 'all';
+  const mark = scriptId !== undefined ? String(scriptId) : 'missing';
   generatingKeys.value = [...generatingKeys.value, mark];
   try {
     if (scriptId !== undefined) {
@@ -197,6 +198,28 @@ async function generateCover(scriptId?: number, regenerate = false): Promise<voi
     await Promise.all([loadScripts(), loadOverview()]);
   } finally {
     generatingKeys.value = generatingKeys.value.filter((k) => k !== mark);
+  }
+}
+
+/** 批量重新生成全部启用剧本的封面（覆盖已有图，会消耗较多生图配额，需二次确认）。 */
+async function regenerateAllCovers(): Promise<void> {
+  const total = scripts.value.filter((item) => item.status === 1).length;
+  try {
+    await ElMessageBox.confirm(
+      `将为全部 ${total} 个启用剧本重新生成封面，**会覆盖现有封面图**且消耗较多 AI 生图配额。确定批量重生吗？`,
+      '批量重新生图',
+      { type: 'warning', confirmButtonText: '批量重生', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  generatingKeys.value = [...generatingKeys.value, 'all'];
+  try {
+    const result = await regenerateAllStageCoversApi();
+    ElMessage.success(`批量重生完成：成功 ${result.generated.length} 张，失败 ${result.failed.length} 张`);
+    await Promise.all([loadScripts(), loadOverview()]);
+  } finally {
+    generatingKeys.value = generatingKeys.value.filter((k) => k !== 'all');
   }
 }
 
@@ -757,10 +780,18 @@ onMounted(() => {
               <el-button :loading="scriptsLoading" @click="loadScripts">刷新</el-button>
               <el-button
                 v-permission="'stage:handle'"
-                :loading="isGenerating('all')"
+                :loading="isGenerating('missing')"
                 @click="generateCover(undefined, false)"
               >
                 补全缺失封面
+              </el-button>
+              <el-button
+                v-permission="'stage:handle'"
+                type="warning"
+                :loading="isGenerating('all')"
+                @click="regenerateAllCovers"
+              >
+                批量重新生图
               </el-button>
               <el-button v-permission="'stage:handle'" type="primary" @click="openScriptDialog()">新增剧本</el-button>
             </div>

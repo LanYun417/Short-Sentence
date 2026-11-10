@@ -73,6 +73,11 @@ export function generateMissingStageCoversApi(): Promise<{ generated: number[]; 
   return post<{ generated: number[]; skipped: number[]; failed: number[] }>('/stages/scripts/covers/generate-missing');
 }
 
+/** 批量重新生成全部启用剧本的封面（覆盖已有图） */
+export function regenerateAllStageCoversApi(): Promise<{ generated: number[]; skipped: number[]; failed: number[] }> {
+  return post<{ generated: number[]; skipped: number[]; failed: number[] }>('/stages/scripts/covers/regenerate-all');
+}
+
 /* ------------------------------ 关卡（stage_story）CRUD ------------------------------ */
 
 /** 关卡列表（含停用的，带统计） */
