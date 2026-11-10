@@ -965,7 +965,7 @@ onMounted(() => {
     >
       <el-form label-width="90px" size="small">
         <el-form-item label="所属剧本" required>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <el-tree-select
               v-model="storyForm.scriptId"
               :data="scriptTree"
@@ -973,7 +973,7 @@ onMounted(() => {
               node-key="value"
               filterable
               placeholder="场景 → 剧本（场景不可选，点开选剧本）"
-              style="width: 340px"
+              style="flex: 1; min-width: 0"
             >
               <template #empty>
                 <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
@@ -1159,10 +1159,10 @@ onMounted(() => {
     </el-dialog>
 
     <!-- AI 生成关卡：选剧本 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
-    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="440px" :close-on-click-modal="false">
+    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="520px" :close-on-click-modal="false">
       <el-form label-width="90px" size="small">
         <el-form-item label="所属剧本" required>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <el-tree-select
               v-model="aiForm.scriptId"
               :data="scriptTree"
@@ -1170,7 +1170,7 @@ onMounted(() => {
               node-key="value"
               filterable
               placeholder="场景 → 剧本（场景不可选，点开选剧本）"
-              style="width: 280px"
+              style="flex: 1; min-width: 0"
             >
               <template #empty>
                 <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
