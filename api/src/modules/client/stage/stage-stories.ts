@@ -21,7 +21,18 @@ export interface StageChapter {
   name: string;
   /** 章节导语：一句话交代这一幕的处境 */
   subtitle: string;
+  /** AI 封面生图提示词（英文场景描述；生图时会拼上统一风格后缀，不含任何文字） */
+  coverPrompt: string;
 }
+
+/**
+ * 章节封面统一风格后缀：拼在每章 coverPrompt 后面。
+ * 封面是「图 + 压字」的展示位，所以硬性要求 no text / no watermark / no logo，
+ * 与句签的 SENTENCE_CARD_STYLE_SUFFIX 同一类约束。
+ */
+export const STAGE_COVER_STYLE_SUFFIX =
+  'soft storybook illustration style, warm flat colors with gentle gradients, cinematic lighting, ' +
+  'no text, no letters, no watermark, no signature, no logo, 4:3 composition, high quality';
 
 /** 对话角色。 */
 export interface StageRole {
@@ -83,21 +94,29 @@ export const STAGE_CHAPTERS: StageChapter[] = [
     key: 'arrive',
     name: '第一章 · 落脚',
     subtitle: '一只行李箱，一间租来的房。先把日子过起来。',
+    coverPrompt:
+      'A lone suitcase standing in a small sunlit rented room with bare wooden floor and a single window with morning light, a potted plant on the sill, cozy and hopeful atmosphere, warm amber tones',
   },
   {
     key: 'work',
     name: '第二章 · 谋生',
     subtitle: '从第一封邮件开始，你在城市里有了位置。',
+    coverPrompt:
+      'A tidy desk by a large office window overlooking a city skyline at dawn, an open laptop with a glowing screen, a coffee cup, notebook and pen, clean blue and steel tones, sense of a fresh start at work',
   },
   {
     key: 'meet',
     name: '第三章 · 相逢',
     subtitle: '语言真正活起来的时刻，是有人回应你。',
+    coverPrompt:
+      'Two steaming teacups on a wooden table by a rainy window at dusk, warm lamplight, soft pink and gold tones, intimate and cozy, a feeling of two people finally talking',
   },
   {
     key: 'wander',
     name: '第四章 · 远行',
     subtitle: '熟悉之后，城市开始向外延伸。',
+    coverPrompt:
+      'A small airplane wing over a sea of clouds at golden sunrise, an open road winding through green hills far below, vast teal and gold palette, feeling of departure and wide-open horizons',
   },
 ];
 

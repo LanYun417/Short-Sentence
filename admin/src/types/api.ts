@@ -1694,7 +1694,19 @@ export interface StageAdminChapter {
   key: string;
   name: string;
   subtitle: string;
+  /** AI 生成的封面图 URL；未生成时为 null */
+  coverUrl: string | null;
   stages: StageAdminItem[];
+}
+
+/** 后台-章节封面管理条目 */
+export interface StageChapterCoverItem {
+  chapterKey: string;
+  chapterName: string;
+  coverUrl: string | null;
+  /** 实际生图用的完整提示词（未生成时为该章的场景描述） */
+  prompt: string;
+  generatedAt: string | null;
 }
 
 /** 后台-会话查询 */

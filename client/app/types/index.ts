@@ -410,6 +410,8 @@ export interface StageChapter {
   key: string;
   name: string;
   subtitle: string;
+  /** AI 生成的封面图 URL；未生成时为 null（前端回落到渐变+emoji） */
+  coverUrl: string | null;
   stages: StageView[];
   clearedCount: number;
   total: number;

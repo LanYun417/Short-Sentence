@@ -118,6 +118,8 @@ export interface TaskDeps {
   sendDailyReminders: () => Promise<void>;
   /** 接龙主题周更（ChainService.generateWeeklyTopics；本周已生成则跳过，旧 AI 主题自动停用） */
   generateWeeklyChainTopics: (count: number) => Promise<{ weekStart: string; created: number }>;
+  /** 情景闯关章节封面补生成（StageService.generateMissingChapterCovers；只补缺失，不覆盖已有） */
+  generateMissingStageCovers: () => Promise<{ generated: string[]; skipped: string[]; failed: string[] }>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -251,6 +253,23 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: config.chain.weeklyCronEnabled,
       create: (deps) => async () => {
         await deps.generateWeeklyChainTopics(config.chain.weeklyTopicCount);
+      },
+    },
+    {
+      name: 'stage-chapter-cover',
+      title: '闯关章节封面补生成',
+      description:
+        'AI（{imageModel}）为情景闯关的章节生成封面图（4:3 webp 入库），只补「还没有封面」的章节，' +
+        '已有封面不覆盖——想换图去后台「情景闯关」页手动重新生成。单章失败不影响其他章。',
+      // 凌晨 00:30，跟在 00:10 句签生图之后错开，避免两条生图流水线并发抢额度
+      schedule: {
+        kind: 'daily',
+        hour: config.stage.coverCronHour,
+        minute: config.stage.coverCronMinute,
+      },
+      enabled: config.stage.coverCronEnabled,
+      create: (deps) => async () => {
+        await deps.generateMissingStageCovers();
       },
     },
   ];

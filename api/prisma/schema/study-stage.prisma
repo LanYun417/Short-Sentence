@@ -101,3 +101,25 @@ model StageDialogueMessage {
   @@index([sessionId, id])
   @@map("stage_dialogue_message")
 }
+
+/// 情景闯关「章节封面」：一章一张 AI 生成图，存 file 表，这里只留 chapter_key → file_id 映射。
+/// 章节定义在代码里（stage-stories.ts 的 STAGE_CHAPTERS），不入库；本表只管封面图落点，
+/// 幂等键 = chapter_key 唯一，重复生成走 regenerate 覆盖。
+model StageChapterCover {
+  /// 主键
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 章节 key（与 STAGE_CHAPTERS.key 一致），全局唯一
+  chapterKey  String   @unique @map("chapter_key") @db.VarChar(30)
+  /// 封面图文件 id（file 表）
+  fileId      BigInt   @map("file_id") @db.BigInt
+  /// 生成时用的提示词（留档便于复现/对比）
+  prompt      String   @db.Text
+  /// 来源（目前恒为 ai）
+  source      String   @default("ai") @db.VarChar(20)
+  /// 生成时间
+  generatedAt DateTime @default(now()) @map("generated_at")
+  /// 更新时间
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("stage_chapter_cover")
+}

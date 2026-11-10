@@ -28,3 +28,17 @@ export class StageTranslationDto {
   @IsBoolean()
   show!: boolean;
 }
+
+/** 生成/重新生成章节封面。chapterKey 缺省 = 全部章节（仅补缺失，除非 regenerate）。 */
+export class GenerateStageCoverDto {
+  /** 章节 key（缺省 = 全部章节）；与 STAGE_CHAPTERS.key 一致 */
+  @IsOptional()
+  @IsString()
+  @Length(1, 30)
+  chapterKey?: string;
+
+  /** 为 true 时即使已有封面也强制重生成 */
+  @IsOptional()
+  @IsBoolean()
+  regenerate?: boolean;
+}

@@ -92,35 +92,47 @@ async function claim(stage: StageView): Promise<void> {
     </div>
 
     <template v-else>
-      <!-- 封面横幅：渐变 + 大图标，与本关卡片同一套配色 -->
+      <!-- 封面横幅：有 AI 封面图则铺底图（压一层暗色保证白字可读），否则渐变 + 大图标 -->
       <header
         class="anim-in relative overflow-hidden rounded-3xl p-5 text-white shadow-sm"
         :class="[cover.gradient, cover.gradientDark]"
       >
-        <NuxtLink
-          to="/stages"
-          class="inline-flex items-center gap-0.5 text-xs font-medium text-white/80 transition hover:text-white"
-        >
-          <UIcon name="i-lucide-chevron-left" class="h-3.5 w-3.5" />
-          全部章节
-        </NuxtLink>
-        <div class="mt-2 flex items-end justify-between gap-3">
-          <div class="min-w-0">
-            <h1 class="text-xl font-bold drop-shadow-sm">{{ chapter.name }}</h1>
-            <p class="mt-1 max-w-md text-xs leading-relaxed text-white/85">{{ chapter.subtitle }}</p>
+        <img
+          v-if="chapter.coverUrl"
+          :src="chapter.coverUrl"
+          :alt="chapter.name"
+          class="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+        <div v-if="chapter.coverUrl" class="absolute inset-0 bg-black/40" />
+        <div class="relative">
+          <NuxtLink
+            to="/stages"
+            class="inline-flex items-center gap-0.5 text-xs font-medium text-white/80 transition hover:text-white"
+          >
+            <UIcon name="i-lucide-chevron-left" class="h-3.5 w-3.5" />
+            全部章节
+          </NuxtLink>
+          <div class="mt-2 flex items-end justify-between gap-3">
+            <div class="min-w-0">
+              <h1 class="text-xl font-bold drop-shadow-sm">{{ chapter.name }}</h1>
+              <p class="mt-1 max-w-md text-xs leading-relaxed text-white/85">{{ chapter.subtitle }}</p>
+            </div>
+            <span v-if="!chapter.coverUrl" class="shrink-0 text-4xl drop-shadow-sm" aria-hidden="true">{{
+              cover.emoji
+            }}</span>
           </div>
-          <span class="shrink-0 text-4xl drop-shadow-sm" aria-hidden="true">{{ cover.emoji }}</span>
-        </div>
-        <div class="mt-3 flex items-center gap-2">
-          <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
-            <div
-              class="h-full rounded-full bg-white transition-all duration-500"
-              :style="{ width: `${chapter.total > 0 ? (chapter.clearedCount / chapter.total) * 100 : 0}%` }"
-            />
+          <div class="mt-3 flex items-center gap-2">
+            <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/25">
+              <div
+                class="h-full rounded-full bg-white transition-all duration-500"
+                :style="{ width: `${chapter.total > 0 ? (chapter.clearedCount / chapter.total) * 100 : 0}%` }"
+              />
+            </div>
+            <span class="shrink-0 text-[11px] font-semibold text-white/90">
+              {{ chapter.clearedCount }} / {{ chapter.total }} 关
+            </span>
           </div>
-          <span class="shrink-0 text-[11px] font-semibold text-white/90">
-            {{ chapter.clearedCount }} / {{ chapter.total }} 关
-          </span>
         </div>
       </header>
 

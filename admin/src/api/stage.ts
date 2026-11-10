@@ -6,6 +6,7 @@ import { get, post } from './request';
 import type {
   PageResult,
   StageAdminChapter,
+  StageChapterCoverItem,
   StageSessionDetail,
   StageSessionItem,
   StageSessionQuery,
@@ -14,6 +15,16 @@ import type {
 /** 关卡总览（章节 + 关卡 + 参与/通关/领奖统计） */
 export function getStageOverviewApi(): Promise<StageAdminChapter[]> {
   return get<StageAdminChapter[]>('/stages');
+}
+
+/** 章节封面管理列表（每章一行，含未生成的） */
+export function getStageCoversApi(): Promise<StageChapterCoverItem[]> {
+  return get<StageChapterCoverItem[]>('/stages/covers');
+}
+
+/** 生成章节封面。chapterKey 缺省 = 补齐全部缺失；regenerate = 强制重生成 */
+export function generateStageCoverApi(params: { chapterKey?: string; regenerate?: boolean }): Promise<unknown> {
+  return post<unknown>('/stages/covers/generate', params);
 }
 
 /** 对话会话分页列表 */

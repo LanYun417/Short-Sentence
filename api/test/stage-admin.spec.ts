@@ -6,6 +6,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import type { GamifyService } from '../src/modules/client/gamify/gamify.service.js';
 import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
+import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
+import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
 
 function makeService() {
@@ -26,6 +28,10 @@ function makeService() {
         const hit = categories.find((c) => c.id === where.id);
         return hit ? { name: hit.name } : null;
       }),
+    },
+    // 章节封面表：默认无封面，coverUrlMapOf 返回空 map
+    stageChapterCover: {
+      findMany: vi.fn(async () => []),
     },
     stageDialogueSession: {
       groupBy: vi.fn(async ({ by, where }: { by: string[]; where?: Record<string, unknown> }) => {
@@ -136,10 +142,14 @@ function makeService() {
 
   const gamify = { awardXp: vi.fn(), checkAchievements: vi.fn() };
   const ai = { stageDialogueTurn: vi.fn(), stageDialogueSummary: vi.fn() };
+  const imageGen = { generate: vi.fn() };
+  const fileService = { save: vi.fn(), findById: vi.fn(async () => null) };
   const service = new StageService(
     prisma as unknown as PrismaService,
     gamify as unknown as GamifyService,
     ai as unknown as AgnesSentenceProvider,
+    imageGen as unknown as AgnesImageProvider,
+    fileService as unknown as FileService,
   );
   return { service, prisma, sessions, messages, progress, xpLogs };
 }

@@ -11,13 +11,21 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
   closeStageSessionApi,
+  generateStageCoverApi,
+  getStageCoversApi,
   getStageOverviewApi,
   getStageSessionDetailApi,
   getStageSessionListApi,
 } from '@/api/stage';
 import { useTable } from '@/composables/useTable';
 import { formatDateTime } from '@/utils/format';
-import type { StageAdminChapter, StageAdminItem, StageSessionDetail, StageSessionItem } from '@/types/api';
+import type {
+  StageAdminChapter,
+  StageAdminItem,
+  StageChapterCoverItem,
+  StageSessionDetail,
+  StageSessionItem,
+} from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 
@@ -27,7 +35,7 @@ defineOptions({ name: 'SentenceStage' });
 // 内容区 overflow:hidden 只允许单表格内部滚动，套 el-tabs 后高度链断裂导致整页滚不动。
 // 这里整页正常滚动（content-scrollbar 默认 overflow:auto）。
 
-const activeTab = ref<'overview' | 'sessions'>('overview');
+const activeTab = ref<'overview' | 'sessions' | 'covers'>('overview');
 
 /* ------------------------------ Tab1 关卡总览 ------------------------------ */
 const chapters = ref<StageAdminChapter[]>([]);
@@ -50,6 +58,55 @@ const stageOptions = computed(() =>
 function clearRate(stage: StageAdminItem): string {
   if (stage.participantCount === 0) return '—';
   return `${Math.round((stage.clearedCount / stage.participantCount) * 100)}%`;
+}
+
+/* ------------------------------ Tab3：章节封面管理（AI 生图） ------------------------------ */
+const covers = ref<StageChapterCoverItem[]>([]);
+const coversLoading = ref(false);
+/** 正在生成中的标记：单章用 chapterKey，全部补全用 'all' */
+const generatingKeys = ref<string[]>([]);
+
+async function loadCovers(): Promise<void> {
+  coversLoading.value = true;
+  try {
+    covers.value = await getStageCoversApi();
+  } finally {
+    coversLoading.value = false;
+  }
+}
+
+function isGenerating(key: string): boolean {
+  return generatingKeys.value.includes(key);
+}
+
+/**
+ * 生成封面。chapterKey 缺省 = 补全全部缺失封面；已有封面时 regenerate 走「重新生成」（二次确认）。
+ */
+async function generateCover(chapterKey?: string, regenerate = false): Promise<void> {
+  if (regenerate) {
+    try {
+      await ElMessageBox.confirm('重新生成会覆盖当前封面图（旧图文件仍在 file 表，可回溯），确定吗？', '重新生成封面', {
+        type: 'warning',
+        confirmButtonText: '重新生成',
+        cancelButtonText: '取消',
+      });
+    } catch {
+      return;
+    }
+  }
+  const mark = chapterKey ?? 'all';
+  generatingKeys.value = [...generatingKeys.value, mark];
+  try {
+    await generateStageCoverApi({ chapterKey, regenerate });
+    ElMessage.success(chapterKey ? '封面已生成' : '缺失封面已补全');
+    await Promise.all([loadCovers(), loadOverview()]);
+  } finally {
+    generatingKeys.value = generatingKeys.value.filter((k) => k !== mark);
+  }
+}
+
+function onTabChange(name: string | number): void {
+  if (name === 'covers' && covers.value.length === 0) void loadCovers();
 }
 
 /* ------------------------------ Tab2 对话会话 ------------------------------ */
@@ -123,7 +180,7 @@ onMounted(() => {
 
 <template>
   <div class="sentence-stage-page">
-    <el-tabs v-model="activeTab" class="mt-1">
+    <el-tabs v-model="activeTab" class="mt-1" @tab-change="onTabChange">
       <!-- ===================== Tab1：关卡总览 ===================== -->
       <el-tab-pane label="关卡总览" name="overview">
         <el-card v-loading="overviewLoading" shadow="never" class="mt-4">
@@ -267,6 +324,61 @@ onMounted(() => {
             @size-change="changePageSize"
             @current-change="changePage"
           />
+        </el-card>
+      </el-tab-pane>
+
+      <!-- ===================== Tab3：章节封面管理（AI 生图） ===================== -->
+      <el-tab-pane label="封面管理" name="covers">
+        <el-card v-loading="coversLoading" shadow="never" class="mt-4">
+          <div class="mb-3 flex items-center justify-between">
+            <span class="text-[15px] font-semibold text-ink">章节封面（AI 生图，4:3 webp）</span>
+            <div class="flex gap-2">
+              <el-button :loading="coversLoading" @click="loadCovers">刷新</el-button>
+              <el-button
+                v-permission="'stage:handle'"
+                type="primary"
+                :loading="isGenerating('all')"
+                @click="generateCover(undefined, false)"
+              >
+                补全缺失封面
+              </el-button>
+            </div>
+          </div>
+
+          <div
+            v-for="item in covers"
+            :key="item.chapterKey"
+            class="mb-3 flex items-center gap-4 rounded-xl border border-gray-200 p-3 last:mb-0 dark:border-gray-700"
+          >
+            <!-- 缩略图：有图显示图，无图显示占位 -->
+            <div
+              class="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+            >
+              <img
+                v-if="item.coverUrl"
+                :src="item.coverUrl"
+                :alt="item.chapterName"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <span v-else class="px-1 text-center text-xs text-gray-400">未生成</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-semibold text-ink">{{ item.chapterName }}</div>
+              <div class="mt-0.5 text-xs text-gray-400">
+                {{ item.generatedAt ? `生成于 ${formatDateTime(item.generatedAt)}` : '尚未生成' }}
+              </div>
+              <div class="mt-1 truncate text-xs text-gray-400" :title="item.prompt">提示词：{{ item.prompt }}</div>
+            </div>
+            <el-button
+              v-permission="'stage:handle'"
+              size="small"
+              :loading="isGenerating(item.chapterKey)"
+              @click="generateCover(item.chapterKey, Boolean(item.coverUrl))"
+            >
+              {{ item.coverUrl ? '重新生成' : '生成封面' }}
+            </el-button>
+          </div>
         </el-card>
       </el-tab-pane>
     </el-tabs>

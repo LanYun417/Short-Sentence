@@ -7,13 +7,19 @@
  *
  * 权限码：stage:view（查询）/ stage:handle（强制结束会话，超管直通）。
  */
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { RequirePermissions } from '../../../common/auth/permission.guard.js';
 import { OperationLog } from '../../../common/log/operation-log.decorator.js';
 import type { ResponseEnvelope } from '../../../common/http/response.interceptor.js';
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
-import { StageService, type StageAdminChapter, type StageSessionAdminDetail } from './stage.service.js';
+import { GenerateStageCoverDto } from './stage.dto.js';
+import {
+  StageService,
+  type StageAdminChapter,
+  type StageChapterCoverItem,
+  type StageSessionAdminDetail,
+} from './stage.service.js';
 
 @Controller('stages')
 export class StageAdminController {
@@ -49,5 +55,32 @@ export class StageAdminController {
   async closeSession(@Param() params: IdParamDto): Promise<ResponseEnvelope<null>> {
     await this.stages.adminCloseSession(params.id);
     return { __raw: true, data: null, message: '已结束该会话' };
+  }
+
+  /** 章节封面管理列表：每章一行，含封面 URL / 生成时间 / 提示词。 */
+  @Get('covers')
+  @RequirePermissions('stage:view')
+  covers(): Promise<StageChapterCoverItem[]> {
+    return this.stages.adminCovers();
+  }
+
+  /**
+   * 生成章节封面（AI 生图 → webp 入库 → upsert 封面行）。
+   * chapterKey 缺省时补齐全部「尚无封面」的章节；regenerate=true 时强制重生成。
+   */
+  @Post('covers/generate')
+  @RequirePermissions('stage:handle')
+  @OperationLog('情景闯关', '生成章节封面')
+  async generateCover(@Body() body: GenerateStageCoverDto) {
+    if (body.chapterKey) {
+      const result = await this.stages.generateChapterCover(body.chapterKey, Boolean(body.regenerate));
+      return { __raw: true, data: result, message: '封面已生成' };
+    }
+    const result = body.regenerate
+      ? await Promise.all(
+          (await this.stages.adminCovers()).map((item) => this.stages.generateChapterCover(item.chapterKey, true)),
+        )
+      : await this.stages.generateMissingChapterCovers();
+    return { __raw: true, data: result, message: '封面生成完成' };
   }
 }

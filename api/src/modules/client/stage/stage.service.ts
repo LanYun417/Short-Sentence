@@ -9,18 +9,24 @@
  * - 奖励幂等仍复用 GamifyService 的 `stage:{userId}:{categoryId}`。
  */
 import { Injectable, Logger } from '@nestjs/common';
+import sharp from 'sharp';
 import { isFestivalName } from '../../../common/calendar/festivals.js';
+import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
+import { FileService } from '../../../common/file/file.service.js';
+import { config } from '../../../common/config/config.js';
 import {
   AgnesSentenceProvider,
   type StageDialogueHint,
   type StageDialogueReply,
   type StageDialogueSummary,
 } from '../../../common/ai/agnes-sentence.provider.js';
+import { withRetry } from '../../../common/ai/concurrency.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { GamifyService } from '../gamify/gamify.service.js';
 import {
   STAGE_CHAPTERS,
+  STAGE_COVER_STYLE_SUFFIX,
   STAGE_STORIES,
   STAGE_TOTAL,
   stageRoleOf,
@@ -82,6 +88,8 @@ export interface StageChapterView {
   key: string;
   name: string;
   subtitle: string;
+  /** AI 生成的封面图 URL；未生成时为 null（前端回落到渐变+emoji） */
+  coverUrl: string | null;
   stages: StageView[];
   clearedCount: number;
   total: number;
@@ -209,12 +217,14 @@ export class StageService {
     private readonly prisma: PrismaService,
     private readonly gamify: GamifyService,
     private readonly ai: AgnesSentenceProvider,
+    private readonly imageGen: AgnesImageProvider,
+    private readonly fileService: FileService,
   ) {}
 
   /** 闯关地图：章节 + 关卡 + 我的对话进度。 */
   async getStages(userId: number): Promise<StageOverview> {
     const uid = BigInt(userId);
-    const [categories, progresses, claims, activeSessions, bankCounts] = await Promise.all([
+    const [categories, progresses, claims, activeSessions, bankCounts, coverUrls] = await Promise.all([
       this.prisma.sentenceCategory.findMany({
         where: { status: 1 },
         orderBy: [{ sort: 'asc' }, { id: 'asc' }],
@@ -238,6 +248,8 @@ export class StageService {
         where: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
         _count: { _all: true },
       }),
+      // 章节封面：一章一张 AI 图，已生成则下发 URL，前端有图用图、无图回落渐变+emoji
+      this.coverUrlMapOf(),
     ]);
 
     const categoryByName = new Map(categories.filter((row) => !isFestivalName(row.name)).map((row) => [row.name, row]));
@@ -314,6 +326,7 @@ export class StageService {
           key: chapter.key,
           name: chapter.name,
           subtitle: chapter.subtitle,
+          coverUrl: coverUrls.get(chapter.key) ?? null,
           stages,
           clearedCount: stages.filter((item) => item.cleared).length,
           total: stages.length,
@@ -332,6 +345,127 @@ export class StageService {
       claimable,
       recommendedId,
     };
+  }
+
+  /* ------------------------------ 章节封面（AI 生图） ------------------------------ */
+
+  /** 章节 key → 封面 URL 映射（未生成为缺席；file 记录被删则视为 null）。 */
+  private async coverUrlMapOf(): Promise<Map<string, string>> {
+    const rows = await this.prisma.stageChapterCover.findMany({
+      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
+      select: { chapterKey: true, fileId: true },
+    });
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      const url = await this.coverUrlOf(row.fileId);
+      if (url) map.set(row.chapterKey, url);
+    }
+    return map;
+  }
+
+  /** 由文件 id 解析封面访问 URL（0/缺失返回 null）。 */
+  private async coverUrlOf(fileId: bigint): Promise<string | null> {
+    if (fileId <= 0n) return null;
+    const file = await this.fileService.findById(Number(fileId));
+    return file?.fileUrl ?? null;
+  }
+
+  /**
+   * 生成（或重新生成）某章封面：AI 生图 → sharp 转 webp → file 表落盘 →
+   * stage_chapter_cover 按 chapter_key 唯一 upsert（重复生成覆盖旧图引用）。
+   * @param regenerate 为 true 时即使已有封面也强制重生成
+   */
+  async generateChapterCover(
+    chapterKey: string,
+    regenerate = false,
+  ): Promise<{ chapterKey: string; coverUrl: string }> {
+    const chapter = STAGE_CHAPTERS.find((item) => item.key === chapterKey);
+    if (!chapter) throw AppException.notFound(`章节不存在：${chapterKey}`);
+
+    const existing = await this.prisma.stageChapterCover.findUnique({ where: { chapterKey } });
+    if (existing && !regenerate) {
+      const url = await this.coverUrlOf(existing.fileId);
+      if (url) return { chapterKey, coverUrl: url };
+      // file 记录已被删但封面行还在：落下去重生成
+      this.logger.warn(`[Stage] 章节 ${chapterKey} 的封面文件缺失，重新生成`);
+    }
+
+    const prompt = `${chapter.coverPrompt}, ${STAGE_COVER_STYLE_SUFFIX}`;
+    const image = await withRetry(
+      () =>
+        this.imageGen.generate(prompt, {
+          size: config.stage.coverSize,
+          ratio: config.stage.coverRatio,
+        }),
+      { maxAttempts: 4, baseDelayMs: 5000, maxDelayMs: 30000 },
+    );
+    const webp = await sharp(image.buffer)
+      .resize({ width: config.stage.coverMaxWidth, withoutEnlargement: true })
+      .webp({ quality: config.stage.coverQuality })
+      .toBuffer();
+    const saved = await this.fileService.save(`stage-cover-${chapterKey}.webp`, 'image/webp', webp, null);
+
+    const row = await this.prisma.stageChapterCover.upsert({
+      where: { chapterKey },
+      create: { chapterKey, fileId: BigInt(saved.file.id), prompt },
+      update: { fileId: BigInt(saved.file.id), prompt },
+    });
+    const coverUrl = (await this.coverUrlOf(row.fileId)) ?? saved.file.fileUrl;
+    this.logger.log(`[Stage] 章节 ${chapterKey}（${chapter.name}）封面生成完成：${coverUrl}`);
+    return { chapterKey, coverUrl };
+  }
+
+  /**
+   * 补齐缺失的章节封面（定时任务用）：只生成「还没有封面行」的章节，
+   * 已有封面不覆盖——想换图走后台手动「重新生成」。单章失败不影响其他章。
+   */
+  async generateMissingChapterCovers(): Promise<{ generated: string[]; skipped: string[]; failed: string[] }> {
+    const existing = await this.prisma.stageChapterCover.findMany({
+      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
+      select: { chapterKey: true },
+    });
+    const has = new Set(existing.map((row) => row.chapterKey));
+    const generated: string[] = [];
+    const skipped: string[] = [];
+    const failed: string[] = [];
+    for (const chapter of STAGE_CHAPTERS) {
+      if (has.has(chapter.key)) {
+        skipped.push(chapter.key);
+        continue;
+      }
+      try {
+        await this.generateChapterCover(chapter.key);
+        generated.push(chapter.key);
+      } catch (error) {
+        failed.push(chapter.key);
+        this.logger.error(`[Stage] 章节 ${chapter.key} 封面生成失败：${(error as Error).message}`);
+      }
+    }
+    this.logger.log(
+      `[Stage] 封面补生成完成：新增 ${generated.length} 张，跳过 ${skipped.length} 张，失败 ${failed.length} 张`,
+    );
+    return { generated, skipped, failed };
+  }
+
+  /** 后台-封面管理列表：每章一行（含未生成的），带封面 URL 与生成信息。 */
+  async adminCovers(): Promise<StageChapterCoverItem[]> {
+    const rows = await this.prisma.stageChapterCover.findMany({
+      where: { chapterKey: { in: STAGE_CHAPTERS.map((item) => item.key) } },
+      select: { chapterKey: true, fileId: true, prompt: true, generatedAt: true },
+    });
+    const byKey = new Map(rows.map((row) => [row.chapterKey, row]));
+    const items: StageChapterCoverItem[] = [];
+    for (const chapter of STAGE_CHAPTERS) {
+      const row = byKey.get(chapter.key);
+      items.push({
+        chapterKey: chapter.key,
+        chapterName: chapter.name,
+        coverUrl: row ? await this.coverUrlOf(row.fileId) : null,
+        prompt: row?.prompt ?? chapter.coverPrompt,
+        generatedAt: row ? row.generatedAt.toISOString() : null,
+      });
+    }
+    return items;
   }
 
   /* ------------------------------ 场景长对话 ------------------------------ */
@@ -845,6 +979,7 @@ export class StageService {
     }
 
     const chapters: StageAdminChapter[] = [];
+    const coverUrls = await this.coverUrlMapOf();
     for (const chapter of STAGE_CHAPTERS) {
       const stages: StageAdminOverviewItem[] = [];
       for (const story of STAGE_STORIES.filter((item) => item.chapter === chapter.key)) {
@@ -877,6 +1012,7 @@ export class StageService {
           key: chapter.key,
           name: chapter.name,
           subtitle: chapter.subtitle,
+          coverUrl: coverUrls.get(chapter.key) ?? null,
           stages,
         });
       }
@@ -1104,7 +1240,19 @@ export interface StageAdminChapter {
   key: string;
   name: string;
   subtitle: string;
+  /** AI 封面图 URL；未生成时为 null（后台可据此显示「待生成」） */
+  coverUrl: string | null;
   stages: StageAdminOverviewItem[];
+}
+
+/** 后台-章节封面管理条目。 */
+export interface StageChapterCoverItem {
+  chapterKey: string;
+  chapterName: string;
+  coverUrl: string | null;
+  /** 实际生图用的完整提示词（含风格后缀；未生成时为该章的场景描述） */
+  prompt: string;
+  generatedAt: string | null;
 }
 
 /** 后台-会话列表条目。 */

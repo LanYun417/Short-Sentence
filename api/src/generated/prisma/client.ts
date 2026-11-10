@@ -237,6 +237,13 @@ export type StageDialogueSession = Prisma.StageDialogueSessionModel
  */
 export type StageDialogueMessage = Prisma.StageDialogueMessageModel
 /**
+ * Model StageChapterCover
+ * 情景闯关「章节封面」：一章一张 AI 生成图，存 file 表，这里只留 chapter_key → file_id 映射。
+ * 章节定义在代码里（stage-stories.ts 的 STAGE_CHAPTERS），不入库；本表只管封面图落点，
+ * 幂等键 = chapter_key 唯一，重复生成走 regenerate 覆盖。
+ */
+export type StageChapterCover = Prisma.StageChapterCoverModel
+/**
  * Model StudyTeam
  * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
  * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。

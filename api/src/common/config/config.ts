@@ -476,6 +476,19 @@ export const config = {
     weeklyHour: toNumber(process.env.CHAIN_WEEKLY_HOUR, 9),
     weeklyMinute: toNumber(process.env.CHAIN_WEEKLY_MINUTE, 0),
   },
+  /** 情景闯关配置 */
+  stage: {
+    /** 是否启用「章节封面补生成」定时任务（只补缺失的，不覆盖已生成） */
+    coverCronEnabled: toBoolean(process.env.STAGE_COVER_CRON_ENABLED, true),
+    /** 封面补生成时刻（本地时间，默认 00:30，跟在 00:10 句签之后错开） */
+    coverCronHour: toNumber(process.env.STAGE_COVER_CRON_HOUR, 0),
+    coverCronMinute: toNumber(process.env.STAGE_COVER_CRON_MINUTE, 30),
+    /** 章节封面生图参数（定义在 image-gen-config，CLI 脚本共用同一份） */
+    coverSize: imageGenConfig.stageCoverSize,
+    coverRatio: imageGenConfig.stageCoverRatio,
+    coverMaxWidth: imageGenConfig.stageCoverMaxWidth,
+    coverQuality: imageGenConfig.stageCoverQuality,
+  },
 } as const;
 
 export type AppConfig = typeof config;

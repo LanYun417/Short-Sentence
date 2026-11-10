@@ -18,4 +18,9 @@ export const imageGenConfig = {
   /** 入库前缩放上限（宽 px）与 webp 质量 */
   imageMaxWidth: toNumber(process.env.SENTENCE_IMAGE_MAX_WIDTH, 1280),
   imageQuality: Math.min(100, Math.max(1, toNumber(process.env.SENTENCE_IMAGE_QUALITY, 80))),
+  /** 情景闯关章节封面：客户端封面卡是 4:3，故默认 4:3；与句签共用 size 档位 */
+  stageCoverSize: process.env.STAGE_COVER_SIZE ?? '2K',
+  stageCoverRatio: process.env.STAGE_COVER_RATIO ?? '4:3',
+  stageCoverMaxWidth: toNumber(process.env.STAGE_COVER_MAX_WIDTH, 1280),
+  stageCoverQuality: Math.min(100, Math.max(1, toNumber(process.env.STAGE_COVER_QUALITY, 82))),
 } as const;

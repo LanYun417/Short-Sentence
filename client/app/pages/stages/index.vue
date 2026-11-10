@@ -124,12 +124,24 @@ const firstClaimableChapter = computed<string | null>(() => {
         :to="`/stages/chapter/${chapter.key}`"
         class="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       >
-        <!-- 封面：渐变 + 大图标；进度角标压在白图标可读的深色底上 -->
+        <!-- 封面：有 AI 生成图就用图，否则回落渐变 + 大图标；进度角标压在深色底上保证可读 -->
         <div
-          class="relative flex aspect-[4/3] items-center justify-center"
+          class="relative flex aspect-[4/3] items-center justify-center overflow-hidden"
           :class="[chapterCoverOf(chapter.key).gradient, chapterCoverOf(chapter.key).gradientDark]"
         >
+          <img
+            v-if="chapter.coverUrl"
+            :src="chapter.coverUrl"
+            :alt="chapter.name"
+            class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div
+            v-if="chapter.coverUrl"
+            class="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10"
+          />
           <span
+            v-if="!chapter.coverUrl"
             class="text-5xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
             aria-hidden="true"
           >
