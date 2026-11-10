@@ -72,7 +72,13 @@ async function loadOverview(): Promise<void> {
 
 /** 总览里的关卡下拉（给会话筛选用）。 */
 const stageOptions = computed(() =>
-  chapters.value.flatMap((c) => c.stages.map((s) => ({ id: s.id, title: `${c.name} · ${s.title}` }))),
+  // 剧本名可能带「{场景} · 」前缀（种子数据），与关卡名并排会重复；顺手剥掉
+  chapters.value.flatMap((c) =>
+    c.stages.map((s) => ({
+      id: s.id,
+      title: `${c.name.replace(/^.+ · (?=默认剧本$)/, '')} · ${s.title}`,
+    })),
+  ),
 );
 
 function clearRate(stage: StageAdminItem): string {
@@ -213,14 +219,35 @@ async function loadStories(): Promise<void> {
   }
 }
 
-/** 剧本下拉（按场景分组排序；剧本列表来自 Tab3 的 loadScripts）。 */
-const scriptOptions = computed(() =>
-  (scripts.value.length > 0 ? scripts.value : []).map((item) => ({
-    id: item.id,
-    name: `${item.categoryName} · ${item.name}`,
-    categoryId: item.categoryId,
-  })),
-);
+/**
+ * 剥掉剧本名里的「{场景} · 」前缀（种子/迁移生成的默认剧本名带前缀，历史数据），
+ * 否则与场景名并排展示会变成「日常生活 · 日常生活 · 默认剧本」。
+ */
+function stripScenePrefix(categoryName: string, name: string): string {
+  const prefix = `${categoryName} · `;
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+}
+
+/** 剧本下拉树：场景为父节点（禁选，只作分组），剧本为子节点（value = 剧本 id）。 */
+const scriptTree = computed(() => {
+  const groups = new Map<number, { name: string; scripts: StageScriptAdminItem[] }>();
+  for (const script of scripts.value) {
+    const hit = groups.get(script.categoryId) ?? { name: script.categoryName, scripts: [] };
+    hit.scripts.push(script);
+    groups.set(script.categoryId, hit);
+  }
+  return [...groups.entries()].map(([categoryId, group]) => ({
+    value: `scene-${categoryId}`,
+    label: group.name,
+    disabled: true,
+    children: group.scripts.map((script) => ({
+      value: script.id,
+      label: stripScenePrefix(script.categoryName, script.name),
+    })),
+  }));
+});
+
+const treeSelectProps = { label: 'label', children: 'children', disabled: 'disabled' } as const;
 
 /* ------------------------------ 剧本表单弹窗 ------------------------------ */
 
@@ -279,8 +306,10 @@ async function saveScript(): Promise<void> {
   };
   scriptSaving.value = true;
   try {
+    let createdId: number | null = null;
     if (editingScriptId.value === null) {
-      await createStageScriptApi(payload);
+      const result = await createStageScriptApi(payload);
+      createdId = result.id;
       ElMessage.success('剧本已创建');
     } else {
       await updateStageScriptApi(editingScriptId.value, payload);
@@ -288,6 +317,10 @@ async function saveScript(): Promise<void> {
     }
     scriptDialogVisible.value = false;
     await loadScripts();
+    // 从关卡弹窗里顺手新建的剧本：自动选中，省得再手动挑一次
+    if (createdId !== null && storyDialogVisible.value && storyForm.value.scriptId === 0) {
+      storyForm.value.scriptId = createdId;
+    }
   } finally {
     scriptSaving.value = false;
   }
@@ -352,7 +385,7 @@ const storySaving = ref(false);
 const editingStoryId = ref<number | null>(null);
 
 const emptyForm = (): StoryForm => ({
-  scriptId: scriptOptions.value[0]?.id ?? 0,
+  scriptId: (scriptTree.value[0]?.children[0]?.value as number | undefined) ?? 0,
   title: '',
   intro: '',
   outro: '',
@@ -521,7 +554,7 @@ const aiForm = ref<{ scriptId: number }>({ scriptId: 0 });
 
 async function openAiDialog(): Promise<void> {
   if (scripts.value.length === 0) await loadScripts();
-  aiForm.value = { scriptId: scriptOptions.value[0]?.id ?? 0 };
+  aiForm.value = { scriptId: (scriptTree.value[0]?.children[0]?.value as number | undefined) ?? 0 };
   aiDialogVisible.value = true;
 }
 
@@ -825,7 +858,9 @@ onMounted(() => {
             <el-table-column label="所属" min-width="200">
               <template #default="{ row }">
                 <div class="text-sm font-medium text-ink">{{ row.title }}</div>
-                <div class="text-xs text-gray-400">{{ row.categoryName }} · {{ row.scriptName }}</div>
+                <div class="text-xs text-gray-400">
+                  {{ row.categoryName }} · {{ stripScenePrefix(row.categoryName, row.scriptName) }}
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="目标" min-width="180" show-overflow-tooltip>
@@ -930,21 +965,26 @@ onMounted(() => {
     >
       <el-form label-width="90px" size="small">
         <el-form-item label="所属剧本" required>
-          <el-select
-            v-model="storyForm.scriptId"
-            placeholder="选择剧本（场景 · 剧本名）"
-            filterable
-            style="width: 340px"
-          >
-            <el-option v-for="opt in scriptOptions" :key="opt.id" :label="opt.name" :value="opt.id" />
-            <template #empty>
-              <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                还没有剧本。去「剧本管理」Tab 新增（或去
-                <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
-                先建场景）。
-              </div>
-            </template>
-          </el-select>
+          <div class="flex items-center gap-2">
+            <el-tree-select
+              v-model="storyForm.scriptId"
+              :data="scriptTree"
+              :props="treeSelectProps"
+              node-key="value"
+              filterable
+              placeholder="场景 → 剧本（场景不可选，点开选剧本）"
+              style="width: 340px"
+            >
+              <template #empty>
+                <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                  还没有剧本。点右侧「＋ 新建剧本」，或去
+                  <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+                  先建场景。
+                </div>
+              </template>
+            </el-tree-select>
+            <el-button link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
+          </div>
         </el-form-item>
         <el-form-item label="关卡标题" required>
           <el-input v-model="storyForm.title" maxlength="100" placeholder="如：便利店的清晨" style="width: 320px" />
@@ -1122,14 +1162,26 @@ onMounted(() => {
     <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="440px" :close-on-click-modal="false">
       <el-form label-width="90px" size="small">
         <el-form-item label="所属剧本" required>
-          <el-select v-model="aiForm.scriptId" placeholder="选择剧本（场景 · 剧本名）" filterable style="width: 300px">
-            <el-option v-for="opt in scriptOptions" :key="opt.id" :label="opt.name" :value="opt.id" />
-            <template #empty>
-              <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
-                还没有剧本。先去「剧本管理」Tab 新增一个剧本。
-              </div>
-            </template>
-          </el-select>
+          <div class="flex items-center gap-2">
+            <el-tree-select
+              v-model="aiForm.scriptId"
+              :data="scriptTree"
+              :props="treeSelectProps"
+              node-key="value"
+              filterable
+              placeholder="场景 → 剧本（场景不可选，点开选剧本）"
+              style="width: 280px"
+            >
+              <template #empty>
+                <div class="px-3 py-2 text-xs leading-relaxed text-gray-400">
+                  还没有剧本。点右侧「＋ 新建剧本」，或去
+                  <router-link to="/sentence/category" class="text-primary">「场景分类」</router-link>
+                  先建场景。
+                </div>
+              </template>
+            </el-tree-select>
+            <el-button link type="primary" @click="openScriptDialog()">＋ 新建剧本</el-button>
+          </div>
         </el-form-item>
         <p class="text-xs leading-relaxed text-gray-400">
           AI 会根据剧本所属场景和剧本定位生成一整套关卡剧情（标题/引入/目标/角色/开场白/候选短句），
