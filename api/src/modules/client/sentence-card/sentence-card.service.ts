@@ -9,7 +9,7 @@
  * 领取只增不减、幂等；未达标返回 null（不报错、不惩罚）；句签与题库配图同一存储链路。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
+import { normalizeGeneratedImage } from '../../../common/ai/image-normalize.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { dayContextOf, parseDateKey } from '../../../common/calendar/day-context.js';
 import { config } from '../../../common/config/config.js';
@@ -127,10 +127,11 @@ export class SentenceCardService {
           }),
         { maxAttempts: 4, baseDelayMs: 5000, maxDelayMs: 30000 },
       );
-      const webp = await sharp(image.buffer)
-        .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
-        .webp({ quality: config.sentence.imageQuality })
-        .toBuffer();
+      const webp = await normalizeGeneratedImage(image.buffer, {
+        maxWidth: config.sentence.imageMaxWidth,
+        ratio: config.sentence.imageRatio,
+        quality: config.sentence.imageQuality,
+      });
       const saved = await this.fileService.save(`sentence-card-${bizDate}.webp`, 'image/webp', webp, null);
 
       // 3) 入库（bizDate 唯一 → upsert，重复触发覆盖为最新成功结果）

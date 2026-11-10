@@ -14,7 +14,6 @@
  *   执行记录也不进 sys_task_log——运维以为没配，其实在跑。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
 import { config } from '../../common/config/config.js';
 import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
 import {
@@ -33,6 +32,7 @@ import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { resolveTextChannel } from '../../common/ai/ai.config.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
+import { normalizeGeneratedImage } from '../../common/ai/image-normalize.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
 import { STAGE_COVER_STYLE_SUFFIX } from '../client/stage/stage-stories.js';
 import { SENTENCE_STATUS } from './sentence.dto.js';
@@ -992,10 +992,11 @@ export class SentenceGenService {
           }),
         retry,
       );
-      const webp = await sharp(image.buffer)
-        .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
-        .webp({ quality: config.sentence.imageQuality })
-        .toBuffer();
+      const webp = await normalizeGeneratedImage(image.buffer, {
+        maxWidth: config.sentence.imageMaxWidth,
+        ratio: config.sentence.imageRatio,
+        quality: config.sentence.imageQuality,
+      });
 
       // 图像内容审核（把生图纳入审核链路）：生成后、入库前过一遍视觉审核，
       // 不合规的不下发、落到 image_rejected 隔离，管理员可「重新生图」恢复。
@@ -1547,10 +1548,11 @@ export class SentenceGenService {
           }),
         IMAGE_RETRY,
       );
-      const webp = await sharp(image.buffer)
-        .resize({ width: config.sentence.imageMaxWidth, withoutEnlargement: true })
-        .webp({ quality: config.sentence.imageQuality })
-        .toBuffer();
+      const webp = await normalizeGeneratedImage(image.buffer, {
+        maxWidth: config.sentence.imageMaxWidth,
+        ratio: config.sentence.imageRatio,
+        quality: config.sentence.imageQuality,
+      });
       // 封面同样过视觉审核：跑题 / 不适龄 / 画字 / 画成写实照片的封面不能贴到用户端
       const review = await withRetry(
         () => this.sentenceGen.reviewImage(webp, { scenePrompt: coverPrompt }),
@@ -1641,10 +1643,11 @@ export class SentenceGenService {
         }),
       IMAGE_RETRY,
     );
-    const webp = await sharp(image.buffer)
-      .resize({ width: config.stage.coverMaxWidth, withoutEnlargement: true })
-      .webp({ quality: config.stage.coverQuality })
-      .toBuffer();
+    const webp = await normalizeGeneratedImage(image.buffer, {
+      maxWidth: config.stage.coverMaxWidth,
+      ratio: config.stage.coverRatio,
+      quality: config.stage.coverQuality,
+    });
     // 与节日封面同口径：跑题 / 画字 / 写实照片的封面不能贴到用户端
     const review = await withRetry(() => this.sentenceGen.reviewImage(webp, { scenePrompt: prompt }), IMAGE_RETRY);
     if (!review.pass) {

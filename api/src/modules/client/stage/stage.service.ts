@@ -9,7 +9,7 @@
  * - 奖励幂等仍复用 GamifyService 的 `stage:{userId}:{categoryId}`。
  */
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
+import { normalizeGeneratedImage } from '../../../common/ai/image-normalize.js';
 import { isFestivalName } from '../../../common/calendar/festivals.js';
 import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
 import { FileService } from '../../../common/file/file.service.js';
@@ -548,7 +548,7 @@ export class StageService {
   }
 
   /**
-   * 生成（或重新生成）某剧本封面：AI 生图 → sharp 转 webp → file 表落盘 → 回写 stage_script.cover_file_id。
+   * 生成（或重新生成）某剧本封面：AI 生图 → 归一化尺寸转 webp → file 表落盘 → 回写 stage_script.cover_file_id。
    * @param regenerate 为 true 时即使已有封面也强制重生成
    */
   async generateScriptCover(scriptId: number, regenerate = false): Promise<{ scriptId: number; coverUrl: string }> {
@@ -573,10 +573,11 @@ export class StageService {
         }),
       { maxAttempts: 4, baseDelayMs: 5000, maxDelayMs: 30000 },
     );
-    const webp = await sharp(image.buffer)
-      .resize({ width: config.stage.coverMaxWidth, withoutEnlargement: true })
-      .webp({ quality: config.stage.coverQuality })
-      .toBuffer();
+    const webp = await normalizeGeneratedImage(image.buffer, {
+      maxWidth: config.stage.coverMaxWidth,
+      ratio: config.stage.coverRatio,
+      quality: config.stage.coverQuality,
+    });
     const saved = await this.fileService.save(`stage-script-cover-${scriptId}.webp`, 'image/webp', webp, null);
     const row = await this.prisma.stageScript.update({
       where: { id: script.id },
