@@ -217,6 +217,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.groups_rounded,
+                    label: '学习小队',
+                    hint: '组队打卡，还能群聊',
+                    onTap: () => context.push('/team'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.edit_note_rounded,
                     label: '句子接龙',
                     hint: '一句开头，匿名往下接',

@@ -51,6 +51,78 @@ class TeamApi {
     }
   }
 
+  /// 自建队伍（生成组队码，创建者为队长）。
+  Future<TeamView> create(String name) async {
+    try {
+      final response = await _dio.post<dynamic>('/client/team/create', data: <String, dynamic>{'name': name});
+      return TeamView.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 凭组队码加入小队。
+  Future<TeamView> join(String code) async {
+    try {
+      final response = await _dio.post<dynamic>('/client/team/join', data: <String, dynamic>{'code': code});
+      return TeamView.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 修改小队名。
+  Future<TeamView> rename(String name) async {
+    try {
+      final response = await _dio.patch<dynamic>('/client/team/name', data: <String, dynamic>{'name': name});
+      return TeamView.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 群聊消息（游标分页，最近 30 天）。
+  Future<TeamMessagePage> messages({int? before, int limit = 30}) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/client/team/messages',
+        queryParameters: <String, dynamic>{
+          'limit': limit,
+          if (before != null) 'before': before,
+        },
+      );
+      return TeamMessagePage.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 发送群聊消息（可引用某条）。
+  Future<TeamMessage> sendMessage(String content, {int? quoteId}) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/client/team/messages',
+        data: <String, dynamic>{
+          'content': content,
+          if (quoteId != null) 'quoteId': quoteId,
+        },
+      );
+      return TeamMessage.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 撤回自己的消息（2 分钟内）。
+  Future<TeamMessage> recall(int messageId) async {
+    try {
+      final response = await _dio.post<dynamic>('/client/team/messages/$messageId/recall');
+      return TeamMessage.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
   Map<String, dynamic> _data(Response<dynamic> response) {
     final body = response.data;
     if (body is Map<String, dynamic>) {

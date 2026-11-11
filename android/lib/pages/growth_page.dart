@@ -1330,8 +1330,19 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
                   style: theme.textTheme.titleSmall
                       ?.copyWith(fontWeight: FontWeight.w700)),
               const Spacer(),
-              Text('节奏相近的伙伴',
-                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+              PressScale(
+                onTap: () => context.push('/team'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text('进入小队',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: context.colors.brand)),
+                    Icon(Icons.chevron_right_rounded,
+                        size: 14, color: context.colors.brand),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1358,7 +1369,7 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium),
         const SizedBox(height: 6),
-        Text('系统按近 7 天练习量自动匹配 2~4 人小队；不互加好友、不聊天，只看今日打卡状态。'
+        Text('最多 10 人：可随机匹配，也可自建队伍或凭组队码加入，队伍内还能群聊。'
             '全员完成每人额外 +15 XP，小队连续天数一起涨。',
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(color: hint, height: 1.5)),
