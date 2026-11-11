@@ -98,6 +98,23 @@ export class SentenceController {
     };
   }
 
+  /**
+   * 批量重新生成全部启用分类的封面（覆盖已有图，消耗较多 AI 生图配额）。
+   * **静态路由，同样必须声明在 `categories/:id/cover` 之前**，否则会被 `:id` 吃掉。
+   */
+  @Post('categories/covers/regenerate-all')
+  @RequirePermissions('sentence:category')
+  @OperationLog('题库管理', '批量重生场景封面')
+  async regenerateAllCategoryCovers(): Promise<ResponseEnvelope<{ generated: number[]; failed: number[] }>> {
+    const result = await this.sentenceGen.regenerateAllCategoryCovers();
+    const failed = result.failed.length;
+    return {
+      __raw: true,
+      data: result,
+      message: `已重生成 ${result.generated.length} 张，${failed} 张失败（可重试）`,
+    };
+  }
+
   /** 生成（或重新生成）某场景的封面图：生图 → 审核 → 回写分类封面。 */
   @Post('categories/:id/cover')
   @RequirePermissions('sentence:category')

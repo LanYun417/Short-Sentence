@@ -1665,12 +1665,14 @@ export class SentenceGenService {
   }
 
   /**
-   * 补齐缺失的场景封面（定时任务用，串行）：只生成「还没有封面」的启用分类，
-   * 单个失败不影响其他。与剧本封面补全同一任务里跑（错开时段，别抢生图配额）。
+   * 批量生成场景封面（定时任务 / 后台按钮共用，串行）：
+   * - `force=false`：只补「还没有封面」的启用分类，已有封面不覆盖；
+   * - `force=true`：全部启用分类强制重生成（批量重新生图，会覆盖已有图）。
+   * 单个失败不影响其他分类；与剧本封面补全错开时段，避免抢生图配额。
    */
-  async generateMissingCategoryCovers(): Promise<{ generated: number[]; failed: number[] }> {
+  async batchGenerateCategoryCovers(force: boolean): Promise<{ generated: number[]; failed: number[] }> {
     const categories = await this.prisma.sentenceCategory.findMany({
-      where: { status: 1, coverFileId: 0n },
+      where: force ? { status: 1 } : { status: 1, coverFileId: 0n },
       orderBy: [{ sort: 'asc' }, { id: 'asc' }],
       select: { id: true, name: true },
     });
@@ -1678,15 +1680,27 @@ export class SentenceGenService {
     const failed: number[] = [];
     for (const category of categories) {
       try {
-        await this.generateCategoryCover(Number(category.id));
+        await this.generateCategoryCover(Number(category.id), force);
         generated.push(Number(category.id));
       } catch (error) {
         failed.push(Number(category.id));
         this.logger.error(`[SentenceGen] 场景「${category.name}」封面生成失败：${this.errText(error)}`);
       }
     }
-    this.logger.log(`[SentenceGen] 场景封面补生成完成：新增 ${generated.length}，失败 ${failed.length}`);
+    this.logger.log(
+      `[SentenceGen] 场景封面批量生成完成（force=${force}）：新增 ${generated.length}，失败 ${failed.length}`,
+    );
     return { generated, failed };
+  }
+
+  /** 补齐缺失的场景封面（定时任务用）：只生成「还没有封面」的启用分类。 */
+  async generateMissingCategoryCovers(): Promise<{ generated: number[]; failed: number[] }> {
+    return this.batchGenerateCategoryCovers(false);
+  }
+
+  /** 批量重新生成全部启用分类的封面（覆盖已有图，走足 AI 配额，谨慎使用）。 */
+  async regenerateAllCategoryCovers(): Promise<{ generated: number[]; failed: number[] }> {
+    return this.batchGenerateCategoryCovers(true);
   }
 
   /** 无提示词时的兜底构图（两人对话场景）。 */

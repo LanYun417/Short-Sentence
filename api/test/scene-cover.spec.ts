@@ -158,3 +158,28 @@ describe('generateMissingCategoryCovers：只补缺失', () => {
     expect(result.failed).toEqual([]);
   });
 });
+
+describe('regenerateAllCategoryCovers：强制重生成启用分类', () => {
+  it('已有封面也覆盖，停用的不处理，单个失败不影响其他', async () => {
+    const { service, imageGen } = makeService();
+    // 先让分类 1 有封面，验证 force=true 仍会重生成
+    await service.generateCategoryCover(1);
+    imageGen.generate.mockClear();
+
+    const result = await service.regenerateAllCategoryCovers();
+    expect(result.generated).toEqual([1, 2]);
+    expect(result.failed).toEqual([]);
+    expect(imageGen.generate).toHaveBeenCalledTimes(2);
+  });
+
+  it('单个生图失败只计入 failed，其余继续', async () => {
+    const { service, imageGen } = makeService();
+    imageGen.generate.mockImplementation(async () => {
+      throw new Error('生图接口炸了');
+    });
+
+    const result = await service.regenerateAllCategoryCovers();
+    expect(result.generated).toEqual([]);
+    expect(result.failed).toEqual([1, 2]);
+  });
+});

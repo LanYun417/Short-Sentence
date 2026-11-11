@@ -10,6 +10,7 @@ import {
   generateCategoryCoverApi,
   generateMissingCategoryCoversApi,
   getCategoryListApi,
+  regenerateAllCategoryCoversApi,
   updateCategoryApi,
 } from '@/api/sentence';
 import type { SentenceCategoryItem, SentenceCategoryPayload } from '@/types/api';
@@ -154,6 +155,29 @@ async function generateAllCovers(): Promise<void> {
     coveringIds.value = coveringIds.value.filter((item) => item !== 'all');
   }
 }
+
+/** 批量重新生成全部启用分类的封面（覆盖已有图，消耗较多生图配额，需二次确认）。 */
+async function regenerateAllCovers(): Promise<void> {
+  const total = list.value.filter((item) => item.status === 1).length;
+  try {
+    await ElMessageBox.confirm(
+      `将为全部 ${total} 个启用分类重新生成封面，会覆盖现有封面图且消耗较多 AI 生图配额。确定批量重生吗？`,
+      '批量重新生图',
+      { type: 'warning', confirmButtonText: '批量重生', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  // 与「补全缺失封面」共用 'all' 标记：两个批量任务互斥，避免同时抢生图配额
+  coveringIds.value = [...coveringIds.value, 'all'];
+  try {
+    const result = await regenerateAllCategoryCoversApi();
+    ElMessage.success(`批量重生完成：成功 ${result.generated.length} 张，失败 ${result.failed.length} 张`);
+    await load();
+  } finally {
+    coveringIds.value = coveringIds.value.filter((item) => item !== 'all');
+  }
+}
 </script>
 
 <template>
@@ -165,6 +189,9 @@ async function generateAllCovers(): Promise<void> {
           <el-button v-permission="'sentence:category'" type="primary" @click="handleCreate">新增分类</el-button>
           <el-button v-permission="'sentence:category'" :loading="isCovering('all')" @click="generateAllCovers">
             补全缺失封面
+          </el-button>
+          <el-button v-permission="'sentence:category'" :loading="isCovering('all')" @click="regenerateAllCovers">
+            批量重新生图
           </el-button>
           <el-button :loading="loading" @click="load">刷新</el-button>
         </div>
@@ -184,12 +211,13 @@ async function generateAllCovers(): Promise<void> {
             <div
               class="flex h-12 w-16 items-center justify-center overflow-hidden rounded bg-gray-100 dark:bg-gray-800"
             >
-              <img
+              <el-image
                 v-if="row.coverUrl"
                 :src="row.coverUrl"
-                :alt="row.name"
-                class="h-full w-full object-cover"
-                loading="lazy"
+                :preview-src-list="[row.coverUrl]"
+                preview-teleported
+                fit="cover"
+                class="h-full w-full cursor-zoom-in"
               />
               <span v-else class="text-[10px] text-gray-400">未生成</span>
             </div>

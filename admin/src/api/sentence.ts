@@ -214,6 +214,11 @@ export function generateMissingCategoryCoversApi(): Promise<{ generated: number[
   return post<{ generated: number[]; failed: number[] }>('/sentences/categories/covers/generate-missing');
 }
 
+/** 批量重新生成全部启用分类的封面（覆盖已有图，会消耗较多生图配额） */
+export function regenerateAllCategoryCoversApi(): Promise<{ generated: number[]; failed: number[] }> {
+  return post<{ generated: number[]; failed: number[] }>('/sentences/categories/covers/regenerate-all');
+}
+
 export function deleteCategoryApi(id: number): Promise<null> {
   return del<null>(`/sentences/categories/${id}`);
 }
