@@ -14,9 +14,8 @@
  * 私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 的 robots/sitemap 已排除，
  * `/stages/*` 同时覆盖场景/剧本详情页）。
  */
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { apiFetch } from '~/composables/useApi';
-import { sceneCoverOf } from '~/utils/stage-chapters';
 import type { StageOverview, StageView } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -28,13 +27,39 @@ usePageSeo({
 
 const { data: overview } = await useSsrApi<StageOverview>('ss:stages', '/client/stages');
 
+const scenes = computed(() => overview.value?.scenes ?? []);
+
+/**
+ * 封面图是否已就绪。背景图（background-image）没有 load 事件，
+ * 用 Image 预加载确认完成后才撤掉骨架，避免露出半张图或用彩色渐变兜底。
+ */
+const loadedCovers = ref<Record<number, boolean>>({});
+
+/** 预加载所有场景封面；无封面 / 加载失败时保持中性加载占位。 */
+function preloadCovers(): void {
+  if (!import.meta.client) return;
+  for (const scene of scenes.value) {
+    if (!scene.coverUrl || loadedCovers.value[scene.id]) continue;
+    const image = new Image();
+    const markLoaded = (): void => {
+      loadedCovers.value = { ...loadedCovers.value, [scene.id]: true };
+    };
+    image.onload = markLoaded;
+    image.src = scene.coverUrl;
+    // 命中缓存时 onload 可能已经错过，用 complete 兜底
+    if (image.complete && image.naturalWidth > 0) markLoaded();
+  }
+}
+
+watch(scenes, preloadCovers);
+
 onMounted(async () => {
   if (!overview.value) {
     overview.value = await apiFetch<StageOverview>('/client/stages').catch(() => null);
   }
+  preloadCovers();
 });
 
-const scenes = computed(() => overview.value?.scenes ?? []);
 const chapters = computed(() => overview.value?.chapters ?? []);
 const allStages = computed<StageView[]>(() => chapters.value.flatMap((item) => item.stages));
 /** 推荐关卡（第一个已解锁未通关）：给老用户一条「直奔当前关」的捷径。 */
@@ -121,29 +146,22 @@ const firstClaimableScriptId = computed<number | null>(() => firstClaimable.valu
         :to="`/stages/scene/${scene.id}`"
         class="group overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
       >
-        <!-- 封面：有 AI 生成图（取第一个有封面的剧本）就用图，否则回落渐变 + 大图标 -->
+        <!-- 封面：真图始终挂载让浏览器尽早下载；未就绪时盖一层中性加载骨架，不再用彩色渐变兜底 -->
         <div
-          class="relative flex aspect-[4/3] items-center justify-center overflow-hidden"
-          :class="[sceneCoverOf(scene.id).gradient, sceneCoverOf(scene.id).gradientDark]"
+          class="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-slate-100 dark:bg-slate-800"
         >
-          <img
-            v-if="scene.coverUrl"
-            :src="scene.coverUrl"
-            :alt="scene.name"
-            class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
           <div
             v-if="scene.coverUrl"
-            class="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10"
+            class="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-300 group-hover:scale-105"
+            :style="{ backgroundImage: `url('${scene.coverUrl}')` }"
+            role="img"
+            :aria-label="scene.name"
           />
-          <span
-            v-if="!scene.coverUrl"
-            class="text-5xl drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
-            aria-hidden="true"
-          >
-            {{ scene.icon || sceneCoverOf(scene.id).emoji }}
-          </span>
+          <div
+            v-if="!loadedCovers[scene.id]"
+            class="absolute inset-0 animate-pulse bg-slate-200/70 dark:bg-slate-700/50"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
           <span
             class="absolute right-2.5 top-2.5 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
           >
