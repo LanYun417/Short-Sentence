@@ -18,6 +18,8 @@ export const AI_TYPE_LABELS: Record<string, string> = {
   sentence_review: '审核',
   sentence_card_gen: '句签',
   image_gen: '生图',
+  /** 封面生成业务日志（场景/节日封面，含视觉审核重试明细） */
+  cover_gen: '封面生成',
   expand: '造句',
   word_root: '词根',
   /** 旧命名：2026-10-23 改名前「藏品生成」，并入「句签」 */

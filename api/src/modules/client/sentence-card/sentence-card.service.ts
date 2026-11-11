@@ -18,10 +18,13 @@ import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
 import { AgnesSentenceProvider } from '../../../common/ai/agnes-sentence.provider.js';
 import { withRetry } from '../../../common/ai/concurrency.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { IMAGE_2D_HARD_STYLE } from '../../../common/ai/image-style.js';
 
-/** 句签生图画风（唯美治愈系，区别于题库的两人对话卡通）。 */
-const SENTENCE_CARD_STYLE_SUFFIX =
-  'dreamy healing illustration, soft watercolor and pastel tones, warm golden sunlight, serene atmosphere, high detail, wide 16:9 composition, no text in image';
+/** 句签生图画风（唯美治愈系，区别于题库的两人对话卡通），末尾统一拼 2D 硬约束。 */
+export const SENTENCE_CARD_STYLE_SUFFIX =
+  'dreamy healing flat illustration, soft pastel palette with flat watercolor-style color washes, ' +
+  'serene atmosphere, wide 16:9 composition, no text in image, ' +
+  IMAGE_2D_HARD_STYLE;
 
 /** 「未拥有」列表容量上限：句签按天累积，一年就是 365 张，不能一次全塞给前端。 */
 const MISSING_CARD_LIMIT = 60;

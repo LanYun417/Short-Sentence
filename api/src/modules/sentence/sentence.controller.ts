@@ -72,6 +72,13 @@ export class SentenceController {
     return this.sentenceService.listCategories();
   }
 
+  /** 封面生成日志（分页）：「场景分类」页「生图日志」抽屉的数据来源。 */
+  @Get('categories/cover-logs')
+  @RequirePermissions('sentence:category')
+  coverGenLogs(@Query() query: Record<string, unknown>) {
+    return this.sentenceService.coverGenLogs(query);
+  }
+
   /** 新增分类。 */
   @Post('categories')
   @RequirePermissions('sentence:category')

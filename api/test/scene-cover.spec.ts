@@ -31,8 +31,16 @@ function makeService(opts?: { reviewPass?: boolean }) {
   ];
   const files = new Map<bigint, { fileUrl: string }>();
   let fileSeq = 700n;
+  /** 封面生成业务日志（recordCoverLog 写入 ai_call_log 的 data） */
+  const logs: Array<Record<string, any>> = [];
 
   const prisma: any = {
+    aiCallLog: {
+      create: vi.fn(async (args: any) => {
+        logs.push(args.data);
+        return { id: 1n };
+      }),
+    },
     sentenceCategory: {
       findUnique: vi.fn(async (args: any) => categories.find((row) => row.id === args.where.id) ?? null),
       findMany: vi.fn(async (args?: any) =>
@@ -77,9 +85,9 @@ function makeService(opts?: { reviewPass?: boolean }) {
     imageGen as unknown as AgnesImageProvider,
     fileService as unknown as FileService,
     {} as never,
-    {} as never,
+    { current: { imageModel: 'agnes-image-2.5-flash' } } as never,
   );
-  return { service, prisma, categories, sentenceGen, imageGen, fileService, files };
+  return { service, prisma, categories, sentenceGen, imageGen, fileService, files, logs };
 }
 
 describe('generateCategoryCover：AI 生图链路与幂等', () => {
@@ -156,6 +164,45 @@ describe('generateMissingCategoryCovers：只补缺失', () => {
     const result = await service.generateMissingCategoryCovers();
     expect(result.generated).toEqual([1, 2]);
     expect(result.failed).toEqual([]);
+  });
+});
+
+describe('封面视觉审核不通过：自动重新生成并落业务日志', () => {
+  it('首次审核不通过自动重抽，第二次通过则成功，日志含审核原因', async () => {
+    const { service, sentenceGen, imageGen, logs } = makeService();
+    let reviews = 0;
+    sentenceGen.reviewImage.mockImplementation(async () => {
+      reviews += 1;
+      return reviews === 1 ? { pass: false, reason: 'illegible gibberish characters' } : { pass: true, reason: '' };
+    });
+
+    const result = await service.generateCategoryCover(1);
+    expect(result.coverUrl).toContain('stage-scene-cover-1.webp');
+    expect(imageGen.generate).toHaveBeenCalledTimes(2);
+    const rejected = logs.filter((row) => row.status === 'rejected');
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].type).toBe('cover_gen');
+    expect(rejected[0].errorMessage).toContain('illegible gibberish characters');
+    expect(rejected[0].errorMessage).toContain('场景分类·日常生活');
+    expect(logs.filter((row) => row.status === 'success')).toHaveLength(1);
+  });
+
+  it('连续 3 次审核不通过才判失败，生成异常不叠加外层重试', async () => {
+    const { service, imageGen, logs } = makeService({ reviewPass: false });
+    await expect(service.generateCategoryCover(1)).rejects.toMatchObject({ code: 400 });
+    expect(imageGen.generate).toHaveBeenCalledTimes(3);
+    expect(logs.filter((row) => row.status === 'rejected')).toHaveLength(3);
+    expect(logs.filter((row) => row.status === 'failed')).toHaveLength(1);
+  });
+
+  it('上游生图异常直接抛出，不重复烧配额', async () => {
+    const { service, imageGen, logs } = makeService();
+    imageGen.generate.mockImplementation(async () => {
+      throw new Error('生图接口炸了');
+    });
+    await expect(service.generateCategoryCover(1)).rejects.toThrow('生图接口炸了');
+    expect(imageGen.generate).toHaveBeenCalledTimes(1);
+    expect(logs.filter((row) => row.status === 'failed')).toHaveLength(1);
   });
 });
 

@@ -10,10 +10,13 @@ import {
   generateCategoryCoverApi,
   generateMissingCategoryCoversApi,
   getCategoryListApi,
+  getCoverGenLogsApi,
   regenerateAllCategoryCoversApi,
   updateCategoryApi,
 } from '@/api/sentence';
+import type { CoverGenLogItem } from '@/api/sentence';
 import type { SentenceCategoryItem, SentenceCategoryPayload } from '@/types/api';
+import { formatDateTime } from '@/utils/format';
 import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ref } from 'vue';
 
@@ -172,11 +175,63 @@ async function regenerateAllCovers(): Promise<void> {
   coveringIds.value = [...coveringIds.value, 'all'];
   try {
     const result = await regenerateAllCategoryCoversApi();
-    ElMessage.success(`批量重生完成：成功 ${result.generated.length} 张，失败 ${result.failed.length} 张`);
+    ElMessage.success(
+      `批量重生完成：成功 ${result.generated.length} 张，失败 ${result.failed.length} 张` +
+        (result.failed.length > 0 ? '，失败原因见「生图日志」' : ''),
+    );
     await load();
   } finally {
     coveringIds.value = coveringIds.value.filter((item) => item !== 'all');
   }
+}
+
+/* ------------------------------ 封面生成日志 ------------------------------ */
+
+const logVisible = ref(false);
+const logLoading = ref(false);
+const logs = ref<CoverGenLogItem[]>([]);
+const logTotal = ref(0);
+const logPage = ref(1);
+const logPageSize = ref(20);
+const logStatus = ref('');
+const logBizId = ref('');
+
+const LOG_STATUS_LABEL: Record<string, string> = {
+  success: '成功',
+  rejected: '审核不通过',
+  failed: '失败',
+};
+
+function logStatusTag(status: string): 'success' | 'warning' | 'danger' {
+  return status === 'success' ? 'success' : status === 'rejected' ? 'warning' : 'danger';
+}
+
+/** 拉取封面生成日志（审核原因、重试轨迹都落在 errorMessage 里）。 */
+async function loadCoverLogs(): Promise<void> {
+  logLoading.value = true;
+  try {
+    const bizId = Number(logBizId.value);
+    const result = await getCoverGenLogsApi({
+      page: logPage.value,
+      pageSize: logPageSize.value,
+      status: logStatus.value || undefined,
+      bizId: Number.isFinite(bizId) && bizId > 0 ? bizId : undefined,
+    });
+    logs.value = result.list;
+    logTotal.value = result.total;
+  } finally {
+    logLoading.value = false;
+  }
+}
+
+function openCoverLogs(): void {
+  logVisible.value = true;
+  void loadCoverLogs();
+}
+
+function searchCoverLogs(): void {
+  logPage.value = 1;
+  void loadCoverLogs();
 }
 </script>
 
@@ -193,6 +248,7 @@ async function regenerateAllCovers(): Promise<void> {
           <el-button v-permission="'sentence:category'" :loading="isCovering('all')" @click="regenerateAllCovers">
             批量重新生图
           </el-button>
+          <el-button @click="openCoverLogs">生图日志</el-button>
           <el-button :loading="loading" @click="load">刷新</el-button>
         </div>
       </div>
@@ -295,5 +351,57 @@ async function regenerateAllCovers(): Promise<void> {
         <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
       </template>
     </BasicDialog>
+
+    <!-- 封面生成日志：审核不通过原因、自动重试轨迹都在详情列，不用再翻控制台 -->
+    <el-drawer v-model="logVisible" title="封面生成日志" size="780px" destroy-on-close>
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <el-select v-model="logStatus" placeholder="全部状态" clearable style="width: 140px" @change="searchCoverLogs">
+          <el-option label="成功" value="success" />
+          <el-option label="审核不通过" value="rejected" />
+          <el-option label="失败" value="failed" />
+        </el-select>
+        <el-input
+          v-model="logBizId"
+          placeholder="分类 ID"
+          clearable
+          style="width: 120px"
+          @keyup.enter="searchCoverLogs"
+        />
+        <el-button type="primary" @click="searchCoverLogs">查询</el-button>
+        <el-button :loading="logLoading" @click="loadCoverLogs">刷新</el-button>
+        <span class="ml-auto text-xs text-gray-400">共 {{ logTotal }} 条</span>
+      </div>
+      <el-table v-loading="logLoading" :data="logs" border row-key="id" max-height="560">
+        <el-table-column label="时间" width="165">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="分类 ID" width="90">
+          <template #default="{ row }">{{ row.bizId || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="logStatusTag(row.status)" size="small">
+              {{ LOG_STATUS_LABEL[row.status] ?? row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="耗时" width="90">
+          <template #default="{ row }">{{ row.latencyMs }} ms</template>
+        </el-table-column>
+        <el-table-column label="详情（对象 / 审核原因 / 重试轨迹）" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.errorMessage ?? '—' }}</template>
+        </el-table-column>
+      </el-table>
+      <div class="mt-3 flex justify-end">
+        <el-pagination
+          v-model:current-page="logPage"
+          v-model:page-size="logPageSize"
+          :total="logTotal"
+          layout="total, prev, pager, next"
+          background
+          @current-change="loadCoverLogs"
+        />
+      </div>
+    </el-drawer>
   </div>
 </template>

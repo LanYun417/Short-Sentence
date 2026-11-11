@@ -33,6 +33,7 @@ const TYPE_LABEL: Record<string, string> = {
   sentence_review: '审核',
   word_meanings: '逐词释义',
   image_gen: '生图',
+  cover_gen: '封面生成',
   expand: '造句',
   word_root: '词根',
   sentence_card_gen: '句签',
@@ -54,6 +55,14 @@ const BIZ_HINT: Record<string, string> = {
   sentence_card_gen: '句签业务日期',
   collectible_gen: '句签业务日期（旧命名）',
   image_gen: '无关联（恒 0）',
+  cover_gen: '场景分类 id / 节日分类 id',
+};
+
+/** 状态文案：封面审核不通过是自动重试中的中间态，不算最终失败。 */
+const AI_LOG_STATUS_LABEL: Record<string, string> = {
+  success: '成功',
+  rejected: '审核不通过',
+  failed: '失败',
 };
 
 /** 统计卡配色（按类型轮换） */
@@ -213,6 +222,7 @@ onMounted(async () => {
           <el-option label="审核" value="sentence_review" />
           <el-option label="逐词释义" value="word_meanings" />
           <el-option label="生图" value="image_gen" />
+          <el-option label="封面生成" value="cover_gen" />
           <el-option label="造句" value="expand" />
           <el-option label="词根" value="word_root" />
           <el-option label="句签" value="sentence_card_gen" />
@@ -221,6 +231,7 @@ onMounted(async () => {
       <el-form-item label="状态">
         <el-select v-model="filters.status" placeholder="全部" clearable style="width: 110px">
           <el-option label="成功" value="success" />
+          <el-option label="审核不通过" value="rejected" />
           <el-option label="失败" value="failed" />
         </el-select>
       </el-form-item>
@@ -282,8 +293,11 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
-              <el-tag :type="row.status === 'success' ? 'success' : 'danger'" size="small">
-                {{ row.status === 'success' ? '成功' : '失败' }}
+              <el-tag
+                :type="row.status === 'success' ? 'success' : row.status === 'rejected' ? 'warning' : 'danger'"
+                size="small"
+              >
+                {{ AI_LOG_STATUS_LABEL[row.status] ?? '失败' }}
               </el-tag>
             </template>
           </el-table-column>

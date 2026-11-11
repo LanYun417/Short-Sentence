@@ -19,6 +19,13 @@ import {
 } from 'class-validator';
 
 /** 句子状态（与 schema 注释一致）。 */
+/**
+ * 封面生成业务日志类型（写入 ai_call_log）。
+ * 与 Provider 层的 `image_gen`（模型调用级）区分：这里记的是「哪张封面、第几次、
+ * 审核为什么不通过、最终是否入库」，供后台页面回看，避免只能翻控制台。
+ */
+export const COVER_GEN_LOG_TYPE = 'cover_gen';
+
 export const SENTENCE_STATUS = {
   PENDING_IMAGE: 'pending_image',
   READY: 'ready',

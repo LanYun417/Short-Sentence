@@ -219,6 +219,28 @@ export function regenerateAllCategoryCoversApi(): Promise<{ generated: number[];
   return post<{ generated: number[]; failed: number[] }>('/sentences/categories/covers/regenerate-all');
 }
 
+/** 封面生成日志项（含视觉审核不通过与自动重试明细） */
+export interface CoverGenLogItem {
+  id: number;
+  /** 关联的场景/节日分类 id */
+  bizId: number;
+  /** success 成功 / rejected 审核不通过 / failed 最终失败 */
+  status: string;
+  errorMessage: string | null;
+  latencyMs: number;
+  createdAt: string;
+}
+
+/** 封面生成日志分页（可按状态 / 分类 id 筛选） */
+export function getCoverGenLogsApi(params: {
+  page: number;
+  pageSize: number;
+  status?: string;
+  bizId?: number;
+}): Promise<PageResult<CoverGenLogItem>> {
+  return get<PageResult<CoverGenLogItem>>('/sentences/categories/cover-logs', params);
+}
+
 export function deleteCategoryApi(id: number): Promise<null> {
   return del<null>(`/sentences/categories/${id}`);
 }

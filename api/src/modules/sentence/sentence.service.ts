@@ -12,7 +12,26 @@ import type { CsvExportTask } from '../../common/utils/csv-stream.js';
 import { assertExportable } from '../../common/utils/csv-stream.js';
 import type { PageResult } from '../../common/types.js';
 import { config } from '../../common/config/config.js';
-import { SENTENCE_STATUS, SaveCategoryDto, SaveSentenceDto, type SentenceStatus } from './sentence.dto.js';
+import {
+  COVER_GEN_LOG_TYPE,
+  SENTENCE_STATUS,
+  SaveCategoryDto,
+  SaveSentenceDto,
+  type SentenceStatus,
+} from './sentence.dto.js';
+
+/** 封面生成日志项（后台「生图日志」抽屉用）。 */
+export interface CoverGenLogItem {
+  id: number;
+  /** 关联的场景/节日分类 id */
+  bizId: number;
+  /** success 成功 / rejected 审核不通过（自动重试中）/ failed 最终失败 */
+  status: string;
+  /** 详情：业务对象名、第几次、审核原因 */
+  errorMessage: string | null;
+  latencyMs: number;
+  createdAt: Date;
+}
 
 /** 导出表头（与列表列顺序一致，方便运营对照）。 */
 const SENTENCE_CSV_HEADER = [
@@ -487,7 +506,42 @@ export class SentenceService {
     return count;
   }
 
+  /**
+   * 封面生成业务日志分页（ai_call_log 中 type=cover_gen）。
+   * 供「场景分类」页就地回看生图与审核重试结果，避免上线后只能翻控制台。
+   */
+  async coverGenLogs(query: Record<string, unknown>): Promise<PageResult<CoverGenLogItem>> {
+    const { page, pageSize, offset, limit } = parsePagination(query);
+    const where: Record<string, unknown> = { type: COVER_GEN_LOG_TYPE };
+    const status = String(query.status ?? '').trim();
+    if (status) {
+      where.status = status;
+    }
+    const bizId = Number(query.bizId ?? 0);
+    if (Number.isFinite(bizId) && bizId > 0) {
+      where.bizId = BigInt(Math.floor(bizId));
+    }
+    const [rows, total] = await Promise.all([
+      this.prisma.aiCallLog.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.aiCallLog.count({ where }),
+    ]);
+    const list: CoverGenLogItem[] = rows.map((row) => ({
+      id: Number(row.id),
+      bizId: Number(row.bizId),
+      status: row.status,
+      errorMessage: row.errorMessage,
+      latencyMs: row.latencyMs,
+      createdAt: row.createdAt,
+    }));
+    return buildPageResult(list, total, page, pageSize);
+  }
+
   private defaultScenePrompt(sentenceEn: string): string {
-    return `Two people having a natural conversation in a everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", warm natural light, 16:9 composition, no text in image`;
+    return `A pure flat 2D animation illustration of two people having a natural conversation in an everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", flat cel-shaded colors, clean outlines, no realistic lighting, 16:9 composition, no text in image`;
   }
 }

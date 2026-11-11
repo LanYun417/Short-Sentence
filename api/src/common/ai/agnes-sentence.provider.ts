@@ -310,7 +310,7 @@ const POLISH_SYSTEM_PROMPT = [
   '   the Chinese alone must be understandable.',
   '3. difficulty: re-judge with the rules below (the original label may be wrong; do not copy it).',
   '4. ipa: British IPA consistent with the rewritten English.',
-  '5. scenePrompt: keep it a flat cartoon of TWO PEOPLE talking in the matching scene; fix it if it no longer matches.',
+  '5. scenePrompt: keep it a PURE FLAT 2D ANIMATION cartoon of TWO PEOPLE talking in the matching scene; fix it if it no longer matches.',
   '6. categoryName: keep the original Chinese category name unless clearly wrong.',
   '7. alternateAnswers: rewrite the list so every entry still expresses the SAME meaning as the REWRITTEN',
   '   sentenceEn. Each must be natural, grammatically correct, different from sentenceEn and from each other.',
@@ -393,9 +393,9 @@ const REVIEW_SYSTEM_PROMPT = [
  * 图像内容审核提示词（视觉模型看单张已生成配图）。
  * 与文本审核同一套「fail-closed」心智：宁可不下发，也不放坏图进库。
  */
-const IMAGE_REVIEW_SYSTEM_PROMPT = [
+export const IMAGE_REVIEW_SYSTEM_PROMPT = [
   'You are the image content moderator for a language-learning app for all ages.',
-  'You will be shown ONE illustration (flat cartoon, two people talking) just generated for a sentence card.',
+  'You will be shown ONE PURE FLAT 2D ANIMATION illustration just generated for a sentence card, a scene cover, or a daily sentence card.',
   'The intended scene is described by the provided "scenePrompt".',
   '',
   'FAIL the image (pass=false) if ANY of the following is true:',
@@ -411,6 +411,15 @@ const IMAGE_REVIEW_SYSTEM_PROMPT = [
   '3. The image is grossly off from the described scene (empty background with no people when people are',
   '   required, text/letters as the main subject, or a scene contradicting the sentence).',
   '4. Low quality / broken render that would look obviously wrong to a user.',
+  '5. STYLE VIOLATION — not PURE FLAT 2D ANIMATION. FAIL any of the following:',
+  '   - a photorealistic photo, live-action shot, real-person photo, or 3D / CGI render;',
+  '   - a "2D + semi-realistic" hybrid: realistic light and shadow, volumetric or cinematic lighting,',
+  '     realistic skin / fabric / material textures, painterly thick-painted or airbrushed shading,',
+  '     pseudo-3D depth, bevels, or CGI-like glossy surfaces — even if the drawing is still 2D.',
+  '   PASS only flat cel-shaded 2D illustration: solid flat color fills, clean simplified outlines,',
+  '   matte colors, no realistic texture and no realistic light/shadow rendering. Flat cartoon,',
+  '   flat storybook, and flat watercolor-style color washes all PASS as long as they stay flat 2D.',
+  '   A soft background gradient is NOT a violation; gradients used to fake 3D shading ARE.',
   '',
   'PASS when the image is appropriate and depicts the intended everyday scene; this is true even if the two',
   'people shown are the same gender, as long as they are not a romantic couple (see rule 2).',
@@ -758,8 +767,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         : '   All three levels must appear; do not pile everything into level 2.',
       '5. sentenceEn must be natural spoken English with complete meaning. Do not drop words in the name of',
       '   "casual", and avoid rare words and slang.',
-      '6. scenePrompt: a flat cartoon illustration of TWO PEOPLE talking in that specific scene',
-      '   (who they are, what they are doing, the environment, the lighting). 16:9 composition, no text in the image.',
+      '6. scenePrompt: a PURE FLAT 2D ANIMATION illustration of TWO PEOPLE talking in that specific scene',
+      '   (who they are, what they are doing, the environment). Cel-shaded flat colors, clean outlines,',
+      '   no realistic lighting or textures, no semi-realistic shading. 16:9 composition, no text in the image.',
       themeLine,
     ].join('\n');
 
@@ -1307,7 +1317,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       '   never 「小小的手，收获耐心大地生长出的果实」. Keep the Chinese short too; it must read smoothly aloud.',
       '5. titleZh and translationZh must not stack the same words; they should read like Chinese, not a translation.',
       '6. scenePrompt: English image prompt for a storybook-style scene illustration (NOT two people talking):',
-      '   describe the subject, environment, light and palette; flat / storybook style, 16:9, no text in the image.',
+      '   describe the subject, environment and palette (NOT realistic lighting); pure flat 2D animation,',
+      '   cel-shaded flat colors, clean outlines, no semi-realistic shading; 16:9, no text in the image.',
       '7. blessing: a short Chinese dedication (at most 24 characters) written for whoever collects this card today.',
       '   Warm and specific to the theme; never a translation of sentenceEn; no exclamation marks;',
       '   read like something a friend would write on the back of a postcard.',

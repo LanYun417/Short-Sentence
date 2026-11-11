@@ -33,9 +33,10 @@ import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { resolveTextChannel } from '../../common/ai/ai.config.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import { normalizeGeneratedImage } from '../../common/ai/image-normalize.js';
+import { IMAGE_2D_HARD_STYLE } from '../../common/ai/image-style.js';
 import type { SentenceDraft } from '../../common/ai/ai.types.js';
 import { STAGE_COVER_STYLE_SUFFIX } from '../client/stage/stage-stories.js';
-import { SENTENCE_STATUS } from './sentence.dto.js';
+import { COVER_GEN_LOG_TYPE, SENTENCE_STATUS } from './sentence.dto.js';
 
 /**
  * 单批生题的最大条数。
@@ -54,12 +55,14 @@ const MAX_FAILED_CHUNKS = 5;
 /**
  * 配图风格后缀（统一追加到场景提示词末尾）。
  *
- * 产品定位是「视觉场景英语闪卡」，全站统一扁平卡通插画风格。
- * 在服务层统一追加而不是只靠模型输出的 scenePrompt：模型偶尔会写成写实/3D/照片风格，
- * 同一批题里混入不同画风会显得很乱，这里兜住风格下限。
+ * 产品定位是「视觉场景英语闪卡」，全站统一纯粹扁平 2D 动画渲染；题目配图这一路是扁平卡通。
+ * 在服务层统一追加而不是只靠模型输出的 scenePrompt：模型偶尔会写成写实/半写实/3D 风格，
+ * 同一批题里混入不同画风会显得很乱。末尾拼接 IMAGE_2D_HARD_STYLE 锁死渲染质感。
  */
-const IMAGE_STYLE_SUFFIX =
-  'flat cartoon illustration style, clean vector art, soft cel shading, friendly characters, bright pastel colors, wide 16:9 composition, no text in image';
+export const IMAGE_STYLE_SUFFIX =
+  'flat cartoon illustration style, clean vector art, flat cel shading, friendly characters, bright pastel colors, ' +
+  'wide 16:9 composition, no text in image, ' +
+  IMAGE_2D_HARD_STYLE;
 
 /**
  * 闯关场景封面提示词（场景 = sentence_category，如「职场办公」「日常生活」）。
@@ -103,6 +106,21 @@ const IMAGE_RETRY = {
   baseDelayMs: 10_000,
   maxDelayMs: 120_000,
 };
+
+/**
+ * 封面视觉审核不通过时的最大生成次数（含首次）。
+ * 模型偶发把字画糊 / 画成中文字符，审核会按 no-text 规则拒；这种是随机抖动，
+ * 重抽一张通常就好，不该整批判失败再让人工点一次。3 次是配额与自愈率的折中。
+ */
+const MAX_COVER_ATTEMPTS = 3;
+
+/** 一条封面日志的业务上下文。 */
+interface CoverLogContext {
+  /** 业务对象名（写进日志详情，运营不用对着 id 猜） */
+  target: string;
+  /** 关联业务 id（场景分类 / 节日分类的 sentence_category.id） */
+  bizId: number;
+}
 
 /** 逐词释义回填单题结果明细（管理端完成后弹窗展示用）。 */
 export interface BackfillWordMeaningsItem {
@@ -1540,28 +1558,16 @@ export class SentenceGenService {
       return { ok: true, skipped: true, reason: '已有封面', fileId: Number(category.coverFileId) };
     }
     try {
-      const image = await withRetry(
-        () =>
-          this.imageGen.generate(`${coverPrompt}, ${IMAGE_STYLE_SUFFIX}`, {
-            size: config.sentence.imageSize,
-            ratio: config.sentence.imageRatio,
-          }),
-        IMAGE_RETRY,
-      );
-      const webp = await normalizeGeneratedImage(image.buffer, {
-        maxWidth: config.sentence.imageMaxWidth,
+      // 与场景分类封面同口径：审核不通过自动重抽，每次结果落 cover_gen 日志
+      const webp = await this.generateReviewedCover({
+        prompt: `${coverPrompt}, ${IMAGE_STYLE_SUFFIX}`,
+        reviewPrompt: coverPrompt,
+        size: config.sentence.imageSize,
         ratio: config.sentence.imageRatio,
+        maxWidth: config.sentence.imageMaxWidth,
         quality: config.sentence.imageQuality,
+        ctx: { target: `节日封面·${entry.name}`, bizId: Number(categoryId) },
       });
-      // 封面同样过视觉审核：跑题 / 不适龄 / 画字 / 画成写实照片的封面不能贴到用户端
-      const review = await withRetry(
-        () => this.sentenceGen.reviewImage(webp, { scenePrompt: coverPrompt }),
-        IMAGE_RETRY,
-      );
-      if (!review.pass) {
-        this.logger.warn(`[SentenceGen] 节日封面审核未通过（${entry.name}）: ${review.reason}`);
-        return { ok: false, skipped: false, reason: review.reason, fileId: null };
-      }
       const saved = await this.fileService.save(`${entry.name}-cover.webp`, 'image/webp', webp, null);
       await this.prisma.sentenceCategory.update({
         where: { id: categoryId },
@@ -1618,6 +1624,102 @@ export class SentenceGenService {
    *
    * @param regenerate 为 true 时即使已有封面也强制重生成
    */
+  /**
+   * 写一条封面生成业务日志。落库失败绝不影响生图主流程（与 AiCallLogService 同哲学）。
+   */
+  private async recordCoverLog(
+    ctx: CoverLogContext,
+    status: 'success' | 'failed' | 'rejected',
+    message: string,
+    latencyMs = 0,
+  ): Promise<void> {
+    try {
+      await this.prisma.aiCallLog.create({
+        data: {
+          type: COVER_GEN_LOG_TYPE,
+          provider: 'sentence-gen',
+          model: this.aiSettings.current?.imageModel ?? 'agnes-image',
+          bizId: BigInt(ctx.bizId),
+          latencyMs,
+          status,
+          errorMessage: `[${ctx.target}] ${message}`.slice(0, 500),
+        },
+      });
+    } catch {
+      // 日志写库失败不影响业务：静默跳过
+    }
+  }
+
+  /**
+   * 生成一张封面：生图 → 归一化 → 视觉审核，审核不通过自动重新生成。
+   *
+   * 每次尝试都落一条 cover_gen 日志（success / rejected / failed），运营在后台
+   * 「生图日志」或「AI 调用日志」页即可回看审核原因与重试轨迹，不必上线后翻控制台。
+   * 全部尝试仍未通过才抛错，由批量任务计入 failed。
+   */
+  private async generateReviewedCover(options: {
+    prompt: string;
+    reviewPrompt: string;
+    size: string;
+    ratio: string;
+    maxWidth: number;
+    quality: number;
+    ctx: CoverLogContext;
+  }): Promise<Buffer> {
+    const startedAt = Date.now();
+    let lastReason = '';
+    for (let attempt = 1; attempt <= MAX_COVER_ATTEMPTS; attempt += 1) {
+      try {
+        const image = await withRetry(
+          () => this.imageGen.generate(options.prompt, { size: options.size, ratio: options.ratio }),
+          IMAGE_RETRY,
+        );
+        const webp = await normalizeGeneratedImage(image.buffer, {
+          maxWidth: options.maxWidth,
+          ratio: options.ratio,
+          quality: options.quality,
+        });
+        const review = await withRetry(
+          () => this.sentenceGen.reviewImage(webp, { scenePrompt: options.reviewPrompt }),
+          IMAGE_RETRY,
+        );
+        if (review.pass) {
+          await this.recordCoverLog(
+            options.ctx,
+            'success',
+            `第 ${attempt} 次生成通过审核并入库${attempt > 1 ? '（自动重试生效）' : ''}`,
+            Date.now() - startedAt,
+          );
+          return webp;
+        }
+        lastReason = review.reason;
+        await this.recordCoverLog(
+          options.ctx,
+          'rejected',
+          `第 ${attempt} 次审核未通过：${review.reason}`,
+          Date.now() - startedAt,
+        );
+        this.logger.warn(
+          `[SentenceGen] 封面审核未通过（${options.ctx.target} 第 ${attempt}/${MAX_COVER_ATTEMPTS} 次）：${review.reason}`,
+        );
+      } catch (error) {
+        // 上游异常（限频/超时/预算）已由 withRetry 退避处理，这里不再叠加外层重试，
+        // 否则一次故障会放大成 3 轮 × 4 次调用，白烧配额。只记日志后直接抛出。
+        const reason = this.errText(error);
+        await this.recordCoverLog(options.ctx, 'failed', `生成异常：${reason}`, Date.now() - startedAt);
+        this.logger.error(`[SentenceGen] 封面生成异常（${options.ctx.target}）：${reason}`);
+        throw error;
+      }
+    }
+    await this.recordCoverLog(
+      options.ctx,
+      'failed',
+      `${MAX_COVER_ATTEMPTS} 次审核均未通过：${lastReason}`,
+      Date.now() - startedAt,
+    );
+    throw AppException.badRequest(`封面审核未通过：${lastReason}`);
+  }
+
   async generateCategoryCover(
     categoryId: number,
     regenerate = false,
@@ -1635,25 +1737,16 @@ export class SentenceGenService {
       this.logger.warn(`[SentenceGen] 场景 ${categoryId} 的封面文件缺失，重新生成`);
     }
     const prompt = sceneCoverPromptOf(category.name, category.nameEn);
-    const image = await withRetry(
-      () =>
-        this.imageGen.generate(prompt, {
-          size: config.stage.coverSize,
-          ratio: config.stage.coverRatio,
-        }),
-      IMAGE_RETRY,
-    );
-    const webp = await normalizeGeneratedImage(image.buffer, {
-      maxWidth: config.stage.coverMaxWidth,
+    // 审核不通过自动重新生成（最多 MAX_COVER_ATTEMPTS 次），每次结果都落 cover_gen 日志
+    const webp = await this.generateReviewedCover({
+      prompt,
+      reviewPrompt: prompt,
+      size: config.stage.coverSize,
       ratio: config.stage.coverRatio,
+      maxWidth: config.stage.coverMaxWidth,
       quality: config.stage.coverQuality,
+      ctx: { target: `场景分类·${category.name}`, bizId: categoryId },
     });
-    // 与节日封面同口径：跑题 / 画字 / 写实照片的封面不能贴到用户端
-    const review = await withRetry(() => this.sentenceGen.reviewImage(webp, { scenePrompt: prompt }), IMAGE_RETRY);
-    if (!review.pass) {
-      this.logger.warn(`[SentenceGen] 场景封面审核未通过（${category.name}）: ${review.reason}`);
-      throw AppException.badRequest(`封面审核未通过：${review.reason}`);
-    }
     const saved = await this.fileService.save(`stage-scene-cover-${categoryId}.webp`, 'image/webp', webp, null);
     const row = await this.prisma.sentenceCategory.update({
       where: { id: category.id },
@@ -1705,7 +1798,7 @@ export class SentenceGenService {
 
   /** 无提示词时的兜底构图（两人对话场景）。 */
   private defaultScenePrompt(sentenceEn: string): string {
-    return `Two people having a natural conversation in an everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", warm natural light, 16:9 composition, no text in image`;
+    return `A pure flat 2D animation illustration of two people having a natural conversation in an everyday setting, one of them saying "${sentenceEn.slice(0, 120)}", flat cel-shaded colors, clean outlines, no realistic lighting, 16:9 composition, no text in image`;
   }
 
   /** 今天命中的节日（节日题库关闭或普通日返回 null）。 */

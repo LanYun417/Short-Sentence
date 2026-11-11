@@ -805,12 +805,13 @@ onMounted(() => {
                   <div
                     class="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded bg-gray-100 dark:bg-gray-800"
                   >
-                    <img
+                    <el-image
                       v-if="row.coverUrl"
                       :src="row.coverUrl"
-                      :alt="row.name"
-                      class="h-full w-full object-cover"
-                      loading="lazy"
+                      :preview-src-list="[row.coverUrl]"
+                      preview-teleported
+                      fit="cover"
+                      class="h-full w-full cursor-zoom-in"
                     />
                     <span v-else class="text-[10px] text-gray-400">无封面</span>
                   </div>

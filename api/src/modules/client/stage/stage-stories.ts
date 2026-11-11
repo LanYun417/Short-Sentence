@@ -13,6 +13,7 @@
  * 关卡顺序 = 本文件数组顺序（服务启动时按此顺序回填到各「默认剧本」下）。
  * 2026-11-10 重构：层级改为 场景（分类）→ 剧本（stage_script）→ 关卡（stage_story），本文件只作种子。
  */
+import { IMAGE_2D_HARD_STYLE } from '../../../common/ai/image-style.js';
 
 /**
  * 章节封面统一风格后缀：拼在每章 coverPrompt 后面。
@@ -20,8 +21,9 @@
  * 与句签的 SENTENCE_CARD_STYLE_SUFFIX 同一类约束。
  */
 export const STAGE_COVER_STYLE_SUFFIX =
-  'soft storybook illustration style, warm flat colors with gentle gradients, cinematic lighting, ' +
-  'no text, no letters, no watermark, no signature, no logo, 4:3 composition, high quality';
+  'soft storybook illustration style, warm flat color blocks, clean simplified outlines, ' +
+  'no text, no letters, no watermark, no signature, no logo, 4:3 composition, ' +
+  IMAGE_2D_HARD_STYLE;
 
 /** 对话角色。 */
 export interface StageRole {
