@@ -1,26 +1,33 @@
 // use prisma-next
 
-/// 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
-/// 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
+/// 学习小队：支持「随机匹配 / 自建队伍 / 组队码加入」三种组队方式。
+/// 队伍内可群聊（study_team_message），聊天记录仅保留最近 30 天（定时任务清理）。
 model StudyTeam {
   /// 主键
   id       BigInt @id @default(autoincrement()) @db.BigInt
-  /// 小队名（系统生成，如「晨光小队」）
+  /// 小队名（系统生成或自建，如「晨光小队」）
   name     String @db.VarChar(50)
   /// 状态：active 进行中 / dissolved 已解散（成员退空后置位）
   status   String @default("active") @db.VarChar(20)
-  /// 匹配分桶：近 7 天答题量档位（0~4），同桶才能匹配，保证节奏相近
+  /// 匹配分桶：近 7 天答题量档位（0~4），随机匹配时同桶才能组队
   bucket   Int    @default(0) @db.Int
   /// 全员打卡连续天数
   streak   Int    @default(0) @db.Int
   /// 最近一次「全员完成」日期 YYYY-MM-DD；断签判定用
   lastFullDate String? @map("last_full_date") @db.VarChar(10)
+  /// 组队码（6 位，建队时生成，历史队伍为 null 会在读取时惰性补）；凭码加入
+  code String? @unique @db.VarChar(8)
+  /// 来源：random 随机匹配 / create 自建队伍
+  source String @default("random") @db.VarChar(10)
+  /// 队长 userId（自建队伍的创建者；随机匹配队伍为 null）
+  ownerId BigInt? @map("owner_id") @db.BigInt
   /// 创建时间
   createdAt DateTime @default(now()) @map("created_at")
   /// 更新时间
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  members StudyTeamMember[]
+  members  StudyTeamMember[]
+  messages StudyTeamMessage[]
 
   @@index([status, bucket])
   @@map("study_team")
@@ -45,4 +52,29 @@ model StudyTeamMember {
   @@unique([userId])
   @@index([teamId])
   @@map("study_team_member")
+}
+
+/// 小队群聊消息。仅保留最近 30 天（task-retention 类定时任务清理 + 读取时过滤）。
+/// 撤回（2 分钟内、仅本人）把 status 置为 recalled；AI 审核不通过由后台置 hidden。
+model StudyTeamMessage {
+  /// 主键
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 小队 id
+  teamId    BigInt   @map("team_id") @db.BigInt
+  /// 发送者 userId（client_user）
+  userId    BigInt   @map("user_id") @db.BigInt
+  /// 消息正文（≤500 字）
+  content   String   @db.VarChar(500)
+  /// 引用的消息 id（回复某条时带上，必须属于同一小队）
+  quoteId   BigInt?  @map("quote_id") @db.BigInt
+  /// 状态：normal 正常 / recalled 已撤回 / hidden 已隐藏（审核）
+  status    String   @default("normal") @db.VarChar(10)
+  /// 发送时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team StudyTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([userId])
+  @@map("study_team_message")
 }

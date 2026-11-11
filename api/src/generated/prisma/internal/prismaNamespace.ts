@@ -435,6 +435,7 @@ export const ModelName = {
   StageStory: 'StageStory',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
+  StudyTeamMessage: 'StudyTeamMessage',
   User: 'User',
   Role: 'Role',
   Menu: 'Menu',
@@ -460,7 +461,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2972,6 +2973,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    StudyTeamMessage: {
+      payload: Prisma.$StudyTeamMessagePayload<ExtArgs>
+      fields: Prisma.StudyTeamMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StudyTeamMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StudyTeamMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.StudyTeamMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StudyTeamMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        findMany: {
+          args: Prisma.StudyTeamMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>[]
+        }
+        create: {
+          args: Prisma.StudyTeamMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        createMany: {
+          args: Prisma.StudyTeamMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.StudyTeamMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        update: {
+          args: Prisma.StudyTeamMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.StudyTeamMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StudyTeamMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.StudyTeamMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StudyTeamMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.StudyTeamMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStudyTeamMessage>
+        }
+        groupBy: {
+          args: Prisma.StudyTeamMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StudyTeamMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StudyTeamMessageCountAggregateOutputType> | number
+        }
+      }
+    }
     User: {
       payload: Prisma.$UserPayload<ExtArgs>
       fields: Prisma.UserFieldRefs
@@ -4262,6 +4329,9 @@ export const StudyTeamScalarFieldEnum = {
   bucket: 'bucket',
   streak: 'streak',
   lastFullDate: 'lastFullDate',
+  code: 'code',
+  source: 'source',
+  ownerId: 'ownerId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -4278,6 +4348,19 @@ export const StudyTeamMemberScalarFieldEnum = {
 } as const
 
 export type StudyTeamMemberScalarFieldEnum = (typeof StudyTeamMemberScalarFieldEnum)[keyof typeof StudyTeamMemberScalarFieldEnum]
+
+
+export const StudyTeamMessageScalarFieldEnum = {
+  id: 'id',
+  teamId: 'teamId',
+  userId: 'userId',
+  content: 'content',
+  quoteId: 'quoteId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type StudyTeamMessageScalarFieldEnum = (typeof StudyTeamMessageScalarFieldEnum)[keyof typeof StudyTeamMessageScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -4807,7 +4890,9 @@ export type StageStoryOrderByRelevanceFieldEnum = (typeof StageStoryOrderByRelev
 export const StudyTeamOrderByRelevanceFieldEnum = {
   name: 'name',
   status: 'status',
-  lastFullDate: 'lastFullDate'
+  lastFullDate: 'lastFullDate',
+  code: 'code',
+  source: 'source'
 } as const
 
 export type StudyTeamOrderByRelevanceFieldEnum = (typeof StudyTeamOrderByRelevanceFieldEnum)[keyof typeof StudyTeamOrderByRelevanceFieldEnum]
@@ -4818,6 +4903,14 @@ export const StudyTeamMemberOrderByRelevanceFieldEnum = {
 } as const
 
 export type StudyTeamMemberOrderByRelevanceFieldEnum = (typeof StudyTeamMemberOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMemberOrderByRelevanceFieldEnum]
+
+
+export const StudyTeamMessageOrderByRelevanceFieldEnum = {
+  content: 'content',
+  status: 'status'
+} as const
+
+export type StudyTeamMessageOrderByRelevanceFieldEnum = (typeof StudyTeamMessageOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMessageOrderByRelevanceFieldEnum]
 
 
 export const UserOrderByRelevanceFieldEnum = {
@@ -5136,6 +5229,7 @@ export type GlobalOmitConfig = {
   stageStory?: Prisma.StageStoryOmit
   studyTeam?: Prisma.StudyTeamOmit
   studyTeamMember?: Prisma.StudyTeamMemberOmit
+  studyTeamMessage?: Prisma.StudyTeamMessageOmit
   user?: Prisma.UserOmit
   role?: Prisma.RoleOmit
   menu?: Prisma.MenuOmit

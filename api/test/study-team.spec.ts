@@ -109,8 +109,12 @@ function makeService() {
     checkAchievements: vi.fn(async () => []),
   };
 
-  const service = new TeamService(prisma as unknown as PrismaService, gamify);
-  return { service, prisma, gamify, teams, members, checkins, xpCalls };
+  const moderator: any = {
+    moderateChainEntry: vi.fn(async () => ({ decision: 'approve', reason: 'ok' })),
+  };
+
+  const service = new TeamService(prisma as unknown as PrismaService, gamify, moderator);
+  return { service, prisma, gamify, moderator, teams, members, checkins, xpCalls };
 }
 
 describe('弱连接小队：匹配', () => {

@@ -82,7 +82,8 @@ function makeService() {
   };
 
   const gamify: any = { awardXp: vi.fn(), checkAchievements: vi.fn() };
-  const service = new TeamService(prisma as unknown as PrismaService, gamify as unknown as GamifyService);
+  const moderator: any = { moderateChainEntry: vi.fn(async () => ({ decision: 'approve', reason: 'ok' })) };
+  const service = new TeamService(prisma as unknown as PrismaService, gamify as unknown as GamifyService, moderator);
 
   function addTeam(name: string, status = 'active') {
     const team = { id: teamSeq++, name, status, bucket: 1, streak: 0, lastFullDate: null, createdAt: new Date() };
@@ -154,7 +155,7 @@ describe('学习小队后台：列表与详情', () => {
     const other = detail.members.find((m) => m.userId === 2);
     expect(me?.checkedIn).toBe(true);
     expect(other?.checkedIn).toBe(false);
-    expect(detail.maxMembers).toBe(4);
+    expect(detail.maxMembers).toBe(10);
   });
 
   it('概览统计：进行中/解散/在队用户/今日全员', async () => {

@@ -26,6 +26,7 @@ import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { ChainService } from '../client/chain/chain.service.js';
 import { StageService } from '../client/stage/stage.service.js';
+import { TeamService } from '../client/team/team.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { ConfigService } from '../config/config.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
@@ -159,6 +160,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly dailyReminder: DailyReminderService,
     private readonly chain: ChainService,
     private readonly stage: StageService,
+    private readonly team: TeamService,
     private readonly configService: ConfigService,
     private readonly aiSettings: AiSettingsService,
   ) {}
@@ -182,6 +184,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       generateWeeklyChainTopics: (count: number) => this.chain.generateWeeklyTopics(count),
       generateMissingStageCovers: () => this.stage.generateMissingScriptCovers(),
       generateMissingSceneCovers: () => this.sentenceGen.generateMissingCategoryCovers(),
+      cleanTeamMessages: () => this.team.cleanTeamMessages(),
     };
 
     // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值

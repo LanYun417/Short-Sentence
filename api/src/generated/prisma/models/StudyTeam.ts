@@ -14,8 +14,8 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model StudyTeam
- * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
- * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
+ * 学习小队：支持「随机匹配 / 自建队伍 / 组队码加入」三种组队方式。
+ * 队伍内可群聊（study_team_message），聊天记录仅保留最近 30 天（定时任务清理）。
  */
 export type StudyTeamModel = runtime.Types.Result.DefaultSelection<Prisma.$StudyTeamPayload>
 
@@ -31,12 +31,14 @@ export type StudyTeamAvgAggregateOutputType = {
   id: number | null
   bucket: number | null
   streak: number | null
+  ownerId: number | null
 }
 
 export type StudyTeamSumAggregateOutputType = {
   id: bigint | null
   bucket: number | null
   streak: number | null
+  ownerId: bigint | null
 }
 
 export type StudyTeamMinAggregateOutputType = {
@@ -46,6 +48,9 @@ export type StudyTeamMinAggregateOutputType = {
   bucket: number | null
   streak: number | null
   lastFullDate: string | null
+  code: string | null
+  source: string | null
+  ownerId: bigint | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,6 +62,9 @@ export type StudyTeamMaxAggregateOutputType = {
   bucket: number | null
   streak: number | null
   lastFullDate: string | null
+  code: string | null
+  source: string | null
+  ownerId: bigint | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -68,6 +76,9 @@ export type StudyTeamCountAggregateOutputType = {
   bucket: number
   streak: number
   lastFullDate: number
+  code: number
+  source: number
+  ownerId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -78,12 +89,14 @@ export type StudyTeamAvgAggregateInputType = {
   id?: true
   bucket?: true
   streak?: true
+  ownerId?: true
 }
 
 export type StudyTeamSumAggregateInputType = {
   id?: true
   bucket?: true
   streak?: true
+  ownerId?: true
 }
 
 export type StudyTeamMinAggregateInputType = {
@@ -93,6 +106,9 @@ export type StudyTeamMinAggregateInputType = {
   bucket?: true
   streak?: true
   lastFullDate?: true
+  code?: true
+  source?: true
+  ownerId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -104,6 +120,9 @@ export type StudyTeamMaxAggregateInputType = {
   bucket?: true
   streak?: true
   lastFullDate?: true
+  code?: true
+  source?: true
+  ownerId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -115,6 +134,9 @@ export type StudyTeamCountAggregateInputType = {
   bucket?: true
   streak?: true
   lastFullDate?: true
+  code?: true
+  source?: true
+  ownerId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -213,6 +235,9 @@ export type StudyTeamGroupByOutputType = {
   bucket: number
   streak: number
   lastFullDate: string | null
+  code: string | null
+  source: string
+  ownerId: bigint | null
   createdAt: Date
   updatedAt: Date
   _count: StudyTeamCountAggregateOutputType | null
@@ -247,9 +272,13 @@ export type StudyTeamWhereInput = {
   bucket?: Prisma.IntFilter<"StudyTeam"> | number
   streak?: Prisma.IntFilter<"StudyTeam"> | number
   lastFullDate?: Prisma.StringNullableFilter<"StudyTeam"> | string | null
+  code?: Prisma.StringNullableFilter<"StudyTeam"> | string | null
+  source?: Prisma.StringFilter<"StudyTeam"> | string
+  ownerId?: Prisma.BigIntNullableFilter<"StudyTeam"> | bigint | number | null
   createdAt?: Prisma.DateTimeFilter<"StudyTeam"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"StudyTeam"> | Date | string
   members?: Prisma.StudyTeamMemberListRelationFilter
+  messages?: Prisma.StudyTeamMessageListRelationFilter
 }
 
 export type StudyTeamOrderByWithRelationInput = {
@@ -259,14 +288,19 @@ export type StudyTeamOrderByWithRelationInput = {
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
   lastFullDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
+  source?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   members?: Prisma.StudyTeamMemberOrderByRelationAggregateInput
+  messages?: Prisma.StudyTeamMessageOrderByRelationAggregateInput
   _relevance?: Prisma.StudyTeamOrderByRelevanceInput
 }
 
 export type StudyTeamWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
+  code?: string
   AND?: Prisma.StudyTeamWhereInput | Prisma.StudyTeamWhereInput[]
   OR?: Prisma.StudyTeamWhereInput[]
   NOT?: Prisma.StudyTeamWhereInput | Prisma.StudyTeamWhereInput[]
@@ -275,10 +309,13 @@ export type StudyTeamWhereUniqueInput = Prisma.AtLeast<{
   bucket?: Prisma.IntFilter<"StudyTeam"> | number
   streak?: Prisma.IntFilter<"StudyTeam"> | number
   lastFullDate?: Prisma.StringNullableFilter<"StudyTeam"> | string | null
+  source?: Prisma.StringFilter<"StudyTeam"> | string
+  ownerId?: Prisma.BigIntNullableFilter<"StudyTeam"> | bigint | number | null
   createdAt?: Prisma.DateTimeFilter<"StudyTeam"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"StudyTeam"> | Date | string
   members?: Prisma.StudyTeamMemberListRelationFilter
-}, "id">
+  messages?: Prisma.StudyTeamMessageListRelationFilter
+}, "id" | "code">
 
 export type StudyTeamOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -287,6 +324,9 @@ export type StudyTeamOrderByWithAggregationInput = {
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
   lastFullDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
+  source?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.StudyTeamCountOrderByAggregateInput
@@ -306,6 +346,9 @@ export type StudyTeamScalarWhereWithAggregatesInput = {
   bucket?: Prisma.IntWithAggregatesFilter<"StudyTeam"> | number
   streak?: Prisma.IntWithAggregatesFilter<"StudyTeam"> | number
   lastFullDate?: Prisma.StringNullableWithAggregatesFilter<"StudyTeam"> | string | null
+  code?: Prisma.StringNullableWithAggregatesFilter<"StudyTeam"> | string | null
+  source?: Prisma.StringWithAggregatesFilter<"StudyTeam"> | string
+  ownerId?: Prisma.BigIntNullableWithAggregatesFilter<"StudyTeam"> | bigint | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"StudyTeam"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"StudyTeam"> | Date | string
 }
@@ -317,9 +360,13 @@ export type StudyTeamCreateInput = {
   bucket?: number
   streak?: number
   lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StudyTeamMemberCreateNestedManyWithoutTeamInput
+  messages?: Prisma.StudyTeamMessageCreateNestedManyWithoutTeamInput
 }
 
 export type StudyTeamUncheckedCreateInput = {
@@ -329,9 +376,13 @@ export type StudyTeamUncheckedCreateInput = {
   bucket?: number
   streak?: number
   lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StudyTeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  messages?: Prisma.StudyTeamMessageUncheckedCreateNestedManyWithoutTeamInput
 }
 
 export type StudyTeamUpdateInput = {
@@ -341,9 +392,13 @@ export type StudyTeamUpdateInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StudyTeamMemberUpdateManyWithoutTeamNestedInput
+  messages?: Prisma.StudyTeamMessageUpdateManyWithoutTeamNestedInput
 }
 
 export type StudyTeamUncheckedUpdateInput = {
@@ -353,9 +408,13 @@ export type StudyTeamUncheckedUpdateInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StudyTeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  messages?: Prisma.StudyTeamMessageUncheckedUpdateManyWithoutTeamNestedInput
 }
 
 export type StudyTeamCreateManyInput = {
@@ -365,6 +424,9 @@ export type StudyTeamCreateManyInput = {
   bucket?: number
   streak?: number
   lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -376,6 +438,9 @@ export type StudyTeamUpdateManyMutationInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -387,6 +452,9 @@ export type StudyTeamUncheckedUpdateManyInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -404,6 +472,9 @@ export type StudyTeamCountOrderByAggregateInput = {
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
   lastFullDate?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -412,6 +483,7 @@ export type StudyTeamAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrder
 }
 
 export type StudyTeamMaxOrderByAggregateInput = {
@@ -421,6 +493,9 @@ export type StudyTeamMaxOrderByAggregateInput = {
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
   lastFullDate?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -432,6 +507,9 @@ export type StudyTeamMinOrderByAggregateInput = {
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
   lastFullDate?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  source?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -440,6 +518,7 @@ export type StudyTeamSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   bucket?: Prisma.SortOrder
   streak?: Prisma.SortOrder
+  ownerId?: Prisma.SortOrder
 }
 
 export type StudyTeamScalarRelationFilter = {
@@ -461,6 +540,20 @@ export type StudyTeamUpdateOneRequiredWithoutMembersNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StudyTeamUpdateToOneWithWhereWithoutMembersInput, Prisma.StudyTeamUpdateWithoutMembersInput>, Prisma.StudyTeamUncheckedUpdateWithoutMembersInput>
 }
 
+export type StudyTeamCreateNestedOneWithoutMessagesInput = {
+  create?: Prisma.XOR<Prisma.StudyTeamCreateWithoutMessagesInput, Prisma.StudyTeamUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.StudyTeamCreateOrConnectWithoutMessagesInput
+  connect?: Prisma.StudyTeamWhereUniqueInput
+}
+
+export type StudyTeamUpdateOneRequiredWithoutMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.StudyTeamCreateWithoutMessagesInput, Prisma.StudyTeamUncheckedCreateWithoutMessagesInput>
+  connectOrCreate?: Prisma.StudyTeamCreateOrConnectWithoutMessagesInput
+  upsert?: Prisma.StudyTeamUpsertWithoutMessagesInput
+  connect?: Prisma.StudyTeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StudyTeamUpdateToOneWithWhereWithoutMessagesInput, Prisma.StudyTeamUpdateWithoutMessagesInput>, Prisma.StudyTeamUncheckedUpdateWithoutMessagesInput>
+}
+
 export type StudyTeamCreateWithoutMembersInput = {
   id?: bigint | number
   name: string
@@ -468,8 +561,12 @@ export type StudyTeamCreateWithoutMembersInput = {
   bucket?: number
   streak?: number
   lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  messages?: Prisma.StudyTeamMessageCreateNestedManyWithoutTeamInput
 }
 
 export type StudyTeamUncheckedCreateWithoutMembersInput = {
@@ -479,8 +576,12 @@ export type StudyTeamUncheckedCreateWithoutMembersInput = {
   bucket?: number
   streak?: number
   lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  messages?: Prisma.StudyTeamMessageUncheckedCreateNestedManyWithoutTeamInput
 }
 
 export type StudyTeamCreateOrConnectWithoutMembersInput = {
@@ -506,8 +607,12 @@ export type StudyTeamUpdateWithoutMembersInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  messages?: Prisma.StudyTeamMessageUpdateManyWithoutTeamNestedInput
 }
 
 export type StudyTeamUncheckedUpdateWithoutMembersInput = {
@@ -517,8 +622,88 @@ export type StudyTeamUncheckedUpdateWithoutMembersInput = {
   bucket?: Prisma.IntFieldUpdateOperationsInput | number
   streak?: Prisma.IntFieldUpdateOperationsInput | number
   lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  messages?: Prisma.StudyTeamMessageUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type StudyTeamCreateWithoutMessagesInput = {
+  id?: bigint | number
+  name: string
+  status?: string
+  bucket?: number
+  streak?: number
+  lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.StudyTeamMemberCreateNestedManyWithoutTeamInput
+}
+
+export type StudyTeamUncheckedCreateWithoutMessagesInput = {
+  id?: bigint | number
+  name: string
+  status?: string
+  bucket?: number
+  streak?: number
+  lastFullDate?: string | null
+  code?: string | null
+  source?: string
+  ownerId?: bigint | number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.StudyTeamMemberUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type StudyTeamCreateOrConnectWithoutMessagesInput = {
+  where: Prisma.StudyTeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudyTeamCreateWithoutMessagesInput, Prisma.StudyTeamUncheckedCreateWithoutMessagesInput>
+}
+
+export type StudyTeamUpsertWithoutMessagesInput = {
+  update: Prisma.XOR<Prisma.StudyTeamUpdateWithoutMessagesInput, Prisma.StudyTeamUncheckedUpdateWithoutMessagesInput>
+  create: Prisma.XOR<Prisma.StudyTeamCreateWithoutMessagesInput, Prisma.StudyTeamUncheckedCreateWithoutMessagesInput>
+  where?: Prisma.StudyTeamWhereInput
+}
+
+export type StudyTeamUpdateToOneWithWhereWithoutMessagesInput = {
+  where?: Prisma.StudyTeamWhereInput
+  data: Prisma.XOR<Prisma.StudyTeamUpdateWithoutMessagesInput, Prisma.StudyTeamUncheckedUpdateWithoutMessagesInput>
+}
+
+export type StudyTeamUpdateWithoutMessagesInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  bucket?: Prisma.IntFieldUpdateOperationsInput | number
+  streak?: Prisma.IntFieldUpdateOperationsInput | number
+  lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.StudyTeamMemberUpdateManyWithoutTeamNestedInput
+}
+
+export type StudyTeamUncheckedUpdateWithoutMessagesInput = {
+  id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  bucket?: Prisma.IntFieldUpdateOperationsInput | number
+  streak?: Prisma.IntFieldUpdateOperationsInput | number
+  lastFullDate?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  source?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerId?: Prisma.NullableBigIntFieldUpdateOperationsInput | bigint | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.StudyTeamMemberUncheckedUpdateManyWithoutTeamNestedInput
 }
 
 
@@ -528,10 +713,12 @@ export type StudyTeamUncheckedUpdateWithoutMembersInput = {
 
 export type StudyTeamCountOutputType = {
   members: number
+  messages: number
 }
 
 export type StudyTeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | StudyTeamCountOutputTypeCountMembersArgs
+  messages?: boolean | StudyTeamCountOutputTypeCountMessagesArgs
 }
 
 /**
@@ -551,6 +738,13 @@ export type StudyTeamCountOutputTypeCountMembersArgs<ExtArgs extends runtime.Typ
   where?: Prisma.StudyTeamMemberWhereInput
 }
 
+/**
+ * StudyTeamCountOutputType without action
+ */
+export type StudyTeamCountOutputTypeCountMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.StudyTeamMessageWhereInput
+}
+
 
 export type StudyTeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -559,9 +753,13 @@ export type StudyTeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   bucket?: boolean
   streak?: boolean
   lastFullDate?: boolean
+  code?: boolean
+  source?: boolean
+  ownerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   members?: boolean | Prisma.StudyTeam$membersArgs<ExtArgs>
+  messages?: boolean | Prisma.StudyTeam$messagesArgs<ExtArgs>
   _count?: boolean | Prisma.StudyTeamCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studyTeam"]>
 
@@ -574,13 +772,17 @@ export type StudyTeamSelectScalar = {
   bucket?: boolean
   streak?: boolean
   lastFullDate?: boolean
+  code?: boolean
+  source?: boolean
+  ownerId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type StudyTeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "status" | "bucket" | "streak" | "lastFullDate" | "createdAt" | "updatedAt", ExtArgs["result"]["studyTeam"]>
+export type StudyTeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "status" | "bucket" | "streak" | "lastFullDate" | "code" | "source" | "ownerId" | "createdAt" | "updatedAt", ExtArgs["result"]["studyTeam"]>
 export type StudyTeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.StudyTeam$membersArgs<ExtArgs>
+  messages?: boolean | Prisma.StudyTeam$messagesArgs<ExtArgs>
   _count?: boolean | Prisma.StudyTeamCountOutputTypeDefaultArgs<ExtArgs>
 }
 
@@ -588,6 +790,7 @@ export type $StudyTeamPayload<ExtArgs extends runtime.Types.Extensions.InternalA
   name: "StudyTeam"
   objects: {
     members: Prisma.$StudyTeamMemberPayload<ExtArgs>[]
+    messages: Prisma.$StudyTeamMessagePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     /**
@@ -595,7 +798,7 @@ export type $StudyTeamPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      */
     id: bigint
     /**
-     * 小队名（系统生成，如「晨光小队」）
+     * 小队名（系统生成或自建，如「晨光小队」）
      */
     name: string
     /**
@@ -603,7 +806,7 @@ export type $StudyTeamPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      */
     status: string
     /**
-     * 匹配分桶：近 7 天答题量档位（0~4），同桶才能匹配，保证节奏相近
+     * 匹配分桶：近 7 天答题量档位（0~4），随机匹配时同桶才能组队
      */
     bucket: number
     /**
@@ -614,6 +817,18 @@ export type $StudyTeamPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      * 最近一次「全员完成」日期 YYYY-MM-DD；断签判定用
      */
     lastFullDate: string | null
+    /**
+     * 组队码（6 位，建队时生成，历史队伍为 null 会在读取时惰性补）；凭码加入
+     */
+    code: string | null
+    /**
+     * 来源：random 随机匹配 / create 自建队伍
+     */
+    source: string
+    /**
+     * 队长 userId（自建队伍的创建者；随机匹配队伍为 null）
+     */
+    ownerId: bigint | null
     /**
      * 创建时间
      */
@@ -963,6 +1178,7 @@ readonly fields: StudyTeamFieldRefs;
 export interface Prisma__StudyTeamClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   members<T extends Prisma.StudyTeam$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudyTeam$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudyTeamMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  messages<T extends Prisma.StudyTeam$messagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StudyTeam$messagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudyTeamMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -998,6 +1214,9 @@ export interface StudyTeamFieldRefs {
   readonly bucket: Prisma.FieldRef<"StudyTeam", 'Int'>
   readonly streak: Prisma.FieldRef<"StudyTeam", 'Int'>
   readonly lastFullDate: Prisma.FieldRef<"StudyTeam", 'String'>
+  readonly code: Prisma.FieldRef<"StudyTeam", 'String'>
+  readonly source: Prisma.FieldRef<"StudyTeam", 'String'>
+  readonly ownerId: Prisma.FieldRef<"StudyTeam", 'BigInt'>
   readonly createdAt: Prisma.FieldRef<"StudyTeam", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"StudyTeam", 'DateTime'>
 }
@@ -1369,6 +1588,30 @@ export type StudyTeam$membersArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.StudyTeamMemberScalarFieldEnum | Prisma.StudyTeamMemberScalarFieldEnum[]
+}
+
+/**
+ * StudyTeam.messages
+ */
+export type StudyTeam$messagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudyTeamMessage
+   */
+  select?: Prisma.StudyTeamMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudyTeamMessage
+   */
+  omit?: Prisma.StudyTeamMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudyTeamMessageInclude<ExtArgs> | null
+  where?: Prisma.StudyTeamMessageWhereInput
+  orderBy?: Prisma.StudyTeamMessageOrderByWithRelationInput | Prisma.StudyTeamMessageOrderByWithRelationInput[]
+  cursor?: Prisma.StudyTeamMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.StudyTeamMessageScalarFieldEnum | Prisma.StudyTeamMessageScalarFieldEnum[]
 }
 
 /**

@@ -74,8 +74,9 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     TeamAdminController,
   ],
   // ChainService 导出给 TaskModule 挂「接龙主题周更」定时任务；
-  // StageService 同理导出给「闯关章节封面补生成」（ClientModule 不依赖 TaskModule，无循环）
-  exports: [ChainService, StageService],
+  // StageService 同理导出给「闯关章节封面补生成」；
+  // TeamService 导出给「小队群聊记录 30 天清理」定时任务（ClientModule 不依赖 TaskModule，无循环）
+  exports: [ChainService, StageService, TeamService],
   providers: [
     ClientAuthUserService,
     // 邮箱验证码（注册/登录/重置密码；依赖 Redis + 全局 MailService）

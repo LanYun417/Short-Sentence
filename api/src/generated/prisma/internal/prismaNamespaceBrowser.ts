@@ -89,6 +89,7 @@ export const ModelName = {
   StageStory: 'StageStory',
   StudyTeam: 'StudyTeam',
   StudyTeamMember: 'StudyTeamMember',
+  StudyTeamMessage: 'StudyTeamMessage',
   User: 'User',
   Role: 'Role',
   Menu: 'Menu',
@@ -708,6 +709,9 @@ export const StudyTeamScalarFieldEnum = {
   bucket: 'bucket',
   streak: 'streak',
   lastFullDate: 'lastFullDate',
+  code: 'code',
+  source: 'source',
+  ownerId: 'ownerId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -724,6 +728,19 @@ export const StudyTeamMemberScalarFieldEnum = {
 } as const
 
 export type StudyTeamMemberScalarFieldEnum = (typeof StudyTeamMemberScalarFieldEnum)[keyof typeof StudyTeamMemberScalarFieldEnum]
+
+
+export const StudyTeamMessageScalarFieldEnum = {
+  id: 'id',
+  teamId: 'teamId',
+  userId: 'userId',
+  content: 'content',
+  quoteId: 'quoteId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type StudyTeamMessageScalarFieldEnum = (typeof StudyTeamMessageScalarFieldEnum)[keyof typeof StudyTeamMessageScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -1253,7 +1270,9 @@ export type StageStoryOrderByRelevanceFieldEnum = (typeof StageStoryOrderByRelev
 export const StudyTeamOrderByRelevanceFieldEnum = {
   name: 'name',
   status: 'status',
-  lastFullDate: 'lastFullDate'
+  lastFullDate: 'lastFullDate',
+  code: 'code',
+  source: 'source'
 } as const
 
 export type StudyTeamOrderByRelevanceFieldEnum = (typeof StudyTeamOrderByRelevanceFieldEnum)[keyof typeof StudyTeamOrderByRelevanceFieldEnum]
@@ -1264,6 +1283,14 @@ export const StudyTeamMemberOrderByRelevanceFieldEnum = {
 } as const
 
 export type StudyTeamMemberOrderByRelevanceFieldEnum = (typeof StudyTeamMemberOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMemberOrderByRelevanceFieldEnum]
+
+
+export const StudyTeamMessageOrderByRelevanceFieldEnum = {
+  content: 'content',
+  status: 'status'
+} as const
+
+export type StudyTeamMessageOrderByRelevanceFieldEnum = (typeof StudyTeamMessageOrderByRelevanceFieldEnum)[keyof typeof StudyTeamMessageOrderByRelevanceFieldEnum]
 
 
 export const UserOrderByRelevanceFieldEnum = {

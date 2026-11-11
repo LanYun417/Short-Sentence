@@ -6,7 +6,8 @@
  *
  * 权限码：team:view（查询）/ team:handle（解散、改名，超管直通）。
  */
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { IsIn, IsString } from 'class-validator';
 import { RequirePermissions } from '../../../common/auth/permission.guard.js';
 import { OperationLog } from '../../../common/log/operation-log.decorator.js';
 import type { ResponseEnvelope } from '../../../common/http/response.interceptor.js';
@@ -14,6 +15,13 @@ import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import { buildPageResult, parsePagination } from '../../../common/utils/utils.js';
 import { RenameTeamDto } from './team.dto.js';
 import { TeamService, type TeamAdminDetail, type TeamAdminStats } from './team.service.js';
+
+/** 后台-隐藏/恢复群聊消息。 */
+class SetMessageStatusDto {
+  @IsString()
+  @IsIn(['normal', 'hidden'])
+  status!: 'normal' | 'hidden';
+}
 
 @Controller('teams')
 export class TeamAdminController {
@@ -58,5 +66,26 @@ export class TeamAdminController {
   async rename(@Param() params: IdParamDto, @Body() dto: RenameTeamDto): Promise<ResponseEnvelope<null>> {
     await this.team.adminRename(params.id, dto.name);
     return { __raw: true, data: null, message: '已更新小队名' };
+  }
+
+  /** 小队群聊消息分页（含已隐藏，供审核）。 */
+  @Get(':id/messages')
+  @RequirePermissions('team:view')
+  async messages(@Param() params: IdParamDto, @Query() query: Record<string, unknown>) {
+    const { page, pageSize } = parsePagination(query);
+    const { list, total } = await this.team.adminListMessages(params.id, query);
+    return buildPageResult(list, total, page, pageSize);
+  }
+
+  /** 隐藏 / 恢复一条群聊消息。 */
+  @Put('messages/:id/status')
+  @RequirePermissions('team:handle')
+  @OperationLog('学习小队', '审核群聊消息')
+  async setMessageStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetMessageStatusDto,
+  ): Promise<ResponseEnvelope<null>> {
+    await this.team.adminSetMessageStatus(id, dto.status);
+    return { __raw: true, data: null, message: dto.status === 'hidden' ? '已隐藏该消息' : '已恢复该消息' };
   }
 }

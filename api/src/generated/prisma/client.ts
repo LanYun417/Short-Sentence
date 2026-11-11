@@ -258,8 +258,8 @@ export type StageScript = Prisma.StageScriptModel
 export type StageStory = Prisma.StageStoryModel
 /**
  * Model StudyTeam
- * 弱连接学习小队：系统按「近 7 天练习节奏」自动匹配陌生人，队员互不加好友，
- * 只互相看到今日打卡状态与连续天数（无聊天、无 UGC，规避内容审核成本）。
+ * 学习小队：支持「随机匹配 / 自建队伍 / 组队码加入」三种组队方式。
+ * 队伍内可群聊（study_team_message），聊天记录仅保留最近 30 天（定时任务清理）。
  */
 export type StudyTeam = Prisma.StudyTeamModel
 /**
@@ -268,6 +268,12 @@ export type StudyTeam = Prisma.StudyTeamModel
  * 刻意不与 client_user 建 Prisma 关系，与答题/打卡/句签同口径按 userId 显式查询。
  */
 export type StudyTeamMember = Prisma.StudyTeamMemberModel
+/**
+ * Model StudyTeamMessage
+ * 小队群聊消息。仅保留最近 30 天（task-retention 类定时任务清理 + 读取时过滤）。
+ * 撤回（2 分钟内、仅本人）把 status 置为 recalled；AI 审核不通过由后台置 hidden。
+ */
+export type StudyTeamMessage = Prisma.StudyTeamMessageModel
 /**
  * Model User
  * 用户表

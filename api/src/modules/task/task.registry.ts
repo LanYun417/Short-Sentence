@@ -122,6 +122,8 @@ export interface TaskDeps {
   generateMissingStageCovers: () => Promise<{ generated: number[]; skipped: number[]; failed: number[] }>;
   /** 情景闯关场景封面补生成（SentenceGenService.generateMissingCategoryCovers；只补缺失，不覆盖已有） */
   generateMissingSceneCovers: () => Promise<{ generated: number[]; failed: number[] }>;
+  /** 小队群聊记录清理（TeamService.cleanTeamMessages；仅保留最近 30 天） */
+  cleanTeamMessages: () => Promise<number>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -255,6 +257,18 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: config.chain.weeklyCronEnabled,
       create: (deps) => async () => {
         await deps.generateWeeklyChainTopics(config.chain.weeklyTopicCount);
+      },
+    },
+    {
+      name: 'team-message-retention',
+      title: '小队群聊记录清理',
+      description:
+        '删除学习小队群聊中超过 30 天的消息（study_team_message.created_at 早于 30 天前），聊天记录仅保留最近 30 天。',
+      // 凌晨 04:00，避开夜间生图/生题流水线
+      schedule: { kind: 'daily', hour: 4, minute: 0 },
+      enabled: true,
+      create: (deps) => async () => {
+        await deps.cleanTeamMessages();
       },
     },
     {
