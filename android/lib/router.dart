@@ -12,11 +12,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/chain_page.dart';
+import 'pages/dialogue_page.dart';
 import 'pages/leaderboard_page.dart';
 import 'pages/login_page.dart';
+import 'pages/scene_page.dart';
+import 'pages/script_page.dart';
 import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
-import 'pages/stage_page.dart';
+import 'pages/stage_list_page.dart';
 import 'state/auth_controller.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -45,7 +48,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
       GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
-      GoRoute(path: '/stages', builder: (context, state) => const StagePage()),
+      GoRoute(path: '/stages', builder: (context, state) => const StageListPage()),
+      GoRoute(
+        path: '/stages/scene/:id',
+        builder: (context, state) =>
+            ScenePage(id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/stages/script/:id',
+        builder: (context, state) =>
+            ScriptPage(id: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/stages/:id',
+        builder: (context, state) => DialoguePage(
+          id: int.parse(state.pathParameters['id']!),
+          scriptId: state.extra is int ? state.extra as int : null,
+        ),
+      ),
       GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
     ],
   );

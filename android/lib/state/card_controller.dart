@@ -17,6 +17,9 @@ class CardState {
     this.todayDate = '',
     this.mine = const <SentenceCard>[],
     this.mineLoaded = false,
+    this.missing = const <SentenceCard>[],
+    this.missingTotal = 0,
+    this.missingLoaded = false,
     this.loading = false,
     this.claiming = false,
     this.error,
@@ -33,6 +36,15 @@ class CardState {
 
   /// 句签册是否已拉过（刷题页只查「今天领没领」，不需要整个册子）。
   final bool mineLoaded;
+
+  /// 未拥有的句签（成长页「查看未拥有」预览）。
+  final List<SentenceCard> missing;
+
+  /// 未拥有句签总数（可能大于 [missing].length）。
+  final int missingTotal;
+
+  /// 未拥有列表是否已拉过。
+  final bool missingLoaded;
 
   final bool loading;
   final bool claiming;
@@ -51,6 +63,9 @@ class CardState {
     String? todayDate,
     List<SentenceCard>? mine,
     bool? mineLoaded,
+    List<SentenceCard>? missing,
+    int? missingTotal,
+    bool? missingLoaded,
     bool? loading,
     bool? claiming,
     String? error,
@@ -61,6 +76,9 @@ class CardState {
       todayDate: todayDate ?? this.todayDate,
       mine: mine ?? this.mine,
       mineLoaded: mineLoaded ?? this.mineLoaded,
+      missing: missing ?? this.missing,
+      missingTotal: missingTotal ?? this.missingTotal,
+      missingLoaded: missingLoaded ?? this.missingLoaded,
       loading: loading ?? this.loading,
       claiming: claiming ?? this.claiming,
       error: clearError ? null : (error ?? this.error),
@@ -154,6 +172,24 @@ class CardController extends Notifier<CardState> {
   }
 
   Future<void> refresh() => load(force: true);
+
+  /// 加载未拥有的句签（成长页「查看未拥有」）。
+  Future<void> loadMissing({bool force = false}) async {
+    if (state.missingLoaded && !force) {
+      return;
+    }
+    try {
+      final data = await _api.missing();
+      state = state.copyWith(
+        missing: data.list,
+        missingTotal: data.total,
+        missingLoaded: true,
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(error: _message(error));
+    }
+  }
 
   static String _message(Object error) {
     if (error is ApiException) {

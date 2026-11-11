@@ -81,6 +81,34 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
     );
   }
 
+  /// 查看未拥有的句签（拉数据后弹底部面板）。
+  Future<void> _showMissingSheet() async {
+    final notifier = ref.read(cardControllerProvider.notifier);
+    await notifier.loadMissing();
+    if (!mounted) {
+      return;
+    }
+    final state = ref.read(cardControllerProvider);
+    if (state.missing.isEmpty && state.missingTotal == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('你已经集齐了所有句签，真厉害！')),
+      );
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _MissingSheet(
+        cards: state.missing,
+        total: state.missingTotal,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final growth = ref.watch(growthControllerProvider);
@@ -211,6 +239,10 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                                 ? '达标后领取，收进册子'
                                 : '共 ${cards.mine.length} 张',
                             icon: Icons.auto_awesome_rounded,
+                            actionLabel: cards.missingLoaded && cards.missingTotal > 0
+                                ? '查看未拥有 (${cards.missingTotal})'
+                                : '查看未拥有',
+                            onAction: _showMissingSheet,
                             index: 6,
                           ),
                           _CardWall(
@@ -2092,6 +2124,100 @@ class _CardTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 未拥有句签底部面板。
+class _MissingSheet extends StatelessWidget {
+  const _MissingSheet({required this.cards, required this.total});
+
+  final List<SentenceCard> cards;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      maxChildSize: 0.9,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (context, scroll) => Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.auto_awesome_rounded, size: 20, color: colors.gold),
+                const SizedBox(width: 8),
+                Text(
+                  '未拥有的句签',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: colors.ink,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.cardMuted,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$total 张',
+                    style: TextStyle(fontSize: 11, color: colors.inkSoft),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: cards.isEmpty
+                ? Center(
+                    child: Text(
+                      '加载中…',
+                      style: TextStyle(color: colors.inkFaint),
+                    ),
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      const gap = 10.0;
+                      final tileWidth = (constraints.maxWidth - gap) / 2;
+                      return ListView(
+                        controller: scroll,
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                        children: <Widget>[
+                          Wrap(
+                            spacing: gap,
+                            runSpacing: gap,
+                            children: <Widget>[
+                              for (final card in cards)
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _CardTile(card: card),
+                                ),
+                            ],
+                          ),
+                          if (total > cards.length)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Center(
+                                child: Text(
+                                  '仅展示最近 ${cards.length} 张，还有 ${total - cards.length} 张待你解锁',
+                                  style: TextStyle(fontSize: 12, color: colors.inkFaint),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
           ),
         ],
       ),

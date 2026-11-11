@@ -13,6 +13,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
+import '../config/image_pick.dart';
 import 'dio_client.dart';
 import 'api_exception.dart';
 import 'models/user.dart';
@@ -181,6 +182,40 @@ class AuthApi {
           'emailCode': emailCode.trim(),
         },
       );
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
+  /// 上传头像（multipart 字段 `file`）。
+  ///
+  /// 返回更新后的完整资料（含新的 avatarUrl）；调用方据此回写本地缓存。
+  Future<UserProfile> uploadAvatar(PickedImage image) async {
+    try {
+      final form = FormData.fromMap(<String, dynamic>{
+        'file': MultipartFile.fromBytes(
+          image.bytes,
+          filename: image.name,
+          contentType: DioMediaType.parse(image.mimeType),
+        ),
+      });
+      final response = await _dio.post<dynamic>('/client/auth/avatar', data: form);
+      return UserProfile.fromJson(_unwrap(response));
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
+  /// 设置个人主页背景句签（cardId = 0 恢复默认渐变）。
+  ///
+  /// 返回更新后的完整资料（含 bgCardId / bgCardTitle / bgImageUrl）。
+  Future<UserProfile> setBackground(int cardId) async {
+    try {
+      final response = await _dio.put<dynamic>(
+        '/client/auth/me/background',
+        data: <String, dynamic>{'cardId': cardId},
+      );
+      return UserProfile.fromJson(_unwrap(response));
     } on DioException catch (error) {
       throw _toApiException(error);
     }

@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
 import '../api/notice_api.dart';
+import '../config/image_pick.dart';
 import '../state/auth_controller.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
@@ -40,6 +41,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(growthControllerProvider.notifier).load();
     });
+  }
+
+  /// 更换头像：选图（原生 SAF 桥）→ multipart 上传 → 回写本地缓存。
+  Future<void> _changeAvatar() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final images = await pickImages(maxCount: 1);
+    if (images.isEmpty || !mounted) {
+      return;
+    }
+    final error =
+        await ref.read(authControllerProvider.notifier).uploadAvatar(images.first);
+    if (!mounted) {
+      return;
+    }
+    if (error != null) {
+      messenger.showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      messenger.showSnackBar(const SnackBar(content: Text('头像已更新')));
+    }
   }
 
   Future<void> _changePassword() async {
@@ -163,6 +183,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               user: user,
               levelCode: growth.level?.code,
               xp: growth.xp,
+              onChangeAvatar: _changeAvatar,
             ),
           ),
           const SizedBox(height: 14),
@@ -285,13 +306,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 /* ------------------------------ 身份卡 ------------------------------ */
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user, this.levelCode, this.xp = 0});
+  const _IdentityCard({
+    required this.user,
+    this.levelCode,
+    this.xp = 0,
+    this.onChangeAvatar,
+  });
 
   final UserProfile? user;
 
   /// 当前 CEFR 等级码（未加载到成长数据时为 null，不显示等级标签）。
   final String? levelCode;
   final int xp;
+
+  /// 点击头像「更换头像」的回调（由父页注入，处理选图 + 上传）。
+  final VoidCallback? onChangeAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -332,33 +361,66 @@ class _IdentityCard extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Container(
-                      width: 62,
-                      height: 62,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.18),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 1.5),
-                      ),
-                      alignment: Alignment.center,
-                      child: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                          ? ClipOval(
-                              child: CachedNetworkImage(
-                                imageUrl: staticUrl(user!.avatarUrl),
-                                width: 62,
-                                height: 62,
-                                fit: BoxFit.cover,
-                                memCacheWidth: 186,
-                              ),
-                            )
-                          : Text(
-                              initial,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
+                    PressScale(
+                      onTap: onChangeAvatar,
+                      scale: 0.95,
+                      child: Stack(
+                        children: <Widget>[
+                          Container(
+                            width: 62,
+                            height: 62,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.18),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.45),
+                                width: 1.5,
                               ),
                             ),
+                            alignment: Alignment.center,
+                            child:
+                                (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                                    ? ClipOval(
+                                        child: CachedNetworkImage(
+                                          imageUrl: staticUrl(user!.avatarUrl),
+                                          width: 62,
+                                          height: 62,
+                                          fit: BoxFit.cover,
+                                          memCacheWidth: 186,
+                                        ),
+                                      )
+                                    : Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF0284C7),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 13,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(

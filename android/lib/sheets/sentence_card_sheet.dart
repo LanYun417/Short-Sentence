@@ -24,11 +24,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/auth_api.dart';
 import '../api/models/growth.dart';
+import '../state/auth_controller.dart';
 import '../state/tilt.dart';
 import '../theme/motion.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/tts_button.dart';
 
 /* ------------------------------ 色板（与网页端一致） ------------------------------ */
@@ -86,16 +89,16 @@ String _dateLabel(String bizDate) {
   return '$month月$day日';
 }
 
-class _CardPoster extends StatefulWidget {
+class _CardPoster extends ConsumerStatefulWidget {
   const _CardPoster({required this.card});
 
   final SentenceCard card;
 
   @override
-  State<_CardPoster> createState() => _CardPosterState();
+  ConsumerState<_CardPoster> createState() => _CardPosterState();
 }
 
-class _CardPosterState extends State<_CardPoster>
+class _CardPosterState extends ConsumerState<_CardPoster>
     with TickerProviderStateMixin {
   /// 翻面：0 = 卡背，1 = 正面（句子），2 与 0 视觉等价（整圈）。
   ///
@@ -287,6 +290,8 @@ class _CardPosterState extends State<_CardPoster>
                         },
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    _buildBackgroundButton(),
                   ],
                 ),
               ),
@@ -367,6 +372,64 @@ class _CardPosterState extends State<_CardPoster>
     messenger?.showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
+  }
+
+  /// 设为 / 取消个人主页背景（底部按钮）。
+  ///
+  /// 与网页端 profile 一致：已是当前背景时显示「已设为」，点它恢复默认渐变；
+  /// 否则显示「设为个人主页背景」。
+  Widget _buildBackgroundButton() {
+    final user = ref.watch(authControllerProvider).user;
+    final isCurrent = user?.bgCardId == widget.card.id;
+    final label = isCurrent ? '已设为个人主页背景' : '设为个人主页背景';
+
+    return Center(
+      child: PressScale(
+        onTap: isCurrent ? null : () => _setBackground(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: isCurrent
+                ? Colors.white.withValues(alpha: 0.16)
+                : Colors.white.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                isCurrent ? Icons.check_rounded : Icons.wallpaper_rounded,
+                size: 16,
+                color: isCurrent ? Colors.white : Colors.black87,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isCurrent ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setBackground() async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final error =
+        await ref.read(authControllerProvider.notifier).setBackground(widget.card.id);
+    if (!mounted) {
+      return;
+    }
+    if (error != null) {
+      messenger?.showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      messenger?.showSnackBar(const SnackBar(content: Text('已设为个人主页背景')));
+    }
   }
 
   /// 卡片本体（含翻面）。倾斜矩阵只包在外面，这里与姿态无关。

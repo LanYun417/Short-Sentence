@@ -15,6 +15,7 @@ import '../api/api_exception.dart';
 import '../api/dio_client.dart';
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
+import '../config/image_pick.dart';
 import 'auth_storage.dart';
 
 /// 认证状态。
@@ -192,6 +193,34 @@ class AuthController extends Notifier<AuthState> {
         newPassword: newPassword,
         emailCode: emailCode,
       );
+      return null;
+    } catch (error) {
+      return _message(error);
+    }
+  }
+
+  /// 上传头像：成功返回 null，失败返回可展示的错误文案。
+  ///
+  /// 成功后**立刻回写本地缓存与状态**，否则身份卡头像会短暂显示旧图。
+  Future<String?> uploadAvatar(PickedImage image) async {
+    try {
+      final profile = await _api.uploadAvatar(image);
+      await _storage.writeUser(encodeProfile(profile));
+      state = state.copyWith(user: profile);
+      return null;
+    } catch (error) {
+      return _message(error);
+    }
+  }
+
+  /// 设置个人主页背景句签（cardId = 0 恢复默认渐变）。
+  ///
+  /// 成功后回写本地缓存与状态（bgCardId / bgCardTitle / bgImageUrl）。
+  Future<String?> setBackground(int cardId) async {
+    try {
+      final profile = await _api.setBackground(cardId);
+      await _storage.writeUser(encodeProfile(profile));
+      state = state.copyWith(user: profile);
       return null;
     } catch (error) {
       return _message(error);

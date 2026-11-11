@@ -134,6 +134,16 @@ class LibraryApi {
     }
   }
 
+  /// 未拥有的句签（最近的若干张 + 总数）。
+  Future<MissingSentenceCards> missing() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/sentence-card/missing');
+      return MissingSentenceCards.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
   /// 举报 / 反馈题目。
   Future<void> report({
     required int sentenceId,

@@ -235,6 +235,27 @@ class SentenceCard {
   }
 }
 
+/// 未拥有的句签（成长页「查看未拥有」用）。
+///
+/// 后端 `/client/sentence-card/missing` 返回最近的未拥有句签（按业务日期倒序），
+/// `total` 可能大于 `list.length`——列表只给一页预览，总数单独给。
+class MissingSentenceCards {
+  const MissingSentenceCards({required this.total, required this.list});
+
+  final int total;
+  final List<SentenceCard> list;
+
+  factory MissingSentenceCards.fromJson(Map<String, dynamic> json) {
+    final list = json['list'];
+    return MissingSentenceCards(
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      list: list is List
+          ? list.whereType<Map<String, dynamic>>().map(SentenceCard.fromJson).toList()
+          : const <SentenceCard>[],
+    );
+  }
+}
+
 /// 今日句签状态（轻量：只有「领没领」与业务日期，不含卡片内容）。
 ///
 /// 后端 `/client/sentence-card/today` 的返回是 `{ obtained, bizDate }`：
