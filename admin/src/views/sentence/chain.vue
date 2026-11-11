@@ -131,7 +131,7 @@ async function toggleTopicStatus(row: ChainTopicAdminItem): Promise<void> {
 
 <template>
   <div class="sentence-chain-page table-page">
-    <el-tabs v-model="activeTab" class="mt-1">
+    <el-tabs v-model="activeTab" class="mt-1 chain-tabs">
       <!-- ===================== Tab1：接龙条目审核 ===================== -->
       <el-tab-pane label="接龙审核" name="entries">
         <SearchForm class="table-page__filter" @search="search" @reset="reset">
@@ -308,3 +308,29 @@ async function toggleTopicStatus(row: ChainTopicAdminItem): Promise<void> {
     </el-tabs>
   </div>
 </template>
+
+<style>
+/* el-tabs 默认不撑满父级，会打断 .table-page 的 flex 高度链：
+   .table-page__table > .el-table 是 position:absolute; inset:0，
+   父级高度为 0 时整张表格空白（连表头都不渲染）。
+   这里把高度链穿透 el-tabs 到 tab 面板，让两个 Tab 的表格都正常渲染。
+   不用 scoped/:deep —— .chain-tabs 只在本页存在，类前缀已足够限定作用域。 */
+.chain-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chain-tabs .el-tabs__content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.chain-tabs .el-tab-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+</style>
