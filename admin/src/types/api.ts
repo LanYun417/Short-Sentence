@@ -1016,6 +1016,30 @@ export interface AiSettings {
   nimModel: string;
   /** 文本 AI 通道选择：'agnes'（默认）或 'nim' */
   genChannel: 'agnes' | 'nim';
+  /** 文本通道 API 格式（生图不受影响） */
+  apiFormat: 'openai_chat' | 'openai_responses' | 'anthropic';
+  /** 上游地址是否为完整 URL（含路径） */
+  fullUrl: boolean;
+  /** 模型展示名称（空 = 显示模型 ID） */
+  modelLabel: string;
+  /** 高级参数 */
+  advanced: AdvancedAiConfig;
+}
+
+/** AI 高级参数（与后端 AdvancedAiConfig 同构） */
+export interface AdvancedAiConfig {
+  modelSeries: string;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  toolRounds: number;
+  imageInput: boolean;
+  thinkingParam: string;
+  thinkingOptions: string[];
+  thinkingValue: string;
+  /** -1 = 不覆盖（用调用方默认） */
+  temperature: number;
+  topP: number;
+  topK: number;
 }
 
 /** 保存 AI 设置入参（apiKey / nimApiKey 留空 = 不修改） */
@@ -1032,6 +1056,14 @@ export interface SaveAiSettingsPayload {
   nimModel?: string;
   /** 文本 AI 通道选择：'agnes'（默认）或 'nim'（选 nim 时 NIM 三项必填，所有文本 AI 走 NIM） */
   genChannel?: 'agnes' | 'nim';
+  /** 文本通道 API 格式 */
+  apiFormat?: 'openai_chat' | 'openai_responses' | 'anthropic';
+  /** 上游地址是否为完整 URL */
+  fullUrl?: boolean;
+  /** 模型展示名称 */
+  modelLabel?: string;
+  /** 高级参数 */
+  advanced?: AdvancedAiConfig;
 }
 
 /** AI 连通性测试结果 */

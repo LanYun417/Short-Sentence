@@ -17,6 +17,9 @@ import { AppException } from '../exception/app.exception.js';
 import { config } from '../config/config.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { AI_CONFIG_KEYS } from './ai.constants.js';
+import { type AdvancedAiConfig, type ApiFormat, normalizeApiFormat, parseAdvanced } from './ai-protocol.js';
+
+export type { AdvancedAiConfig, ApiFormat } from './ai-protocol.js';
 
 /** 运行时生效的 AI 配置（apiKey 为空表示未配置）。 */
 export interface AiSettings {
@@ -32,6 +35,14 @@ export interface AiSettings {
   nimModel: string;
   /** 生题内容生成通道选择：'agnes'（默认）或 'nim'；'nim' 时生题内容生成走 NIM */
   genChannel: string;
+  /** 文本通道 API 格式（生图不受影响，始终走 Agnes images） */
+  apiFormat: ApiFormat;
+  /** 上游地址是否为完整 URL（含路径） */
+  fullUrl: boolean;
+  /** 模型展示名称（空 = 显示模型 ID） */
+  modelLabel: string;
+  /** 高级参数（模型系列/上下文/工具轮数/图片输入/思考模式/采样） */
+  advanced: AdvancedAiConfig;
 }
 
 /** 去掉末尾斜杠，避免拼出 `//chat/completions`（后台手填地址时很常见）。 */
@@ -65,6 +76,10 @@ export async function loadAiSettings(prisma: PrismaService): Promise<AiSettings>
     nimModel: value(AI_CONFIG_KEYS.nimModel, config.ai.agnes.nimModel),
     // 非法值一律回落 'agnes'，避免脏数据把生题通道切到不存在的分支
     genChannel: value(AI_CONFIG_KEYS.genChannel, config.ai.agnes.genChannel) === 'nim' ? 'nim' : 'agnes',
+    apiFormat: normalizeApiFormat(value(AI_CONFIG_KEYS.apiFormat, 'openai_chat')),
+    fullUrl: ['1', 'true', 'yes'].includes(value(AI_CONFIG_KEYS.fullUrl, '').toLowerCase()),
+    modelLabel: value(AI_CONFIG_KEYS.modelLabel, ''),
+    advanced: parseAdvanced(map.get(AI_CONFIG_KEYS.advanced) ?? ''),
   };
 }
 

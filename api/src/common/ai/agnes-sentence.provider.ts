@@ -16,6 +16,7 @@ import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
 import { AiSettingsService } from './ai-settings.service.js';
 import { resolveTextChannel } from './ai.config.js';
+import { type ApiFormat, buildChatRequest, normalizeApiFormat, parseChatResponse } from './ai-protocol.js';
 import {
   AiProviderError,
   type ChainTopicDraft,
@@ -1165,36 +1166,30 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     const channel = imageBase64
       ? { channel: 'agnes' as const, baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.textModel }
       : resolveTextChannel(settings);
-    const endpoint = `${channel.baseUrl}/chat/completions`;
-    const authKey = channel.apiKey;
     const activeModel = channel.model;
+    // API 格式：视觉审核与 NIM 通道固定走 openai_chat（多模态 / NIM 仅 OpenAI 兼容）；
+    // 其余文本调用按后台「API 格式」所选协议。生图不在本方法内，始终走 Agnes images。
+    const format: ApiFormat =
+      imageBase64 || channel.channel === 'nim' ? 'openai_chat' : normalizeApiFormat(settings.apiFormat);
+    const request = buildChatRequest({
+      baseUrl: channel.baseUrl,
+      apiKey: channel.apiKey,
+      model: activeModel,
+      systemPrompt,
+      userContent,
+      temperature,
+      maxTokens: config.ai.maxOutputTokens,
+      jsonMode: true,
+      fullUrl: settings.fullUrl,
+      format,
+      advanced: settings.advanced,
+      imageBase64,
+    });
     try {
-      // 视觉审核走多模态：user 消息变成 [文本 + 图片] 数组；纯文本调用不传 imageBase64。
-      const userMessage: {
-        role: 'user';
-        content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
-      } = imageBase64
-        ? {
-            role: 'user',
-            content: [
-              { type: 'text', text: userContent },
-              { type: 'image_url', image_url: { url: `data:image/webp;base64,${imageBase64}` } },
-            ],
-          }
-        : { role: 'user', content: userContent };
-      const response = await fetch(endpoint, {
+      const response = await fetch(request.url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: activeModel,
-          messages: [{ role: 'system', content: systemPrompt }, userMessage],
-          temperature,
-          max_tokens: config.ai.maxOutputTokens,
-          response_format: { type: 'json_object' },
-        }),
+        headers: request.headers,
+        body: JSON.stringify(request.body),
         signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
       });
 
@@ -1210,15 +1205,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         });
       }
 
-      const body = (await response.json()) as {
-        choices?: Array<{
-          message?: { content?: string | null; reasoning_content?: string | null };
-        }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number };
-      };
-      const message = body.choices?.[0]?.message;
-      // content 为空时回退 reasoning_content：推理模型可能把输出放在 reasoning_content 里
-      const content = message?.content?.trim() || message?.reasoning_content?.trim() || '';
+      const body = await response.json();
+      // 按 API 格式统一解析（openai_chat 下 content 空时已回退 reasoning_content）
+      const parsed = parseChatResponse(format, body);
+      const content = parsed.content;
       if (!content) {
         throw new AiProviderError(`${callType} 返回为空`, { retryable: true });
       }
@@ -1235,8 +1225,8 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
         model: activeModel,
         bizId: options.bizId ?? 0,
-        promptTokens: body.usage?.prompt_tokens ?? 0,
-        completionTokens: body.usage?.completion_tokens ?? 0,
+        promptTokens: parsed.promptTokens,
+        completionTokens: parsed.completionTokens,
         latencyMs: Date.now() - startedAt,
         status: 'success',
       });

@@ -4,11 +4,93 @@
  * 约定：`apiKey` 留空表示**不修改**——前端拿不到真密钥，只能留空；
  * 传掩码值回填会把真 key 覆盖成 `****abcd`，所以这里只接受「新值或空」。
  */
-import { Transform } from 'class-transformer';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { API_FORMATS, type AdvancedAiConfig } from '../../common/ai/ai-protocol.js';
 
 /** 去除首尾空白。 */
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
+
+/** 高级参数（整体作为一个 JSON 块存 sys_config）。 */
+class AdvancedAiConfigDto implements AdvancedAiConfig {
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  modelSeries = '';
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100_000_000)
+  maxInputTokens = 0;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
+  maxOutputTokens = 0;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  toolRounds = 0;
+
+  @IsOptional()
+  @IsBoolean()
+  imageInput = true;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  thinkingParam = '';
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(30, { each: true })
+  thinkingOptions: string[] = [];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  thinkingValue = '';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(2)
+  temperature = -1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-1)
+  @Max(1)
+  topP = -1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(-1)
+  @Max(100)
+  topK = -1;
+}
 
 /** 保存 AI 设置。 */
 export class UpdateAiSettingsDto {
@@ -71,4 +153,27 @@ export class UpdateAiSettingsDto {
   @IsOptional()
   @IsIn(['agnes', 'nim'], { message: '生题通道只能是 agnes 或 nim' })
   genChannel?: 'agnes' | 'nim';
+
+  /** 文本通道 API 格式（生图不受影响） */
+  @IsOptional()
+  @IsIn([...API_FORMATS], { message: 'API 格式不合法' })
+  apiFormat?: 'openai_chat' | 'openai_responses' | 'anthropic';
+
+  /** 上游地址是否为完整 URL（含路径） */
+  @IsOptional()
+  @IsBoolean()
+  fullUrl?: boolean;
+
+  /** 模型展示名称（空 = 显示模型 ID） */
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  @MaxLength(64)
+  modelLabel?: string;
+
+  /** 高级参数（整体 JSON 块） */
+  @IsOptional()
+  @Type(() => AdvancedAiConfigDto)
+  @IsObject()
+  advanced?: AdvancedAiConfigDto;
 }

@@ -21,6 +21,14 @@ export const AI_CONFIG_KEYS = {
   nimModel: 'ai.agnes.nimModel',
   /** 生题内容生成通道选择：'agnes'（默认）或 'nim'（选 nim 时才走 NIM） */
   genChannel: 'ai.agnes.genChannel',
+  /** 文本通道 API 格式：openai_chat / openai_responses / anthropic（默认 openai_chat） */
+  apiFormat: 'ai.agnes.apiFormat',
+  /** 上游地址是否为「完整 URL」（含路径），'1' = 是 */
+  fullUrl: 'ai.agnes.fullUrl',
+  /** 模型展示名称（模型列表里显示的名字，空 = 显示模型 ID） */
+  modelLabel: 'ai.agnes.modelLabel',
+  /** 高级参数 JSON 块（模型系列/上下文窗口/工具轮数/图片输入/思考模式/采样参数） */
+  advanced: 'ai.agnes.advanced',
 } as const;
 
 /** 配置项的中文名（写库时作为 config_name）。 */
@@ -33,4 +41,8 @@ export const AI_CONFIG_NAMES: Record<string, string> = {
   [AI_CONFIG_KEYS.nimApiKey]: 'NIM API Key',
   [AI_CONFIG_KEYS.nimModel]: 'NIM 生题模型',
   [AI_CONFIG_KEYS.genChannel]: '生题通道选择',
+  [AI_CONFIG_KEYS.apiFormat]: 'API 格式',
+  [AI_CONFIG_KEYS.fullUrl]: '完整 URL',
+  [AI_CONFIG_KEYS.modelLabel]: '模型展示名称',
+  [AI_CONFIG_KEYS.advanced]: '高级参数',
 };

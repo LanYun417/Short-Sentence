@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildTaskRegistry, renderTaskDescription } from '../src/modules/task/task.registry.js';
 import { resolveTextChannel, type AiSettings } from '../src/common/ai/ai.config.js';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 
 /**
  * 任务说明里的模型名不写死（占位符 + 运行时渲染）。
@@ -49,6 +50,10 @@ describe('resolveTextChannel 决定说明里的文本模型', () => {
     nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
     nimApiKey: 'nv-key',
     nimModel: 'deepseek-v4-flash',
+    apiFormat: 'openai_chat',
+    fullUrl: false,
+    modelLabel: '',
+    advanced: { ...DEFAULT_ADVANCED },
     genChannel: 'agnes',
   };
 

@@ -11,6 +11,7 @@ import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { config } from '../config/config.js';
 import { loadAiSettings, type AiSettings } from './ai.config.js';
+import { DEFAULT_ADVANCED } from './ai-protocol.js';
 
 @Injectable()
 export class AiSettingsService implements OnApplicationBootstrap {
@@ -26,6 +27,10 @@ export class AiSettingsService implements OnApplicationBootstrap {
     nimApiKey: config.ai.agnes.nimApiKey,
     nimModel: config.ai.agnes.nimModel,
     genChannel: config.ai.agnes.genChannel,
+    apiFormat: 'openai_chat',
+    fullUrl: false,
+    modelLabel: '',
+    advanced: { ...DEFAULT_ADVANCED },
   };
 
   constructor(private readonly prisma: PrismaService) {}

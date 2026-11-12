@@ -14,6 +14,7 @@ import { type ResponseEnvelope } from '../../common/http/response.interceptor.js
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { maskSecret, saveAiSetting } from '../../common/ai/ai.config.js';
 import { AI_CONFIG_KEYS, AI_CONFIG_NAMES } from '../../common/ai/ai.constants.js';
+import { type AdvancedAiConfig, buildChatRequest } from '../../common/ai/ai-protocol.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { UpdateAiSettingsDto } from './ai-settings.dto.js';
 
@@ -41,6 +42,14 @@ export interface AiSettingsView {
   nimModel: string;
   /** 生题内容生成通道选择：'agnes'（默认）或 'nim' */
   genChannel: string;
+  /** 文本通道 API 格式 */
+  apiFormat: string;
+  /** 上游地址是否为完整 URL */
+  fullUrl: boolean;
+  /** 模型展示名称 */
+  modelLabel: string;
+  /** 高级参数 */
+  advanced: AdvancedAiConfig;
 }
 
 @Controller('ai-settings')
@@ -67,6 +76,10 @@ export class AiSettingsController {
       nimApiKeyMasked: maskSecret(settings.nimApiKey),
       nimModel: settings.nimModel,
       genChannel: settings.genChannel,
+      apiFormat: settings.apiFormat,
+      fullUrl: settings.fullUrl,
+      modelLabel: settings.modelLabel,
+      advanced: settings.advanced,
     };
   }
 
@@ -148,6 +161,39 @@ export class AiSettingsController {
         dto.genChannel,
       );
     }
+    if (dto.apiFormat !== undefined) {
+      await saveAiSetting(
+        this.prisma,
+        AI_CONFIG_KEYS.apiFormat,
+        AI_CONFIG_NAMES[AI_CONFIG_KEYS.apiFormat],
+        dto.apiFormat,
+      );
+    }
+    if (dto.fullUrl !== undefined) {
+      await saveAiSetting(
+        this.prisma,
+        AI_CONFIG_KEYS.fullUrl,
+        AI_CONFIG_NAMES[AI_CONFIG_KEYS.fullUrl],
+        dto.fullUrl ? '1' : '0',
+      );
+    }
+    if (dto.modelLabel !== undefined) {
+      await saveAiSetting(
+        this.prisma,
+        AI_CONFIG_KEYS.modelLabel,
+        AI_CONFIG_NAMES[AI_CONFIG_KEYS.modelLabel],
+        dto.modelLabel,
+      );
+    }
+    if (dto.advanced !== undefined) {
+      // 高级参数整体作为 JSON 块存储；存前剔除未填项（保留默认语义由 load 时 parseAdvanced 合并）
+      await saveAiSetting(
+        this.prisma,
+        AI_CONFIG_KEYS.advanced,
+        AI_CONFIG_NAMES[AI_CONFIG_KEYS.advanced],
+        JSON.stringify(dto.advanced),
+      );
+    }
     // 刷新运行时快照：下一次 AI 调用即用新配置（无需重启）
     await this.aiSettings.reload();
     return { __raw: true, data: null, message: '已保存' };
@@ -176,19 +222,26 @@ export class AiSettingsController {
       throw AppException.badRequest('尚未配置 NIM 生题模型');
     }
     const startedAt = Date.now();
+    // 走协议层构造请求，和真实调用走同一套格式/地址规则
+    const req = buildChatRequest({
+      baseUrl,
+      apiKey,
+      model,
+      systemPrompt: '',
+      userContent: 'ping',
+      temperature: 0,
+      maxTokens: 8,
+      jsonMode: false,
+      fullUrl: settings.fullUrl,
+      format: settings.apiFormat,
+      advanced: settings.advanced,
+    });
     let response: Response;
     try {
-      response = await fetch(`${baseUrl}/chat/completions`, {
+      response = await fetch(req.url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: 'ping' }],
-          max_tokens: 8,
-        }),
+        headers: req.headers,
+        body: JSON.stringify(req.body),
         signal: AbortSignal.timeout(20_000),
       });
     } catch (error) {
