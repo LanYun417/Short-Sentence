@@ -13,7 +13,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { AgnesSentenceProvider, type ChainModerationResult } from '../../../common/ai/agnes-sentence.provider.js';
+import { TextChatProvider, type ChainModerationResult } from '../../../common/ai/text-chat.provider.js';
 import { aliasOf, validateEntry } from './chain-content.js';
 
 /** 每人每天最多提交条数。 */
@@ -106,7 +106,7 @@ export class ChainService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly moderator: AgnesSentenceProvider,
+    private readonly moderator: TextChatProvider,
   ) {}
 
   /**

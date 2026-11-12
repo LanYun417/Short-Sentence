@@ -10,8 +10,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import type { GamifyService } from '../src/modules/client/gamify/gamify.service.js';
-import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
-import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
+import type { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
+import type { ImageGenApiProvider } from '../src/common/ai/image-gen.provider.js';
 import type { FileService } from '../src/common/file/file.service.js';
 import { StageService } from '../src/modules/client/stage/stage.service.js';
 import { STAGE_STORIES } from '../src/modules/client/stage/stage-stories.js';
@@ -87,8 +87,8 @@ function makeService(opts?: { emptyDb?: boolean }) {
   const service = new StageService(
     prisma as unknown as PrismaService,
     gamify as unknown as GamifyService,
-    ai as unknown as AgnesSentenceProvider,
-    imageGen as unknown as AgnesImageProvider,
+    ai as unknown as TextChatProvider,
+    imageGen as unknown as ImageGenApiProvider,
     fileService as unknown as FileService,
   );
   return { service, prisma, scripts, stories, stageScript, stageStory, categories };

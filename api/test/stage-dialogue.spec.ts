@@ -5,7 +5,7 @@
  * 坏结构返回空 replies 由服务层兜底，绝不把脏数据写进消息表。
  */
 import { describe, expect, it } from 'vitest';
-import { parseStageDialogueSummary, parseStageDialogueTurn } from '../src/common/ai/agnes-sentence.provider.js';
+import { parseStageDialogueSummary, parseStageDialogueTurn } from '../src/common/ai/text-chat.provider.js';
 
 describe('parseStageDialogueTurn', () => {
   it('解析多角色回复，保序并带中文翻译', () => {

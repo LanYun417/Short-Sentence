@@ -1,8 +1,8 @@
 /**
- * Agnes AI 生图 Provider（agnes-image-2.5-flash）。
+ * 生图 Provider（模型列表里第一个启用的「生图」用途模型）。
  * 模块职责：按场景提示词生成对话场景图，返回原始字节（转 webp 与入库由调用方负责）。
  *
- * 契约（官方文档）：POST {baseUrl}/images/generations，Bearer 认证；
+ * 契约：固定走 OpenAI 兼容的 images 接口（POST {baseUrl}/images/generations，Bearer 认证）；
  * 请求体 { model, prompt, size, ratio, extra_body: { response_format: 'url' } }；
  * 响应 data[0].url（默认）或 data[0].b64_json（return_base64: true / b64_json）。
  * 注意：`response_format` 只能放 extra_body 里，放顶层会被上游拒绝。
@@ -16,13 +16,13 @@ import { AiSettingsService } from './ai-settings.service.js';
 import { AiProviderError, type GeneratedImage, type ImageGenProvider } from './ai.types.js';
 import { resolveImageEndpoint, resolveModel } from './ai-protocol.js';
 
-/** Agnes 图像响应结构。 */
-interface AgnesImageResponse {
+/** 生图响应结构。 */
+interface ImageGenResponse {
   data?: Array<{ url?: string | null; b64_json?: string | null }>;
 }
 
 @Injectable()
-export class AgnesImageProvider implements ImageGenProvider {
+export class ImageGenApiProvider implements ImageGenProvider {
   constructor(
     private readonly aiCallLog: AiCallLogService,
     private readonly budget: AiBudgetService,
@@ -41,7 +41,7 @@ export class AgnesImageProvider implements ImageGenProvider {
     if (!model || !model.baseUrl || !model.modelId) {
       throw new AiProviderError('生图能力未配置（AI 设置里添加并启用一个「生图」用途的模型）', { retryable: false });
     }
-    // 预算闸门放在 try 之前：超额时抛不可重试错误且不写 ai_call_log（详见 agnes-sentence.provider）
+    // 预算闸门放在 try 之前：超额时抛不可重试错误且不写 ai_call_log（详见 text-chat.provider）
     await this.budget.assertWithinBudget();
 
     const startedAt = Date.now();
@@ -70,7 +70,7 @@ export class AgnesImageProvider implements ImageGenProvider {
         });
       }
 
-      const body = (await response.json()) as AgnesImageResponse;
+      const body = (await response.json()) as ImageGenResponse;
       const first = body.data?.[0];
       if (first?.b64_json) {
         const buffer = Buffer.from(first.b64_json, 'base64');
@@ -108,7 +108,7 @@ export class AgnesImageProvider implements ImageGenProvider {
   private async logCall(status: string, latencyMs: number, errorMessage: string | null): Promise<void> {
     await this.aiCallLog.record({
       type: 'image_gen',
-      provider: 'agnes-ai',
+      provider: resolveModel(this.aiSettings.current.models, 'image')?.id ?? 'image-model',
       model: resolveModel(this.aiSettings.current.models, 'image')?.modelId ?? '-',
       latencyMs,
       status,

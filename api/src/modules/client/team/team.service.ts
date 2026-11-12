@@ -14,7 +14,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { AgnesSentenceProvider } from '../../../common/ai/agnes-sentence.provider.js';
+import { TextChatProvider } from '../../../common/ai/text-chat.provider.js';
 import { GamifyService } from '../gamify/gamify.service.js';
 
 /** 小队人数上限（凑满即不再接收新成员）。 */
@@ -181,7 +181,7 @@ export class TeamService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamify: GamifyService,
-    private readonly moderator: AgnesSentenceProvider,
+    private readonly moderator: TextChatProvider,
   ) {}
 
   /** 我的小队（无队伍返回 null，前端展示「找队友」入口）。 */

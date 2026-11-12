@@ -101,9 +101,9 @@ model Sentence {
   imageFileId      BigInt   @default(0) @map("image_file_id") @db.BigInt
   /// 来源：ai 生成 / manual 运营手工
   source           String   @default("ai") @db.VarChar(20)
-  /// AI 生成时实际使用的文本通道：agnes / nim（null = 旧数据或手工题，不展示）
+  /// AI 生成时实际使用的文本模型配置 id（模型列表项；null = 旧数据或手工题，不展示）
   aiChannel        String?  @map("ai_channel") @db.VarChar(20)
-  /// AI 生成时实际使用的文本模型名（如 agnes-2.5-flash / deepseek-v4.1-flash；null 同上）
+  /// AI 生成时实际使用的文本模型名（如 gpt-4o-mini / deepseek-v4.1-flash；null 同上）
   aiModel          String?  @map("ai_model") @db.VarChar(100)
   /// 状态：pending_image 待生成 / ready 就绪 / offline 下架
   status           String   @default("pending_image") @db.VarChar(20)
@@ -289,9 +289,9 @@ model AiCallLog {
   id               BigInt   @id @default(autoincrement()) @db.BigInt
   /// 调用类型：sentence_gen 生题 / sentence_polish 优化 / sentence_review 审核 / word_meanings 逐词释义 / sentence_card_gen 句签 / image_gen 生图 / expand 造句 / word_root 词根
   type             String   @db.VarChar(20)
-  /// 提供方（如 nvidia / agnes-ai）
+  /// 提供方（模型配置 id，如 text-1；历史值可能是 nvidia / agnes-ai）
   provider         String   @db.VarChar(50)
-  /// 模型标识（如 deepseek-v4.1-flash / agnes-image-2.5-flash）
+  /// 模型标识（如 gpt-4o-mini / deepseek-v4.1-flash）
   model            String   @db.VarChar(100)
   /// 关联业务 id（批次/句子/用户，按类型解释）
   bizId            BigInt   @default(0) @map("biz_id") @db.BigInt

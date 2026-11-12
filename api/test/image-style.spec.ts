@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { IMAGE_2D_HARD_STYLE } from '../src/common/ai/image-style.js';
-import { IMAGE_REVIEW_SYSTEM_PROMPT } from '../src/common/ai/agnes-sentence.provider.js';
+import { IMAGE_REVIEW_SYSTEM_PROMPT } from '../src/common/ai/text-chat.provider.js';
 import { IMAGE_STYLE_SUFFIX } from '../src/modules/sentence/sentence-gen.service.js';
 import { STAGE_COVER_STYLE_SUFFIX } from '../src/modules/client/stage/stage-stories.js';
 import { SENTENCE_CARD_STYLE_SUFFIX } from '../src/modules/client/sentence-card/sentence-card.service.js';

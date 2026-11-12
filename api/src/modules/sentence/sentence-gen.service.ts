@@ -26,8 +26,8 @@ import {
 import { AppException } from '../../common/exception/app.exception.js';
 import { FileService } from '../../common/file/file.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { AgnesSentenceProvider } from '../../common/ai/agnes-sentence.provider.js';
-import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
+import { TextChatProvider } from '../../common/ai/text-chat.provider.js';
+import { ImageGenApiProvider } from '../../common/ai/image-gen.provider.js';
 import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { resolveModel } from '../../common/ai/ai-protocol.js';
@@ -175,8 +175,8 @@ export class SentenceGenService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sentenceGen: AgnesSentenceProvider,
-    private readonly imageGen: AgnesImageProvider,
+    private readonly sentenceGen: TextChatProvider,
+    private readonly imageGen: ImageGenApiProvider,
     private readonly fileService: FileService,
     private readonly budget: AiBudgetService,
     private readonly aiSettings: AiSettingsService,

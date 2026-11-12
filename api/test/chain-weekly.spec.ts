@@ -6,9 +6,9 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
-import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
+import type { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
 import type { ChainTopicDraft } from '../src/common/ai/ai.types.js';
-import { normalizeChainText, parseChainTopicBatch } from '../src/common/ai/agnes-sentence.provider.js';
+import { normalizeChainText, parseChainTopicBatch } from '../src/common/ai/text-chat.provider.js';
 import { ChainService } from '../src/modules/client/chain/chain.service.js';
 import { cronOf } from '../src/modules/task/task.registry.js';
 
@@ -140,7 +140,7 @@ function makeService(drafts: ChainTopicDraft[]) {
   const moderator = {
     generateChainTopics: vi.fn(async () => drafts),
   };
-  const service = new ChainService(prisma as unknown as PrismaService, moderator as unknown as AgnesSentenceProvider);
+  const service = new ChainService(prisma as unknown as PrismaService, moderator as unknown as TextChatProvider);
   return { service, prisma, moderator, topics };
 }
 

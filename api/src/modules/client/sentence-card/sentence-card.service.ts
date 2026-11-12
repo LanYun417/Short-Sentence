@@ -14,8 +14,8 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { dayContextOf, parseDateKey } from '../../../common/calendar/day-context.js';
 import { config } from '../../../common/config/config.js';
 import { FileService } from '../../../common/file/file.service.js';
-import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
-import { AgnesSentenceProvider } from '../../../common/ai/agnes-sentence.provider.js';
+import { ImageGenApiProvider } from '../../../common/ai/image-gen.provider.js';
+import { TextChatProvider } from '../../../common/ai/text-chat.provider.js';
 import { withRetry } from '../../../common/ai/concurrency.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IMAGE_2D_HARD_STYLE } from '../../../common/ai/image-style.js';
@@ -58,8 +58,8 @@ export class SentenceCardService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly themeGen: AgnesSentenceProvider,
-    private readonly imageGen: AgnesImageProvider,
+    private readonly themeGen: TextChatProvider,
+    private readonly imageGen: ImageGenApiProvider,
     private readonly fileService: FileService,
   ) {}
 

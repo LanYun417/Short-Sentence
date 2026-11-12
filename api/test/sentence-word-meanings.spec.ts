@@ -8,7 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
-import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
+import { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
 import type { SentenceDraft } from '../src/common/ai/ai.types.js';
 
 /** 构造最小可用草稿。 */
@@ -26,7 +26,7 @@ function draft(sentenceEn: string): SentenceDraft {
 /** 构造 Provider，并把上游 fetch 替换成固定 JSON 输出。 */
 function buildProvider(content: unknown) {
   const record = vi.fn(async () => undefined);
-  const provider = new AgnesSentenceProvider(
+  const provider = new TextChatProvider(
     { record } as never,
     { assertWithinBudget: vi.fn(async () => undefined) } as never,
     {
@@ -61,7 +61,7 @@ function buildProvider(content: unknown) {
   return { provider, record };
 }
 
-describe('AgnesSentenceProvider.annotateBatch', () => {
+describe('TextChatProvider.annotateBatch', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });

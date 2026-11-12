@@ -16,7 +16,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
 import { AiBudgetService } from '../src/common/ai/ai-budget.service.js';
 import { AiSettingsService } from '../src/common/ai/ai-settings.service.js';
-import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
+import { ImageGenApiProvider } from '../src/common/ai/image-gen.provider.js';
 import { FileService } from '../src/common/file/file.service.js';
 import { imageGenConfig } from '../src/common/config/image-gen-config.js';
 
@@ -937,7 +937,7 @@ async function main(): Promise<void> {
     // AI 配置优先读 sys_config（与后台「AI 设置」同源），空值回落环境变量
     const aiSettings = new AiSettingsService(prisma);
     await aiSettings.reload();
-    const imageGen = new AgnesImageProvider(new AiCallLogService(prisma), new AiBudgetService(prisma), aiSettings);
+    const imageGen = new ImageGenApiProvider(new AiCallLogService(prisma), new AiBudgetService(prisma), aiSettings);
     const fileService = new FileService(prisma);
     let done = 0;
     let failed = 0;

@@ -26,8 +26,8 @@ import { AiCallLogService } from './ai/ai-call-log.service.js';
 import { AiQuotaService } from './ai/ai-quota.service.js';
 import { AiBudgetService } from './ai/ai-budget.service.js';
 import { AiSettingsService } from './ai/ai-settings.service.js';
-import { AgnesSentenceProvider } from './ai/agnes-sentence.provider.js';
-import { AgnesImageProvider } from './ai/agnes-image.provider.js';
+import { TextChatProvider } from './ai/text-chat.provider.js';
+import { ImageGenApiProvider } from './ai/image-gen.provider.js';
 import { MailService } from './mail/mail.service.js';
 
 @Global()
@@ -61,8 +61,8 @@ import { MailService } from './mail/mail.service.js';
     AiBudgetService,
     // AI 配置运行时快照（sys_config 优先、环境变量兜底；后台改完刷新）
     AiSettingsService,
-    AgnesSentenceProvider,
-    AgnesImageProvider,
+    TextChatProvider,
+    ImageGenApiProvider,
     // 邮件（腾讯云 SES；凭证存 sys_config，后台可编辑，缺配置时发送接口报可读错误）
     MailService,
     // 静态资源链的中间件：由 app.setup.ts 显式挂到 express 上，需要能被 app.get 解析
@@ -94,8 +94,8 @@ import { MailService } from './mail/mail.service.js';
     AiQuotaService,
     AiBudgetService,
     AiSettingsService,
-    AgnesSentenceProvider,
-    AgnesImageProvider,
+    TextChatProvider,
+    ImageGenApiProvider,
     MailService,
   ],
 })

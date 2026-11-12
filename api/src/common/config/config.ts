@@ -339,28 +339,25 @@ export const config = {
    * 与 JWT 的 fail-fast 区别：JWT 缺失等于鉴权体系不可用，AI 缺失只是增值功能不可用。
    */
   ai: {
-    agnes: {
-      /** Agnes AI 入口（生文与生图共用同一 Base URL 与密钥） */
+    /**
+     * 旧版单模型/NIM 通道配置的**迁移兜底**（环境变量）。
+     * 现在以后台「AI 设置」的模型列表（ai.models）为准；这里的值只在
+     * 老库首次升级、读不到 ai.models 时用来拼出初始模型列表（迁移后即删旧配置）。
+     * 环境变量名保留 AI_AGNES_* 是为了兼容已有部署的 .env，不再有别的语义。
+     */
+    legacy: {
+      /** 旧版入口（生文与生图共用同一 Base URL 与密钥） */
       baseUrl: process.env.AI_AGNES_BASE_URL ?? 'https://api.agnes-ai.cn/v1',
       apiKey: process.env.AI_AGNES_API_KEY ?? '',
-      /** 图像模型（题目配图 / 句签生图） */
+      /** 旧版图像模型（题目配图 / 句签生图） */
       imageModel: process.env.AI_AGNES_IMAGE_MODEL ?? process.env.AI_AGNES_MODEL ?? 'agnes-image-2.5-flash',
-      /** 文本模型（生题 / 造句 / 词根解析 / 句签文案；OpenAI 兼容 chat/completions） */
+      /** 旧版文本模型（生题 / 造句 / 词根解析 / 句签文案；OpenAI 兼容 chat/completions） */
       textModel: process.env.AI_AGNES_TEXT_MODEL ?? 'agnes-2.5-flash',
-      /**
-       * 英伟达 NIM 文本通道（可选，由 genChannel 选择是否启用）。OpenAI 兼容，baseUrl 默认 NVIDIA NIM 入口。
-       * genChannel='nim' 时所有**纯文本**对话调用走 NIM（生题/优化/审核/解析/逐词释义/句签/客户端 AI）；
-       * 图像生成与图像审核始终走全局 Agnes——纯文本 NIM 模型不支持视觉输入。
-       */
+      /** 旧版 NIM 文本通道（可选，由 genChannel 选择是否启用） */
       nimBaseUrl: process.env.AI_AGNES_NIM_BASE_URL ?? '',
       nimApiKey: process.env.AI_AGNES_NIM_API_KEY ?? '',
       nimModel: process.env.AI_AGNES_NIM_MODEL ?? '',
-      /**
-       * 生题内容生成通道选择：'agnes'（默认）或 'nim'。
-       * 选 'nim' 时才走 NIM（且要求 nimBaseUrl/nimApiKey/nimModel 齐备）；
-       * 选 'agnes' 时即使配了 NIM 也不用——两套配置可共存、随时切换。
-       * 非法值一律回落 'agnes'。
-       */
+      /** 旧版生题通道选择：'agnes'（默认）或 'nim' */
       genChannel: process.env.AI_AGNES_GEN_CHANNEL === 'nim' ? 'nim' : 'agnes',
     },
     /** 生题并发上限（Agnes 限流未知，保守取 2） */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AI_CONFIG_KEYS } from '../src/common/ai/ai.constants.js';
+import { AI_CONFIG_KEYS, LEGACY_AI_CONFIG_KEYS } from '../src/common/ai/ai.constants.js';
 import { loadAiSettings } from '../src/common/ai/ai.config.js';
 import { config } from '../src/common/config/config.js';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
@@ -45,20 +45,20 @@ describe('loadAiSettings', () => {
     const settings = await loadAiSettings(fakePrisma([]));
     const text = settings.models.find((m) => m.purpose === 'text');
     const image = settings.models.find((m) => m.purpose === 'image');
-    expect(text?.modelId).toBe(config.ai.agnes.textModel);
-    expect(text?.baseUrl).toBe(config.ai.agnes.baseUrl.replace(/\/+$/, ''));
-    expect(image?.modelId).toBe(config.ai.agnes.imageModel);
+    expect(text?.modelId).toBe(config.ai.legacy.textModel);
+    expect(text?.baseUrl).toBe(config.ai.legacy.baseUrl.replace(/\/+$/, ''));
+    expect(image?.modelId).toBe(config.ai.legacy.imageModel);
     expect(text?.enabled).toBe(true);
   });
 
   it('迁移：genChannel=nim 且有 NIM 模型时，文本模型优先取 NIM，Agnes 置为备用（禁用）', async () => {
     const settings = await loadAiSettings(
       fakePrisma([
-        { configKey: AI_CONFIG_KEYS.genChannel, configValue: 'nim' },
-        { configKey: AI_CONFIG_KEYS.nimBaseUrl, configValue: 'https://nim.example.com/v1' },
-        { configKey: AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
-        { configKey: AI_CONFIG_KEYS.nimApiKey, configValue: 'nim-key' },
-        { configKey: AI_CONFIG_KEYS.textModel, configValue: 'agnes-text' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.genChannel, configValue: 'nim' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.nimBaseUrl, configValue: 'https://nim.example.com/v1' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.nimApiKey, configValue: 'nim-key' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.textModel, configValue: 'agnes-text' },
       ]),
     );
     const texts = settings.models.filter((m) => m.purpose === 'text');
@@ -71,7 +71,7 @@ describe('loadAiSettings', () => {
 
   it('迁移：baseUrl 去掉末尾斜杠，避免拼出 //chat/completions', async () => {
     const settings = await loadAiSettings(
-      fakePrisma([{ configKey: AI_CONFIG_KEYS.baseUrl, configValue: 'https://example.com/v1///' }]),
+      fakePrisma([{ configKey: LEGACY_AI_CONFIG_KEYS.baseUrl, configValue: 'https://example.com/v1///' }]),
     );
     expect(settings.models.find((m) => m.purpose === 'text')?.baseUrl).toBe('https://example.com/v1');
   });
@@ -79,13 +79,13 @@ describe('loadAiSettings', () => {
   it('迁移：非法 genChannel 回落 agnes（不会误启用 NIM）', async () => {
     const settings = await loadAiSettings(
       fakePrisma([
-        { configKey: AI_CONFIG_KEYS.genChannel, configValue: 'xxx' },
-        { configKey: AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.genChannel, configValue: 'xxx' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
       ]),
     );
     const texts = settings.models.filter((m) => m.purpose === 'text');
     expect(texts).toHaveLength(1);
-    expect(texts[0].modelId).toBe(config.ai.agnes.textModel);
+    expect(texts[0].modelId).toBe(config.ai.legacy.textModel);
   });
 
   it('模型项脏数据被剔除 / 缺字段回落默认', async () => {

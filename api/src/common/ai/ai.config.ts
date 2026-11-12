@@ -18,7 +18,7 @@
 import { AppException } from '../exception/app.exception.js';
 import { config } from '../config/config.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
-import { AI_CONFIG_KEYS } from './ai.constants.js';
+import { AI_CONFIG_KEYS, LEGACY_AI_CONFIG_KEYS } from './ai.constants.js';
 import {
   type AdvancedAiConfig,
   type AiModelConfig,
@@ -50,14 +50,14 @@ function migrateLegacyModels(map: Map<string, string>): AiModelConfig[] {
     const fromDb = (map.get(key) ?? '').trim();
     return fromDb || fallback.trim();
   };
-  const apiKey = value(AI_CONFIG_KEYS.apiKey, config.ai.agnes.apiKey);
-  const baseUrl = normalizeBaseUrl(value(AI_CONFIG_KEYS.baseUrl, config.ai.agnes.baseUrl));
-  const textModel = value(AI_CONFIG_KEYS.textModel, config.ai.agnes.textModel);
-  const imageModel = value(AI_CONFIG_KEYS.imageModel, config.ai.agnes.imageModel);
-  const genChannel = value(AI_CONFIG_KEYS.genChannel, config.ai.agnes.genChannel) === 'nim' ? 'nim' : 'agnes';
+  const apiKey = value(LEGACY_AI_CONFIG_KEYS.apiKey, config.ai.legacy.apiKey);
+  const baseUrl = normalizeBaseUrl(value(LEGACY_AI_CONFIG_KEYS.baseUrl, config.ai.legacy.baseUrl));
+  const textModel = value(LEGACY_AI_CONFIG_KEYS.textModel, config.ai.legacy.textModel);
+  const imageModel = value(LEGACY_AI_CONFIG_KEYS.imageModel, config.ai.legacy.imageModel);
+  const genChannel = value(LEGACY_AI_CONFIG_KEYS.genChannel, config.ai.legacy.genChannel) === 'nim' ? 'nim' : 'agnes';
 
   // 文本模型：原来选 NIM 且有 NIM 模型时用 NIM 三件套（缺项回落 Agnes），否则用 Agnes。
-  const nimModel = value(AI_CONFIG_KEYS.nimModel, config.ai.agnes.nimModel);
+  const nimModel = value(LEGACY_AI_CONFIG_KEYS.nimModel, config.ai.legacy.nimModel);
   const isNim = genChannel === 'nim' && !!nimModel;
   const models: AiModelConfig[] = [];
   if (isNim) {
@@ -67,10 +67,10 @@ function migrateLegacyModels(map: Map<string, string>): AiModelConfig[] {
       enabled: true,
       format: 'openai_chat',
       fullUrl: false,
-      baseUrl: normalizeBaseUrl(value(AI_CONFIG_KEYS.nimBaseUrl, config.ai.agnes.nimBaseUrl) || baseUrl),
+      baseUrl: normalizeBaseUrl(value(LEGACY_AI_CONFIG_KEYS.nimBaseUrl, config.ai.legacy.nimBaseUrl) || baseUrl),
       modelId: nimModel,
       modelLabel: '',
-      apiKey: value(AI_CONFIG_KEYS.nimApiKey, config.ai.agnes.nimApiKey) || apiKey,
+      apiKey: value(LEGACY_AI_CONFIG_KEYS.nimApiKey, config.ai.legacy.nimApiKey) || apiKey,
       advanced: { ...DEFAULT_ADVANCED },
     });
   }
@@ -79,13 +79,13 @@ function migrateLegacyModels(map: Map<string, string>): AiModelConfig[] {
       id: isNim ? 'text-2' : 'text-1',
       purpose: 'text',
       enabled: !isNim,
-      format: normalizeApiFormat(value(AI_CONFIG_KEYS.apiFormat, 'openai_chat')),
-      fullUrl: ['1', 'true', 'yes'].includes(value(AI_CONFIG_KEYS.fullUrl, '').toLowerCase()),
+      format: normalizeApiFormat(value(LEGACY_AI_CONFIG_KEYS.apiFormat, 'openai_chat')),
+      fullUrl: ['1', 'true', 'yes'].includes(value(LEGACY_AI_CONFIG_KEYS.fullUrl, '').toLowerCase()),
       baseUrl,
       modelId: textModel,
-      modelLabel: value(AI_CONFIG_KEYS.modelLabel, ''),
+      modelLabel: value(LEGACY_AI_CONFIG_KEYS.modelLabel, ''),
       apiKey,
-      advanced: parseAdvanced(map.get(AI_CONFIG_KEYS.advanced) ?? ''),
+      advanced: parseAdvanced(map.get(LEGACY_AI_CONFIG_KEYS.advanced) ?? ''),
     });
   }
   if (imageModel) {
@@ -111,7 +111,7 @@ function migrateLegacyModels(map: Map<string, string>): AiModelConfig[] {
  */
 export async function loadAiSettings(prisma: PrismaService): Promise<AiSettings> {
   const rows = await prisma.sysConfig.findMany({
-    where: { configKey: { in: Object.values(AI_CONFIG_KEYS) } },
+    where: { configKey: { in: [AI_CONFIG_KEYS.models, ...Object.values(LEGACY_AI_CONFIG_KEYS)] } },
     select: { configKey: true, configValue: true },
   });
   const map = new Map(rows.map((row) => [row.configKey, row.configValue]));
@@ -121,6 +121,13 @@ export async function loadAiSettings(prisma: PrismaService): Promise<AiSettings>
     return { models };
   }
   return { models: migrateLegacyModels(map), migrated: true };
+}
+
+/** 迁移完成后清理旧键（`ai.agnes.*`），让「参数管理」里只剩 ai.models。 */
+export async function clearLegacyAiConfig(prisma: PrismaService): Promise<void> {
+  await prisma.sysConfig.deleteMany({
+    where: { configKey: { in: Object.values(LEGACY_AI_CONFIG_KEYS) } },
+  });
 }
 
 /** 写入整份模型列表（唯一事实源，覆盖式）。 */

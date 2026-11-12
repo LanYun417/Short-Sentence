@@ -8,7 +8,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
-import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
+import type { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
 import { aliasOf, validateEntry } from '../src/modules/client/chain/chain-content.js';
 import { CHAIN_DAILY_LIMIT, CHAIN_REPORT_HIDE_AT, ChainService } from '../src/modules/client/chain/chain.service.js';
 
@@ -170,7 +170,7 @@ function makePrisma(
 
   const service = new ChainService(
     prisma as unknown as PrismaService,
-    { moderateChainEntry: vi.fn(async () => moderation) } as unknown as AgnesSentenceProvider,
+    { moderateChainEntry: vi.fn(async () => moderation) } as unknown as TextChatProvider,
   );
   return { service, entries, likes };
 }

@@ -1,13 +1,12 @@
 /**
- * Agnes 生题 Provider（agnes-2.5-flash，OpenAI 兼容 chat/completions）。
+ * 文本对话 Provider（模型列表里第一个启用的「生文」用途模型）。
  * 模块职责：按主题批量生成句子草稿（英文句子/中文释义/音标/对话场景提示词/难度/分类），
  * 以及每日句签的主题文案。
  *
- * 契约（官方文档）：POST {baseUrl}/chat/completions，Bearer 认证；
- * 请求 { model: 'agnes-2.5-flash', messages, temperature, response_format: json_object }；
- * 响应 choices[0].message.content（OpenAI 兼容）。
- * Base URL 与密钥与生图（AgnesImageProvider）共用，仅模型不同。
- * 限流未知，调用方（生成流水线）必须用信号量控制并发，本 Provider 只管单次调用。
+ * 契约：按模型自身配置的 API 格式发请求（OpenAI Chat Completions / Responses / Anthropic Messages，
+ * 见 ai-protocol.ts），Bearer / x-api-key 认证与响应解析都在那里统一处理。
+ * 上游与模型都由后台「AI 设置」的模型列表决定，本 Provider 只管单次调用。
+ * 限流未知，调用方（生成流水线）必须用信号量控制并发。
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../config/config.js';
@@ -690,8 +689,8 @@ export function parseStageDialogueSummary(content: string): StageDialogueSummary
 }
 
 @Injectable()
-export class AgnesSentenceProvider implements SentenceGenProvider {
-  private readonly logger = new Logger(AgnesSentenceProvider.name);
+export class TextChatProvider implements SentenceGenProvider {
+  private readonly logger = new Logger(TextChatProvider.name);
 
   constructor(
     private readonly aiCallLog: AiCallLogService,
@@ -1170,7 +1169,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
         retryable: false,
       });
     }
-    const channel = { channel: 'agnes' as const, baseUrl: model.baseUrl, apiKey: model.apiKey, model: model.modelId };
+    const channel = { channel: 'text' as const, baseUrl: model.baseUrl, apiKey: model.apiKey, model: model.modelId };
     const activeModel = channel.model;
     // API 格式：视觉审核固定走 openai_chat（多模态），其余文本调用按模型自身配置的格式。
     // 生图不在本方法内，走单独的「生图」用途模型。
@@ -1225,7 +1224,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
 
       await this.aiCallLog.record({
         type: callType,
-        // 走 NIM 通道时记 nvidia，否则 agnes——与实际请求的上游一致，便于按 provider 分组统计
+        // 记实际使用的模型 id 作为调用日志的 provider 分组依据
         provider: model.id,
         model: activeModel,
         bizId: options.bizId ?? 0,

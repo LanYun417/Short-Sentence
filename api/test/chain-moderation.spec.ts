@@ -5,7 +5,7 @@
  * 其余（未知结论、乱码、空理由）一律 review 转人工——绝不把「模型胡说」当放行。
  */
 import { describe, expect, it } from 'vitest';
-import { parseChainModeration } from '../src/common/ai/agnes-sentence.provider.js';
+import { parseChainModeration } from '../src/common/ai/text-chat.provider.js';
 
 describe('parseChainModeration', () => {
   it('approve 原样透传', () => {

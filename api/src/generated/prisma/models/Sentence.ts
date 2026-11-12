@@ -1590,11 +1590,11 @@ export type $SentencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
      */
     source: string
     /**
-     * AI 生成时实际使用的文本通道：agnes / nim（null = 旧数据或手工题，不展示）
+     * AI 生成时实际使用的文本模型配置 id（模型列表项；null = 旧数据或手工题，不展示）
      */
     aiChannel: string | null
     /**
-     * AI 生成时实际使用的文本模型名（如 agnes-2.5-flash / deepseek-v4.1-flash；null 同上）
+     * AI 生成时实际使用的文本模型名（如 gpt-4o-mini / deepseek-v4.1-flash；null 同上）
      */
     aiModel: string | null
     /**

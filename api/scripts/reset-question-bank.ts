@@ -22,8 +22,8 @@ import { ImageScaleService } from '../src/common/file/file-guards.js';
 import { AiCallLogService } from '../src/common/ai/ai-call-log.service.js';
 import { AiBudgetService } from '../src/common/ai/ai-budget.service.js';
 import { AiSettingsService } from '../src/common/ai/ai-settings.service.js';
-import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
-import { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
+import { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
+import { ImageGenApiProvider } from '../src/common/ai/image-gen.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
 import { FilesService } from '../src/modules/files/files.service.js';
 
@@ -54,8 +54,8 @@ async function main(): Promise<void> {
   await aiSettings.reload();
   const gen = new SentenceGenService(
     prisma,
-    new AgnesSentenceProvider(aiCallLog, budget, aiSettings),
-    new AgnesImageProvider(aiCallLog, budget, aiSettings),
+    new TextChatProvider(aiCallLog, budget, aiSettings),
+    new ImageGenApiProvider(aiCallLog, budget, aiSettings),
     new FileService(prisma),
     budget,
     aiSettings,

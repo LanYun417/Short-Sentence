@@ -11,15 +11,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { normalizeGeneratedImage } from '../../../common/ai/image-normalize.js';
 import { isFestivalName } from '../../../common/calendar/festivals.js';
-import { AgnesImageProvider } from '../../../common/ai/agnes-image.provider.js';
+import { ImageGenApiProvider } from '../../../common/ai/image-gen.provider.js';
 import { FileService } from '../../../common/file/file.service.js';
 import { config } from '../../../common/config/config.js';
 import {
-  AgnesSentenceProvider,
+  TextChatProvider,
   type StageDialogueHint,
   type StageDialogueReply,
   type StageDialogueSummary,
-} from '../../../common/ai/agnes-sentence.provider.js';
+} from '../../../common/ai/text-chat.provider.js';
 import { withRetry } from '../../../common/ai/concurrency.js';
 import type { StageStoryDraft } from '../../../common/ai/ai.types.js';
 import { AppException } from '../../../common/exception/app.exception.js';
@@ -279,8 +279,8 @@ export class StageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamify: GamifyService,
-    private readonly ai: AgnesSentenceProvider,
-    private readonly imageGen: AgnesImageProvider,
+    private readonly ai: TextChatProvider,
+    private readonly imageGen: ImageGenApiProvider,
     private readonly fileService: FileService,
   ) {}
 

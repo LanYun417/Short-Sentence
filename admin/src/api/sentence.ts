@@ -57,7 +57,7 @@ export function regenerateSentenceImageApi(id: number, scenePrompt?: string): Pr
  * 批量重新生图（异步，单题接口的批量版；换配图风格时用）。
  *
  * 后端**不要求全部成功**：不存在、正在生成中、已有生图任务在跑的题会被跳过并
- * 原样回给前端，其余题照常受理。单次上限 50 张（每张都消耗 Agnes 配额）。
+ * 原样回给前端，其余题照常受理。单次上限 50 张（每张都消耗生图模型配额）。
  */
 export function batchRegenerateSentenceImageApi(ids: number[]): Promise<{ accepted: number[]; skipped: number[] }> {
   return post<{ accepted: number[]; skipped: number[] }>('/sentences/batch-regenerate-image', { ids });

@@ -448,7 +448,7 @@ async function handleBatchOnline(): Promise<void> {
  *
  * 与单题版共用同一套轮询（pollRegen 按题目 id 各起一个定时器），
  * 受理后先刷新列表（状态变「待生成」），出图的题会在行内自动更新。
- * 单次上限 50：每张图都消耗 Agnes 配额（免费额度 40 RPM / 并发 2），
+ * 单次上限 50：每张图都消耗生图模型配额，
  * 一次 50 张要约 75 秒以上，超出部分运营分两批点即可。
  */
 async function handleBatchRegen(): Promise<void> {
@@ -988,7 +988,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="来源" width="80">
             <template #default="{ row }">
-              <!-- AI 生成的题目：点击 tag 打开详情，查看该题实际使用的 AI 通道（Agnes/NIM）与模型 -->
+              <!-- AI 生成的题目：点击 tag 打开详情，查看该题实际使用的模型配置与模型 ID -->
               <el-tag
                 v-if="row.source === 'ai'"
                 v-permission="'sentence:query'"

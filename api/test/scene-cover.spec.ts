@@ -13,8 +13,8 @@ import { describe, expect, it, vi } from 'vitest';
 import sharp from 'sharp';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import type { FileService } from '../src/common/file/file.service.js';
-import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
-import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
+import type { TextChatProvider } from '../src/common/ai/text-chat.provider.js';
+import type { ImageGenApiProvider } from '../src/common/ai/image-gen.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
 import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 
@@ -83,8 +83,8 @@ function makeService(opts?: { reviewPass?: boolean }) {
 
   const service = new SentenceGenService(
     prisma as unknown as PrismaService,
-    sentenceGen as unknown as AgnesSentenceProvider,
-    imageGen as unknown as AgnesImageProvider,
+    sentenceGen as unknown as TextChatProvider,
+    imageGen as unknown as ImageGenApiProvider,
     fileService as unknown as FileService,
     {} as never,
     {

@@ -559,11 +559,11 @@ export type $AiCallLogPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      */
     type: string
     /**
-     * 提供方（如 nvidia / agnes-ai）
+     * 提供方（模型配置 id，如 text-1；历史值可能是 nvidia / agnes-ai）
      */
     provider: string
     /**
-     * 模型标识（如 deepseek-v4.1-flash / agnes-image-2.5-flash）
+     * 模型标识（如 gpt-4o-mini / deepseek-v4.1-flash）
      */
     model: string
     /**
