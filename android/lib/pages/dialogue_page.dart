@@ -388,6 +388,7 @@ class _DialoguePageState extends ConsumerState<DialoguePage> {
                   _Bubble(
                     message: message,
                     colors: colors,
+                    showTranslation: _showTranslation,
                     emoji: message.role == 'user' ? null : (_roleEmoji[message.speaker] ?? '🤖'),
                   ),
               if (_ended) _Recap(dialogue: dialogue, claimed: _claimed, onClaim: _claim),
@@ -538,10 +539,18 @@ class _DialoguePageState extends ConsumerState<DialoguePage> {
 
 /// 单条对话气泡。
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.colors, this.emoji});
+  const _Bubble({
+    required this.message,
+    required this.colors,
+    required this.showTranslation,
+    this.emoji,
+  });
 
   final StageDialogueMessage message;
   final AppColors colors;
+
+  /// 翻译开关：关闭时隐藏中文（与 Web 端一致）
+  final bool showTranslation;
   final String? emoji;
 
   @override
@@ -612,7 +621,8 @@ class _Bubble extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (!isUser && message.contentZh != null && message.contentZh!.isNotEmpty)
+                // 中文翻译跟随「翻译」开关：关掉后隐藏（与 Web 端一致；服务端按全程是否开启判 +50% 经验）
+                if (showTranslation && !isUser && message.contentZh != null && message.contentZh!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(left: 4, top: 4),
                     child: Text(
