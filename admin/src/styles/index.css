@@ -253,3 +253,55 @@ html.theme-transition.theme-transition *::after {
     stroke 0.3s ease,
     box-shadow 0.3s ease;
 }
+
+/* ============================================================
+ * 原生滚动条兜底造型（类 el-scrollbar）
+ *
+ * 背景：内容区 / 侧边栏 / 弹窗正文等「主滚动区」都走 el-scrollbar，
+ * 但仍有接管不到的原生滚动条——表格横向滚动、代码块、下拉面板、
+ * 登录 / 404 等布局外页面。不处理就会在细滚动条旁边冒出系统粗白条，
+ * 非常割裂。
+ *
+ * 造型对齐 el-scrollbar：6px、圆角、半透明轨道、hover 加深；
+ * 暗色模式换更亮的灰以免糊在深色底上。Firefox 走 scrollbar-width /
+ * scrollbar-color（不支持伪元素）。
+ * ========================================================== */
+* {
+  scrollbar-color: rgb(144 147 153 / 35%) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(144 147 153 / 35%);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(144 147 153 / 55%);
+}
+
+/* 横竖交汇处不要出现小块白角 */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html.dark * {
+  scrollbar-color: rgb(203 213 225 / 30%) transparent;
+}
+
+html.dark *::-webkit-scrollbar-thumb {
+  background-color: rgb(203 213 225 / 30%);
+}
+
+html.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(203 213 225 / 50%);
+}

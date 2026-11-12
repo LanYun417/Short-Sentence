@@ -82,6 +82,8 @@ npm run build        # 生产构建（预压缩 .gz/.br）
 1. **`el-scrollbar` 自带 `height: 100%`**（EP 默认样式）。放进**高度确定**的容器（抽屉 body、定高 flex 项、`h-full` 容器）时会被撑满整高，把上方内容顶出可视区 —— 容器随即冒出**原生滚动条**，而页面看起来内容并不多。所以：要么给容器限高（`max-height`）、要么用 flex + `min-h-0 flex-1`；确实只需要内容高度时显式覆盖 `height: auto`。
 2. **`Pagination` 外层就是用 `el-scrollbar` 包横向滚动的**（窄屏分页器超宽）。它已把根节点高度覆盖成 `auto`（`.pagination-scrollbar`），但把 `Pagination` 放进定高容器时仍建议外层加 `shrink-0`，别让它抢高度。
 
+**原生滚动条兜底造型**：主滚动区都是 el-scrollbar，但表格横向滚动、代码块、下拉面板、登录/404 等布局外页面仍会产生原生滚动条。`src/styles/index.css` 已全局统一成 el-scrollbar 同款（6px、圆角、半透明轨道、hover 加深，暗色用更亮的灰），**不要再在组件里单独写 `::-webkit-scrollbar`**，以免出现两套粗细。
+
 ## 8. 弹窗与分页约定（BasicDialog / Pagination）
 
 **弹窗一律用 `src/components/BasicDialog`（禁裸写 `<el-dialog>`），分页一律用 `src/components/Pagination`（禁裸写 `<el-pagination>`）**——`guard:components` 扫 `admin/src` 拦截，两个封装自身豁免。
