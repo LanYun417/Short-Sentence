@@ -7604,39 +7604,6 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
-        "path": "/api/client/questions/memory-galaxy",
-        "summary": "记忆星系：学过的句子按场景聚成星座，坐标为后端确定性生成（双端一致）",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "params": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "页码，从 1 开始",
-            "example": 1
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "type": "integer",
-            "required": false,
-            "description": "每页条数",
-            "example": 10
-          }
-        ],
-        "examples": {
-          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/memory-galaxy?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
-          "query": {
-            "page": 1,
-            "pageSize": 10
-          }
-        }
-      },
-      {
-        "method": "GET",
         "path": "/api/client/questions/memory-stats",
         "summary": "记忆健康概览（遗忘曲线 / 待复习分布可视化）",
         "permission": [],

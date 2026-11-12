@@ -200,9 +200,6 @@ function iconOf(name: string): string {
     <!-- 记忆巩固独立成卡，与上方「场景探索」卡片之间由外层 space-y 留出间隙 -->
     <MemoryHealthCard />
 
-    <!-- 记忆星系：学过的句子按场景聚成星座（与记忆巩固互补，一个讲趋势、一个讲收藏感） -->
-    <MemoryGalaxyCard />
-
     <!-- AI 私教：把上面的记忆数据变成「今天具体练什么」，规则层始终可用 -->
     <AiCoachCard />
   </div>
