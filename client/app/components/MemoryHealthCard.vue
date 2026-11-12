@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+/**
+ * 记忆巩固卡片：统计数字 + 未来 30 天复习分布（柱状图）+ 遗忘曲线（折线面积图）。
+ * 图表统一走 echarts（按需引入，见 utils/echarts.ts），不再手绘 SVG，深色模式自动换色。
+ */
+import { computed, ref } from 'vue';
 
 interface MemoryStats {
   reviewed: number;
@@ -13,28 +17,112 @@ interface MemoryStats {
 
 const { data } = await useSsrApi<MemoryStats>('ss:memory-stats', '/client/questions/memory-stats');
 
-const maxDist = computed(() => Math.max(1, ...(data.value?.distribution ?? [])));
+/* ------------------------------ 主题（跟随深色模式） ------------------------------ */
 
-// 柱状图：未来 30 天每天到期题数，viewBox 宽 300
-const bars = computed(() =>
-  (data.value?.distribution ?? []).map((v, i) => ({
-    key: i,
-    x: (i * 300) / 30 + 1.5,
-    h: (v / maxDist.value) * 68,
-  })),
+const colorMode = useColorMode();
+const isDark = computed(() => {
+  const v = colorMode.value;
+  if (v === 'dark') return true;
+  if (v === 'light') return false;
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+});
+
+const palette = computed(() =>
+  isDark.value
+    ? {
+        tooltipBg: '#1e293b',
+        tooltipBorder: '#334155',
+        tooltipText: '#e2e8f0',
+        axis: '#64748b',
+      }
+    : {
+        tooltipBg: '#ffffff',
+        tooltipBorder: '#e2e8f0',
+        tooltipText: '#0f172a',
+        axis: '#94a3b8',
+      },
 );
 
-// 曲线：R(day)=exp(-day/S)，viewBox 300×84，R=1→y=12、R=0→y=80
-const curvePath = computed(() => {
-  const pts = data.value?.retentionCurve ?? [];
-  if (pts.length === 0) return '';
-  return pts
-    .map((p, i) => {
-      const x = (i * 300) / 30;
-      const y = 80 - p.retention * 68;
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+/* ------------------------------ 数据 ------------------------------ */
+
+const distData = computed(() => data.value?.distribution ?? []);
+const curvePts = computed(() => data.value?.retentionCurve ?? []);
+
+const barRef = ref<HTMLElement>();
+const curveRef = ref<HTMLElement>();
+
+type AxisTipItem = { dataIndex: number; axisValue?: unknown; data?: unknown };
+
+useEchart(barRef, () => {
+  const p = palette.value;
+  return {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: p.tooltipBg,
+      borderColor: p.tooltipBorder,
+      textStyle: { color: p.tooltipText, fontSize: 11 },
+      formatter: (params: unknown) => {
+        const list = (Array.isArray(params) ? params : [params]) as AxisTipItem[];
+        const f = list[0];
+        return `第 ${f.dataIndex + 1} 天：<b>${String(f.data)}</b> 题待复习`;
+      },
+    },
+    grid: { left: 2, right: 2, top: 10, bottom: 2 },
+    xAxis: { type: 'category', data: distData.value.map((_, i) => i + 1), show: false },
+    yAxis: { type: 'value', show: false, minInterval: 1 },
+    series: [
+      {
+        type: 'bar',
+        data: distData.value,
+        barWidth: '55%',
+        itemStyle: { color: '#0ea5e9', borderRadius: [3, 3, 0, 0] },
+        emphasis: { itemStyle: { color: '#0284c7' } },
+      },
+    ],
+  } as Record<string, unknown>;
+});
+
+useEchart(curveRef, () => {
+  const p = palette.value;
+  return {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: p.tooltipBg,
+      borderColor: p.tooltipBorder,
+      textStyle: { color: p.tooltipText, fontSize: 11 },
+      formatter: (params: unknown) => {
+        const list = (Array.isArray(params) ? params : [params]) as AxisTipItem[];
+        const f = list[0];
+        const retention = typeof f.data === 'number' ? f.data : 0;
+        return `第 ${String(f.axisValue ?? f.dataIndex + 1)} 天：保留 <b>${(retention * 100).toFixed(0)}%</b>`;
+      },
+    },
+    grid: { left: 2, right: 2, top: 10, bottom: 2 },
+    xAxis: { type: 'category', data: curvePts.value.map((c) => c.day), show: false },
+    yAxis: { type: 'value', min: 0, max: 1, show: false },
+    series: [
+      {
+        type: 'line',
+        smooth: 0.4,
+        symbol: 'none',
+        data: curvePts.value.map((c) => c.retention),
+        lineStyle: { width: 2.5, color: '#6366f1' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(99,102,241,0.28)' },
+              { offset: 1, color: 'rgba(99,102,241,0.01)' },
+            ],
+          },
+        },
+      },
+    ],
+  } as Record<string, unknown>;
 });
 </script>
 
@@ -67,24 +155,9 @@ const curvePath = computed(() => {
     </div>
 
     <p class="mb-1 mt-4 text-xs text-slate-400">未来 30 天复习分布</p>
-    <svg viewBox="0 0 300 76" class="h-16 w-full text-sky-400 dark:text-sky-500" preserveAspectRatio="none">
-      <rect
-        v-for="b in bars"
-        :key="b.key"
-        :x="b.x"
-        :y="76 - b.h"
-        width="7"
-        :height="b.h"
-        rx="2"
-        fill="currentColor"
-        opacity="0.8"
-      />
-    </svg>
+    <div ref="barRef" class="h-20 w-full"></div>
 
     <p class="mb-1 mt-4 text-xs text-slate-400">记忆保留率（每复习一次即被拉平）</p>
-    <svg viewBox="0 0 300 84" class="h-16 w-full text-indigo-400 dark:text-indigo-500">
-      <line x1="0" y1="80" x2="300" y2="80" stroke="currentColor" stroke-opacity="0.15" />
-      <path :d="curvePath" fill="none" stroke="currentColor" stroke-width="2" />
-    </svg>
+    <div ref="curveRef" class="h-20 w-full"></div>
   </div>
 </template>

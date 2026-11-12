@@ -40,6 +40,7 @@
     "@tiptap/suggestion": "^3.32.0",
     "@tiptap/vue-3": "^3.32.0",
     "@vueuse/nuxt": "^15.0.0",
+    "echarts": "^6.1.0",
     "html2canvas": "^1.4.1",
     "nuxt": "^4.6.2",
     "pinia": "^4.1.0",
