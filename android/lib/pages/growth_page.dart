@@ -1677,7 +1677,32 @@ class _MemoryGalaxyCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: AspectRatio(
               aspectRatio: 1,
-              child: CustomPaint(painter: _GalaxyPainter(galaxy: galaxy)),
+              // LayoutBuilder 取布局尺寸，点击时把触点换算成归一化坐标找星座（区域是正方形）
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) {
+                      if (w <= 0) return;
+                      final px = details.localPosition.dx / w;
+                      final py = details.localPosition.dy / w;
+                      for (final c in galaxy.clusters) {
+                        if (c.starCount <= 0) continue;
+                        final ring = 12 + math.min(26, c.starCount * 1.6);
+                        final dx = px - c.x;
+                        final dy = py - c.y;
+                        final hit = (ring + 6) / w;
+                        if (dx * dx + dy * dy <= hit * hit) {
+                          context.push('/scenes');
+                          return;
+                        }
+                      }
+                    },
+                    child: CustomPaint(painter: _GalaxyPainter(galaxy: galaxy)),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1722,6 +1747,7 @@ class _GalaxyLegend extends StatelessWidget {
 }
 
 /// 星空自绘：坐标 / 颜色 / 亮度全部来自后端，与 Web 端同一套数据。
+/// 视觉构成与 Web 端同源：深空渐变 + 装饰星云 + 场景星云 + 星座连线 + 径向渐变光晕 + 四角星芒。
 /// 这里不加入闪烁动画（静态星图功耗更低，也不需要在 Widget 测试里关循环动画）。
 class _GalaxyPainter extends CustomPainter {
   const _GalaxyPainter({required this.galaxy});
@@ -1746,6 +1772,46 @@ class _GalaxyPainter extends CustomPainter {
     tp.paint(canvas, Offset(x - tp.width / 2, y));
   }
 
+  /** 径向渐变光晕（以星星为中心的圆形渐变，比 maskFilter 模糊便宜）。 */
+  Paint _glowPaint(Color c, Offset center, double r) => Paint()
+    ..shader = ui.Gradient.radial(
+      center,
+      r,
+      <Color>[
+        c.withValues(alpha: 0.5),
+        c.withValues(alpha: 0.14),
+        c.withValues(alpha: 0),
+      ],
+      const <double>[0, 0.45, 1],
+    );
+
+  /** 四角星芒路径（毕业星/大星才有，与 Web 端同形状）。 */
+  Path _sparklePath(Offset c, double r) {
+    final w = r * 0.7;
+    final l = r * 3.2;
+    return Path()
+      ..moveTo(c.dx, c.dy - l)
+      ..lineTo(c.dx + w, c.dy - w)
+      ..lineTo(c.dx + l, c.dy)
+      ..lineTo(c.dx + w, c.dy + w)
+      ..lineTo(c.dx, c.dy + l)
+      ..lineTo(c.dx - w, c.dy + w)
+      ..lineTo(c.dx - l, c.dy)
+      ..lineTo(c.dx - w, c.dy - w)
+      ..close();
+  }
+
+  /** 一个星座内占比最高的色调（星云与星座线用它着色，与 Web 端同算法）。 */
+  Color _dominantTone(List<GalaxyStar> stars) {
+    if (stars.isEmpty) return _stable;
+    final count = <String, int>{};
+    for (final s in stars) {
+      count[s.tone] = (count[s.tone] ?? 0) + 1;
+    }
+    final top = count.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+    return _tone(top);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final bg = Paint()
@@ -1760,6 +1826,33 @@ class _GalaxyPainter extends CustomPainter {
         const <double>[0.0, 0.6, 1.0],
       );
     canvas.drawRect(Offset.zero & size, bg);
+
+    // 装饰星云：两团固定的紫/青雾，增加纵深（位置与 Web 端同比例）
+    void decorativeNebula(Offset center, double rx, double ry, Color color) {
+      canvas.drawOval(
+        Rect.fromCenter(center: center, width: rx * 2, height: ry * 2),
+        Paint()
+          ..shader = ui.Gradient.radial(
+            center,
+            math.max(rx, ry),
+            <Color>[color.withValues(alpha: 0.16), color.withValues(alpha: 0)],
+            const <double>[0, 1],
+          ),
+      );
+    }
+
+    decorativeNebula(
+      Offset(size.width * 0.193, size.height * 0.173),
+      size.width * 0.3,
+      size.height * 0.207,
+      const Color(0xFF6366F1),
+    );
+    decorativeNebula(
+      Offset(size.width * 0.827, size.height * 0.84),
+      size.width * 0.287,
+      size.height * 0.233,
+      const Color(0xFF0EA5E9),
+    );
 
     // 背景星尘：与 Web 端同 seed 同算法，纯装饰
     var seed = 20261108;
@@ -1779,6 +1872,65 @@ class _GalaxyPainter extends CustomPainter {
         Paint()..color = const Color(0xFFCBD5E1).withValues(alpha: o),
       );
     }
+
+    // 按场景分组的星星（星座线与场景星云都要）
+    final byClusterMap = <int, List<GalaxyStar>>{};
+    for (final s in galaxy.stars) {
+      byClusterMap.putIfAbsent(s.categoryId, () => <GalaxyStar>[]).add(s);
+    }
+
+    // 场景星云：按该星座的主色调着色，点亮才显示（半径与 Web 端一致 = ring * 1.8）
+    for (final c in galaxy.clusters) {
+      if (c.starCount <= 0) continue;
+      final center = Offset(c.x * size.width, c.y * size.height);
+      final ring = 12 + math.min(26, c.starCount * 1.6);
+      final nebulaR = ring * 1.8;
+      canvas.drawCircle(
+        center,
+        nebulaR,
+        Paint()
+          ..shader = ui.Gradient.radial(
+            center,
+            nebulaR,
+            <Color>[
+              _dominantTone(byClusterMap[c.categoryId] ?? const <GalaxyStar>[]).withValues(alpha: 0.22),
+              _dominantTone(byClusterMap[c.categoryId] ?? const <GalaxyStar>[]).withValues(alpha: 0.07),
+              _dominantTone(byClusterMap[c.categoryId] ?? const <GalaxyStar>[]).withValues(alpha: 0),
+            ],
+            const <double>[0, 0.55, 1],
+          ),
+      );
+    }
+
+    // 星座线：同场景星星绕质心按角度排序后连成折线（与 Web 端同算法，≥3 颗才连）
+    byClusterMap.forEach((categoryId, list) {
+      if (list.length < 3) return;
+      final cx = list.map((s) => s.x * size.width).reduce((a, b) => a + b) / list.length;
+      final cy = list.map((s) => s.y * size.height).reduce((a, b) => a + b) / list.length;
+      final sorted = [...list]..sort((a, b) {
+            final aa = math.atan2(a.y * size.height - cy, a.x * size.width - cx);
+            final bb = math.atan2(b.y * size.height - cy, b.x * size.width - cx);
+            return aa.compareTo(bb);
+          });
+      final path = Path();
+      for (var i = 0; i < sorted.length; i++) {
+        final p = Offset(sorted[i].x * size.width, sorted[i].y * size.height);
+        if (i == 0) {
+          path.moveTo(p.dx, p.dy);
+        } else {
+          path.lineTo(p.dx, p.dy);
+        }
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = _dominantTone(list).withValues(alpha: 0.3),
+      );
+    });
 
     // 星座轮廓：点亮为实线圈、未探索为虚线圈
     for (final c in galaxy.clusters) {
@@ -1811,21 +1963,20 @@ class _GalaxyPainter extends CustomPainter {
         c.name,
         center.dx,
         math.min(size.height - 10, center.dy + ring + 10),
-        lit ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+        lit ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
       );
     }
 
-    // 记忆星：光晕 + 实心核
+    // 记忆星：径向渐变光晕 + 四角星芒 + 实心核
     for (final s in galaxy.stars) {
       final center = Offset(s.x * size.width, s.y * size.height);
       final r = s.radius * 1.35;
       final color = _tone(s.tone);
-      if (s.tone == 'gold' || s.radius > 2.6) {
-        canvas.drawCircle(
-          center,
-          r * 2.4,
-          Paint()..color = color.withValues(alpha: 0.13),
-        );
+      final big = s.tone == 'gold' || s.radius > 2.6;
+      final haloR = r * (big ? 3.4 : 2.4);
+      canvas.drawCircle(center, haloR, _glowPaint(color, center, haloR));
+      if (s.tone == 'gold' || s.radius > 2.8) {
+        canvas.drawPath(_sparklePath(center, r), Paint()..color = color.withValues(alpha: 0.75));
       }
       canvas.drawCircle(
         center,
