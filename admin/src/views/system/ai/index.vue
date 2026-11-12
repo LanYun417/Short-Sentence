@@ -268,15 +268,15 @@ onMounted(() => {
                 >
               </template>
 
-              <el-form label-width="140px" class="mt-2">
-                <el-form-item label="模型系列" class="mb-6">
+              <el-form label-width="140px" class="advanced-form mt-2">
+                <el-form-item label="模型系列">
                   <el-select v-model="form.advanced.modelSeries" class="w-full">
                     <el-option v-for="o in MODEL_SERIES_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
                   </el-select>
                   <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义，未选择时用默认配置</span>
                 </el-form-item>
 
-                <el-form-item label="上下文窗口 输入" class="mb-6">
+                <el-form-item label="上下文窗口 输入">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
                       v-model="form.advanced.maxInputTokens"
@@ -298,7 +298,7 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="上下文窗口 输出" class="mb-6">
+                <el-form-item label="上下文窗口 输出">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
                       v-model="form.advanced.maxOutputTokens"
@@ -320,7 +320,7 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="工具调用轮数" class="mb-6">
+                <el-form-item label="工具调用轮数">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
                       v-model="form.advanced.toolRounds"
@@ -334,14 +334,14 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="支持图片输入" class="mb-6">
+                <el-form-item label="支持图片输入">
                   <el-radio-group v-model="form.advanced.imageInput">
                     <el-radio :value="true">支持</el-radio>
                     <el-radio :value="false">不支持</el-radio>
                   </el-radio-group>
                 </el-form-item>
 
-                <el-form-item label="思考模式" class="mb-6">
+                <el-form-item label="思考模式">
                   <div class="w-full">
                     <div class="flex items-center gap-3">
                       <span class="w-16 shrink-0 text-xs text-gray-400">参数名</span>
@@ -373,7 +373,7 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="采样参数" class="mb-6">
+                <el-form-item label="采样参数">
                   <div class="flex w-full flex-wrap items-center gap-6">
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Temperature</span>
@@ -487,3 +487,14 @@ onMounted(() => {
     </el-card>
   </div>
 </template>
+
+<style scoped>
+/* 高级配置各行之间留出呼吸感。
+   不用 Tailwind 工具类：项目的工具类被包在 @layer utilities 里，
+   而 Element Plus 样式无层级（优先级更高），打在 el-form-item 上的
+   margin 工具类会被 EP 的 `margin-bottom: 18px` 压掉；
+   这里用 scoped 普通类选择器提高特异性，稳稳覆盖。 */
+.advanced-form .el-form-item {
+  margin-bottom: 26px;
+}
+</style>
