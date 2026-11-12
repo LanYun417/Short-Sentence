@@ -190,6 +190,7 @@ export default defineNuxtConfig({
       '/chains',
       '/team',
       '/achievements',
+      '/scenes',
     ],
   },
 
@@ -209,6 +210,7 @@ export default defineNuxtConfig({
       '/chains',
       '/team',
       '/achievements',
+      '/scenes',
     ],
     urls: () => [
       { loc: '/', changefreq: 'daily', priority: 1 },

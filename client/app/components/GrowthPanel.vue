@@ -8,9 +8,13 @@ import type { GamifyAchievement, GamifyOverview } from '~/types';
 
 const { data: overview } = await useSsrApi<GamifyOverview>('ss:gamify', '/client/gamify/overview');
 
-/** 首页勋章墙展示的个数（其余进「全部」弹窗），图标-only 布局一行即可放下很多。 */
+/** 首页勋章墙展示的个数（其余进「全部」页），图标-only 布局一行即可放下很多。 */
 const VISIBLE_ACHIEVEMENTS = 9;
 const visibleAchievements = computed(() => overview.value?.achievements.slice(0, VISIBLE_ACHIEVEMENTS) ?? []);
+
+/** 首页场景探索预览的个数（其余进「查看全部」/scenes 页，不用横向滚动）。 */
+const PREVIEW_SCENES = 6;
+const previewScenes = computed(() => overview.value?.sceneMap.slice(0, PREVIEW_SCENES) ?? []);
 /** 点开某枚勋章看详情（首页勋章墙点开用）。「全部」入口跳转 /achievements 页。 */
 const selected = ref<GamifyAchievement | null>(null);
 
@@ -152,16 +156,26 @@ function iconOf(name: string): string {
     <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80">
       <div class="mb-3 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">场景探索</h3>
-        <span class="text-xs tabular-nums text-slate-400">
-          {{ overview.unlockedScenes }} / {{ overview.totalScenes }}
-        </span>
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs tabular-nums text-slate-400">
+            {{ overview.unlockedScenes }} / {{ overview.totalScenes }}
+          </span>
+          <button
+            v-if="overview.sceneMap.length > PREVIEW_SCENES"
+            type="button"
+            class="text-xs font-medium text-sky-600 transition hover:underline dark:text-sky-400"
+            @click="navigateTo('/scenes')"
+          >
+            查看全部
+          </button>
+        </div>
       </div>
-      <!-- 横向滚动条：场景再多也只占一行高度，页面不会被拉长 -->
-      <div class="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
+      <!-- 预览前 6 个场景；全部场景进 /scenes 页，不用横向滚动 -->
+      <div class="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
         <div
-          v-for="scene in overview.sceneMap"
+          v-for="scene in previewScenes"
           :key="scene.id"
-          class="w-28 shrink-0 rounded-xl border p-3 transition"
+          class="rounded-xl border p-2.5 transition"
           :class="
             scene.unlocked
               ? 'border-sky-200 bg-sky-50/50 dark:border-sky-500/20 dark:bg-sky-500/5'
@@ -174,9 +188,9 @@ function iconOf(name: string): string {
               class="h-4 w-4 shrink-0"
               :class="scene.unlocked ? 'text-sky-500' : 'text-slate-400'"
             />
-            <span class="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{{ scene.name }}</span>
+            <span class="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">{{ scene.name }}</span>
           </div>
-          <p class="mt-1 text-[10px] text-slate-400">
+          <p class="mt-1 text-[9px] text-slate-400">
             {{ scene.unlocked ? `已练 ${scene.practicedCount} 句` : '未解锁' }}
           </p>
         </div>

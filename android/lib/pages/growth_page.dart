@@ -219,8 +219,12 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                                 : '已点亮 ${growth.overview!.unlockedScenes} 个场景',
                             icon: Icons.explore_rounded,
                             index: 4,
+                            actionLabel: growth.scenes.length > 6 ? '全部' : null,
+                            onAction: growth.scenes.length > 6
+                                ? () => context.push('/scenes')
+                                : null,
                           ),
-                          _SceneMap(items: growth.scenes),
+                          _SceneMap(items: growth.scenes.take(6).toList()),
                           const SizedBox(height: 20),
                           SectionHeader(
                             title: '我的句签',
@@ -1938,26 +1942,29 @@ class _SceneMap extends StatelessWidget {
         child: SizedBox(height: 72, child: Center(child: Text('暂无场景数据'))),
       );
     }
-    return SizedBox(
-      height: 128,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        itemCount: items.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => StaggeredEntrance(
-          index: 5 + index,
-          offset: const Offset(18, 0),
-          child: _SceneCard(item: items[index]),
-        ),
+    // 预览用 3 列紧凑网格（首页只传前 6 个），全部场景进 /scenes 页，不用横向滚动
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.1,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) => StaggeredEntrance(
+        index: 5 + index,
+        child: _ScenePreviewTile(item: items[index]),
       ),
     );
   }
 }
 
-class _SceneCard extends StatelessWidget {
-  const _SceneCard({required this.item});
+/// 首页场景预览的紧凑小卡片。
+class _ScenePreviewTile extends StatelessWidget {
+  const _ScenePreviewTile({required this.item});
 
   final SceneMapItem item;
 
@@ -1966,42 +1973,28 @@ class _SceneCard extends StatelessWidget {
     final colors = context.colors;
     final unlocked = item.unlocked;
     return Container(
-      width: 124,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.line.withValues(alpha: 0.8)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: unlocked ? colors.card : colors.cardMuted.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: unlocked ? colors.brand.withValues(alpha: 0.3) : colors.line,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Container(
-            width: 38,
-            height: 38,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(13),
-              gradient: unlocked
-                  ? LinearGradient(
-                      colors: <Color>[
-                        colors.brand.withValues(alpha: 0.9),
-                        const Color(0xFF8B5CF6).withValues(alpha: 0.9),
-                      ],
-                    )
-                  : null,
-              color: unlocked ? null : colors.cardMuted,
+              borderRadius: BorderRadius.circular(10),
+              color: unlocked ? colors.brand.withValues(alpha: 0.15) : colors.cardMuted,
             ),
             child: Icon(
               unlocked ? appIcon(item.icon) : Icons.lock_outline_rounded,
-              size: 19,
-              color: unlocked ? Colors.white : colors.inkFaint,
+              size: 16,
+              color: unlocked ? colors.brand : colors.inkFaint,
             ),
           ),
           const Spacer(),
@@ -2010,15 +2003,14 @@ class _SceneCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: unlocked ? colors.ink : colors.inkSoft,
             ),
           ),
-          const SizedBox(height: 2),
           Text(
-            unlocked ? '练过 ${item.practicedCount} 句' : '还没去过',
-            style: TextStyle(fontSize: 10.5, color: colors.inkFaint),
+            unlocked ? '练过 ${item.practicedCount} 句' : '未解锁',
+            style: TextStyle(fontSize: 9.5, color: colors.inkFaint),
           ),
         ],
       ),

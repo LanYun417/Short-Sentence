@@ -22,6 +22,27 @@ class AchievementsPage extends ConsumerStatefulWidget {
 }
 
 class _AchievementsPageState extends ConsumerState<AchievementsPage> {
+  /// 分类默认折叠（第一个分类默认展开）：记录展开中的分类 label。
+  final Set<String> _expanded = <String>{};
+  /// 筛选：all / unlocked / locked。
+  String _filter = 'all';
+
+  static const List<({String key, String label})> _filters = <({String key, String label})>[
+    (key: 'all', label: '全部'),
+    (key: 'unlocked', label: '已解锁'),
+    (key: 'locked', label: '未解锁'),
+  ];
+
+  void _toggle(String label) {
+    setState(() {
+      if (_expanded.contains(label)) {
+        _expanded.remove(label);
+      } else {
+        _expanded.add(label);
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -35,8 +56,13 @@ class _AchievementsPageState extends ConsumerState<AchievementsPage> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final growth = ref.watch(growthControllerProvider);
-    final items = growth.achievements;
+    final all = growth.achievements;
+    final items = _filtered(all, _filter);
     final overview = growth.overview;
+    final groups = _groupAchievements(items);
+    // 默认展开第一个分类；用户一旦手动折叠/展开，则以 _expanded 为准
+    final expandedSet =
+        _expanded.isEmpty && groups.isNotEmpty ? <String>{groups.first.label} : _expanded;
 
     return Scaffold(
       backgroundColor: colors.canvas,
@@ -53,40 +79,75 @@ class _AchievementsPageState extends ConsumerState<AchievementsPage> {
                     ? null
                     : '已解锁 ${overview.unlockedAchievements} / ${overview.totalAchievements}',
               ),
+              // 筛选 chips
+              if (overview != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: <Widget>[
+                      for (final f in _filters) ...<Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _FilterChip(
+                            label: f.label,
+                            selected: _filter == f.key,
+                            onTap: () => setState(() => _filter = f.key),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               if (items.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: Text('成就正在准备中…')),
+                  child: Center(child: Text('该筛选下暂无成就…')),
                 )
               else
-                for (final group in _groupAchievements(items)) ...<Widget>[
+                for (final group in groups) ...<Widget>[
                   AppCard(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
                     radius: 20,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Text(
-                              group.label,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: colors.ink,
-                              ),
+                        PressScale(
+                          onTap: () => _toggle(group.label),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: <Widget>[
+                                Icon(
+                                  expandedSet.contains(group.label)
+                                      ? Icons.keyboard_arrow_down_rounded
+                                      : Icons.keyboard_arrow_right_rounded,
+                                  size: 18,
+                                  color: colors.inkFaint,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  group.label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: colors.ink,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${group.unlocked}/${group.items.length}',
+                                  style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(child: Divider(height: 1, color: colors.line)),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${group.unlocked}/${group.items.length}',
-                              style: TextStyle(fontSize: 11, color: colors.inkFaint),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Divider(height: 1, color: colors.line)),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        for (final item in group.items) _AchievementRow(item: item),
+                        if (expandedSet.contains(group.label)) ...<Widget>[
+                          const SizedBox(height: 4),
+                          for (final item in group.items) _AchievementRow(item: item),
+                        ],
                       ],
                     ),
                   ),
@@ -193,6 +254,46 @@ class _AchievementRow extends StatelessWidget {
               foreground: unlocked ? colors.success : colors.inkFaint,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 按筛选过滤成就列表。
+List<AchievementView> _filtered(List<AchievementView> all, String filter) {
+  if (filter == 'unlocked') return all.where((a) => a.unlocked).toList();
+  if (filter == 'locked') return all.where((a) => !a.unlocked).toList();
+  return all;
+}
+
+/// 筛选 chip。
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return PressScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? colors.brand : colors.card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? colors.brand : colors.line),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : colors.inkSoft,
+          ),
         ),
       ),
     );

@@ -4,7 +4,7 @@
  *
  * 从成长面板「全部」进入。私有页：不进 sitemap / 禁止抓取（nuxt.config.ts 已排除）。
  */
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { GamifyAchievement, GamifyOverview } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -63,8 +63,24 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 const CATEGORY_ORDER = ['behavior', 'persist', 'explore', 'luck'];
 
-const groupedAchievements = computed(() => {
+/** 筛选：全部 / 已解锁 / 未解锁。 */
+const filter = ref<'all' | 'unlocked' | 'locked'>('all');
+
+const FILTERS: Array<{ key: 'all' | 'unlocked' | 'locked'; label: string }> = [
+  { key: 'all', label: '全部' },
+  { key: 'unlocked', label: '已解锁' },
+  { key: 'locked', label: '未解锁' },
+];
+
+const filteredAchievements = computed(() => {
   const list = overview.value?.achievements ?? [];
+  if (filter.value === 'unlocked') return list.filter((a) => a.unlocked);
+  if (filter.value === 'locked') return list.filter((a) => !a.unlocked);
+  return list;
+});
+
+const groupedAchievements = computed(() => {
+  const list = filteredAchievements.value;
   const map = new Map<string, GamifyAchievement[]>();
   for (const a of list) {
     const c = a.category || 'other';
@@ -87,6 +103,27 @@ const groupedAchievements = computed(() => {
 });
 
 const selected = ref<GamifyAchievement | null>(null);
+
+/** 分类默认折叠，但第一个分类默认展开：记录展开中的分类 label。 */
+const expanded = ref<Set<string>>(new Set<string>());
+
+function toggleCategory(label: string): void {
+  const next = new Set(expanded.value);
+  if (next.has(label)) next.delete(label);
+  else next.add(label);
+  expanded.value = next;
+}
+
+// 数据就绪后默认展开第一个分类
+watch(
+  groupedAchievements,
+  (groups) => {
+    if (expanded.value.size === 0 && groups.length > 0) {
+      expanded.value = new Set([groups[0].label]);
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -111,7 +148,29 @@ const selected = ref<GamifyAchievement | null>(null);
       </div>
     </header>
 
+    <!-- 筛选：全部 / 已解锁 / 未解锁 -->
+    <div v-if="overview" class="mb-4 flex gap-2">
+      <button
+        v-for="f in FILTERS"
+        :key="f.key"
+        type="button"
+        class="rounded-full px-3 py-1.5 text-xs font-medium transition ring-1"
+        :class="
+          filter === f.key
+            ? 'bg-sky-600 text-white ring-sky-600'
+            : 'bg-white text-slate-500 ring-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:ring-slate-700 dark:hover:bg-slate-800'
+        "
+        @click="filter = f.key"
+      >
+        {{ f.label }}
+      </button>
+    </div>
+
     <p v-if="!overview" class="py-16 text-center text-sm text-slate-400">加载中…</p>
+
+    <div v-else-if="groupedAchievements.length === 0" class="py-16 text-center text-sm text-slate-400">
+      该筛选下暂无成就
+    </div>
 
     <div v-else class="space-y-6">
       <section
@@ -119,12 +178,21 @@ const selected = ref<GamifyAchievement | null>(null);
         :key="group.category"
         class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80"
       >
-        <div class="mb-3 flex items-center gap-2">
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 py-1"
+          :aria-expanded="expanded.has(group.label)"
+          @click="toggleCategory(group.label)"
+        >
+          <UIcon
+            :name="expanded.has(group.label) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+            class="h-4 w-4 shrink-0 text-slate-400"
+          />
           <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ group.label }}</h2>
           <span class="text-[11px] tabular-nums text-slate-400">{{ group.unlocked }}/{{ group.items.length }}</span>
           <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800"></span>
-        </div>
-        <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+        </button>
+        <ul v-show="expanded.has(group.label)" class="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
           <li v-for="item in group.items" :key="item.code">
             <button
               type="button"
