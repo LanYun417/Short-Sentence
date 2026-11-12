@@ -61,8 +61,8 @@ model SysConfig {
   configName  String   @map("config_name") @db.VarChar(100)
   /// 参数键名（业务引用键，创建后不可修改）
   configKey   String   @unique @map("config_key") @db.VarChar(100)
-  /// 参数键值
-  configValue String   @default("") @map("config_value") @db.VarChar(500)
+  /// 参数键值（通用参数远小于 500；AI 模型列表 ai.models 是整表 JSON，故放宽到 TEXT）
+  configValue String   @map("config_value") @db.Text
   /// 是否内置：1 内置 / 0 自定义
   systemFlag  Int      @default(0) @map("system_flag") @db.TinyInt
   /// 备注

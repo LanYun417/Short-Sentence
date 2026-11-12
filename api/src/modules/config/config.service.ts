@@ -13,7 +13,15 @@ import { buildPageResult, parsePagination, readString } from '../../common/utils
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { PageResult } from '../../common/types.js';
 import { recordAfter, recordBefore } from '../../common/log/operation-snapshot.js';
+import { AI_CONFIG_KEYS } from '../../common/ai/ai.constants.js';
 import type { CreateConfigDto, UpdateConfigDto } from './dto/config.dto.js';
+
+/**
+ * 由专属页面管理的参数键，不在通用「参数管理」列表出现。
+ * `ai.models` 是 AI 模型列表的 JSON 整体（后台「AI 设置」页维护），
+ * 在通用列表里既看不懂也没法安全编辑，故隐藏；其余系统参数不受影响。
+ */
+const DEDICATED_PAGE_KEYS: readonly string[] = [AI_CONFIG_KEYS.models];
 
 /** 参数（对外 DTO）。 */
 export interface SysConfigBrief {
@@ -75,7 +83,8 @@ export class ConfigService {
     const rows = await this.prisma.sysConfig.findMany({
       where: {
         ...(configName ? { configName: { contains: configName } } : {}),
-        ...(configKey ? { configKey: { contains: configKey } } : {}),
+        // 专属页面管理的键（如 ai.models）不出现在通用列表
+        configKey: { ...(configKey ? { contains: configKey } : {}), notIn: [...DEDICATED_PAGE_KEYS] },
       },
       orderBy: { id: 'asc' },
       skip: offset,
@@ -84,7 +93,7 @@ export class ConfigService {
     const count = await this.prisma.sysConfig.count({
       where: {
         ...(configName ? { configName: { contains: configName } } : {}),
-        ...(configKey ? { configKey: { contains: configKey } } : {}),
+        configKey: { ...(configKey ? { contains: configKey } : {}), notIn: [...DEDICATED_PAGE_KEYS] },
       },
     });
 

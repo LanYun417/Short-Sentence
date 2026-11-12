@@ -15,6 +15,7 @@ import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common'
 import { DataScope, MenuType, Status, SUPER_ADMIN_ROLE } from '../common/config/constants.js';
 import { hashPassword } from '../common/utils/utils.js';
 import { CHAIN_TOPIC_SEEDS } from '../modules/client/chain/chain-topics.js';
+import { LEGACY_AI_CONFIG_KEYS } from '../common/ai/ai.constants.js';
 import { PrismaService } from './prisma.service.js';
 
 /** 日志上下文（种子各步骤共用）。 */
@@ -1600,9 +1601,13 @@ async function seedConfig(prisma: PrismaService): Promise<void> {
  * 背景：`sys.company.name` 已不再属于种子定义（公司信息由「顶级部门」承载）。种子只增不删，
  * 既有库中残留的行不会自动消失，会导致参数管理页面仍列出「公司名称」。此处按 configKey
  * 幂等删除，任何环境重启即收敛，且不影响其他参数。
+ *
+ * 旧版 AI 配置键（`ai.agnes.*`）同理：AI 设置已改为「模型列表」（ai.models，后台专属页面
+ * 维护），老键在 API 启动时会被一次性迁移删除；这里再兜底一次，覆盖「迁移没跑到」
+ * （服务长期未重启）的库，避免参数管理里残留读都不读的旧 AI 参数。
  */
 async function cleanupObsoleteConfigs(prisma: PrismaService): Promise<void> {
-  const OBSOLETE_CONFIG_KEYS = ['sys.company.name'];
+  const OBSOLETE_CONFIG_KEYS = ['sys.company.name', ...Object.values(LEGACY_AI_CONFIG_KEYS)];
   const { count } = await prisma.sysConfig.deleteMany({ where: { configKey: { in: OBSOLETE_CONFIG_KEYS } } });
   if (count > 0) {
     logger.log(`已清理废弃系统参数 ${count} 项：${OBSOLETE_CONFIG_KEYS.join(', ')}`);

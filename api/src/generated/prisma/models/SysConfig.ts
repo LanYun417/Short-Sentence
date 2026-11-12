@@ -306,7 +306,7 @@ export type SysConfigCreateInput = {
   id?: bigint | number
   configName: string
   configKey: string
-  configValue?: string
+  configValue: string
   systemFlag?: number
   remark?: string | null
   createdAt?: Date | string
@@ -317,7 +317,7 @@ export type SysConfigUncheckedCreateInput = {
   id?: bigint | number
   configName: string
   configKey: string
-  configValue?: string
+  configValue: string
   systemFlag?: number
   remark?: string | null
   createdAt?: Date | string
@@ -350,7 +350,7 @@ export type SysConfigCreateManyInput = {
   id?: bigint | number
   configName: string
   configKey: string
-  configValue?: string
+  configValue: string
   systemFlag?: number
   remark?: string | null
   createdAt?: Date | string
@@ -473,7 +473,7 @@ export type $SysConfigPayload<ExtArgs extends runtime.Types.Extensions.InternalA
      */
     configKey: string
     /**
-     * 参数键值
+     * 参数键值（通用参数远小于 500；AI 模型列表 ai.models 是整表 JSON，故放宽到 TEXT）
      */
     configValue: string
     /**
