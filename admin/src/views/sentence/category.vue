@@ -18,6 +18,7 @@ import type { CoverGenLogItem } from '@/api/sentence';
 import type { SentenceCategoryItem, SentenceCategoryPayload } from '@/types/api';
 import { formatDateTime } from '@/utils/format';
 import BasicDialog from '@/components/BasicDialog/index.vue';
+import Pagination from '@/components/Pagination/index.vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'SentenceCategory' });
@@ -393,12 +394,11 @@ function searchCoverLogs(): void {
         </el-table-column>
       </el-table>
       <div class="mt-3 flex justify-end">
-        <el-pagination
+        <Pagination
           v-model:current-page="logPage"
           v-model:page-size="logPageSize"
           :total="logTotal"
           layout="total, prev, pager, next"
-          background
           @current-change="loadCoverLogs"
         />
       </div>

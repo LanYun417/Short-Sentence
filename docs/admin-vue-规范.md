@@ -8,7 +8,7 @@
 - Vue / Vue Router / Pinia / VueUse **自动导入，禁止手 import**；Element Plus 命令式 API（ElMessage/ElMessageBox）必须从 `@/utils/element` 桶引入，禁止整库 import；
 - Prettier 铁律：`semi: true`、`singleQuote: true`、`printWidth: 120`；
 - 样式优先级：**Tailwind 工具类首选**，SCSS 仅兜底且必须 SFC scoped；Tailwind v4 刻意不引入 preflight；
-- 响应式优先：**弹窗一律用封装的 `BasicDialog`，禁止裸写 `<el-dialog>`**（细则见 §8，门禁 `npm run guard:dialog` 会拦）；抽屉等其它固定尺寸弹层走 `useResponsiveSize`；
+- 响应式优先：**弹窗一律用封装的 `BasicDialog`（禁裸写 `<el-dialog>`）、分页一律用封装的 `Pagination`（禁裸写 `<el-pagination>`）**（细则见 §8，门禁 `npm run guard:components` 会拦）；抽屉等其它固定尺寸弹层走 `useResponsiveSize`；
 - **滚动一律用 `el-scrollbar`，禁止原生滚动条**（细则见 §7）：不要给容器写 `overflow-y-auto` / `overflow-auto`，纵向滚动统一包 `<el-scrollbar max-height="…">`；门禁 `npm run guard:scrollbar` 会拦住这类写法；
 - 按钮权限用 `v-permission` 指令；权限码遵循 `:list / :query / :add / :edit / :remove`；
 - 新增运行时依赖默认禁止，确需新增走 `guard:deps -- --update` 并在评审说明。
@@ -62,7 +62,7 @@ npm run test         # vitest
 npm run build        # 生产构建（预压缩 .gz/.br）
 ```
 
-根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale` / `guard:scrollbar` / `guard:dialog`（见 git 规范第 7 节）。
+根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale` / `guard:scrollbar` / `guard:components`（见 git 规范第 7 节）。
 
 ## 7. 滚动条约定（el-scrollbar）
 
@@ -82,9 +82,11 @@ npm run build        # 生产构建（预压缩 .gz/.br）
 1. **`el-scrollbar` 自带 `height: 100%`**（EP 默认样式）。放进**高度确定**的容器（抽屉 body、定高 flex 项、`h-full` 容器）时会被撑满整高，把上方内容顶出可视区 —— 容器随即冒出**原生滚动条**，而页面看起来内容并不多。所以：要么给容器限高（`max-height`）、要么用 flex + `min-h-0 flex-1`；确实只需要内容高度时显式覆盖 `height: auto`。
 2. **`Pagination` 外层就是用 `el-scrollbar` 包横向滚动的**（窄屏分页器超宽）。它已把根节点高度覆盖成 `auto`（`.pagination-scrollbar`），但把 `Pagination` 放进定高容器时仍建议外层加 `shrink-0`，别让它抢高度。
 
-## 8. 弹窗约定（BasicDialog）
+## 8. 弹窗与分页约定（BasicDialog / Pagination）
 
-**所有弹窗一律用 `src/components/BasicDialog`，禁止裸写 `<el-dialog>`**（`guard:dialog` 扫 `admin/src` 拦截，封装自身豁免）。
+**弹窗一律用 `src/components/BasicDialog`（禁裸写 `<el-dialog>`），分页一律用 `src/components/Pagination`（禁裸写 `<el-pagination>`）**——`guard:components` 扫 `admin/src` 拦截，两个封装自身豁免。
+
+### 8.1 弹窗（BasicDialog）
 
 它替调用方解决了四个容易漏的点：
 
@@ -117,3 +119,33 @@ npm run build        # 生产构建（预压缩 .gz/.br）
 - **不要在 `BasicDialog` 里再套一层 `el-scrollbar`**（正文已限高，重复包裹会抢高度，见 §7 的坑 1）；
 - 其余 `el-dialog` 属性/事件（`append-to-body`、`destroy-on-close`、`@closed` 等）经 `$attrs` 全量透传，照常写；
 - `#header` 插槽透传，需要自定义标题栏时直接用。
+
+### 8.2 分页（Pagination）
+
+**列表分页一律用 `src/components/Pagination`**，不要把 `el-pagination` 直接写进页面：
+
+```vue
+<Pagination
+  v-model:current-page="query.page"
+  v-model:page-size="query.pageSize"
+  :total="total"
+  @size-change="changePageSize"
+  @current-change="changePage"
+/>
+```
+
+它替调用方解决了四个问题：
+
+| 封装能力        | 说明                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| 窄屏自适应      | 视口 ≤768px 自动切 `small`，移动端不横向溢出（基于 `useWindowSize`，无 resize 监听泄漏） |
+| 受控式          | 父组件用 `v-model:current-page` / `v-model:page-size` 持有分页状态，封装只转译事件       |
+| 切条数回第 1 页 | `size-change` 时同步把页码重置为 1，不会停在越界页                                       |
+| 横向滚动        | 外层自带 `el-scrollbar` 横向滚动，窄屏分页器超宽不撑破布局（见 §7 的坑 2）               |
+
+要点：
+
+- `layout` 默认 `total, sizes, prev, pager, next, jumper`，不需要「每页条数」时传 `layout="total, prev, pager, next"` 即可（`pageSizes` 仍保留默认值）；
+- `background` 默认 `true`（与全站表格风格一致），无需再写；
+- 放在定高容器（抽屉 body、flex 列）里时给外层加 `shrink-0`，别让分页器抢高度；
+- 页面侧的 `useTable` / `useTablePage` 已配合好这套受控分页，照 §3 的页面模板写即可。

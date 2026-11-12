@@ -18,7 +18,7 @@
     "guard:imports": "node scripts/check-tracked-imports.mjs",
     "guard:locale": "node scripts/check-locale-keys.mjs",
     "guard:scrollbar": "node scripts/check-native-scrollbar.mjs",
-    "guard:dialog": "node scripts/check-basic-dialog.mjs",
+    "guard:components": "node scripts/check-wrapped-components.mjs",
     "db:backup": "node scripts/db-backup.mjs",
     "db:drill": "node scripts/db-restore.mjs",
     "commit": "cz",
