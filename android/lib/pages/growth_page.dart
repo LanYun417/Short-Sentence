@@ -1935,81 +1935,6 @@ Future<void> showAchievementDetail(BuildContext context, AchievementView item) {
   );
 }
 
-class _AchievementTile extends StatelessWidget {
-  const _AchievementTile({required this.item});
-
-  final AchievementView item;
-
-  void _showDetail(BuildContext context) {
-    showAchievementDetail(context, item);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final unlocked = item.unlocked;
-    return PressScale(
-      onTap: () => _showDetail(context),
-      scale: 0.95,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        decoration: BoxDecoration(
-          color: unlocked
-              ? colors.card
-              : colors.cardMuted.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: unlocked ? colors.gold.withValues(alpha: 0.35) : colors.line,
-          ),
-          boxShadow: unlocked
-              ? <BoxShadow>[
-                  BoxShadow(
-                    color: colors.gold.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: unlocked
-                    ? const LinearGradient(
-                        colors: <Color>[Color(0xFFFBBF24), Color(0xFFF97316)],
-                      )
-                    : null,
-                color: unlocked ? null : colors.card,
-              ),
-              child: Icon(
-                unlocked ? appIcon(item.icon) : Icons.lock_rounded,
-                size: 19,
-                color: unlocked ? Colors.white : colors.inkFaint,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: unlocked ? FontWeight.w600 : FontWeight.w500,
-                color: unlocked ? colors.ink : colors.inkFaint,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /* ------------------------------ 场景地图 ------------------------------ */
 
 class _SceneMap extends StatelessWidget {
@@ -2025,13 +1950,13 @@ class _SceneMap extends StatelessWidget {
       );
     }
     return SizedBox(
-      height: 120,
+      height: 128,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         itemCount: items.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 12),
         itemBuilder: (context, index) => StaggeredEntrance(
           index: 5 + index,
           offset: const Offset(18, 0),
@@ -2432,18 +2357,137 @@ class _AllAchievementsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: GridView.builder(
+              child: ListView(
                 padding: const EdgeInsets.only(bottom: 8),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.92,
-                ),
-                itemCount: items.length,
-                itemBuilder: (context, index) =>
-                    _AchievementTile(item: items[index]),
+                children: <Widget>[
+                  for (final group in _grouped(items)) ...<Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(2, 12, 2, 6),
+                      child: Row(
+                        children: <Widget>[
+                          Text(
+                            group.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: colors.ink,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${group.unlocked}/${group.items.length}',
+                            style: TextStyle(fontSize: 10.5, color: colors.inkFaint),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Divider(height: 1, color: colors.line)),
+                        ],
+                      ),
+                    ),
+                    for (final item in group.items)
+                      _AchievementRow(item: item),
+                  ],
+                ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 按分类分组（顺序：行为 / 坚持 / 探索 / 运气 / 其他）。
+  static List<({String label, List<AchievementView> items, int unlocked})> _grouped(
+    List<AchievementView> items,
+  ) {
+    const order = ['behavior', 'persist', 'explore', 'luck'];
+    final map = <String, List<AchievementView>>{};
+    for (final item in items) {
+      final c = item.category.isEmpty ? 'other' : item.category;
+      (map[c] ??= <AchievementView>[]).add(item);
+    }
+    final list = map.entries
+        .map(
+          (e) => (
+            label: e.value.isEmpty ? e.key : e.value.first.categoryLabel,
+            items: e.value,
+            unlocked: e.value.where((i) => i.unlocked).length,
+          ),
+        )
+        .toList();
+    int idxOf(String k) => order.indexOf(k);
+    list.sort((a, b) {
+      // 用 label 反查分类较绕，直接按 items 里第一个的 category 排
+      final ac = a.items.first.category;
+      final bc = b.items.first.category;
+      final ai = idxOf(ac) == -1 ? 99 : idxOf(ac);
+      final bi = idxOf(bc) == -1 ? 99 : idxOf(bc);
+      return ai.compareTo(bi);
+    });
+    return list;
+  }
+}
+
+/// 「全部成就」弹窗里的单行（图标 + 名称 + 描述 + 状态），点开看详情。
+class _AchievementRow extends StatelessWidget {
+  const _AchievementRow({required this.item});
+
+  final AchievementView item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final unlocked = item.unlocked;
+    return PressScale(
+      onTap: () => showAchievementDetail(context, item),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: unlocked ? colors.card : colors.cardMuted,
+                border: Border.all(
+                  color: unlocked ? colors.gold.withValues(alpha: 0.35) : colors.line,
+                ),
+              ),
+              child: Icon(
+                unlocked ? appIcon(item.icon) : Icons.lock_rounded,
+                size: 19,
+                color: unlocked ? colors.gold : colors.inkFaint,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: unlocked ? colors.ink : colors.inkSoft,
+                    ),
+                  ),
+                  Text(
+                    item.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Pill(
+              label: unlocked ? '+${item.rewardXp} XP' : '未解锁',
+              background: (unlocked ? colors.success : colors.inkFaint).withValues(alpha: 0.1),
+              foreground: unlocked ? colors.success : colors.inkFaint,
             ),
           ],
         ),

@@ -98,8 +98,9 @@ class AchievementView {
   }
 
   String get categoryLabel => switch (category) {
-        'persist' => '坚持',
-        'behavior' => '行为',
+        'behavior' => '日常行为',
+        'persist' => '坚持打卡',
+        'explore' => '探索发现',
         'luck' => '运气',
         _ => category,
       };
