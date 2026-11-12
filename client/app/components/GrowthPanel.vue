@@ -3,9 +3,18 @@
  * 成长面板（微游戏化）：XP / CEFR 等级、成就勋章墙、场景探索地图。
  * 数据来自 GET /client/gamify/overview（服务端权威、幂等发放）。
  */
-import type { GamifyOverview } from '~/types';
+import { computed, ref } from 'vue';
+import type { GamifyAchievement, GamifyOverview } from '~/types';
 
 const { data: overview } = await useSsrApi<GamifyOverview>('ss:gamify', '/client/gamify/overview');
+
+/** 首页勋章墙展示的个数（其余进「全部」弹窗），图标-only 布局一行即可放下很多。 */
+const VISIBLE_ACHIEVEMENTS = 9;
+const visibleAchievements = computed(() => overview.value?.achievements.slice(0, VISIBLE_ACHIEVEMENTS) ?? []);
+/** 点开某枚勋章看详情。 */
+const selected = ref<GamifyAchievement | null>(null);
+/** 「全部成就」弹窗。 */
+const showAll = ref(false);
 
 /**
  * 成就图标映射：DB 存的是 lucide 名（不含前缀）。
@@ -99,35 +108,45 @@ function iconOf(name: string): string {
     <!-- 情景闯关：给「下一步练什么」一个带剧情的答案（关卡 = 场景） -->
     <StageCard />
 
-    <!-- 成就勋章墙 -->
+    <!-- 成就勋章墙：紧凑图标格（点开看详情），超过 VISIBLE_ACHIEVEMENTS 的收进「全部」弹窗 -->
     <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80">
       <div class="mb-3 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">成就勋章</h3>
-        <span class="text-xs tabular-nums text-slate-400">
-          {{ overview.unlockedAchievements }} / {{ overview.totalAchievements }}
-        </span>
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs tabular-nums text-slate-400">
+            {{ overview.unlockedAchievements }} / {{ overview.totalAchievements }}
+          </span>
+          <button
+            v-if="overview.achievements.length > VISIBLE_ACHIEVEMENTS"
+            type="button"
+            class="text-xs font-medium text-sky-600 transition hover:underline dark:text-sky-400"
+            @click="showAll = true"
+          >
+            全部
+          </button>
+        </div>
       </div>
-      <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
-        <div
-          v-for="item in overview.achievements"
+      <div class="grid grid-cols-6 gap-2.5 sm:grid-cols-9">
+        <button
+          v-for="item in visibleAchievements"
           :key="item.code"
-          class="flex flex-col items-center gap-1.5 text-center"
-          :class="!item.unlocked && 'opacity-40'"
+          type="button"
+          class="group grid place-items-center"
           :title="`${item.name} · ${item.description}`"
+          :aria-label="item.name"
+          @click="selected = item"
         >
-          <div
-            class="grid size-12 place-items-center rounded-2xl transition"
+          <span
+            class="grid size-11 place-items-center rounded-xl transition group-active:scale-90"
             :class="
               item.unlocked
                 ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
                 : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
             "
           >
-            <UIcon :name="iconOf(item.icon)" class="h-6 w-6" />
-          </div>
-          <span class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ item.name }}</span>
-          <span class="line-clamp-2 text-[10px] leading-tight text-slate-400">{{ item.description }}</span>
-        </div>
+            <UIcon :name="iconOf(item.icon)" class="h-5 w-5" />
+          </span>
+        </button>
       </div>
     </div>
 
@@ -139,26 +158,27 @@ function iconOf(name: string): string {
           {{ overview.unlockedScenes }} / {{ overview.totalScenes }}
         </span>
       </div>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <!-- 横向滚动条：场景再多也只占一行高度，页面不会被拉长 -->
+      <div class="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
         <div
           v-for="scene in overview.sceneMap"
           :key="scene.id"
-          class="rounded-xl border p-3 transition"
+          class="w-28 shrink-0 rounded-xl border p-3 transition"
           :class="
             scene.unlocked
               ? 'border-sky-200 bg-sky-50/50 dark:border-sky-500/20 dark:bg-sky-500/5'
               : 'border-dashed border-slate-200 opacity-60 dark:border-slate-700'
           "
         >
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
             <UIcon
               :name="scene.unlocked ? 'i-lucide-map-pin' : 'i-lucide-lock'"
-              class="h-4 w-4"
+              class="h-4 w-4 shrink-0"
               :class="scene.unlocked ? 'text-sky-500' : 'text-slate-400'"
             />
-            <span class="truncate text-sm font-medium text-slate-700 dark:text-slate-200">{{ scene.name }}</span>
+            <span class="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{{ scene.name }}</span>
           </div>
-          <p class="mt-1 text-xs text-slate-400">
+          <p class="mt-1 text-[10px] text-slate-400">
             {{ scene.unlocked ? `已练 ${scene.practicedCount} 句` : '未解锁' }}
           </p>
         </div>
@@ -175,4 +195,90 @@ function iconOf(name: string): string {
   </div>
 
   <div v-else class="py-10 text-center text-sm text-slate-400">成长数据加载中…</div>
+
+  <!-- 勋章详情弹窗 -->
+  <div v-if="selected" class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" @click.self="selected = null">
+    <div
+      class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
+    >
+      <div class="flex flex-col items-center text-center">
+        <span
+          class="grid size-16 place-items-center rounded-2xl"
+          :class="
+            selected.unlocked
+              ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
+              : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
+          "
+        >
+          <UIcon :name="iconOf(selected.icon)" class="h-8 w-8" />
+        </span>
+        <h3 class="mt-3 text-base font-bold text-slate-800 dark:text-slate-100">{{ selected.name }}</h3>
+        <p class="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ selected.description }}</p>
+        <div class="mt-3 flex items-center gap-2">
+          <span
+            class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+            :class="
+              selected.unlocked
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+            "
+          >
+            {{ selected.unlocked ? '已解锁' : '未解锁' }}
+          </span>
+          <span
+            class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"
+          >
+            +{{ selected.rewardXp }} XP
+          </span>
+        </div>
+      </div>
+      <UButton class="mt-4 w-full" color="neutral" variant="outline" @click="selected = null">关闭</UButton>
+    </div>
+  </div>
+
+  <!-- 全部成就弹窗 -->
+  <div v-if="showAll" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4" @click.self="showAll = false">
+    <div
+      class="mx-auto my-6 w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
+    >
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          全部成就（{{ overview?.unlockedAchievements }} / {{ overview?.totalAchievements }}）
+        </h3>
+        <button
+          type="button"
+          class="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+          @click="showAll = false"
+        >
+          <UIcon name="i-lucide-x" class="h-4 w-4" />
+        </button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <button
+          v-for="item in overview?.achievements ?? []"
+          :key="item.code"
+          type="button"
+          class="flex flex-col items-center gap-1.5 rounded-xl p-2 text-center transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+          :class="!item.unlocked && 'opacity-45'"
+          @click="
+            selected = item;
+            showAll = false;
+          "
+        >
+          <span
+            class="grid size-11 place-items-center rounded-xl"
+            :class="
+              item.unlocked
+                ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
+                : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
+            "
+          >
+            <UIcon :name="iconOf(item.icon)" class="h-5 w-5" />
+          </span>
+          <span class="text-[11px] font-medium text-slate-700 dark:text-slate-200">{{ item.name }}</span>
+          <span class="line-clamp-2 text-[10px] leading-tight text-slate-400">{{ item.description }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

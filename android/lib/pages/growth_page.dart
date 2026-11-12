@@ -1822,23 +1822,117 @@ class _AchievementGrid extends StatelessWidget {
         child: SizedBox(height: 96, child: Center(child: Text('成就正在准备中'))),
       );
     }
+    // 紧凑布局：一行 6 个纯图标（点开看详情），18 枚成就也只占一两行，页面不被拉长
     return GridView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.92,
+        crossAxisCount: 6,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) => StaggeredEntrance(
         index: 3 + index,
-        child: _AchievementTile(item: items[index]),
+        child: _CompactAchievementIcon(item: items[index]),
       ),
     );
   }
+}
+
+/// 首页成就墙的紧凑图标（无文字，点开弹详情）。
+class _CompactAchievementIcon extends StatelessWidget {
+  const _CompactAchievementIcon({required this.item});
+
+  final AchievementView item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final unlocked = item.unlocked;
+    return PressScale(
+      onTap: () => showAchievementDetail(context, item),
+      scale: 0.9,
+      child: Tooltip(
+        message: '${item.name} · ${item.description}',
+        child: Container(
+          decoration: BoxDecoration(
+            color: unlocked ? colors.card : colors.cardMuted.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: unlocked ? colors.gold.withValues(alpha: 0.35) : colors.line),
+          ),
+          child: Center(
+            child: Icon(
+              unlocked ? appIcon(item.icon) : Icons.lock_rounded,
+              size: 22,
+              color: unlocked ? colors.gold : colors.inkFaint,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 成就详情弹窗（首页图标与「全部成就」卡片共用）。
+Future<void> showAchievementDetail(BuildContext context, AchievementView item) {
+  final colors = context.colors;
+  return showModalBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: item.unlocked
+                  ? const LinearGradient(colors: <Color>[Color(0xFFFBBF24), Color(0xFFF97316)])
+                  : null,
+              color: item.unlocked ? null : colors.cardMuted,
+            ),
+            child: Icon(
+              item.unlocked ? appIcon(item.icon) : Icons.lock_rounded,
+              size: 28,
+              color: item.unlocked ? Colors.white : colors.inkFaint,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(item.name, style: Theme.of(sheetContext).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(
+            item.description,
+            textAlign: TextAlign.center,
+            style:
+                Theme.of(sheetContext).textTheme.bodySmall?.copyWith(color: colors.inkSoft, height: 1.6),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Pill(
+                label: item.unlocked ? '已解锁' : '未解锁',
+                background:
+                    (item.unlocked ? colors.success : colors.inkFaint).withValues(alpha: 0.1),
+                foreground: item.unlocked ? colors.success : colors.inkFaint,
+              ),
+              const SizedBox(width: 8),
+              Pill(
+                label: '+${item.rewardXp} XP',
+                background: colors.gold.withValues(alpha: 0.1),
+                foreground: colors.gold,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _AchievementTile extends StatelessWidget {
@@ -1847,66 +1941,7 @@ class _AchievementTile extends StatelessWidget {
   final AchievementView item;
 
   void _showDetail(BuildContext context) {
-    final colors = context.colors;
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: item.unlocked
-                    ? const LinearGradient(
-                        colors: <Color>[Color(0xFFFBBF24), Color(0xFFF97316)],
-                      )
-                    : null,
-                color: item.unlocked ? null : colors.cardMuted,
-              ),
-              child: Icon(
-                item.unlocked ? appIcon(item.icon) : Icons.lock_rounded,
-                size: 28,
-                color: item.unlocked ? Colors.white : colors.inkFaint,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              item.name,
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              item.description,
-              textAlign: TextAlign.center,
-              style: Theme.of(sheetContext).textTheme.bodySmall
-                  ?.copyWith(color: colors.inkSoft, height: 1.6),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Pill(
-                  label: item.unlocked ? '已解锁' : '未解锁',
-                  background: (item.unlocked ? colors.success : colors.inkFaint)
-                      .withValues(alpha: 0.1),
-                  foreground: item.unlocked ? colors.success : colors.inkFaint,
-                ),
-                const SizedBox(width: 8),
-                Pill(
-                  label: '+${item.rewardXp} XP',
-                  background: colors.gold.withValues(alpha: 0.1),
-                  foreground: colors.gold,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+    showAchievementDetail(context, item);
   }
 
   @override
