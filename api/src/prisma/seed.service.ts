@@ -15,7 +15,7 @@ import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common'
 import { DataScope, MenuType, Status, SUPER_ADMIN_ROLE } from '../common/config/constants.js';
 import { hashPassword } from '../common/utils/utils.js';
 import { CHAIN_TOPIC_SEEDS } from '../modules/client/chain/chain-topics.js';
-import { LEGACY_AI_CONFIG_KEYS } from '../common/ai/ai.constants.js';
+import { AI_CONFIG_KEYS, LEGACY_AI_CONFIG_KEYS } from '../common/ai/ai.constants.js';
 import { PrismaService } from './prisma.service.js';
 
 /** 日志上下文（种子各步骤共用）。 */
@@ -1602,15 +1602,26 @@ async function seedConfig(prisma: PrismaService): Promise<void> {
  * 既有库中残留的行不会自动消失，会导致参数管理页面仍列出「公司名称」。此处按 configKey
  * 幂等删除，任何环境重启即收敛，且不影响其他参数。
  *
- * 旧版 AI 配置键（`ai.agnes.*`）同理：AI 设置已改为「模型列表」（ai.models，后台专属页面
- * 维护），老键在 API 启动时会被一次性迁移删除；这里再兜底一次，覆盖「迁移没跑到」
- * （服务长期未重启）的库，避免参数管理里残留读都不读的旧 AI 参数。
+ * 旧版 AI 配置键（`ai.agnes.*`）**只在 ai.models 已存在时**才清理：迁移必须先读到旧键才能
+ * 保住密钥/模型名，seed 若抢先删除，AiSettingsService 只能回落到环境变量（丢 key）。
+ * 因此这里加前置条件，正常迁移仍由 AiSettingsService 完成并删键。
  */
 async function cleanupObsoleteConfigs(prisma: PrismaService): Promise<void> {
-  const OBSOLETE_CONFIG_KEYS = ['sys.company.name', ...Object.values(LEGACY_AI_CONFIG_KEYS)];
+  const OBSOLETE_CONFIG_KEYS = ['sys.company.name'];
   const { count } = await prisma.sysConfig.deleteMany({ where: { configKey: { in: OBSOLETE_CONFIG_KEYS } } });
   if (count > 0) {
     logger.log(`已清理废弃系统参数 ${count} 项：${OBSOLETE_CONFIG_KEYS.join(', ')}`);
+  }
+
+  // 旧 AI 键：迁移完成（ai.models 已存在）后才允许清理，避免抢在迁移前删掉密钥
+  const migrated = await prisma.sysConfig.findUnique({ where: { configKey: AI_CONFIG_KEYS.models } });
+  if (!migrated) {
+    return;
+  }
+  const legacyKeys = Object.values(LEGACY_AI_CONFIG_KEYS);
+  const legacy = await prisma.sysConfig.deleteMany({ where: { configKey: { in: legacyKeys } } });
+  if (legacy.count > 0) {
+    logger.log(`已清理旧版 AI 参数 ${legacy.count} 项（ai.models 已就绪）`);
   }
 }
 

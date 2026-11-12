@@ -51,6 +51,18 @@ describe('loadAiSettings', () => {
     expect(text?.enabled).toBe(true);
   });
 
+  it('迁移必须保住 API Key（生文/生图共用同一把，丢 key 会导致 AI 全挂）', async () => {
+    const settings = await loadAiSettings(
+      fakePrisma([
+        { configKey: LEGACY_AI_CONFIG_KEYS.apiKey, configValue: 'cpk-real-key-123' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.textModel, configValue: 'text-x' },
+        { configKey: LEGACY_AI_CONFIG_KEYS.imageModel, configValue: 'image-x' },
+      ]),
+    );
+    expect(settings.models.find((m) => m.purpose === 'text')?.apiKey).toBe('cpk-real-key-123');
+    expect(settings.models.find((m) => m.purpose === 'image')?.apiKey).toBe('cpk-real-key-123');
+  });
+
   it('迁移：genChannel=nim 且有 NIM 模型时，文本模型优先取 NIM，Agnes 置为备用（禁用）', async () => {
     const settings = await loadAiSettings(
       fakePrisma([
