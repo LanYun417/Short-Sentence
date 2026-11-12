@@ -8,6 +8,7 @@
  * 页面才会在侧边栏出现并可访问。本文件仅提供组件实现。
  */
 
+import BasicDialog from '@/components/BasicDialog/index.vue';
 import { reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { addIpBanApi, getIpBanListApi, getIpBanStatsApi, removeIpBanApi } from '@/api/ip-ban';
@@ -222,7 +223,7 @@ async function submitDialog(): Promise<void> {
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" title="封禁 IP" width="460px" @close="dialogVisible = false">
+    <BasicDialog v-model="dialogVisible" title="封禁 IP" width="460px" @close="dialogVisible = false">
       <el-form label-width="90px">
         <el-form-item label="IP" required>
           <el-input v-model="form.ip" placeholder="请输入要封禁的 IPv4 / IPv6" clearable />
@@ -239,7 +240,7 @@ async function submitDialog(): Promise<void> {
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="danger" :loading="submitting" @click="submitDialog">确定封禁</el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
   </div>
 </template>
 

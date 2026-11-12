@@ -8,7 +8,7 @@
 - Vue / Vue Router / Pinia / VueUse **自动导入，禁止手 import**；Element Plus 命令式 API（ElMessage/ElMessageBox）必须从 `@/utils/element` 桶引入，禁止整库 import；
 - Prettier 铁律：`semi: true`、`singleQuote: true`、`printWidth: 120`；
 - 样式优先级：**Tailwind 工具类首选**，SCSS 仅兜底且必须 SFC scoped；Tailwind v4 刻意不引入 preflight；
-- 响应式优先：固定尺寸弹层（抽屉/弹窗）必须走 `useResponsiveSize` / `BasicDialog`；
+- 响应式优先：**弹窗一律用封装的 `BasicDialog`，禁止裸写 `<el-dialog>`**（细则见 §8，门禁 `npm run guard:dialog` 会拦）；抽屉等其它固定尺寸弹层走 `useResponsiveSize`；
 - **滚动一律用 `el-scrollbar`，禁止原生滚动条**（细则见 §7）：不要给容器写 `overflow-y-auto` / `overflow-auto`，纵向滚动统一包 `<el-scrollbar max-height="…">`；门禁 `npm run guard:scrollbar` 会拦住这类写法；
 - 按钮权限用 `v-permission` 指令；权限码遵循 `:list / :query / :add / :edit / :remove`；
 - 新增运行时依赖默认禁止，确需新增走 `guard:deps -- --update` 并在评审说明。
@@ -62,7 +62,7 @@ npm run test         # vitest
 npm run build        # 生产构建（预压缩 .gz/.br）
 ```
 
-根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale` / `guard:scrollbar`（见 git 规范第 7 节）。
+根目录另跑 `npm run lint` / `stylelint` / `format:check` / `guard:locale` / `guard:scrollbar` / `guard:dialog`（见 git 规范第 7 节）。
 
 ## 7. 滚动条约定（el-scrollbar）
 
@@ -81,3 +81,39 @@ npm run build        # 生产构建（预压缩 .gz/.br）
 
 1. **`el-scrollbar` 自带 `height: 100%`**（EP 默认样式）。放进**高度确定**的容器（抽屉 body、定高 flex 项、`h-full` 容器）时会被撑满整高，把上方内容顶出可视区 —— 容器随即冒出**原生滚动条**，而页面看起来内容并不多。所以：要么给容器限高（`max-height`）、要么用 flex + `min-h-0 flex-1`；确实只需要内容高度时显式覆盖 `height: auto`。
 2. **`Pagination` 外层就是用 `el-scrollbar` 包横向滚动的**（窄屏分页器超宽）。它已把根节点高度覆盖成 `auto`（`.pagination-scrollbar`），但把 `Pagination` 放进定高容器时仍建议外层加 `shrink-0`，别让它抢高度。
+
+## 8. 弹窗约定（BasicDialog）
+
+**所有弹窗一律用 `src/components/BasicDialog`，禁止裸写 `<el-dialog>`**（`guard:dialog` 扫 `admin/src` 拦截，封装自身豁免）。
+
+它替调用方解决了四个容易漏的点：
+
+| 封装能力    | 说明                                                                                                                                                                        |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 正文限高    | 正文包在 `el-scrollbar`（`calc(85vh - 186px)`）里：长表单在弹窗内滚动，遮罩层永不出现原生滚动条（对应 §7）                                                                  |
+| 防误关      | 默认 `close-on-click-modal=false`，点空白不会丢表单；确需允许时显式透传 `:close-on-click-modal="true"`                                                                      |
+| 小屏自适应  | 视口 ≤768px 时宽度自动压缩为 98%，固定宽度不再溢出移动端                                                                                                                    |
+| 默认 footer | `confirm-loading` / `confirm-disabled` / `confirm-text` / `cancel-text` 四个 props 直接控制「取消 / 确定」；确定只 emit `confirm`，**关不关由调用方决定**（校验失败就别关） |
+
+用法：
+
+```vue
+<BasicDialog v-model="visible" title="编辑模型" width="760px" :confirm-loading="saving" @confirm="submit">
+  <el-form>…</el-form>
+</BasicDialog>
+
+<!-- 自定义按钮（如按钮要带 v-permission）→ 用 #footer 插槽，覆盖默认 footer -->
+<BasicDialog v-model="visible" title="新增" width="480px" :show-footer="false">
+  <el-form>…</el-form>
+  <template #footer>
+    <el-button @click="visible = false">取消</el-button>
+    <el-button v-permission="'system:x:add'" type="primary" @click="submit">确定</el-button>
+  </template>
+</BasicDialog>
+```
+
+要点：
+
+- **不要在 `BasicDialog` 里再套一层 `el-scrollbar`**（正文已限高，重复包裹会抢高度，见 §7 的坑 1）；
+- 其余 `el-dialog` 属性/事件（`append-to-body`、`destroy-on-close`、`@closed` 等）经 `$attrs` 全量透传，照常写；
+- `#header` 插槽透传，需要自定义标题栏时直接用。

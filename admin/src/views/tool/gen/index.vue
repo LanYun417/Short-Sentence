@@ -4,6 +4,7 @@
  * 模块职责：选择数据表并填写模块名 / 业务名后，预览生成文件、下载 ZIP，或直接写入项目目录（同名文件需确认覆盖）。
  */
 
+import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import type { AxiosError } from 'axios';
 import {
@@ -537,7 +538,7 @@ onMounted(() => {
     </div>
 
     <!-- 代码预览弹窗 -->
-    <el-dialog
+    <BasicDialog
       v-model="previewVisible"
       :title="`代码预览 - ${currentTable?.tableName ?? ''}`"
       :width="previewWidth"
@@ -575,7 +576,7 @@ onMounted(() => {
       <template #footer>
         <el-button @click="previewVisible = false">关闭</el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
   </div>
 </template>
 

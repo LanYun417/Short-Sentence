@@ -15,6 +15,7 @@
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { getAiSettingsApi, saveAiSettingsApi, testAiApi } from '@/api/ai';
 import { useTablePage } from '@/composables/useTablePage';
+import BasicDialog from '@/components/BasicDialog/index.vue';
 import SearchForm from '@/components/SearchForm/index.vue';
 import type { AdvancedAiConfig, AiModel, SaveAiModel } from '@/types/api';
 
@@ -418,232 +419,228 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <!-- 新增 / 编辑模型 -->
-    <el-dialog
+    <!-- 新增 / 编辑模型（项目统一弹窗：正文自带 el-scrollbar 限高、禁止点遮罩关闭、小屏自适应宽度） -->
+    <BasicDialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑模型' : '新增模型'"
       width="760px"
+      :show-footer="false"
       destroy-on-close
       append-to-body
     >
-      <!-- 弹窗内容限高 + el-scrollbar：展开高级配置后也不会把页面撑出原生滚动条 -->
-      <el-scrollbar max-height="62vh">
-        <el-form label-width="120px" class="pr-2">
-          <el-form-item label="用途" required>
-            <el-select v-model="form.purpose" class="w-full">
-              <el-option v-for="o in PURPOSE_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
-            </el-select>
-          </el-form-item>
+      <el-form label-width="120px" class="pr-2">
+        <el-form-item label="用途" required>
+          <el-select v-model="form.purpose" class="w-full">
+            <el-option v-for="o in PURPOSE_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+          </el-select>
+        </el-form-item>
 
-          <el-form-item label="启用">
-            <el-switch v-model="form.enabled" />
-            <span class="ml-2 text-xs text-gray-400">同用途取第一个启用的模型</span>
-          </el-form-item>
+        <el-form-item label="启用">
+          <el-switch v-model="form.enabled" />
+          <span class="ml-2 text-xs text-gray-400">同用途取第一个启用的模型</span>
+        </el-form-item>
 
-          <el-form-item label="API 格式" required>
-            <el-select v-model="form.format" class="w-full" :disabled="form.purpose === 'image'">
-              <el-option v-for="o in API_FORMAT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
-            </el-select>
-            <span v-if="form.purpose === 'image'" class="ml-2 text-xs text-gray-400"
-              >生图固定走 images 接口，格式不适用</span
-            >
-          </el-form-item>
+        <el-form-item label="API 格式" required>
+          <el-select v-model="form.format" class="w-full" :disabled="form.purpose === 'image'">
+            <el-option v-for="o in API_FORMAT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+          </el-select>
+          <span v-if="form.purpose === 'image'" class="ml-2 text-xs text-gray-400"
+            >生图固定走 images 接口，格式不适用</span
+          >
+        </el-form-item>
 
-          <el-form-item label="请求地址" required>
-            <div class="flex w-full items-center gap-2">
-              <el-input
-                v-model="form.baseUrl"
-                :placeholder="
-                  form.fullUrl ? 'https://api.example.com/v1/chat/completions' : 'https://api.example.com/v1'
-                "
-              />
-              <el-switch v-model="form.fullUrl" />
-              <span class="shrink-0 text-xs text-gray-400">完整 URL</span>
-            </div>
-            <span class="mt-1 block text-xs text-gray-400">
-              {{
-                form.fullUrl
-                  ? '开启后地址原样使用（需含完整路径）'
-                  : '关闭时按格式自动补全路径（/chat/completions、/responses、/messages、/images/generations）'
-              }}
-            </span>
-          </el-form-item>
-
-          <el-form-item label="模型 ID" required>
-            <el-input v-model="form.modelId" placeholder="如 gpt-4o-mini / deepseek-v4.1-flash" />
-          </el-form-item>
-
-          <el-form-item label="模型展示名称">
-            <el-input v-model="form.modelLabel" maxlength="64" placeholder="留空则显示模型 ID" />
-          </el-form-item>
-
-          <el-form-item label="API Key">
+        <el-form-item label="请求地址" required>
+          <div class="flex w-full items-center gap-2">
             <el-input
-              v-model="form.apiKey"
-              type="password"
-              show-password
-              autocomplete="new-password"
-              :placeholder="
-                editingKeyMasked ? `已配置 ${editingKeyMasked}（留空不修改）` : 'API Key（只存服务端，接口不回显明文）'
-              "
+              v-model="form.baseUrl"
+              :placeholder="form.fullUrl ? 'https://api.example.com/v1/chat/completions' : 'https://api.example.com/v1'"
             />
-          </el-form-item>
+            <el-switch v-model="form.fullUrl" />
+            <span class="shrink-0 text-xs text-gray-400">完整 URL</span>
+          </div>
+          <span class="mt-1 block text-xs text-gray-400">
+            {{
+              form.fullUrl
+                ? '开启后地址原样使用（需含完整路径）'
+                : '关闭时按格式自动补全路径（/chat/completions、/responses、/messages、/images/generations）'
+            }}
+          </span>
+        </el-form-item>
 
-          <el-form-item label="高级配置">
-            <div class="w-full">
-              <el-button size="small" link type="primary" @click="advOpen = !advOpen">
-                {{ advOpen ? '收起高级配置' : '展开高级配置' }}
-              </el-button>
+        <el-form-item label="模型 ID" required>
+          <el-input v-model="form.modelId" placeholder="如 gpt-4o-mini / deepseek-v4.1-flash" />
+        </el-form-item>
 
-              <el-form v-show="advOpen" label-width="110px" class="advanced-form mt-2">
-                <el-form-item label="模型系列">
-                  <el-select v-model="form.advanced.modelSeries" class="w-full">
-                    <el-option v-for="o in MODEL_SERIES_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
-                  </el-select>
-                  <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义</span>
-                </el-form-item>
+        <el-form-item label="模型展示名称">
+          <el-input v-model="form.modelLabel" maxlength="64" placeholder="留空则显示模型 ID" />
+        </el-form-item>
 
-                <el-form-item label="上下文 输入">
-                  <div class="flex w-full flex-wrap items-center gap-4">
-                    <el-input-number
-                      v-model="form.advanced.maxInputTokens"
-                      :min="0"
-                      :max="100000000"
-                      controls-position="right"
-                      class="w-44"
+        <el-form-item label="API Key">
+          <el-input
+            v-model="form.apiKey"
+            type="password"
+            show-password
+            autocomplete="new-password"
+            :placeholder="
+              editingKeyMasked ? `已配置 ${editingKeyMasked}（留空不修改）` : 'API Key（只存服务端，接口不回显明文）'
+            "
+          />
+        </el-form-item>
+
+        <el-form-item label="高级配置">
+          <div class="w-full">
+            <el-button size="small" link type="primary" @click="advOpen = !advOpen">
+              {{ advOpen ? '收起高级配置' : '展开高级配置' }}
+            </el-button>
+
+            <el-form v-show="advOpen" label-width="110px" class="advanced-form mt-2">
+              <el-form-item label="模型系列">
+                <el-select v-model="form.advanced.modelSeries" class="w-full">
+                  <el-option v-for="o in MODEL_SERIES_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+                </el-select>
+                <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义</span>
+              </el-form-item>
+
+              <el-form-item label="上下文 输入">
+                <div class="flex w-full flex-wrap items-center gap-4">
+                  <el-input-number
+                    v-model="form.advanced.maxInputTokens"
+                    :min="0"
+                    :max="100000000"
+                    controls-position="right"
+                    class="w-44"
+                  />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <el-button
+                      v-for="p in CONTEXT_IN_PRESETS"
+                      :key="p.label"
+                      size="small"
+                      @click="form.advanced.maxInputTokens = p.value"
+                      >{{ p.label }}</el-button
+                    >
+                  </div>
+                  <span class="text-xs text-gray-400">0 = 上游默认</span>
+                </div>
+              </el-form-item>
+
+              <el-form-item label="上下文 输出">
+                <div class="flex w-full flex-wrap items-center gap-4">
+                  <el-input-number
+                    v-model="form.advanced.maxOutputTokens"
+                    :min="0"
+                    :max="1000000"
+                    controls-position="right"
+                    class="w-44"
+                  />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <el-button
+                      v-for="p in CONTEXT_OUT_PRESETS"
+                      :key="p.label"
+                      size="small"
+                      @click="form.advanced.maxOutputTokens = p.value"
+                      >{{ p.label }}</el-button
+                    >
+                  </div>
+                  <span class="text-xs text-gray-400">0 = 全局默认</span>
+                </div>
+              </el-form-item>
+
+              <el-form-item label="工具调用轮数">
+                <div class="flex w-full flex-wrap items-center gap-4">
+                  <el-input-number
+                    v-model="form.advanced.toolRounds"
+                    :min="0"
+                    :max="10000"
+                    controls-position="right"
+                    class="w-44"
+                    placeholder="500"
+                  />
+                  <span class="text-xs text-gray-400">0 = 上游默认</span>
+                </div>
+              </el-form-item>
+
+              <el-form-item label="支持图片输入">
+                <el-radio-group v-model="form.advanced.imageInput">
+                  <el-radio :value="true">支持</el-radio>
+                  <el-radio :value="false">不支持</el-radio>
+                </el-radio-group>
+              </el-form-item>
+
+              <el-form-item label="思考模式">
+                <div class="w-full">
+                  <div class="flex items-center gap-3">
+                    <span class="w-16 shrink-0 text-xs text-gray-400">参数名</span>
+                    <el-input v-model="form.advanced.thinkingParam" class="w-56" placeholder="如 reasoning_effort" />
+                    <el-select v-model="form.advanced.thinkingValue" class="w-40" placeholder="默认">
+                      <el-option value="" label="默认 / 关闭" />
+                      <el-option v-for="v in form.advanced.thinkingOptions" :key="v" :value="v" :label="v" />
+                    </el-select>
+                  </div>
+                  <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="mr-1 text-xs text-gray-400">可选值（回车添加）：</span>
+                    <el-tag
+                      v-for="v in form.advanced.thinkingOptions"
+                      :key="v"
+                      closable
+                      size="small"
+                      @close="removeThinkingOption(v)"
+                    >
+                      {{ v }}
+                    </el-tag>
+                    <el-input
+                      v-model="thinkingNew"
+                      size="small"
+                      class="w-28"
+                      placeholder="如 low / high"
+                      @keyup.enter="addThinkingOption"
                     />
-                    <div class="flex flex-wrap items-center gap-2">
-                      <el-button
-                        v-for="p in CONTEXT_IN_PRESETS"
-                        :key="p.label"
-                        size="small"
-                        @click="form.advanced.maxInputTokens = p.value"
-                        >{{ p.label }}</el-button
-                      >
-                    </div>
-                    <span class="text-xs text-gray-400">0 = 上游默认</span>
                   </div>
-                </el-form-item>
+                </div>
+              </el-form-item>
 
-                <el-form-item label="上下文 输出">
-                  <div class="flex w-full flex-wrap items-center gap-4">
+              <el-form-item label="采样参数">
+                <div class="flex w-full flex-wrap items-center gap-6">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">Temperature</span>
                     <el-input-number
-                      v-model="form.advanced.maxOutputTokens"
-                      :min="0"
-                      :max="1000000"
+                      v-model="form.advanced.temperature"
+                      :min="-1"
+                      :max="2"
+                      :step="0.1"
                       controls-position="right"
-                      class="w-44"
+                      class="w-32"
                     />
-                    <div class="flex flex-wrap items-center gap-2">
-                      <el-button
-                        v-for="p in CONTEXT_OUT_PRESETS"
-                        :key="p.label"
-                        size="small"
-                        @click="form.advanced.maxOutputTokens = p.value"
-                        >{{ p.label }}</el-button
-                      >
-                    </div>
-                    <span class="text-xs text-gray-400">0 = 全局默认</span>
+                    <span class="text-xs text-gray-400">0~2，-1=默认</span>
                   </div>
-                </el-form-item>
-
-                <el-form-item label="工具调用轮数">
-                  <div class="flex w-full flex-wrap items-center gap-4">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">Top P</span>
                     <el-input-number
-                      v-model="form.advanced.toolRounds"
-                      :min="0"
-                      :max="10000"
+                      v-model="form.advanced.topP"
+                      :min="-1"
+                      :max="1"
+                      :step="0.05"
                       controls-position="right"
-                      class="w-44"
-                      placeholder="500"
+                      class="w-32"
                     />
-                    <span class="text-xs text-gray-400">0 = 上游默认</span>
+                    <span class="text-xs text-gray-400">0~1，-1=默认</span>
                   </div>
-                </el-form-item>
-
-                <el-form-item label="支持图片输入">
-                  <el-radio-group v-model="form.advanced.imageInput">
-                    <el-radio :value="true">支持</el-radio>
-                    <el-radio :value="false">不支持</el-radio>
-                  </el-radio-group>
-                </el-form-item>
-
-                <el-form-item label="思考模式">
-                  <div class="w-full">
-                    <div class="flex items-center gap-3">
-                      <span class="w-16 shrink-0 text-xs text-gray-400">参数名</span>
-                      <el-input v-model="form.advanced.thinkingParam" class="w-56" placeholder="如 reasoning_effort" />
-                      <el-select v-model="form.advanced.thinkingValue" class="w-40" placeholder="默认">
-                        <el-option value="" label="默认 / 关闭" />
-                        <el-option v-for="v in form.advanced.thinkingOptions" :key="v" :value="v" :label="v" />
-                      </el-select>
-                    </div>
-                    <div class="mt-3 flex flex-wrap items-center gap-2">
-                      <span class="mr-1 text-xs text-gray-400">可选值（回车添加）：</span>
-                      <el-tag
-                        v-for="v in form.advanced.thinkingOptions"
-                        :key="v"
-                        closable
-                        size="small"
-                        @close="removeThinkingOption(v)"
-                      >
-                        {{ v }}
-                      </el-tag>
-                      <el-input
-                        v-model="thinkingNew"
-                        size="small"
-                        class="w-28"
-                        placeholder="如 low / high"
-                        @keyup.enter="addThinkingOption"
-                      />
-                    </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400">Top K</span>
+                    <el-input-number
+                      v-model="form.advanced.topK"
+                      :min="-1"
+                      :max="100"
+                      controls-position="right"
+                      class="w-32"
+                    />
+                    <span class="text-xs text-gray-400">1~100，-1=默认</span>
                   </div>
-                </el-form-item>
-
-                <el-form-item label="采样参数">
-                  <div class="flex w-full flex-wrap items-center gap-6">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-400">Temperature</span>
-                      <el-input-number
-                        v-model="form.advanced.temperature"
-                        :min="-1"
-                        :max="2"
-                        :step="0.1"
-                        controls-position="right"
-                        class="w-32"
-                      />
-                      <span class="text-xs text-gray-400">0~2，-1=默认</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-400">Top P</span>
-                      <el-input-number
-                        v-model="form.advanced.topP"
-                        :min="-1"
-                        :max="1"
-                        :step="0.05"
-                        controls-position="right"
-                        class="w-32"
-                      />
-                      <span class="text-xs text-gray-400">0~1，-1=默认</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-400">Top K</span>
-                      <el-input-number
-                        v-model="form.advanced.topK"
-                        :min="-1"
-                        :max="100"
-                        controls-position="right"
-                        class="w-32"
-                      />
-                      <span class="text-xs text-gray-400">1~100，-1=默认</span>
-                    </div>
-                  </div>
-                </el-form-item>
-              </el-form>
-            </div>
-          </el-form-item>
-        </el-form>
-      </el-scrollbar>
+                </div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-form-item>
+      </el-form>
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -651,7 +648,7 @@ onMounted(() => {
           {{ isEdit ? '保存' : '新增' }}
         </el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
   </div>
 </template>
 

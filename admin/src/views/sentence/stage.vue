@@ -10,6 +10,7 @@
  *
  * 权限：stage:view 查看，stage:handle 增删改（v-permission，与种子菜单一致）。
  */
+import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import {
   aiGenerateStageStoryApi,
@@ -989,7 +990,7 @@ onMounted(() => {
     </el-drawer>
 
     <!-- 关卡编辑弹窗（新增/编辑共用） -->
-    <el-dialog
+    <BasicDialog
       v-model="storyDialogVisible"
       :title="editingStoryId === null ? '新增关卡' : '编辑关卡'"
       width="720px"
@@ -1135,10 +1136,10 @@ onMounted(() => {
         <el-button @click="storyDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="storySaving" @click="saveStory">保存</el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
 
     <!-- 剧本编辑弹窗（新增/编辑共用） -->
-    <el-dialog
+    <BasicDialog
       v-model="scriptDialogVisible"
       :title="editingScriptId === null ? '新增剧本' : '编辑剧本'"
       width="520px"
@@ -1190,10 +1191,10 @@ onMounted(() => {
         <el-button @click="scriptDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="scriptSaving" @click="saveScript">保存</el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
 
     <!-- AI 生成关卡：选剧本 → 生成草稿 → 自动铺进上面的编辑弹窗审核 -->
-    <el-dialog v-model="aiDialogVisible" title="AI 生成关卡" width="520px" :close-on-click-modal="false">
+    <BasicDialog v-model="aiDialogVisible" title="AI 生成关卡" width="520px" :close-on-click-modal="false">
       <el-form label-width="90px">
         <el-form-item label="所属剧本" required>
           <div class="flex flex-wrap items-center gap-2">
@@ -1230,6 +1231,6 @@ onMounted(() => {
           生成草稿
         </el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
   </div>
 </template>

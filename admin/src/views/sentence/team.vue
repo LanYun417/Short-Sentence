@@ -7,6 +7,7 @@
  *
  * 权限：team:view 查看，team:handle 解散/改名（v-permission，与种子菜单一致）。
  */
+import BasicDialog from '@/components/BasicDialog/index.vue';
 import { ElMessage, ElMessageBox } from '@/utils/element';
 import { dissolveTeamApi, getTeamDetailApi, getTeamListApi, getTeamStatsApi, renameTeamApi } from '@/api/team';
 import { useTable } from '@/composables/useTable';
@@ -254,7 +255,7 @@ onMounted(() => {
     </el-drawer>
 
     <!-- 改名对话框 -->
-    <el-dialog v-model="renameVisible" title="修改小队名" width="420px" :close-on-click-modal="false">
+    <BasicDialog v-model="renameVisible" title="修改小队名" width="420px" :close-on-click-modal="false">
       <el-form label-width="70px">
         <el-form-item label="新队名">
           <el-input
@@ -270,6 +271,6 @@ onMounted(() => {
         <el-button @click="renameVisible = false">取消</el-button>
         <el-button type="primary" :loading="renaming" @click="saveRename">保存</el-button>
       </template>
-    </el-dialog>
+    </BasicDialog>
   </div>
 </template>

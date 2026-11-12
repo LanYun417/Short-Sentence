@@ -83,6 +83,8 @@ npm run stylelint           # Stylelint
 npm run guard:deps          # 依赖基线
 npm run guard:locale        # 语言包 key / 占位符一致
 npm run guard:imports       # 入库文件的相对导入可解析
+npm run guard:scrollbar     # 禁原生纵向滚动条（统一 el-scrollbar）
+npm run guard:dialog        # 禁裸 el-dialog（统一 BasicDialog）
 (cd api && npm run typecheck && npm run lint && npm run test)   # 后端
 (cd admin && npm run type-check)                                # 中后台
 (cd client && npm run build)                                    # Nuxt 用户端（构建内含类型检查）
