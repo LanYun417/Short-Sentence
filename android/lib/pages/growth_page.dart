@@ -742,7 +742,7 @@ class _MemoryHealthCard extends StatelessWidget {
               style: theme.textTheme.labelSmall?.copyWith(color: hint)),
           const SizedBox(height: 6),
           SizedBox(
-            height: 56,
+            height: 64,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
@@ -753,10 +753,22 @@ class _MemoryHealthCard extends StatelessWidget {
                       child: Container(
                         height: maxDist == 0
                             ? 0
-                            : (stats.distribution[i] / maxDist) * 54,
+                            : (stats.distribution[i] / maxDist) * 60,
                         decoration: BoxDecoration(
-                          color: colors.brand.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(2),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: i == 0
+                                ? [colors.brand, colors.brand.withValues(alpha: 0.45)]
+                                : [
+                                    colors.brand.withValues(alpha: 0.7),
+                                    colors.brand.withValues(alpha: 0.22),
+                                  ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(3),
+                            topRight: Radius.circular(3),
+                          ),
                         ),
                       ),
                     ),
@@ -769,9 +781,9 @@ class _MemoryHealthCard extends StatelessWidget {
               style: theme.textTheme.labelSmall?.copyWith(color: hint)),
           const SizedBox(height: 6),
           SizedBox(
-            height: 56,
+            height: 64,
             child: CustomPaint(
-              size: const Size(double.infinity, 56),
+              size: const Size(double.infinity, 64),
               painter: _RetentionPainter(
                 points: stats.retentionCurve,
                 color: Colors.indigo,
@@ -820,25 +832,63 @@ class _RetentionPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.85)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    final path = Path();
-    for (var i = 0; i < points.length; i++) {
-      final x = (points[i].day / 30) * size.width;
-      final y = size.height - points[i].retention * (size.height - 6) - 3;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
+    final pts = points
+        .map((p) => Offset((p.day / 30) * size.width, size.height - p.retention * (size.height - 8) - 4))
+        .toList();
+
+    // 基线
+    canvas.drawLine(
+      Offset(0, size.height - 0.5),
+      Offset(size.width, size.height - 0.5),
+      Paint()..color = color.withValues(alpha: 0.15)..strokeWidth = 1,
+    );
+
+    // 面积填充（曲线下渐变）
+    final area = Path()..moveTo(pts.first.dx, size.height);
+    for (final p in pts) {
+      area.lineTo(p.dx, p.dy);
     }
-    canvas.drawPath(path, paint);
+    area.lineTo(pts.last.dx, size.height);
+    area.close();
+    canvas.drawPath(
+      area,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: 0.28), color.withValues(alpha: 0.01)],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..style = PaintingStyle.fill,
+    );
+
+    // 平滑折线（二次贝塞尔过中点）
+    final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (var i = 1; i < pts.length; i++) {
+      final prev = pts[i - 1];
+      final cur = pts[i];
+      final mid = Offset((prev.dx + cur.dx) / 2, (prev.dy + cur.dy) / 2);
+      path.quadraticBezierTo(prev.dx, prev.dy, mid.dx, mid.dy);
+    }
+    path.lineTo(pts.last.dx, pts.last.dy);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color.withValues(alpha: 0.9)
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // 终点圆点
+    canvas.drawCircle(
+      pts.last,
+      3.5,
+      Paint()..color = color,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _RetentionPainter old) => false;
+  bool shouldRepaint(covariant _RetentionPainter old) => true;
 }
 
 /* ------------------------------ AI 私教 ------------------------------ */
