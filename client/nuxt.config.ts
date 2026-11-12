@@ -189,6 +189,7 @@ export default defineNuxtConfig({
       '/stages/*',
       '/chains',
       '/team',
+      '/achievements',
     ],
   },
 
@@ -207,6 +208,7 @@ export default defineNuxtConfig({
       '/stages/*',
       '/chains',
       '/team',
+      '/achievements',
     ],
     urls: () => [
       { loc: '/', changefreq: 'daily', priority: 1 },

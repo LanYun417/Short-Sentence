@@ -11,6 +11,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'pages/achievements_page.dart';
 import 'pages/chain_page.dart';
 import 'pages/dialogue_page.dart';
 import 'pages/leaderboard_page.dart';
@@ -69,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
       GoRoute(path: '/team', builder: (context, state) => const TeamPage()),
+      GoRoute(path: '/achievements', builder: (context, state) => const AchievementsPage()),
     ],
   );
 });

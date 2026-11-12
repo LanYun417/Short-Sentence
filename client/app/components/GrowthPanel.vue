@@ -11,42 +11,8 @@ const { data: overview } = await useSsrApi<GamifyOverview>('ss:gamify', '/client
 /** 首页勋章墙展示的个数（其余进「全部」弹窗），图标-only 布局一行即可放下很多。 */
 const VISIBLE_ACHIEVEMENTS = 9;
 const visibleAchievements = computed(() => overview.value?.achievements.slice(0, VISIBLE_ACHIEVEMENTS) ?? []);
-/** 点开某枚勋章看详情。 */
+/** 点开某枚勋章看详情（首页勋章墙点开用）。「全部」入口跳转 /achievements 页。 */
 const selected = ref<GamifyAchievement | null>(null);
-/** 「全部成就」弹窗。 */
-const showAll = ref(false);
-
-/** 成就分类的展示名与排序（与后端 seed 的 category 对应）。 */
-const CATEGORY_LABELS: Record<string, string> = {
-  behavior: '日常行为',
-  persist: '坚持打卡',
-  explore: '探索发现',
-};
-const CATEGORY_ORDER = ['behavior', 'persist', 'explore'];
-
-/** 全部成就按分类分组（供「全部成就」弹窗渲染）。 */
-const groupedAchievements = computed(() => {
-  const list = overview.value?.achievements ?? [];
-  const map = new Map<string, GamifyAchievement[]>();
-  for (const a of list) {
-    const c = a.category || 'other';
-    const arr = map.get(c);
-    if (arr) arr.push(a);
-    else map.set(c, [a]);
-  }
-  const groups = [...map.entries()].map(([category, items]) => ({
-    category,
-    label: CATEGORY_LABELS[category] ?? '其他',
-    items,
-    unlocked: items.filter((i) => i.unlocked).length,
-  }));
-  groups.sort((a, b) => {
-    const ai = CATEGORY_ORDER.indexOf(a.category);
-    const bi = CATEGORY_ORDER.indexOf(b.category);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-  });
-  return groups;
-});
 
 /**
  * 成就图标映射：DB 存的是 lucide 名（不含前缀）。
@@ -152,7 +118,7 @@ function iconOf(name: string): string {
             v-if="overview.achievements.length > VISIBLE_ACHIEVEMENTS"
             type="button"
             class="text-xs font-medium text-sky-600 transition hover:underline dark:text-sky-400"
-            @click="showAll = true"
+            @click="navigateTo('/achievements')"
           >
             全部
           </button>
@@ -266,76 +232,6 @@ function iconOf(name: string): string {
         </div>
       </div>
       <UButton class="mt-4 w-full" color="neutral" variant="outline" @click="selected = null">关闭</UButton>
-    </div>
-  </div>
-
-  <!-- 全部成就弹窗 -->
-  <div v-if="showAll" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4" @click.self="showAll = false">
-    <div
-      class="mx-auto my-6 w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
-    >
-      <div class="mb-3 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-          全部成就（{{ overview?.unlockedAchievements }} / {{ overview?.totalAchievements }}）
-        </h3>
-        <button
-          type="button"
-          class="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
-          @click="showAll = false"
-        >
-          <UIcon name="i-lucide-x" class="h-4 w-4" />
-        </button>
-      </div>
-      <!-- 按分类分组的列表，比挤在一起的小图标格更好读 -->
-      <div class="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
-        <section v-for="group in groupedAchievements" :key="group.category">
-          <div class="mb-2 flex items-center gap-2">
-            <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200">{{ group.label }}</h4>
-            <span class="text-[10px] tabular-nums text-slate-400">{{ group.unlocked }}/{{ group.items.length }}</span>
-            <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800"></span>
-          </div>
-          <ul class="space-y-1.5">
-            <li v-for="item in group.items" :key="item.code">
-              <button
-                type="button"
-                class="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                :class="!item.unlocked && 'opacity-50'"
-                @click="
-                  selected = item;
-                  showAll = false;
-                "
-              >
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-xl"
-                  :class="
-                    item.unlocked
-                      ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
-                      : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
-                  "
-                >
-                  <UIcon :name="iconOf(item.icon)" class="h-5 w-5" />
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block truncate text-[13px] font-semibold text-slate-800 dark:text-slate-100">
-                    {{ item.name }}
-                  </span>
-                  <span class="block truncate text-[11px] text-slate-400">{{ item.description }}</span>
-                </span>
-                <span
-                  class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                  :class="
-                    item.unlocked
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                      : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
-                  "
-                >
-                  {{ item.unlocked ? `+${item.rewardXp} XP` : '未解锁' }}
-                </span>
-              </button>
-            </li>
-          </ul>
-        </section>
-      </div>
     </div>
   </div>
 </template>
