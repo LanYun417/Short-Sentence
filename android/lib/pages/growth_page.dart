@@ -1374,18 +1374,95 @@ class _TeamCardState extends ConsumerState<_TeamCard> {
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(color: hint, height: 1.5)),
         const SizedBox(height: 12),
-        Center(
-          child: FilledButton(
-            onPressed: _busy
-                ? null
-                : () => _act((api) async {
-                      await api.match();
-                    }),
-            child: Text(_busy ? '匹配中…' : '找队友'),
-          ),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _busy ? null : _showFindSheet,
+                icon: const Icon(Icons.shuffle_rounded, size: 16),
+                label: const Text('找队友'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _busy ? null : _createTeam,
+                icon: const Icon(Icons.flag_rounded, size: 16),
+                label: const Text('创建小队'),
+              ),
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  /// 「找队友」点开给两个选择：随机匹配 / 组队码加入；「创建小队」在旁边，凑齐三种组队方式。
+  void _showFindSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.shuffle_rounded),
+              title: const Text('随机匹配'),
+              subtitle: const Text('按近 7 天练习节奏匹配陌生队友'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _act((api) async {
+                  await api.match();
+                });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.vpn_key_rounded),
+              title: const Text('组队码加入'),
+              subtitle: const Text('输入朋友给你的组队码'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _joinByCode();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 弹窗输入一段文字（建队名 / 组队码共用）。
+  Future<String?> _promptText(String title, String hint) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(controller: controller, autofocus: true, decoration: InputDecoration(hintText: hint)),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('确定')),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  /// 创建小队：弹队名 → 建队（单人也可成队，之后拿组队码邀请别人）。
+  Future<void> _createTeam() async {
+    final name = await _promptText('创建小队', '小队名 2~20 字');
+    if (name == null || name.isEmpty) return;
+    await _act((api) async {
+      await api.create(name);
+    });
+  }
+
+  /// 组队码加入：弹码 → 入队。
+  Future<void> _joinByCode() async {
+    final code = await _promptText('组队码加入', '6 位组队码');
+    if (code == null || code.isEmpty) return;
+    await _act((api) async {
+      await api.join(code.toUpperCase());
+    });
   }
 
   Widget _buildTeam(BuildContext context, ThemeData theme, TeamView team) {

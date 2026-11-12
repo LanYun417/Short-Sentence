@@ -37,6 +37,10 @@ const renaming = ref(false);
 const nameDraft = ref('');
 /** 待确认的危险动作：leave 退出 / rematch 换一批队友。空串 = 无待确认。 */
 const confirming = ref<'' | 'leave' | 'rematch'>('');
+/** 空态下展开的面板：'' 无 / 'find' 找队友 / 'create' 创建小队。 */
+const chooser = ref<'' | 'find' | 'create'>('');
+const createName = ref('');
+const joinCode = ref('');
 
 /** 小队名归一（与服务端同口径，这里只用于即时反馈；服务端会再归一一次）。 */
 function normalizeName(raw: string): string {
@@ -58,6 +62,52 @@ async function run(action: 'match' | 'leave'): Promise<void> {
     await refresh();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败，请稍后重试';
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** 自建队伍：单人也可成队，之后拿组队码邀请别人。 */
+async function createTeam(): Promise<void> {
+  if (busy.value) return;
+  const name = normalizeName(createName.value);
+  if ([...name].length < 2) {
+    error.value = '小队名至少 2 个字';
+    return;
+  }
+  if ([...name].length > 20) {
+    error.value = '小队名最多 20 个字';
+    return;
+  }
+  busy.value = true;
+  error.value = '';
+  try {
+    team.value = await apiFetch<TeamView>('/client/team/create', { method: 'POST', body: { name } });
+    createName.value = '';
+    chooser.value = '';
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '创建失败，请稍后重试';
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** 凭组队码加入。 */
+async function joinByCode(): Promise<void> {
+  if (busy.value) return;
+  const code = joinCode.value.trim().toUpperCase();
+  if (code.length < 4) {
+    error.value = '请输入组队码';
+    return;
+  }
+  busy.value = true;
+  error.value = '';
+  try {
+    team.value = await apiFetch<TeamView>('/client/team/join', { method: 'POST', body: { code } });
+    joinCode.value = '';
+    chooser.value = '';
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '加入失败，请检查组队码';
   } finally {
     busy.value = false;
   }
@@ -152,21 +202,60 @@ const toneClass = computed(() => {
       <span class="text-xs text-slate-400">节奏相近的伙伴</span>
     </div>
 
-    <!-- 未组队：一句话讲清「弱连接」是什么 -->
+    <!-- 未组队：找队友 / 创建小队 两个入口并排 -->
     <div v-if="!team" class="text-center">
       <p class="mb-1 text-sm text-slate-600 dark:text-slate-300">和节奏相近的人，一起把每天坚持下来</p>
-      <p class="mb-4 text-xs leading-relaxed text-slate-400">
-        系统按近 7 天练习量自动匹配 2~4 人小队；不互加好友、不聊天，只看今日打卡状态。<br />
+      <p class="mb-3 text-xs leading-relaxed text-slate-400">
+        最多 10 人：随机匹配、组队码加入或自建队伍，队伍内还能群聊。<br />
         全员完成，每人额外 +15 XP，小队连续天数一起涨。
       </p>
-      <button
-        type="button"
-        class="rounded-xl bg-sky-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-sky-700 disabled:opacity-50"
-        :disabled="busy"
-        @click="run('match')"
-      >
-        {{ busy ? '匹配中…' : '找队友' }}
-      </button>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="flex-1 rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-700 disabled:opacity-50"
+          :disabled="busy"
+          @click="chooser = chooser === 'find' ? '' : 'find'"
+        >
+          找队友
+        </button>
+        <button
+          type="button"
+          class="flex-1 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+          :disabled="busy"
+          @click="chooser = chooser === 'create' ? '' : 'create'"
+        >
+          创建小队
+        </button>
+      </div>
+
+      <!-- 找队友展开：随机匹配 / 组队码加入 -->
+      <div v-if="chooser === 'find'" class="mt-3 space-y-2 rounded-xl bg-slate-50 p-3 text-left dark:bg-slate-800/60">
+        <UButton size="sm" class="w-full" :loading="busy" @click="run('match')">随机匹配（按近 7 天节奏）</UButton>
+        <div class="flex gap-2">
+          <input
+            v-model="joinCode"
+            type="text"
+            maxlength="8"
+            placeholder="6 位组队码"
+            class="min-w-0 flex-1 rounded-lg bg-white px-2 py-1.5 font-mono text-xs uppercase tracking-widest ring-1 ring-slate-200 outline-none transition focus:ring-sky-400 dark:bg-slate-900 dark:ring-slate-700 dark:text-slate-100"
+            @keyup.enter="joinByCode"
+          />
+          <UButton size="sm" :loading="busy" @click="joinByCode">加入</UButton>
+        </div>
+      </div>
+
+      <!-- 创建小队展开：队名 + 创建（单人也可成队，之后拿组队码邀请别人） -->
+      <div v-if="chooser === 'create'" class="mt-3 flex gap-2">
+        <input
+          v-model="createName"
+          type="text"
+          maxlength="20"
+          placeholder="小队名 2~20 字"
+          class="min-w-0 flex-1 rounded-lg bg-slate-50 px-2 py-1.5 text-sm ring-1 ring-slate-200 outline-none transition focus:ring-sky-400 dark:bg-slate-800 dark:ring-slate-700 dark:text-slate-100"
+          @keyup.enter="createTeam"
+        />
+        <UButton size="sm" :loading="busy" @click="createTeam">创建</UButton>
+      </div>
     </div>
 
     <!-- 已组队 -->
