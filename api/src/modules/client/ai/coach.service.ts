@@ -16,7 +16,7 @@ import { AiBudgetService } from '../../../common/ai/ai-budget.service.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
-import { resolveTextChannel } from '../../../common/ai/ai.config.js';
+import { resolveChatEndpoint, resolveModel } from '../../../common/ai/ai-protocol.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -193,7 +193,7 @@ export class ClientCoachService {
       toughSentences,
       plan,
       focus,
-      aiAvailable: resolveTextChannel(this.aiSettings.current).apiKey.trim().length > 0,
+      aiAvailable: (resolveModel(this.aiSettings.current.models, 'text')?.apiKey.trim().length ?? 0) > 0,
     };
   }
 
@@ -208,7 +208,14 @@ export class ClientCoachService {
       return { text: rule, source: 'rule' };
     }
 
-    const channel = resolveTextChannel(this.aiSettings.current);
+    const model = resolveModel(this.aiSettings.current.models, 'text');
+    const channel = {
+      id: model?.id ?? '',
+      baseUrl: model?.baseUrl ?? '',
+      apiKey: model?.apiKey ?? '',
+      model: model?.modelId ?? '',
+      fullUrl: !!model?.fullUrl,
+    };
     const startedAt = Date.now();
     let quotaConsumed = false;
     try {
@@ -217,7 +224,7 @@ export class ClientCoachService {
       await this.aiQuota.consume(userId, 'coach');
       quotaConsumed = true;
 
-      const response = await fetch(`${channel.baseUrl}/chat/completions`, {
+      const response = await fetch(resolveChatEndpoint(channel.baseUrl, 'openai_chat', channel.fullUrl), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${channel.apiKey}`,
@@ -261,7 +268,7 @@ export class ClientCoachService {
       }
       await this.aiCallLog.record({
         type: 'coach_advice',
-        provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
+        provider: channel.id,
         model: channel.model,
         bizId: userId,
         promptTokens: body.usage?.prompt_tokens ?? 0,
@@ -280,7 +287,7 @@ export class ClientCoachService {
       if (!overBudget) {
         await this.aiCallLog.record({
           type: 'coach_advice',
-          provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
+          provider: channel.id,
           model: channel.model,
           bizId: userId,
           latencyMs: Date.now() - startedAt,

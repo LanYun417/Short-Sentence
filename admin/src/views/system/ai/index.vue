@@ -1,29 +1,35 @@
 <script setup lang="ts">
 /**
- * AI 设置页（Agnes 文本通道 + 英伟达 NIM 生题通道）。
+ * AI 设置页（模型列表）。
  *
- * 模型接入参数参考常见 AI 客户端的设置形态：
- * - API 格式：OpenAI Chat Completions / OpenAI Responses API / Anthropic Messages 三种；
- * - 自定义请求地址 + 「完整 URL」开关（开 = 地址原样使用，关 = 自动补全格式对应路径）；
- * - 模型 ID / 展示名称 / API Key（只回掩码、留空不改）；
- * - 高级配置：模型系列、上下文窗口（输入/输出预设）、工具调用轮数、图片输入、思考模式、采样参数。
+ * 设计：**一套配置、多个模型、不分厂商**。每张卡片 = 一个模型，
+ * 字段含用途（生文 / 生图）、API 格式、自定义请求地址 + 完整 URL 开关、
+ * 模型 ID / 展示名称 / API Key、高级参数（模型系列、上下文窗口、工具轮数、
+ * 图片输入、思考模式、采样参数）。同用途取第一个启用的模型。
  *
- * 注意：**生图模型固定走 Agnes images 接口，不受 API 格式影响**，保持不变。
+ * 关键交互：API Key **只回掩码、留空表示沿用已存密钥**——后端从不把真密钥交给浏览器，
+ * 前端也不允许把掩码值回填提交。
  *
- * 保存后后端刷新运行时快照，下一次 AI 调用立即生效，无需重启进程。
+ * 生图模型固定走 images 接口，API 格式仅对生文模型有意义（生图固定 openai_chat）。
  */
 import { ElMessage } from '@/utils/element';
 import { getAiSettingsApi, saveAiSettingsApi, testAiApi } from '@/api/ai';
-import type { AdvancedAiConfig, AiSettings, SaveAiSettingsPayload } from '@/types/api';
+import type { AdvancedAiConfig, AiSettings, SaveAiModel, SaveAiSettingsPayload } from '@/types/api';
 
 defineOptions({ name: 'SystemAi' });
 
 type ApiFormat = 'openai_chat' | 'openai_responses' | 'anthropic';
+type Purpose = 'text' | 'image';
 
 const API_FORMAT_OPTIONS: Array<{ value: ApiFormat; label: string }> = [
   { value: 'openai_chat', label: 'OpenAI Chat Completions 格式' },
   { value: 'openai_responses', label: 'OpenAI Responses API 格式' },
   { value: 'anthropic', label: 'Anthropic Messages 格式' },
+];
+
+const PURPOSE_OPTIONS: Array<{ value: Purpose; label: string }> = [
+  { value: 'text', label: '生文（对话/生题/造句/词根/句签/解析）' },
+  { value: 'image', label: '生图（场景配图）' },
 ];
 
 /** 模型系列可选值（仅 OpenAI 系列模型有意义；默认即「不指定」）。 */
@@ -50,15 +56,31 @@ const CONTEXT_OUT_PRESETS = [
 
 const loading = ref(false);
 const saving = ref(false);
-const testing = ref(false);
-const testingNim = ref(false);
+/** 正在测试的模型 id（空 = 无） */
+const testingId = ref('');
 const settings = ref<AiSettings | null>(null);
-const testResult = ref('');
-const testNimResult = ref('');
-/** 高级配置折叠面板激活项。 */
-const activeNames = ref<string[]>([]);
-/** 思考模式：新增值输入框。 */
-const thinkingNew = ref('');
+
+/** 可编辑的模型表单（apiKey 是输入框，空 = 沿用已存）。 */
+interface ModelForm {
+  id: string;
+  purpose: Purpose;
+  enabled: boolean;
+  format: ApiFormat;
+  fullUrl: boolean;
+  baseUrl: string;
+  modelId: string;
+  modelLabel: string;
+  apiKey: string;
+  advanced: AdvancedAiConfig;
+}
+
+const models = ref<ModelForm[]>([]);
+/** 每个模型密钥的已配置形态（读接口只回掩码），用于 placeholder 提示。 */
+const keyMeta = ref<Record<string, { configured: boolean; masked: string }>>({});
+/** 每个模型「高级配置」是否展开。 */
+const advOpen = ref<Record<string, boolean>>({});
+/** 每个模型思考模式的新增值输入框。 */
+const thinkingNew = ref<Record<string, string>>({});
 
 const defaultAdvanced = (): AdvancedAiConfig => ({
   modelSeries: '',
@@ -74,77 +96,72 @@ const defaultAdvanced = (): AdvancedAiConfig => ({
   topK: -1,
 });
 
-const form = ref({
-  apiKey: '',
-  baseUrl: 'https://api.agnes-ai.cn/v1',
-  apiFormat: 'openai_chat' as ApiFormat,
-  fullUrl: false,
-  textModel: 'agnes-2.5-flash',
-  modelLabel: '',
-  imageModel: 'agnes-image-2.5-flash',
-  nimApiKey: '',
-  nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
-  nimModel: '',
-  genChannel: 'agnes' as 'agnes' | 'nim',
-  advanced: defaultAdvanced() as AdvancedAiConfig,
-});
+/** 生成一个短 id（同列表内唯一即可，落库为 VarChar(32)）。 */
+function newId(): string {
+  return `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function blankModel(purpose: Purpose = 'text'): ModelForm {
+  return {
+    id: newId(),
+    purpose,
+    enabled: true,
+    format: 'openai_chat',
+    fullUrl: false,
+    baseUrl: '',
+    modelId: '',
+    modelLabel: '',
+    apiKey: '',
+    advanced: defaultAdvanced(),
+  };
+}
 
 async function load(): Promise<void> {
   loading.value = true;
   try {
     const data = await getAiSettingsApi();
     settings.value = data;
-    form.value = {
-      apiKey: '',
-      baseUrl: data.baseUrl || 'https://api.agnes-ai.cn/v1',
-      apiFormat: data.apiFormat ?? 'openai_chat',
-      fullUrl: !!data.fullUrl,
-      textModel: data.textModel || 'agnes-2.5-flash',
-      modelLabel: data.modelLabel || '',
-      imageModel: data.imageModel || 'agnes-image-2.5-flash',
-      nimApiKey: '',
-      nimBaseUrl: data.nimBaseUrl || 'https://integrate.api.nvidia.com/v1',
-      nimModel: data.nimModel || '',
-      genChannel: data.genChannel === 'nim' ? 'nim' : 'agnes',
-      advanced: { ...defaultAdvanced(), ...(data.advanced ?? {}) },
-    };
+    models.value = data.models.map((m) => ({
+      id: m.id,
+      purpose: m.purpose,
+      enabled: m.enabled,
+      format: m.format,
+      fullUrl: m.fullUrl,
+      baseUrl: m.baseUrl,
+      modelId: m.modelId,
+      modelLabel: m.modelLabel,
+      apiKey: '', // 只回掩码，输入框留空表示沿用
+      advanced: { ...defaultAdvanced(), ...(m.advanced ?? {}) },
+    }));
+    keyMeta.value = Object.fromEntries(
+      data.models.map((m) => [m.id, { configured: m.apiKeyConfigured, masked: m.apiKeyMasked }]),
+    );
   } finally {
     loading.value = false;
   }
 }
 
-/** 思考模式：回车添加一个可选值。 */
-function addThinkingOption(): void {
-  const v = thinkingNew.value.trim();
-  if (!v) return;
-  if (!form.value.advanced.thinkingOptions.includes(v)) {
-    form.value.advanced.thinkingOptions.push(v);
-  }
-  thinkingNew.value = '';
-}
-
-function removeThinkingOption(v: string): void {
-  form.value.advanced.thinkingOptions = form.value.advanced.thinkingOptions.filter((x) => x !== v);
-  if (form.value.advanced.thinkingValue === v) form.value.advanced.thinkingValue = '';
+/** 表单 → 保存入参（apiKey 空则不带，后端按 id 沿用旧密钥）。 */
+function toSaveModel(m: ModelForm): SaveAiModel {
+  const out: SaveAiModel = {
+    id: m.id,
+    purpose: m.purpose,
+    enabled: m.enabled,
+    format: m.format,
+    fullUrl: m.fullUrl,
+    baseUrl: m.baseUrl.trim(),
+    modelId: m.modelId.trim(),
+    modelLabel: m.modelLabel.trim(),
+    advanced: { ...m.advanced },
+  };
+  if (m.apiKey.trim()) out.apiKey = m.apiKey.trim();
+  return out;
 }
 
 async function save(): Promise<void> {
   saving.value = true;
   try {
-    const payload: SaveAiSettingsPayload = {
-      baseUrl: form.value.baseUrl.trim(),
-      apiFormat: form.value.apiFormat,
-      fullUrl: form.value.fullUrl,
-      textModel: form.value.textModel.trim(),
-      modelLabel: form.value.modelLabel.trim(),
-      imageModel: form.value.imageModel.trim(),
-      nimBaseUrl: form.value.nimBaseUrl.trim(),
-      nimModel: form.value.nimModel.trim(),
-      genChannel: form.value.genChannel,
-      advanced: { ...form.value.advanced },
-    };
-    if (form.value.apiKey.trim()) payload.apiKey = form.value.apiKey.trim();
-    if (form.value.nimApiKey.trim()) payload.nimApiKey = form.value.nimApiKey.trim();
+    const payload: SaveAiSettingsPayload = { models: models.value.map(toSaveModel) };
     await saveAiSettingsApi(payload);
     ElMessage.success('已保存，配置立即生效');
     await load();
@@ -153,28 +170,48 @@ async function save(): Promise<void> {
   }
 }
 
-async function runTest(): Promise<void> {
-  testing.value = true;
-  testResult.value = '';
+/** 新增一个模型卡片。 */
+function addModel(purpose: Purpose = 'text'): void {
+  const m = blankModel(purpose);
+  models.value.push(m);
+  advOpen.value[m.id] = false;
+}
+
+/** 删除一个模型卡片。 */
+function removeModel(id: string): void {
+  models.value = models.value.filter((m) => m.id !== id);
+}
+
+/** 测试某个模型的连通（把当前表单作为草稿发过去，未保存也能测）。 */
+async function runTest(m: ModelForm): Promise<void> {
+  testingId.value = m.id;
   try {
-    const data = await testAiApi();
-    testResult.value = `连通正常 · ${data.model} · ${data.latencyMs}ms`;
-    ElMessage.success('连通正常');
+    const data = await testAiApi(toSaveModel(m), m.id);
+    ElMessage.success(`连通正常 · ${data.model} · ${data.latencyMs}ms`);
   } finally {
-    testing.value = false;
+    testingId.value = '';
   }
 }
 
-async function runNimTest(): Promise<void> {
-  testingNim.value = true;
-  testNimResult.value = '';
-  try {
-    const data = await testAiApi('nim');
-    testNimResult.value = `NIM 连通正常 · ${data.model} · ${data.latencyMs}ms`;
-    ElMessage.success('NIM 连通正常');
-  } finally {
-    testingNim.value = false;
-  }
+/** 思考模式：回车添加一个可选值。 */
+function addThinkingOption(m: ModelForm): void {
+  const v = (thinkingNew.value[m.id] ?? '').trim();
+  if (!v) return;
+  if (!m.advanced.thinkingOptions.includes(v)) m.advanced.thinkingOptions.push(v);
+  thinkingNew.value[m.id] = '';
+}
+
+function removeThinkingOption(m: ModelForm, v: string): void {
+  m.advanced.thinkingOptions = m.advanced.thinkingOptions.filter((x) => x !== v);
+  if (m.advanced.thinkingValue === v) m.advanced.thinkingValue = '';
+}
+
+function purposeLabel(p: Purpose): string {
+  return p === 'image' ? '生图' : '生文';
+}
+
+function modelName(m: ModelForm): string {
+  return m.modelLabel || m.modelId || '未命名模型';
 }
 
 onMounted(() => {
@@ -187,99 +224,124 @@ onMounted(() => {
     <el-card shadow="never">
       <template #header>
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-[15px] font-semibold text-ink">Agnes AI 服务（文本通道）</span>
-          <el-tag v-if="settings?.enabled" type="success" size="small">已配置</el-tag>
-          <el-tag v-else type="info" size="small">未配置</el-tag>
+          <span class="text-[15px] font-semibold text-ink">AI 模型配置</span>
+          <div class="flex items-center gap-2">
+            <el-tag v-if="settings && settings.models.length" type="success" size="small">
+              已配置 {{ settings.models.length }} 个模型
+            </el-tag>
+            <el-tag v-else type="info" size="small">未配置</el-tag>
+          </div>
         </div>
       </template>
 
       <el-alert
-        v-if="settings && !settings.enabled"
+        v-if="!loading && models.length === 0"
         type="warning"
         :closable="false"
         show-icon
         class="mb-4"
-        title="尚未配置 API Key"
-        description="生题、AI 拓展、词根拆解、句签与题目解析都会停用。填入 Key 保存后立即生效。"
+        title="尚未配置任何模型"
+        description="生题、AI 拓展、词根拆解、句签、题目解析与场景配图都会停用。添加至少一个「生文」用途的模型并保存后立即生效。"
       />
 
-      <el-form label-width="140px" class="max-w-3xl">
-        <el-form-item label="API 格式" required>
-          <el-select v-model="form.apiFormat" class="w-full">
-            <el-option v-for="o in API_FORMAT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
-          </el-select>
-          <span class="ml-2 text-xs text-gray-400">文本对话所用协议；生图仍走 Agnes images，不受影响</span>
-        </el-form-item>
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        class="mb-4"
+        title="一套配置、多个模型、不分厂商"
+        description="每张卡片是一个模型：用途（生文/生图）+ API 格式 + 地址 + 模型 ID + Key + 高级参数。同用途取第一个启用的模型；生图固定走 images 接口，不受 API 格式影响。"
+      />
 
-        <el-form-item label="自定义请求地址" required>
-          <div class="flex w-full items-center gap-2">
-            <el-input
-              v-model="form.baseUrl"
-              :placeholder="form.fullUrl ? 'https://api.example.com/v1/chat/completions' : 'https://api.agnes-ai.cn/v1'"
-            />
-            <el-switch v-model="form.fullUrl" />
-            <span class="shrink-0 text-xs text-gray-400">完整 URL</span>
+      <!-- 模型列表 -->
+      <el-card v-for="m in models" :key="m.id" shadow="never" class="model-card" :body-style="{ padding: '16px 20px' }">
+        <template #header>
+          <div class="flex flex-wrap items-center gap-2">
+            <el-tag :type="m.purpose === 'image' ? 'warning' : 'success'" size="small" effect="light">
+              {{ purposeLabel(m.purpose) }}
+            </el-tag>
+            <span class="text-sm font-semibold text-ink">{{ modelName(m) }}</span>
+            <span class="font-mono text-[11px] text-gray-400">#{{ m.id }}</span>
+            <div class="flex-1"></div>
+            <el-switch v-model="m.enabled" :active-text="m.enabled ? '已启用' : '已停用'" inline-text />
+            <el-button size="small" :loading="testingId === m.id" @click="runTest(m)">测试连接</el-button>
+            <el-button size="small" type="danger" plain @click="removeModel(m.id)">删除</el-button>
           </div>
-          <span class="mt-1 block text-xs text-gray-400">
-            {{
-              form.fullUrl
-                ? '开启后地址原样使用（需含完整路径，如 …/chat/completions）'
-                : '关闭时按所选格式自动补全路径（/chat/completions、/responses、/messages）'
-            }}
-          </span>
-        </el-form-item>
+        </template>
 
-        <el-form-item label="模型 ID" required>
-          <el-input v-model="form.textModel" placeholder="agnes-2.5-flash" />
-          <span class="ml-2 text-xs text-gray-400">生题 / 造句 / 词根 / 句签 / 解析</span>
-        </el-form-item>
+        <el-form label-width="120px">
+          <el-form-item label="用途" required>
+            <el-select v-model="m.purpose" class="w-full">
+              <el-option v-for="o in PURPOSE_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+            </el-select>
+          </el-form-item>
 
-        <el-form-item label="模型展示名称">
-          <el-input v-model="form.modelLabel" maxlength="64" placeholder="留空则显示模型 ID" />
-        </el-form-item>
+          <el-form-item label="API 格式" required>
+            <el-select v-model="m.format" class="w-full" :disabled="m.purpose === 'image'">
+              <el-option v-for="o in API_FORMAT_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
+            </el-select>
+            <span v-if="m.purpose === 'image'" class="ml-2 text-xs text-gray-400"
+              >生图固定走 images 接口，格式不适用</span
+            >
+          </el-form-item>
 
-        <el-form-item label="API Key">
-          <el-input
-            v-model="form.apiKey"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            :placeholder="
-              settings?.apiKeyConfigured
-                ? `已配置 ${settings.apiKeyMasked}（留空不修改）`
-                : 'API Key（只存服务端，接口不回显明文）'
-            "
-          />
-        </el-form-item>
+          <el-form-item label="请求地址" required>
+            <div class="flex w-full items-center gap-2">
+              <el-input
+                v-model="m.baseUrl"
+                :placeholder="m.fullUrl ? 'https://api.example.com/v1/chat/completions' : 'https://api.example.com/v1'"
+              />
+              <el-switch v-model="m.fullUrl" />
+              <span class="shrink-0 text-xs text-gray-400">完整 URL</span>
+            </div>
+            <span class="mt-1 block text-xs text-gray-400">
+              {{
+                m.fullUrl
+                  ? '开启后地址原样使用（需含完整路径）'
+                  : '关闭时按所选格式自动补全路径（/chat/completions、/responses、/messages、/images/generations）'
+              }}
+            </span>
+          </el-form-item>
 
-        <el-form-item label="生图模型">
-          <el-input v-model="form.imageModel" placeholder="agnes-image-2.5-flash" />
-          <span class="ml-2 text-xs text-gray-400">题目配图；固定走 Agnes，不随 API 格式变化</span>
-        </el-form-item>
+          <el-form-item label="模型 ID" required>
+            <el-input v-model="m.modelId" placeholder="如 gpt-4o-mini / deepseek-v4.1-flash" />
+          </el-form-item>
 
-        <!-- 高级配置 -->
-        <el-form-item label="高级配置">
-          <el-collapse v-model="activeNames" class="w-full">
-            <el-collapse-item name="adv">
-              <template #title>
-                <span class="text-sm font-medium">展开高级配置</span>
-                <span class="ml-2 text-xs text-gray-400"
-                  >模型系列 / 上下文窗口 / 工具轮数 / 图片输入 / 思考模式 / 采样参数</span
-                >
-              </template>
+          <el-form-item label="模型展示名称">
+            <el-input v-model="m.modelLabel" maxlength="64" placeholder="留空则显示模型 ID" />
+          </el-form-item>
 
-              <el-form label-width="140px" class="advanced-form mt-2">
+          <el-form-item label="API Key">
+            <el-input
+              v-model="m.apiKey"
+              type="password"
+              show-password
+              autocomplete="new-password"
+              :placeholder="
+                keyMeta[m.id]?.configured
+                  ? `已配置 ${keyMeta[m.id].masked}（留空不修改）`
+                  : 'API Key（只存服务端，接口不回显明文）'
+              "
+            />
+          </el-form-item>
+
+          <el-form-item label="高级配置">
+            <div class="w-full">
+              <el-button size="small" link type="primary" @click="advOpen[m.id] = !advOpen[m.id]">
+                {{ advOpen[m.id] ? '收起高级配置' : '展开高级配置' }}
+              </el-button>
+              <el-form v-show="advOpen[m.id]" label-width="110px" class="advanced-form mt-2">
                 <el-form-item label="模型系列">
-                  <el-select v-model="form.advanced.modelSeries" class="w-full">
+                  <el-select v-model="m.advanced.modelSeries" class="w-full">
                     <el-option v-for="o in MODEL_SERIES_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
                   </el-select>
-                  <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义，未选择时用默认配置</span>
+                  <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义</span>
                 </el-form-item>
 
-                <el-form-item label="上下文窗口 输入">
+                <el-form-item label="上下文 输入">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
-                      v-model="form.advanced.maxInputTokens"
+                      v-model="m.advanced.maxInputTokens"
                       :min="0"
                       :max="100000000"
                       controls-position="right"
@@ -290,7 +352,7 @@ onMounted(() => {
                         v-for="p in CONTEXT_IN_PRESETS"
                         :key="p.label"
                         size="small"
-                        @click="form.advanced.maxInputTokens = p.value"
+                        @click="m.advanced.maxInputTokens = p.value"
                         >{{ p.label }}</el-button
                       >
                     </div>
@@ -298,10 +360,10 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="上下文窗口 输出">
+                <el-form-item label="上下文 输出">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
-                      v-model="form.advanced.maxOutputTokens"
+                      v-model="m.advanced.maxOutputTokens"
                       :min="0"
                       :max="1000000"
                       controls-position="right"
@@ -312,7 +374,7 @@ onMounted(() => {
                         v-for="p in CONTEXT_OUT_PRESETS"
                         :key="p.label"
                         size="small"
-                        @click="form.advanced.maxOutputTokens = p.value"
+                        @click="m.advanced.maxOutputTokens = p.value"
                         >{{ p.label }}</el-button
                       >
                     </div>
@@ -323,7 +385,7 @@ onMounted(() => {
                 <el-form-item label="工具调用轮数">
                   <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
-                      v-model="form.advanced.toolRounds"
+                      v-model="m.advanced.toolRounds"
                       :min="0"
                       :max="10000"
                       controls-position="right"
@@ -335,7 +397,7 @@ onMounted(() => {
                 </el-form-item>
 
                 <el-form-item label="支持图片输入">
-                  <el-radio-group v-model="form.advanced.imageInput">
+                  <el-radio-group v-model="m.advanced.imageInput">
                     <el-radio :value="true">支持</el-radio>
                     <el-radio :value="false">不支持</el-radio>
                   </el-radio-group>
@@ -345,29 +407,29 @@ onMounted(() => {
                   <div class="w-full">
                     <div class="flex items-center gap-3">
                       <span class="w-16 shrink-0 text-xs text-gray-400">参数名</span>
-                      <el-input v-model="form.advanced.thinkingParam" class="w-56" placeholder="如 reasoning_effort" />
-                      <el-select v-model="form.advanced.thinkingValue" class="w-40" placeholder="默认">
+                      <el-input v-model="m.advanced.thinkingParam" class="w-56" placeholder="如 reasoning_effort" />
+                      <el-select v-model="m.advanced.thinkingValue" class="w-40" placeholder="默认">
                         <el-option value="" label="默认 / 关闭" />
-                        <el-option v-for="v in form.advanced.thinkingOptions" :key="v" :value="v" :label="v" />
+                        <el-option v-for="v in m.advanced.thinkingOptions" :key="v" :value="v" :label="v" />
                       </el-select>
                     </div>
                     <div class="mt-3 flex flex-wrap items-center gap-2">
                       <span class="mr-1 text-xs text-gray-400">可选值（回车添加）：</span>
                       <el-tag
-                        v-for="v in form.advanced.thinkingOptions"
+                        v-for="v in m.advanced.thinkingOptions"
                         :key="v"
                         closable
                         size="small"
-                        @close="removeThinkingOption(v)"
+                        @close="removeThinkingOption(m, v)"
                       >
                         {{ v }}
                       </el-tag>
                       <el-input
-                        v-model="thinkingNew"
+                        v-model="thinkingNew[m.id]"
                         size="small"
                         class="w-28"
                         placeholder="如 low / high"
-                        @keyup.enter="addThinkingOption"
+                        @keyup.enter="addThinkingOption(m)"
                       />
                     </div>
                   </div>
@@ -378,7 +440,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Temperature</span>
                       <el-input-number
-                        v-model="form.advanced.temperature"
+                        v-model="m.advanced.temperature"
                         :min="-1"
                         :max="2"
                         :step="0.1"
@@ -390,7 +452,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Top P</span>
                       <el-input-number
-                        v-model="form.advanced.topP"
+                        v-model="m.advanced.topP"
                         :min="-1"
                         :max="1"
                         :step="0.05"
@@ -402,7 +464,7 @@ onMounted(() => {
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Top K</span>
                       <el-input-number
-                        v-model="form.advanced.topK"
+                        v-model="m.advanced.topK"
                         :min="-1"
                         :max="100"
                         controls-position="right"
@@ -413,82 +475,29 @@ onMounted(() => {
                   </div>
                 </el-form-item>
               </el-form>
-            </el-collapse-item>
-          </el-collapse>
-        </el-form-item>
-
-        <el-form-item label="生题内容通道">
-          <el-radio-group v-model="form.genChannel">
-            <el-radio value="agnes">Agnes（默认，走上方生文模型）</el-radio>
-            <el-radio value="nim">英伟达 NIM（免费模型，见下方）</el-radio>
-          </el-radio-group>
-          <span class="ml-2 text-xs text-gray-400"
-            >选 NIM 后所有文本
-            AI（生题/优化/审核/解析/逐词释义/句签/客户端拓展与词根）都走该通道；仅图像生成与图像审核保持 Agnes</span
-          >
-        </el-form-item>
-
-        <template v-if="form.genChannel === 'nim'">
-          <el-divider content-position="left">英伟达 NIM 通道配置（必填 · 所有文本 AI 走这里）</el-divider>
-          <el-alert
-            type="info"
-            :closable="false"
-            show-icon
-            class="mb-4"
-            title="英伟达 NIM 免费模型通道（OpenAI 兼容）"
-            description="选择「英伟达 NIM」后，所有文本 AI 调用都改走这里的地址与模型；仅图像生成和图像审核保持 Agnes。三项一起填，模型在 NVIDIA NIM 目录任选。"
-          />
-
-          <el-form-item label="NIM API Key">
-            <el-input
-              v-model="form.nimApiKey"
-              type="password"
-              show-password
-              autocomplete="new-password"
-              :placeholder="
-                settings?.nimApiKeyConfigured
-                  ? `已配置 ${settings.nimApiKeyMasked}（留空不修改）`
-                  : 'NVIDIA NIM API Key（只存服务端，接口不回显明文）'
-              "
-            />
+            </div>
           </el-form-item>
+        </el-form>
+      </el-card>
 
-          <el-form-item label="NIM 上游地址">
-            <el-input v-model="form.nimBaseUrl" placeholder="https://integrate.api.nvidia.com/v1" />
-          </el-form-item>
-
-          <el-form-item label="NIM 生题模型">
-            <el-input v-model="form.nimModel" placeholder="如 deepseek-ai/deepseek-v4.1-flash" />
-            <span class="ml-2 text-xs text-gray-400">NIM 目录任选免费模型；选 Agnes 通道时本配置不启用</span>
-          </el-form-item>
-        </template>
-
-        <el-form-item>
-          <el-button v-permission="'system:ai:edit'" type="primary" :loading="saving" @click="save">保存设置</el-button>
-          <span class="ml-3 text-xs text-gray-400">存于「参数管理」，空值回落环境变量；保存即生效</span>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 连通性测试 -->
-    <el-card shadow="never" class="mt-4">
-      <template #header>
-        <span class="text-[15px] font-semibold text-ink">连通性测试</span>
-      </template>
-      <div class="flex flex-wrap items-center gap-2">
-        <el-button v-permission="'system:ai:edit'" :loading="testing" @click="runTest">测试 Agnes 连通</el-button>
-        <el-button v-permission="'system:ai:edit'" :loading="testingNim" @click="runNimTest">测试 NIM 连通</el-button>
-        <span v-if="testResult" class="text-sm text-emerald-600">{{ testResult }}</span>
-        <span v-if="testNimResult" class="text-sm text-emerald-600">{{ testNimResult }}</span>
-        <span v-else-if="!testResult && !testNimResult" class="text-xs text-gray-400">
-          按当前 API 格式与生文模型发一个极短请求，验证 Key、地址与模型是否都对
-        </span>
+      <!-- 操作区 -->
+      <div class="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <el-button @click="addModel('text')">+ 添加生文模型</el-button>
+        <el-button @click="addModel('image')">+ 添加生图模型</el-button>
+        <div class="flex-1"></div>
+        <el-button v-permission="'system:ai:edit'" type="primary" :loading="saving" @click="save">保存全部</el-button>
+        <span class="text-xs text-gray-400">存于「参数管理」，保存即生效；密钥留空表示沿用原值</span>
       </div>
     </el-card>
   </div>
 </template>
 
 <style scoped>
+/* 模型卡片之间留出呼吸感（EP 表单项自带间距，这里只排卡片间距）。 */
+.model-card {
+  margin-bottom: 16px;
+}
+
 /* 高级配置各行之间留出呼吸感。
    不用 Tailwind 工具类：项目的工具类被包在 @layer utilities 里，
    而 Element Plus 样式无层级（优先级更高），打在 el-form-item 上的

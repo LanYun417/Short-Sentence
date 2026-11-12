@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { buildTaskRegistry, renderTaskDescription } from '../src/modules/task/task.registry.js';
-import { resolveTextChannel, type AiSettings } from '../src/common/ai/ai.config.js';
-import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
+import { DEFAULT_ADVANCED, resolveModel, type AiModelConfig } from '../src/common/ai/ai-protocol.js';
 
 /**
  * 任务说明里的模型名不写死（占位符 + 运行时渲染）。
  *
- * 后台把生题通道切到英伟达 NIM 后，文本模型就变了；若说明里写死 "Agnes 2.5 Flash"，
- * 运维在定时任务页看到的说明会和实际跑的模型对不上。
+ * 模型列表是可增删的，说明里写死任何模型名都会和实际跑的模型对不上；
+ * 占位符在 TaskService.listTasks 返回时用当前生效的用途模型渲染。
  */
 describe('buildTaskRegistry 任务说明', () => {
   const registry = buildTaskRegistry();
@@ -41,31 +40,38 @@ describe('buildTaskRegistry 任务说明', () => {
   });
 });
 
-describe('resolveTextChannel 决定说明里的文本模型', () => {
-  const base: AiSettings = {
-    apiKey: 'k',
-    baseUrl: 'https://agnes.example.com/v1',
-    textModel: 'agnes-2.5-flash',
-    imageModel: 'agnes-image-v1',
-    nimBaseUrl: 'https://integrate.api.nvidia.com/v1',
-    nimApiKey: 'nv-key',
-    nimModel: 'deepseek-v4-flash',
-    apiFormat: 'openai_chat',
+describe('resolveModel 决定说明里的模型（按用途取第一个启用的模型）', () => {
+  const model = (
+    over: Partial<AiModelConfig> & { id: string; purpose: 'text' | 'image'; modelId: string },
+  ): AiModelConfig => ({
+    enabled: true,
+    format: 'openai_chat',
     fullUrl: false,
+    baseUrl: 'https://a.example/v1',
     modelLabel: '',
+    apiKey: 'k',
     advanced: { ...DEFAULT_ADVANCED },
-    genChannel: 'agnes',
-  };
-
-  it('默认 Agnes 通道时文本模型为 textModel', () => {
-    const channel = resolveTextChannel(base);
-    expect(channel.model).toBe('agnes-2.5-flash');
-    expect(channel.channel).toBe('agnes');
+    ...over,
   });
 
-  it('切到 NIM 通道时文本模型为 nimModel', () => {
-    const channel = resolveTextChannel({ ...base, genChannel: 'nim' });
-    expect(channel.model).toBe('deepseek-v4-flash');
-    expect(channel.channel).toBe('nim');
+  it('按用途分别取文本/生图模型', () => {
+    const models = [
+      model({ id: 't1', purpose: 'text', modelId: 'text-a' }),
+      model({ id: 'i1', purpose: 'image', modelId: 'image-a' }),
+    ];
+    const text = resolveModel(models, 'text');
+    const image = resolveModel(models, 'image');
+    expect(text?.modelId).toBe('text-a');
+    expect(image?.modelId).toBe('image-a');
+  });
+
+  it('禁用的模型被跳过；没有可用模型返回 null', () => {
+    const models = [
+      model({ id: 't1', purpose: 'text', modelId: 'text-a', enabled: false }),
+      model({ id: 't2', purpose: 'text', modelId: 'text-b' }),
+    ];
+    expect(resolveModel(models, 'text')?.modelId).toBe('text-b');
+    expect(resolveModel([], 'text')).toBeNull();
+    expect(resolveModel(models, 'image')).toBeNull();
   });
 });

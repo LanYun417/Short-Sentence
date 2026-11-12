@@ -15,7 +15,7 @@ import type { DayContext } from '../calendar/day-context.js';
 import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
 import { AiSettingsService } from './ai-settings.service.js';
-import { resolveTextChannel } from './ai.config.js';
+import { resolveModel } from './ai-protocol.js';
 import { type ApiFormat, buildChatRequest, normalizeApiFormat, parseChatResponse } from './ai-protocol.js';
 import {
   AiProviderError,
@@ -699,9 +699,10 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     private readonly aiSettings: AiSettingsService,
   ) {}
 
-  /** 密钥未配置时禁用生题能力（由调用方转为明确的业务错误）。 */
+  /** 没有配置任何启用的「生文」用途模型时禁用生题能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
-    return this.aiSettings.current.apiKey.trim().length > 0;
+    const model = resolveModel(this.aiSettings.current.models, 'text');
+    return !!model && model.baseUrl.trim().length > 0 && model.modelId.trim().length > 0;
   }
 
   /**
@@ -1159,18 +1160,21 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     // （生题/优化/审核/句签/词根/造句）。
     await this.budget.assertWithinBudget();
     const startedAt = Date.now();
-    // 文本通道：genChannel 选了 nim 时，所有**纯文本**对话调用走 NIM（生题/优化/审核/解析/逐词释义/句签/造句/词根）；
-    // 带图调用（图像审核 image_review）强制走全局 Agnes——纯文本 NIM 模型不支持视觉输入，图像审核是图像侧 fail-closed 闸门。
+    // 文本通道：从模型列表里取第一个启用的「文本」模型（不分厂商，按它的 API 格式发请求）；
+    // 带图调用（图像审核 image_review）要求该模型支持图片输入，且固定走 openai_chat 多模态格式。
     // 定义在 try 之外，catch 里的失败日志也要记实际使用的模型。
     const settings = this.aiSettings.current;
-    const channel = imageBase64
-      ? { channel: 'agnes' as const, baseUrl: settings.baseUrl, apiKey: settings.apiKey, model: settings.textModel }
-      : resolveTextChannel(settings);
+    const model = resolveModel(settings.models, 'text');
+    if (!model || !model.baseUrl || !model.modelId) {
+      throw new AiProviderError('未配置可用的文本模型（AI 设置里添加并启用一个「生文」用途的模型）', {
+        retryable: false,
+      });
+    }
+    const channel = { channel: 'agnes' as const, baseUrl: model.baseUrl, apiKey: model.apiKey, model: model.modelId };
     const activeModel = channel.model;
-    // API 格式：视觉审核与 NIM 通道固定走 openai_chat（多模态 / NIM 仅 OpenAI 兼容）；
-    // 其余文本调用按后台「API 格式」所选协议。生图不在本方法内，始终走 Agnes images。
-    const format: ApiFormat =
-      imageBase64 || channel.channel === 'nim' ? 'openai_chat' : normalizeApiFormat(settings.apiFormat);
+    // API 格式：视觉审核固定走 openai_chat（多模态），其余文本调用按模型自身配置的格式。
+    // 生图不在本方法内，走单独的「生图」用途模型。
+    const format: ApiFormat = imageBase64 ? 'openai_chat' : normalizeApiFormat(model.format);
     const request = buildChatRequest({
       baseUrl: channel.baseUrl,
       apiKey: channel.apiKey,
@@ -1180,9 +1184,9 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       temperature,
       maxTokens: config.ai.maxOutputTokens,
       jsonMode: true,
-      fullUrl: settings.fullUrl,
+      fullUrl: !!model.fullUrl,
       format,
-      advanced: settings.advanced,
+      advanced: model.advanced,
       imageBase64,
     });
     try {
@@ -1222,7 +1226,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
       await this.aiCallLog.record({
         type: callType,
         // 走 NIM 通道时记 nvidia，否则 agnes——与实际请求的上游一致，便于按 provider 分组统计
-        provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
+        provider: model.id,
         model: activeModel,
         bizId: options.bizId ?? 0,
         promptTokens: parsed.promptTokens,
@@ -1234,7 +1238,7 @@ export class AgnesSentenceProvider implements SentenceGenProvider {
     } catch (error) {
       await this.aiCallLog.record({
         type: callType,
-        provider: channel.channel === 'nim' ? 'nvidia' : 'agnes',
+        provider: model.id,
         model: activeModel,
         bizId: options.bizId ?? 0,
         latencyMs: Date.now() - startedAt,

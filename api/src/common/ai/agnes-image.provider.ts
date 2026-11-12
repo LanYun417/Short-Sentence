@@ -14,6 +14,7 @@ import { AiCallLogService } from './ai-call-log.service.js';
 import { AiBudgetService } from './ai-budget.service.js';
 import { AiSettingsService } from './ai-settings.service.js';
 import { AiProviderError, type GeneratedImage, type ImageGenProvider } from './ai.types.js';
+import { resolveImageEndpoint, resolveModel } from './ai-protocol.js';
 
 /** Agnes 图像响应结构。 */
 interface AgnesImageResponse {
@@ -28,29 +29,31 @@ export class AgnesImageProvider implements ImageGenProvider {
     private readonly aiSettings: AiSettingsService,
   ) {}
 
-  /** 密钥未配置时禁用生图能力（由调用方转为明确的业务错误）。 */
+  /** 未配置启用的「生图」用途模型时禁用生图能力（由调用方转为明确的业务错误）。 */
   get enabled(): boolean {
-    return this.aiSettings.current.apiKey.trim().length > 0;
+    const model = resolveModel(this.aiSettings.current.models, 'image');
+    return !!model && model.baseUrl.trim().length > 0 && model.modelId.trim().length > 0;
   }
 
   /** 按提示词生成一张图（URL 输出，下载后返回字节）。 */
   async generate(prompt: string, options: { size: string; ratio: string }): Promise<GeneratedImage> {
-    if (!this.enabled) {
-      throw new AiProviderError('生图能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
+    const model = resolveModel(this.aiSettings.current.models, 'image');
+    if (!model || !model.baseUrl || !model.modelId) {
+      throw new AiProviderError('生图能力未配置（AI 设置里添加并启用一个「生图」用途的模型）', { retryable: false });
     }
     // 预算闸门放在 try 之前：超额时抛不可重试错误且不写 ai_call_log（详见 agnes-sentence.provider）
     await this.budget.assertWithinBudget();
 
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${this.aiSettings.current.baseUrl}/images/generations`, {
+      const response = await fetch(resolveImageEndpoint(model.baseUrl, !!model.fullUrl), {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.aiSettings.current.apiKey}`,
+          Authorization: `Bearer ${model.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: this.aiSettings.current.imageModel,
+          model: model.modelId,
           prompt,
           size: options.size,
           ratio: options.ratio,
@@ -106,7 +109,7 @@ export class AgnesImageProvider implements ImageGenProvider {
     await this.aiCallLog.record({
       type: 'image_gen',
       provider: 'agnes-ai',
-      model: this.aiSettings.current.imageModel,
+      model: resolveModel(this.aiSettings.current.models, 'image')?.modelId ?? '-',
       latencyMs,
       status,
       errorMessage,

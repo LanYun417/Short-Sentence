@@ -10,71 +10,107 @@ function fakePrisma(rows: Array<{ configKey: string; configValue: string }>): Pr
 }
 
 /**
- * AI 配置读取（DB 优先、空值回落环境变量）。
+ * AI 配置读取（模型列表：`ai.models` JSON 为事实源，老库旧键自动迁移）。
  *
- * 这条回落规则是「后台可管理」与「本地/CI 用 .env」能共存的前提：
- * 写错就会导致「后台填了 key 但线上仍用空环境变量」或「后台清空后把本地配置一起打空」。
+ * 重点验证：迁移不能把老配置弄丢（老库里 Agarth/NIM 两套要合成模型列表），
+ * 以及新格式（`ai.models`）到达时直接解析、不再走迁移。
  */
 describe('loadAiSettings', () => {
-  it('DB 有值时优先于环境变量', async () => {
+  it('ai.models 存在时直接解析模型列表', async () => {
+    const models = [
+      { id: 'm1', purpose: 'text', baseUrl: 'https://a.example/v1', modelId: 'gpt-5', apiKey: 'k1' },
+      { id: 'm2', purpose: 'image', baseUrl: 'https://a.example/v1', modelId: 'img-1', apiKey: 'k2' },
+    ];
     const settings = await loadAiSettings(
-      fakePrisma([
-        { configKey: AI_CONFIG_KEYS.apiKey, configValue: 'db-key' },
-        { configKey: AI_CONFIG_KEYS.textModel, configValue: 'db-text-model' },
-      ]),
+      fakePrisma([{ configKey: AI_CONFIG_KEYS.models, configValue: JSON.stringify(models) }]),
     );
-    expect(settings.apiKey).toBe('db-key');
-    expect(settings.textModel).toBe('db-text-model');
+    expect(settings.models).toHaveLength(2);
+    expect(settings.models[0].modelId).toBe('gpt-5');
+    expect(settings.models[0].purpose).toBe('text');
+    expect(settings.models[0].advanced.modelSeries).toBe('');
+    expect(settings.models[1].purpose).toBe('image');
+    // 生图用途的格式被强制为 openai_chat
+    expect(settings.models[1].format).toBe('openai_chat');
+    expect(settings.migrated).toBeFalsy();
   });
 
-  it('DB 空值（含纯空白）回落环境变量，而不是变成空串', async () => {
-    const settings = await loadAiSettings(
-      fakePrisma([
-        { configKey: AI_CONFIG_KEYS.apiKey, configValue: '   ' },
-        { configKey: AI_CONFIG_KEYS.baseUrl, configValue: '' },
-      ]),
-    );
-    expect(settings.apiKey).toBe(config.ai.agnes.apiKey);
-    expect(settings.baseUrl).toBe(config.ai.agnes.baseUrl.replace(/\/+$/, ''));
+  it('ai.models 为空串 / 非法 JSON 时按旧配置迁移', async () => {
+    const blank = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.models, configValue: '   ' }]));
+    expect(blank.migrated).toBe(true);
+    const broken = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.models, configValue: 'not-json' }]));
+    expect(broken.migrated).toBe(true);
   });
 
-  it('baseUrl 去掉末尾斜杠，避免拼出 //chat/completions', async () => {
+  it('迁移：默认取 Agnes 生文模型 + 生图模型（空库回落环境变量）', async () => {
+    const settings = await loadAiSettings(fakePrisma([]));
+    const text = settings.models.find((m) => m.purpose === 'text');
+    const image = settings.models.find((m) => m.purpose === 'image');
+    expect(text?.modelId).toBe(config.ai.agnes.textModel);
+    expect(text?.baseUrl).toBe(config.ai.agnes.baseUrl.replace(/\/+$/, ''));
+    expect(image?.modelId).toBe(config.ai.agnes.imageModel);
+    expect(text?.enabled).toBe(true);
+  });
+
+  it('迁移：genChannel=nim 且有 NIM 模型时，文本模型优先取 NIM，Agnes 置为备用（禁用）', async () => {
+    const settings = await loadAiSettings(
+      fakePrisma([
+        { configKey: AI_CONFIG_KEYS.genChannel, configValue: 'nim' },
+        { configKey: AI_CONFIG_KEYS.nimBaseUrl, configValue: 'https://nim.example.com/v1' },
+        { configKey: AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
+        { configKey: AI_CONFIG_KEYS.nimApiKey, configValue: 'nim-key' },
+        { configKey: AI_CONFIG_KEYS.textModel, configValue: 'agnes-text' },
+      ]),
+    );
+    const texts = settings.models.filter((m) => m.purpose === 'text');
+    expect(texts[0].modelId).toBe('nim-model');
+    expect(texts[0].baseUrl).toBe('https://nim.example.com/v1');
+    expect(texts[0].enabled).toBe(true);
+    expect(texts[1].modelId).toBe('agnes-text');
+    expect(texts[1].enabled).toBe(false); // 同用途第二个 = 备用，不自动启用
+  });
+
+  it('迁移：baseUrl 去掉末尾斜杠，避免拼出 //chat/completions', async () => {
     const settings = await loadAiSettings(
       fakePrisma([{ configKey: AI_CONFIG_KEYS.baseUrl, configValue: 'https://example.com/v1///' }]),
     );
-    expect(settings.baseUrl).toBe('https://example.com/v1');
+    expect(settings.models.find((m) => m.purpose === 'text')?.baseUrl).toBe('https://example.com/v1');
   });
 
-  it('未配置任何键时四项都取环境变量（与旧版纯 env 行为一致）', async () => {
-    const settings = await loadAiSettings(fakePrisma([]));
-    expect(settings.apiKey).toBe(config.ai.agnes.apiKey);
-    expect(settings.textModel).toBe(config.ai.agnes.textModel);
-    expect(settings.imageModel).toBe(config.ai.agnes.imageModel);
-  });
-
-  it('NIM 通道：DB 有值时优先于环境变量', async () => {
+  it('迁移：非法 genChannel 回落 agnes（不会误启用 NIM）', async () => {
     const settings = await loadAiSettings(
       fakePrisma([
-        { configKey: AI_CONFIG_KEYS.nimBaseUrl, configValue: 'https://nim.example.com/v1' },
+        { configKey: AI_CONFIG_KEYS.genChannel, configValue: 'xxx' },
         { configKey: AI_CONFIG_KEYS.nimModel, configValue: 'nim-model' },
       ]),
     );
-    expect(settings.nimBaseUrl).toBe('https://nim.example.com/v1');
-    expect(settings.nimModel).toBe('nim-model');
+    const texts = settings.models.filter((m) => m.purpose === 'text');
+    expect(texts).toHaveLength(1);
+    expect(texts[0].modelId).toBe(config.ai.agnes.textModel);
   });
 
-  it('NIM 通道：DB 空值回落环境变量', async () => {
-    const settings = await loadAiSettings(fakePrisma([]));
-    expect(settings.nimBaseUrl).toBe(config.ai.agnes.nimBaseUrl);
-    expect(settings.nimModel).toBe(config.ai.agnes.nimModel);
-  });
-
-  it('生题通道选择：默认 agnes；DB 仅 nim 生效；非法值回落 agnes', async () => {
-    const def = await loadAiSettings(fakePrisma([]));
-    expect(def.genChannel).toBe('agnes');
-    const nim = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.genChannel, configValue: 'nim' }]));
-    expect(nim.genChannel).toBe('nim');
-    const bad = await loadAiSettings(fakePrisma([{ configKey: AI_CONFIG_KEYS.genChannel, configValue: 'xxx' }]));
-    expect(bad.genChannel).toBe('agnes');
+  it('模型项脏数据被剔除 / 缺字段回落默认', async () => {
+    const settings = await loadAiSettings(
+      fakePrisma([
+        {
+          configKey: AI_CONFIG_KEYS.models,
+          configValue: JSON.stringify([
+            null,
+            'bad',
+            {
+              id: 'ok',
+              purpose: 'text',
+              baseUrl: 'https://a/v1/',
+              modelId: 'm',
+              format: 'weird',
+              advanced: { temperature: 0.5 },
+            },
+          ]),
+        },
+      ]),
+    );
+    expect(settings.models).toHaveLength(1);
+    expect(settings.models[0].format).toBe('openai_chat'); // 非法格式回落
+    expect(settings.models[0].baseUrl).toBe('https://a/v1'); // 末尾斜杠去掉
+    expect(settings.models[0].advanced.temperature).toBe(0.5);
   });
 });

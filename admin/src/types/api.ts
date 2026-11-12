@@ -992,38 +992,40 @@ export interface SaveMailSettingsPayload {
   templateReminder?: number;
 }
 
-/** AI 设置（管理端；API Key 只回掩码，永不回显明文） */
-export interface AiSettings {
+/** AI 模型配置（管理端；API Key 只回掩码，永不回显明文） */
+export interface AiModel {
+  /** 模型配置 id（列表内唯一） */
+  id: string;
+  /** 用途：text 生文（生题/造句/词根/句签/解析/审核）/ image 生图 */
+  purpose: 'text' | 'image';
+  /** 是否启用（同用途取第一个启用的） */
+  enabled: boolean;
+  /** API 格式（生图固定 openai_chat） */
+  format: 'openai_chat' | 'openai_responses' | 'anthropic';
+  /** 上游地址是否为完整 URL（含路径） */
+  fullUrl: boolean;
+  /** 上游地址 */
+  baseUrl: string;
+  /** 模型 ID */
+  modelId: string;
+  /** 模型展示名称（空 = 显示模型 ID） */
+  modelLabel: string;
   /** API Key 是否已配置 */
   apiKeyConfigured: boolean;
   /** 掩码后的 API Key（末 4 位可见） */
   apiKeyMasked: string;
-  /** 上游地址（含 /v1） */
-  baseUrl: string;
-  /** 生文模型 */
-  textModel: string;
-  /** 生图模型 */
-  imageModel: string;
-  /** 是否可用（等价于 apiKeyConfigured） */
-  enabled: boolean;
-  /** NIM 上游地址 */
-  nimBaseUrl: string;
-  /** NIM API Key 是否已配置 */
-  nimApiKeyConfigured: boolean;
-  /** 掩码后的 NIM API Key（末 4 位可见） */
-  nimApiKeyMasked: string;
-  /** NIM 生题模型（空 = 不启用通道） */
-  nimModel: string;
-  /** 文本 AI 通道选择：'agnes'（默认）或 'nim' */
-  genChannel: 'agnes' | 'nim';
-  /** 文本通道 API 格式（生图不受影响） */
-  apiFormat: 'openai_chat' | 'openai_responses' | 'anthropic';
-  /** 上游地址是否为完整 URL（含路径） */
-  fullUrl: boolean;
-  /** 模型展示名称（空 = 显示模型 ID） */
-  modelLabel: string;
   /** 高级参数 */
   advanced: AdvancedAiConfig;
+}
+
+/** AI 设置（管理端）= 模型列表 */
+export interface AiSettings {
+  /** 全部模型（掩码形态） */
+  models: AiModel[];
+  /** 当前生效的生文模型 id */
+  defaultTextModelId: string | null;
+  /** 当前生效的生图模型 id */
+  defaultImageModelId: string | null;
 }
 
 /** AI 高级参数（与后端 AdvancedAiConfig 同构） */
@@ -1042,36 +1044,33 @@ export interface AdvancedAiConfig {
   topK: number;
 }
 
-/** 保存 AI 设置入参（apiKey / nimApiKey 留空 = 不修改） */
-export interface SaveAiSettingsPayload {
+/** 保存用单个模型（apiKey 留空 = 沿用已存密钥） */
+export interface SaveAiModel {
+  id: string;
+  purpose: 'text' | 'image';
+  enabled: boolean;
+  format: 'openai_chat' | 'openai_responses' | 'anthropic';
+  fullUrl: boolean;
+  baseUrl: string;
+  modelId: string;
+  modelLabel: string;
   apiKey?: string;
-  baseUrl?: string;
-  textModel?: string;
-  imageModel?: string;
-  /** 英伟达 NIM 生题通道 - 上游地址（留空 = 不修改） */
-  nimBaseUrl?: string;
-  /** 英伟达 NIM 生题通道 - API Key（留空 = 不修改） */
-  nimApiKey?: string;
-  /** 英伟达 NIM 生题通道 - 模型名（留空 = 不修改） */
-  nimModel?: string;
-  /** 文本 AI 通道选择：'agnes'（默认）或 'nim'（选 nim 时 NIM 三项必填，所有文本 AI 走 NIM） */
-  genChannel?: 'agnes' | 'nim';
-  /** 文本通道 API 格式 */
-  apiFormat?: 'openai_chat' | 'openai_responses' | 'anthropic';
-  /** 上游地址是否为完整 URL */
-  fullUrl?: boolean;
-  /** 模型展示名称 */
-  modelLabel?: string;
-  /** 高级参数 */
-  advanced?: AdvancedAiConfig;
+  advanced: AdvancedAiConfig;
+}
+
+/** 保存 AI 设置入参（整表提交模型列表） */
+export interface SaveAiSettingsPayload {
+  models: SaveAiModel[];
 }
 
 /** AI 连通性测试结果 */
 export interface AiTestResult {
   /** 上游往返耗时（ms） */
   latencyMs: number;
-  /** 本次使用的生文模型 */
+  /** 本次使用的模型 ID */
   model: string;
+  /** 被测试的模型配置 id */
+  id: string;
 }
 
 /** App 版本条目（管理端） */

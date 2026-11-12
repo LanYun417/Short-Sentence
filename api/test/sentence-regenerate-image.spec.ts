@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 import sharp from 'sharp';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
 import { AiProviderError } from '../src/common/ai/ai.types.js';
@@ -84,16 +85,35 @@ function buildService(
         : async () => ({ pass: review?.pass ?? true, reason: review?.reason ?? '' }),
   };
   // 入库时会读它拿当前文本通道（aiChannel/aiModel 落题）；本文件只测生图，给个 Agnes 通道的假快照即可
+  // 入库时会读模型列表拿当前生文/生图模型（aiChannel/aiModel 落题）；本文件只测生图，给个假快照即可
   const aiSettings = {
     current: {
-      apiKey: 'k',
-      baseUrl: 'https://example.com/v1',
-      textModel: 'agnes-2.5-flash',
-      imageModel: 'agnes-image',
-      nimBaseUrl: '',
-      nimApiKey: '',
-      nimModel: '',
-      genChannel: 'agnes',
+      models: [
+        {
+          id: 'text-1',
+          purpose: 'text',
+          enabled: true,
+          format: 'openai_chat',
+          fullUrl: false,
+          baseUrl: 'https://example.com/v1',
+          modelId: 'agnes-2.5-flash',
+          modelLabel: '',
+          apiKey: 'k',
+          advanced: { ...DEFAULT_ADVANCED },
+        },
+        {
+          id: 'image-1',
+          purpose: 'image',
+          enabled: true,
+          format: 'openai_chat',
+          fullUrl: false,
+          baseUrl: 'https://example.com/v1',
+          modelId: 'agnes-image',
+          modelLabel: '',
+          apiKey: 'k',
+          advanced: { ...DEFAULT_ADVANCED },
+        },
+      ],
     },
   } as never;
   return new SentenceGenService(

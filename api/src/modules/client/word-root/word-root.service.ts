@@ -12,7 +12,7 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
-import { resolveTextChannel } from '../../../common/ai/ai.config.js';
+import { resolveChatEndpoint, resolveModel } from '../../../common/ai/ai-protocol.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
 /** 词根构件。 */
@@ -315,13 +315,21 @@ export class WordRootService {
 
   /** 调上游做一次词根解析（非流式）。 */
   private async analyze(word: string, userId?: number): Promise<WordRootAnalysis> {
-    // 文本通道：genChannel 选了 nim 时词根解析也走 NIM，否则走全局 Agnes
-    const ch = resolveTextChannel(this.aiSettings.current);
-    if (ch.apiKey.trim().length === 0) {
-      throw new Error('AI 能力未配置（AI_AGNES_API_KEY 缺失）');
+    // 文本模型：取模型列表里第一个启用的「生文」用途模型（不分厂商）。
+    // 词根解析是单次非流式，走 OpenAI 兼容的 chat/completions（模型格式为响应式/Anthropic 时也按此发）。
+    const model = resolveModel(this.aiSettings.current.models, 'text');
+    const ch = {
+      id: model?.id ?? '',
+      baseUrl: model?.baseUrl ?? '',
+      apiKey: model?.apiKey ?? '',
+      model: model?.modelId ?? '',
+      fullUrl: !!model?.fullUrl,
+    };
+    if (ch.apiKey.trim().length === 0 || !ch.model) {
+      throw new Error('AI 能力未配置（AI 设置里添加并启用一个「生文」用途的模型）');
     }
     const startedAt = Date.now();
-    const response = await fetch(`${ch.baseUrl}/chat/completions`, {
+    const response = await fetch(resolveChatEndpoint(ch.baseUrl, 'openai_chat', ch.fullUrl), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${ch.apiKey}`,
@@ -350,7 +358,7 @@ export class WordRootService {
     const content = payload.choices?.[0]?.message?.content ?? '';
     await this.aiCallLog.record({
       type: 'word_root',
-      provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
+      provider: ch.id || 'text-model',
       model: ch.model,
       // 带 userId 便于按用户归集 AI 用量（做会员分档与运营报表的依据）
       bizId: userId ?? 0,

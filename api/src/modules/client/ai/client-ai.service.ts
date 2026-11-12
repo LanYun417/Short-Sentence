@@ -14,7 +14,7 @@ import { AppException } from '../../../common/exception/app.exception.js';
 import { AiCallLogService } from '../../../common/ai/ai-call-log.service.js';
 import { AiQuotaService } from '../../../common/ai/ai-quota.service.js';
 import { AiSettingsService } from '../../../common/ai/ai-settings.service.js';
-import { resolveTextChannel } from '../../../common/ai/ai.config.js';
+import { resolveChatEndpoint, resolveModel } from '../../../common/ai/ai-protocol.js';
 import { AiProviderError } from '../../../common/ai/ai.types.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 
@@ -165,8 +165,16 @@ export class ClientAiService {
     return new Observable<SseFrame>((subscriber) => {
       const controller = new AbortController();
       const startedAt = Date.now();
-      // 文本通道：genChannel 选了 nim 时客户端 AI 也走 NIM，否则走全局 Agnes
-      const ch = resolveTextChannel(this.aiSettings.current);
+      // 文本模型：取模型列表里第一个启用的「生文」用途模型（不分厂商）。
+      // 流式 SSE 目前只走 OpenAI 兼容的 chat/completions（格式差异大的响应式/Anthropic 暂不支持流式）。
+      const model = resolveModel(this.aiSettings.current.models, 'text');
+      const ch = {
+        id: model?.id ?? '',
+        baseUrl: model?.baseUrl ?? '',
+        apiKey: model?.apiKey ?? '',
+        model: model?.modelId ?? '',
+        fullUrl: !!model?.fullUrl,
+      };
       let promptTokens = 0;
       let completionTokens = 0;
 
@@ -175,7 +183,7 @@ export class ClientAiService {
           if (ch.apiKey.trim().length === 0) {
             throw new AiProviderError('AI 能力未配置（AI_AGNES_API_KEY 缺失）', { retryable: false });
           }
-          const response = await fetch(`${ch.baseUrl}/chat/completions`, {
+          const response = await fetch(resolveChatEndpoint(ch.baseUrl, 'openai_chat', ch.fullUrl), {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${ch.apiKey}`,
@@ -215,7 +223,7 @@ export class ClientAiService {
           subscriber.complete();
           await this.aiCallLog.record({
             type: params.type,
-            provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
+            provider: ch.id || 'text-model',
             model: ch.model,
             bizId: params.bizId,
             promptTokens,
@@ -236,7 +244,7 @@ export class ClientAiService {
           await this.aiQuota.refund(params.userId);
           await this.aiCallLog.record({
             type: params.type,
-            provider: ch.channel === 'nim' ? 'nvidia' : 'agnes',
+            provider: ch.id || 'text-model',
             model: ch.model,
             bizId: params.bizId,
             latencyMs: Date.now() - startedAt,

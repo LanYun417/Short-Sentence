@@ -1148,14 +1148,8 @@ onMounted(async () => {
           <el-descriptions-item label="来源">{{ detailRow.source === 'ai' ? 'AI 生成' : '手工' }}</el-descriptions-item>
           <template v-if="detailRow.source === 'ai'">
             <el-descriptions-item label="AI 通道">
-              <el-tag size="small" :type="detailRow.aiChannel === 'nim' ? 'warning' : 'success'">
-                {{
-                  detailRow.aiChannel === 'nim'
-                    ? '英伟达 NIM'
-                    : detailRow.aiChannel === 'agnes'
-                      ? 'Agnes'
-                      : '未记录（旧数据）'
-                }}
+              <el-tag size="small" type="info">
+                {{ detailRow.aiChannel || '未记录（旧数据）' }}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="AI 模型">{{ detailRow.aiModel || '未记录（旧数据）' }}</el-descriptions-item>

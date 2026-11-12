@@ -9,33 +9,18 @@
  */
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { config } from '../config/config.js';
-import { loadAiSettings, type AiSettings } from './ai.config.js';
-import { DEFAULT_ADVANCED } from './ai-protocol.js';
+import { loadAiSettings, saveAiModels, type AiSettings } from './ai.config.js';
 
 @Injectable()
 export class AiSettingsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(AiSettingsService.name);
 
-  /** 当前生效快照（初值取环境变量，保证首次访问即有值）。 */
-  private snapshot: AiSettings = {
-    apiKey: config.ai.agnes.apiKey,
-    baseUrl: config.ai.agnes.baseUrl.replace(/\/+$/, ''),
-    textModel: config.ai.agnes.textModel,
-    imageModel: config.ai.agnes.imageModel,
-    nimBaseUrl: config.ai.agnes.nimBaseUrl.replace(/\/+$/, ''),
-    nimApiKey: config.ai.agnes.nimApiKey,
-    nimModel: config.ai.agnes.nimModel,
-    genChannel: config.ai.agnes.genChannel,
-    apiFormat: 'openai_chat',
-    fullUrl: false,
-    modelLabel: '',
-    advanced: { ...DEFAULT_ADVANCED },
-  };
+  /** 当前生效快照（初值为空列表，启动时 reload 会从库/环境变量填充）。 */
+  private snapshot: AiSettings = { models: [] };
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** 启动时从 sys_config 加载一次（种子已写入内置参数，此时库可用）。 */
+  /** 启动时从 sys_config 加载一次（老库自动迁移成模型列表）。 */
   async onApplicationBootstrap(): Promise<void> {
     await this.reload();
   }
@@ -48,11 +33,15 @@ export class AiSettingsService implements OnApplicationBootstrap {
   /** 从 sys_config 重新加载；失败时保留旧快照（只告警，不影响服务启动）。 */
   async reload(): Promise<void> {
     try {
-      this.snapshot = await loadAiSettings(this.prisma);
+      const next = await loadAiSettings(this.prisma);
+      // 一次性迁移写回：老库配置首次迁移后立刻落库，之后即以 ai.models 为准
+      if (next.migrated && next.models.length > 0) {
+        await saveAiModels(this.prisma, next.models);
+        next.migrated = false;
+      }
+      this.snapshot = next;
     } catch (error) {
-      this.logger.warn(
-        `AI 配置加载失败，沿用环境变量/上一次快照：${error instanceof Error ? error.message : String(error)}`,
-      );
+      this.logger.warn(`AI 配置加载失败，沿用上一次快照：${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -5,44 +5,41 @@
  * 这样本地开发/CI 继续用 .env，线上运营在后台填一次即可，无需改服务器配置重启。
  */
 export const AI_CONFIG_KEYS = {
-  /** Agnes API Key（只写不读：接口只回掩码） */
+  /**
+   * AI 模型列表（JSON 数组，多模型配置的唯一事实源）。
+   * 每项 = { id, purpose: 'text'|'image', enabled, format, fullUrl, baseUrl, modelId, modelLabel, apiKey, advanced }。
+   * 不分厂商：厂商差异只体现在「API 格式」字段上。
+   */
+  models: 'ai.models',
+
+  /* ---- 以下为旧版单模型/NIM 通道键，仅用于一次性迁移读取，不再写入 ---- */
   apiKey: 'ai.agnes.apiKey',
-  /** 上游地址（含 /v1） */
   baseUrl: 'ai.agnes.baseUrl',
-  /** 生文模型 */
   textModel: 'ai.agnes.textModel',
-  /** 生图模型 */
   imageModel: 'ai.agnes.imageModel',
-  /** 英伟达 NIM 生题通道 - 上游地址（可选；留空回落 Agnes） */
   nimBaseUrl: 'ai.agnes.nimBaseUrl',
-  /** 英伟达 NIM 生题通道 - API Key（可选；留空回落 Agnes） */
   nimApiKey: 'ai.agnes.nimApiKey',
-  /** 英伟达 NIM 生题通道 - 模型名（可选；留空 = 不启用通道） */
   nimModel: 'ai.agnes.nimModel',
-  /** 生题内容生成通道选择：'agnes'（默认）或 'nim'（选 nim 时才走 NIM） */
   genChannel: 'ai.agnes.genChannel',
-  /** 文本通道 API 格式：openai_chat / openai_responses / anthropic（默认 openai_chat） */
   apiFormat: 'ai.agnes.apiFormat',
-  /** 上游地址是否为「完整 URL」（含路径），'1' = 是 */
   fullUrl: 'ai.agnes.fullUrl',
-  /** 模型展示名称（模型列表里显示的名字，空 = 显示模型 ID） */
   modelLabel: 'ai.agnes.modelLabel',
-  /** 高级参数 JSON 块（模型系列/上下文窗口/工具轮数/图片输入/思考模式/采样参数） */
   advanced: 'ai.agnes.advanced',
 } as const;
 
 /** 配置项的中文名（写库时作为 config_name）。 */
 export const AI_CONFIG_NAMES: Record<string, string> = {
-  [AI_CONFIG_KEYS.apiKey]: 'Agnes API Key',
-  [AI_CONFIG_KEYS.baseUrl]: 'Agnes API 地址',
-  [AI_CONFIG_KEYS.textModel]: 'Agnes 生文模型',
-  [AI_CONFIG_KEYS.imageModel]: 'Agnes 生图模型',
-  [AI_CONFIG_KEYS.nimBaseUrl]: 'NIM 上游地址',
-  [AI_CONFIG_KEYS.nimApiKey]: 'NIM API Key',
-  [AI_CONFIG_KEYS.nimModel]: 'NIM 生题模型',
-  [AI_CONFIG_KEYS.genChannel]: '生题通道选择',
-  [AI_CONFIG_KEYS.apiFormat]: 'API 格式',
-  [AI_CONFIG_KEYS.fullUrl]: '完整 URL',
-  [AI_CONFIG_KEYS.modelLabel]: '模型展示名称',
-  [AI_CONFIG_KEYS.advanced]: '高级参数',
+  [AI_CONFIG_KEYS.models]: 'AI 模型列表',
+  [AI_CONFIG_KEYS.apiKey]: 'Agnes API Key（旧）',
+  [AI_CONFIG_KEYS.baseUrl]: 'Agnes API 地址（旧）',
+  [AI_CONFIG_KEYS.textModel]: 'Agnes 生文模型（旧）',
+  [AI_CONFIG_KEYS.imageModel]: 'Agnes 生图模型（旧）',
+  [AI_CONFIG_KEYS.nimBaseUrl]: 'NIM 上游地址（旧）',
+  [AI_CONFIG_KEYS.nimApiKey]: 'NIM API Key（旧）',
+  [AI_CONFIG_KEYS.nimModel]: 'NIM 生题模型（旧）',
+  [AI_CONFIG_KEYS.genChannel]: '生题通道选择（旧）',
+  [AI_CONFIG_KEYS.apiFormat]: 'API 格式（旧）',
+  [AI_CONFIG_KEYS.fullUrl]: '完整 URL（旧）',
+  [AI_CONFIG_KEYS.modelLabel]: '模型展示名称（旧）',
+  [AI_CONFIG_KEYS.advanced]: '高级参数（旧）',
 };

@@ -15084,6 +15084,109 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/categories/cover-logs": {
+      "get": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "封面生成日志（分页）：「场景分类」页「生图日志」抽屉的数据来源",
+        "operationId": "get__api_sentences_categories_cover_logs",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "bizId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/export": {
       "get": {
         "tags": [
@@ -15433,6 +15536,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "一键补齐缺失的场景封面（AI 生图）。**静态路由，必须声明在 `categories/:id/cover` 之前**， 否则 `covers/generate-missing` 会被 `:id` 吃掉（Nest 按声明顺序匹配）",
         "operationId": "post__api_sentences_categories_covers_generate_missing",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/sentences/categories/covers/regenerate-all": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "批量重新生成全部启用分类的封面（覆盖已有图，消耗较多 AI 生图配额）。 **静态路由，同样必须声明在 `categories/:id/cover` 之前**，否则会被 `:id` 吃掉",
+        "operationId": "post__api_sentences_categories_covers_regenerate_all",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
@@ -16578,6 +16724,80 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/teams/{id}/messages": {
+      "get": {
+        "tags": [
+          "学习小队"
+        ],
+        "summary": "小队群聊消息分页（含已隐藏，供审核）",
+        "operationId": "get__api_teams__id_messages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/teams/stats": {
       "get": {
         "tags": [
@@ -16765,6 +16985,60 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                     "data": {
                       "$ref": "#/components/schemas/RenameTeamDto"
                     }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/teams/messages/{id}/status": {
+      "put": {
+        "tags": [
+          "学习小队"
+        ],
+        "summary": "隐藏 / 恢复一条群聊消息",
+        "operationId": "put__api_teams_messages__id_status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
                   },
                   "required": [
                     "code",
@@ -17456,7 +17730,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "AI 设置"
         ],
-        "summary": "保存设置（apiKey 传空 = 不修改）",
+        "summary": "保存设置（整表提交）。 每项的 apiKey 留空 = 沿用已存密钥（匹配同 id 的旧值），避免前端把掩码回填成真值",
         "operationId": "put__api_ai_settings",
         "requestBody": {
           "required": true,
@@ -17511,8 +17785,18 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "AI 设置"
         ],
-        "summary": "测试连通性：用指定通道发一个极短的请求。 `channel=nim` 时测英伟达 NIM 生题通道（地址/密钥/模型回落到全局 Agnes 对应项）； 缺省测全局生文模型。只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "summary": "测试连通性：用指定的模型（未保存的草稿或已存的 id）发一个极短请求。 不传参时测当前生效的生文模型。失败时把上游状态码与前 200 字回包透出，便于定位",
         "operationId": "post__api_ai_settings_test",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestAiDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
@@ -17530,7 +17814,9 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                       "type": "string",
                       "example": "success"
                     },
-                    "data": {}
+                    "data": {
+                      "$ref": "#/components/schemas/TestAiDto"
+                    }
                   },
                   "required": [
                     "code",
@@ -19532,6 +19818,144 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/team/messages": {
+      "get": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "群聊消息游标分页（最近 30 天）；before = 上一页最老消息 id",
+        "operationId": "get__api_client_team_messages",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "发送群聊消息（可带 quoteId 引用某条）",
+        "operationId": "post__api_client_team_messages",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTeamMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SendTeamMessageDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/team/my": {
       "get": {
         "tags": [
@@ -19617,6 +20041,116 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/team/create": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "自建队伍：创建一个新小队并生成组队码（创建者为队长）",
+        "operationId": "post__api_client_team_create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CreateTeamDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/team/join": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "凭组队码加入小队",
+        "operationId": "post__api_client_team_join",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/JoinTeamDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/team/leave": {
       "post": {
         "tags": [
@@ -19665,8 +20199,62 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "Team"
         ],
-        "summary": "找队友：按近 7 天练习节奏匹配陌生队友，或新建一个等待池",
+        "summary": "找队友：按近 7 天练习节奏随机匹配，或新建一个随机等待池",
         "operationId": "post__api_client_team_match",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/team/messages/{id}/recall": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "撤回自己的消息（2 分钟内）",
+        "operationId": "post__api_client_team_messages__id_recall",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
@@ -21262,50 +21850,139 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           "enabled"
         ]
       },
-      "UpdateAiSettingsDto": {
+      "TestAiDto": {
         "type": "object",
         "properties": {
-          "apiKey": {
+          "model": {
+            "$ref": "#/components/schemas/SaveAiModelDto"
+          }
+        }
+      },
+      "SaveAiModelDto": {
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "string",
-            "description": "Agnes API Key（留空 = 不修改）",
+            "description": "模型配置 id（同一份列表内唯一）",
             "example": "示例值"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "用途：text 生文 / image 生图",
+            "example": "示例值"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "是否启用（缺省启用）",
+            "example": true
+          },
+          "format": {
+            "type": "string",
+            "description": "API 格式（生图固定 openai_chat）",
+            "example": "示例值"
+          },
+          "fullUrl": {
+            "type": "boolean",
+            "description": "上游地址是否为完整 URL（含路径）",
+            "example": true
           },
           "baseUrl": {
             "type": "string",
-            "description": "上游地址（含 /v1；留空 = 不修改）",
+            "description": "上游地址",
             "example": "示例值"
           },
-          "textModel": {
+          "modelId": {
             "type": "string",
-            "description": "生文模型（留空 = 不修改）",
+            "description": "模型 ID",
             "example": "示例值"
           },
-          "imageModel": {
+          "modelLabel": {
             "type": "string",
-            "description": "生图模型（留空 = 不修改）",
+            "description": "模型展示名称（空 = 显示模型 ID）",
             "example": "示例值"
           },
-          "nimBaseUrl": {
+          "apiKey": {
             "type": "string",
-            "description": "英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。",
+            "description": "API Key（留空 = 沿用已存密钥）",
             "example": "示例值"
           },
-          "nimApiKey": {
+          "advanced": {
+            "$ref": "#/components/schemas/AdvancedAiConfigDto"
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "baseUrl",
+          "modelId"
+        ]
+      },
+      "AdvancedAiConfigDto": {
+        "type": "object",
+        "properties": {
+          "modelSeries": {
             "type": "string",
-            "description": "英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效）",
             "example": "示例值"
           },
-          "nimModel": {
+          "maxInputTokens": {
             "type": "string",
-            "description": "英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM）",
             "example": "示例值"
           },
-          "genChannel": {
+          "maxOutputTokens": {
             "type": "string",
-            "description": "生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。",
+            "example": "示例值"
+          },
+          "toolRounds": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "imageInput": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "thinkingParam": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "thinkingOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": []
+          },
+          "thinkingValue": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "temperature": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "topP": {
+            "type": "string",
+            "example": "示例值"
+          },
+          "topK": {
+            "type": "string",
             "example": "示例值"
           }
         }
+      },
+      "UpdateAiSettingsDto": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveAiModelDto"
+            },
+            "example": []
+          }
+        },
+        "required": [
+          "models"
+        ]
       },
       "SaveAppVersionDto": {
         "type": "object",
@@ -21433,6 +22110,50 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         },
         "required": [
           "show"
+        ]
+      },
+      "CreateTeamDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "小队名（2~20 字，同 rename 归一规则）",
+            "example": "log-archive"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "JoinTeamDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "组队码（6 位，字母数字；service 会转大写归一）",
+            "example": "示例值"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "SendTeamMessageDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "消息正文（≤500 字）",
+            "example": "示例值"
+          },
+          "quoteId": {
+            "type": "number",
+            "description": "引用的消息 id（可选；必须属于同一小队）",
+            "example": 1
+          }
+        },
+        "required": [
+          "content"
         ]
       }
     }

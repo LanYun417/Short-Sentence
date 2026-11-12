@@ -7,6 +7,7 @@
  * 3. 只收真实存在的 token / 含汉字的含义，臆造项丢弃。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 import { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import type { SentenceDraft } from '../src/common/ai/ai.types.js';
 
@@ -28,7 +29,24 @@ function buildProvider(content: unknown) {
   const provider = new AgnesSentenceProvider(
     { record } as never,
     { assertWithinBudget: vi.fn(async () => undefined) } as never,
-    { current: { apiKey: 'test-key', baseUrl: 'http://test.local', textModel: 'test-model' } } as never,
+    {
+      current: {
+        models: [
+          {
+            id: 'text-1',
+            purpose: 'text',
+            enabled: true,
+            format: 'openai_chat',
+            fullUrl: false,
+            baseUrl: 'http://test.local',
+            modelId: 'test-model',
+            modelLabel: '',
+            apiKey: 'test-key',
+            advanced: { ...DEFAULT_ADVANCED },
+          },
+        ],
+      },
+    } as never,
   );
   vi.stubGlobal(
     'fetch',

@@ -30,7 +30,7 @@ import { AgnesSentenceProvider } from '../../common/ai/agnes-sentence.provider.j
 import { AgnesImageProvider } from '../../common/ai/agnes-image.provider.js';
 import { AiBudgetService } from '../../common/ai/ai-budget.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
-import { resolveTextChannel } from '../../common/ai/ai.config.js';
+import { resolveModel } from '../../common/ai/ai-protocol.js';
 import { Semaphore, withRetry } from '../../common/ai/concurrency.js';
 import { normalizeGeneratedImage } from '../../common/ai/image-normalize.js';
 import { IMAGE_2D_HARD_STYLE } from '../../common/ai/image-style.js';
@@ -1426,9 +1426,9 @@ export class SentenceGenService {
     const byName = new Map(categories.map((category) => [category.name, category.id]));
 
     const seen = new Set<string>();
-    // 本批入库时实际生效的文本通道与模型（随 genChannel 开关切换），落到每道题上，
-    // 后台题库详情里可点开查看该题用的是 Agnes 还是英伟达 NIM、具体什么模型
-    const textChannel = resolveTextChannel(this.aiSettings.current);
+    // 本批入库时实际生效的文本模型（从模型列表里选的第一个「生文」用途模型），落到每道题上，
+    // 后台题库详情里可点开查看该题用的是哪个模型配置、具体模型 ID
+    const textModel = resolveModel(this.aiSettings.current.models, 'text');
     const rows = drafts
       // 英文为空 / 中文释义为空都直接丢弃：
       // 过去中文缺失时用 `draft.translationZh || draft.sentenceEn` 兜底，
@@ -1463,8 +1463,8 @@ export class SentenceGenService {
               : null,
           scenePrompt: scenePrompt.slice(0, 500),
           source: 'ai',
-          aiChannel: textChannel.channel,
-          aiModel: textChannel.model,
+          aiChannel: textModel?.id ?? null,
+          aiModel: textModel?.modelId ?? null,
           status: 'pending_image',
           genTaskId: taskId,
           // 节日题库标记：普通批次为 null（Prisma 会忽略 null 字段，等价于不写）
@@ -1638,7 +1638,7 @@ export class SentenceGenService {
         data: {
           type: COVER_GEN_LOG_TYPE,
           provider: 'sentence-gen',
-          model: this.aiSettings.current?.imageModel ?? 'agnes-image',
+          model: resolveModel(this.aiSettings.current.models, 'image')?.modelId ?? 'image-model',
           bizId: BigInt(ctx.bizId),
           latencyMs,
           status,

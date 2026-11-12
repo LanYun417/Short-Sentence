@@ -64,30 +64,105 @@ export const DEFAULT_ADVANCED: AdvancedAiConfig = {
 };
 
 /** 解析并合并高级参数 JSON（脏数据/缺字段一律回落默认）。 */
-export function parseAdvanced(raw: string | undefined | null): AdvancedAiConfig {
+export function parseAdvanced(raw: unknown): AdvancedAiConfig {
   if (!raw) return { ...DEFAULT_ADVANCED };
-  try {
-    const parsed = JSON.parse(raw) as Partial<AdvancedAiConfig>;
-    const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
-    const str = (v: unknown, d: string): string => (typeof v === 'string' ? v : d);
-    return {
-      modelSeries: str(parsed.modelSeries, ''),
-      maxInputTokens: num(parsed.maxInputTokens, 0),
-      maxOutputTokens: num(parsed.maxOutputTokens, 0),
-      toolRounds: num(parsed.toolRounds, 0),
-      imageInput: typeof parsed.imageInput === 'boolean' ? parsed.imageInput : true,
-      thinkingParam: str(parsed.thinkingParam, ''),
-      thinkingOptions: Array.isArray(parsed.thinkingOptions)
-        ? parsed.thinkingOptions.filter((x): x is string => typeof x === 'string')
-        : [],
-      thinkingValue: str(parsed.thinkingValue, ''),
-      temperature: num(parsed.temperature, -1),
-      topP: num(parsed.topP, -1),
-      topK: num(parsed.topK, -1),
-    };
-  } catch {
-    return { ...DEFAULT_ADVANCED };
+  let parsed: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { ...DEFAULT_ADVANCED };
+    }
   }
+  if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_ADVANCED };
+  const p = parsed as Record<string, unknown>;
+  const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+  const str = (v: unknown, d: string): string => (typeof v === 'string' ? v : d);
+  return {
+    modelSeries: str(p.modelSeries, ''),
+    maxInputTokens: num(p.maxInputTokens, 0),
+    maxOutputTokens: num(p.maxOutputTokens, 0),
+    toolRounds: num(p.toolRounds, 0),
+    imageInput: typeof p.imageInput === 'boolean' ? p.imageInput : true,
+    thinkingParam: str(p.thinkingParam, ''),
+    thinkingOptions: Array.isArray(p.thinkingOptions)
+      ? (p.thinkingOptions as unknown[]).filter((x): x is string => typeof x === 'string')
+      : [],
+    thinkingValue: str(p.thinkingValue, ''),
+    temperature: num(p.temperature, -1),
+    topP: num(p.topP, -1),
+    topK: num(p.topK, -1),
+  };
+}
+
+/** 模型用途：文本对话（生题/造句/词根/句签/解析/审核）与生图。 */
+export type ModelPurpose = 'text' | 'image';
+
+/**
+ * 单个模型配置（模型列表的一项）。
+ * 不分厂商了——一套字段走所有上游，厂商差异只体现在「API 格式」上。
+ */
+export interface AiModelConfig {
+  id: string;
+  purpose: ModelPurpose;
+  enabled: boolean;
+  /** API 格式（生图固定 openai_chat：走 images 接口） */
+  format: ApiFormat;
+  fullUrl: boolean;
+  baseUrl: string;
+  modelId: string;
+  modelLabel: string;
+  apiKey: string;
+  advanced: AdvancedAiConfig;
+}
+
+/** 解析模型列表（JSON 字符串或数组，脏数据逐项剔除，缺字段回落默认）。 */
+export function parseModels(raw: unknown): AiModelConfig[] {
+  let parsed: unknown = raw;
+  if (typeof raw === 'string') {
+    if (!raw.trim()) return [];
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  const out: AiModelConfig[] = [];
+  for (const item of parsed as unknown[]) {
+    if (!item || typeof item !== 'object') continue;
+    const o = item as Record<string, unknown>;
+    const purpose: ModelPurpose = o.purpose === 'image' ? 'image' : 'text';
+    const id = typeof o.id === 'string' && o.id ? o.id : `${purpose}-${out.length + 1}`;
+    out.push({
+      id,
+      purpose,
+      enabled: typeof o.enabled === 'boolean' ? o.enabled : true,
+      format: normalizeApiFormat(purpose === 'image' ? 'openai_chat' : o.format),
+      fullUrl: o.fullUrl === true,
+      baseUrl: typeof o.baseUrl === 'string' ? o.baseUrl.replace(/\/+$/, '') : '',
+      modelId: typeof o.modelId === 'string' ? o.modelId : '',
+      modelLabel: typeof o.modelLabel === 'string' ? o.modelLabel : '',
+      apiKey: typeof o.apiKey === 'string' ? o.apiKey : '',
+      advanced: parseAdvanced(o.advanced),
+    });
+  }
+  return out;
+}
+
+/** 按用途取第一个启用的模型（没有则 null）。 */
+export function resolveModel(models: AiModelConfig[], purpose: ModelPurpose): AiModelConfig | null {
+  if (!Array.isArray(models)) return null;
+  for (const m of models) {
+    if (m.purpose === purpose && m.enabled) return m;
+  }
+  return null;
+}
+
+/** 生图端点（生图固定走 OpenAI 兼容的 images/generations）。 */
+export function resolveImageEndpoint(baseUrl: string, fullUrl: boolean): string {
+  const base = baseUrl.replace(/\/+$/, '');
+  return fullUrl ? base : `${base}/images/generations`;
 }
 
 /** chat 请求输入。 */

@@ -8058,6 +8058,55 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/sentences/categories/cover-logs",
+        "summary": "封面生成日志（分页）：「场景分类」页「生图日志」抽屉的数据来源",
+        "permission": [
+          "sentence:category"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "bizId",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/sentences/categories/cover-logs?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/sentences/export",
         "summary": "导出题库 CSV（流式；筛选与列表共用同一套条件）。 权限用 `sentence:query` 而不是新增 `sentence:export`：导出是只读操作， 且权限码是种子数据里写死的，为一个导出动作加码需要重跑 seed——收益不抵风险",
         "permission": [
@@ -8391,6 +8440,19 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "题库管理 · 补全场景封面",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/sentences/categories/covers/generate-missing\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sentences/categories/covers/regenerate-all",
+        "summary": "批量重新生成全部启用分类的封面（覆盖已有图，消耗较多 AI 生图配额）。 **静态路由，同样必须声明在 `categories/:id/cover` 之前**，否则会被 `:id` 吃掉",
+        "permission": [
+          "sentence:category"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 批量重生场景封面",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/categories/covers/regenerate-all\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       },
       {
@@ -9126,6 +9188,32 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/teams/:id/messages",
+        "summary": "小队群聊消息分页（含已隐藏，供审核）",
+        "permission": [
+          "team:view"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/teams/1/messages\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/teams/stats",
         "summary": "概览统计（进行中/已解散小队数、在队用户数、今日全员达成数）",
         "permission": [
@@ -9219,6 +9307,32 @@ export const API_DOCS: ApiDocGroup[] = [
           },
           "requestBody": {
             "name": "log-archive"
+          }
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/teams/messages/:id/status",
+        "summary": "隐藏 / 恢复一条群聊消息",
+        "permission": [
+          "team:handle"
+        ],
+        "isPublic": false,
+        "action": "学习小队 · 审核群聊消息",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/teams/messages/1/status\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
           }
         }
       }
@@ -9580,20 +9694,44 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "POST",
         "path": "/api/ai-settings/test",
-        "summary": "测试连通性：用指定通道发一个极短的请求。 `channel=nim` 时测英伟达 NIM 生题通道（地址/密钥/模型回落到全局 Agnes 对应项）； 缺省测全局生文模型。只测文本模型（生图一次成本高、耗时数十秒，不适合做「点一下试试」）。 失败时把上游状态码与前 200 字回包透出，便于定位 key/地址/模型哪个错了",
+        "summary": "测试连通性：用指定的模型（未保存的草稿或已存的 id）发一个极短请求。 不传参时测当前生效的生文模型。失败时把上游状态码与前 200 字回包透出，便于定位",
         "permission": [
           "system:ai:edit"
         ],
         "isPublic": false,
         "action": "AI 设置 · 测试连通性",
+        "params": [
+          {
+            "name": "model",
+            "in": "body",
+            "type": "SaveAiModelDto",
+            "required": false,
+            "description": "",
+            "example": {
+              "id": "示例值",
+              "purpose": "示例值",
+              "enabled": true,
+              "format": "示例值",
+              "fullUrl": true,
+              "baseUrl": "示例值",
+              "modelId": "示例值",
+              "modelLabel": "示例值",
+              "apiKey": "示例值",
+              "advanced": "示例值"
+            }
+          }
+        ],
         "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/ai-settings/test\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+          "curl": "curl -X POST \"http://localhost:3000/api/ai-settings/test\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"model\": \"示例值\"\n    }'",
+          "requestBody": {
+            "model": "示例值"
+          }
         }
       },
       {
         "method": "PUT",
         "path": "/api/ai-settings",
-        "summary": "保存设置（apiKey 传空 = 不修改）",
+        "summary": "保存设置（整表提交）。 每项的 apiKey 留空 = 沿用已存密钥（匹配同 id 的旧值），避免前端把掩码回填成真值",
         "permission": [
           "system:ai:edit"
         ],
@@ -9601,81 +9739,31 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "AI 设置 · 保存",
         "params": [
           {
-            "name": "apiKey",
+            "name": "models",
             "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "Agnes API Key（留空 = 不修改）",
-            "example": "示例值"
-          },
-          {
-            "name": "baseUrl",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "上游地址（含 /v1；留空 = 不修改）",
-            "example": "示例值"
-          },
-          {
-            "name": "textModel",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "生文模型（留空 = 不修改）",
-            "example": "示例值"
-          },
-          {
-            "name": "imageModel",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "生图模型（留空 = 不修改）",
-            "example": "示例值"
-          },
-          {
-            "name": "nimBaseUrl",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。",
-            "example": "示例值"
-          },
-          {
-            "name": "nimApiKey",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效）",
-            "example": "示例值"
-          },
-          {
-            "name": "nimModel",
-            "in": "body",
-            "type": "string",
-            "required": false,
-            "description": "英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM）",
-            "example": "示例值"
-          },
-          {
-            "name": "genChannel",
-            "in": "body",
-            "type": "'agnes' | 'nim'",
-            "required": false,
-            "description": "生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。",
-            "example": "示例值"
+            "type": "SaveAiModelDto[]",
+            "required": true,
+            "description": "",
+            "example": [
+              {
+                "id": "示例值",
+                "purpose": "示例值",
+                "enabled": true,
+                "format": "示例值",
+                "fullUrl": true,
+                "baseUrl": "示例值",
+                "modelId": "示例值",
+                "modelLabel": "示例值",
+                "apiKey": "示例值",
+                "advanced": "示例值"
+              }
+            ]
           }
         ],
         "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/ai-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"apiKey\": \"示例值\",\n      \"baseUrl\": \"示例值\",\n      \"textModel\": \"示例值\",\n      \"imageModel\": \"示例值\",\n      \"nimBaseUrl\": \"示例值\",\n      \"nimApiKey\": \"示例值\",\n      \"nimModel\": \"示例值\",\n      \"genChannel\": \"示例值\"\n    }'",
+          "curl": "curl -X PUT \"http://localhost:3000/api/ai-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"models\": []\n    }'",
           "requestBody": {
-            "apiKey": "示例值",
-            "baseUrl": "示例值",
-            "textModel": "示例值",
-            "imageModel": "示例值",
-            "nimBaseUrl": "示例值",
-            "nimApiKey": "示例值",
-            "nimModel": "示例值",
-            "genChannel": "示例值"
+            "models": []
           }
         }
       }
@@ -10715,6 +10803,39 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/client/team/messages",
+        "summary": "群聊消息游标分页（最近 30 天）；before = 上一页最老消息 id",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/team/messages?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client/team/my",
         "summary": "我的小队（无队伍返回 null，前端显示「找队友」入口）",
         "permission": [],
@@ -10748,6 +10869,54 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/client/team/create",
+        "summary": "自建队伍：创建一个新小队并生成组队码（创建者为队长）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "小队名（2~20 字，同 rename 归一规则）",
+            "example": "log-archive"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/create\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"name\": \"log-archive\"\n    }'",
+          "requestBody": {
+            "name": "log-archive"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/join",
+        "summary": "凭组队码加入小队",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "code",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "组队码（6 位，字母数字；service 会转大写归一）",
+            "example": "示例值"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/join\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"code\": \"示例值\"\n    }'",
+          "requestBody": {
+            "code": "示例值"
+          }
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/client/team/leave",
         "summary": "退出小队（可重新匹配）",
         "permission": [],
@@ -10760,12 +10929,69 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "POST",
         "path": "/api/client/team/match",
-        "summary": "找队友：按近 7 天练习节奏匹配陌生队友，或新建一个等待池",
+        "summary": "找队友：按近 7 天练习节奏随机匹配，或新建一个随机等待池",
         "permission": [],
         "isPublic": false,
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/team/match\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/messages",
+        "summary": "发送群聊消息（可带 quoteId 引用某条）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "content",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "消息正文（≤500 字）",
+            "example": "示例值"
+          },
+          {
+            "name": "quoteId",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "引用的消息 id（可选；必须属于同一小队）",
+            "example": 1
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/messages\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"content\": \"示例值\",\n      \"quoteId\": 1\n    }'",
+          "requestBody": {
+            "content": "示例值",
+            "quoteId": 1
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/messages/:id/recall",
+        "summary": "撤回自己的消息（2 分钟内）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/messages/1/recall\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
         }
       },
       {

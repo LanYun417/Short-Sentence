@@ -1,7 +1,7 @@
 /**
- * AI 设置 DTO（管理端）。
+ * AI 设置 DTO（管理端）——模型列表，整表提交。
  *
- * 约定：`apiKey` 留空表示**不修改**——前端拿不到真密钥，只能留空；
+ * 约定：每个模型的 `apiKey` **留空表示沿用已存密钥**——读接口只回掩码，前端拿不到真密钥，
  * 传掩码值回填会把真 key 覆盖成 `****abcd`，所以这里只接受「新值或空」。
  */
 import { Transform, Type } from 'class-transformer';
@@ -18,13 +18,14 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { API_FORMATS, type AdvancedAiConfig } from '../../common/ai/ai-protocol.js';
 
 /** 去除首尾空白。 */
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
 
-/** 高级参数（整体作为一个 JSON 块存 sys_config）。 */
+/** 高级参数（作为一个对象嵌套在模型项里）。 */
 class AdvancedAiConfigDto implements AdvancedAiConfig {
   @IsOptional()
   @IsString()
@@ -92,77 +93,44 @@ class AdvancedAiConfigDto implements AdvancedAiConfig {
   topK = -1;
 }
 
-/** 保存 AI 设置。 */
-export class UpdateAiSettingsDto {
-  /** Agnes API Key（留空 = 不修改） */
-  @IsOptional()
-  @IsString({ message: 'API Key 必须为字符串' })
+/** 单个模型配置。 */
+class SaveAiModelDto {
+  /** 模型配置 id（同一份列表内唯一） */
+  @IsString({ message: 'id 必须为字符串' })
   @Transform(trim)
-  @MaxLength(500, { message: 'API Key 过长' })
-  apiKey?: string;
+  @MaxLength(32)
+  id!: string;
 
-  /** 上游地址（含 /v1；留空 = 不修改） */
-  @IsOptional()
-  @IsString({ message: 'API 地址必须为字符串' })
-  @Transform(trim)
-  @MaxLength(500, { message: 'API 地址过长' })
-  baseUrl?: string;
+  /** 用途：text 生文 / image 生图 */
+  @IsIn(['text', 'image'], { message: '用途只能是 text 或 image' })
+  purpose!: 'text' | 'image';
 
-  /** 生文模型（留空 = 不修改） */
+  /** 是否启用（缺省启用） */
   @IsOptional()
-  @IsString({ message: '生文模型必须为字符串' })
-  @Transform(trim)
-  @MaxLength(100, { message: '生文模型名过长' })
-  textModel?: string;
+  @IsBoolean()
+  enabled?: boolean;
 
-  /** 生图模型（留空 = 不修改） */
+  /** API 格式（生图固定 openai_chat） */
   @IsOptional()
-  @IsString({ message: '生图模型必须为字符串' })
-  @Transform(trim)
-  @MaxLength(100, { message: '生图模型名过长' })
-  imageModel?: string;
-
-  /**
-   * 英伟达 NIM 生题通道 - 上游地址（留空 = 不修改；填了即启用 NIM 通道，需与 nimApiKey / nimModel 一起填）。
-   * 默认 `https://integrate.api.nvidia.com/v1`（OpenAI 兼容）。
-   */
-  @IsOptional()
-  @IsString({ message: 'NIM 上游地址必须为字符串' })
-  @Transform(trim)
-  @MaxLength(500, { message: 'NIM 上游地址过长' })
-  nimBaseUrl?: string;
-
-  /** 英伟达 NIM 生题通道 - API Key（留空 = 不修改；与 nimBaseUrl / nimModel 一起生效） */
-  @IsOptional()
-  @IsString({ message: 'NIM API Key 必须为字符串' })
-  @Transform(trim)
-  @MaxLength(500, { message: 'NIM API Key 过长' })
-  nimApiKey?: string;
-
-  /** 英伟达 NIM 生题通道 - 模型名（留空 = 不修改；非空即启用通道，仅生题内容生成走 NIM） */
-  @IsOptional()
-  @IsString({ message: 'NIM 模型名必须为字符串' })
-  @Transform(trim)
-  @MaxLength(100, { message: 'NIM 模型名过长' })
-  nimModel?: string;
-
-  /**
-   * 生题内容生成通道选择：'agnes'（默认，走全局生文模型）或 'nim'（走 NIM 通道，需 nim 三件套齐备）。
-   * 这是显式开关——两套配置可同时存在，由本字段决定生题走哪条。
-   */
-  @IsOptional()
-  @IsIn(['agnes', 'nim'], { message: '生题通道只能是 agnes 或 nim' })
-  genChannel?: 'agnes' | 'nim';
-
-  /** 文本通道 API 格式（生图不受影响） */
-  @IsOptional()
-  @IsIn([...API_FORMATS], { message: 'API 格式不合法' })
-  apiFormat?: 'openai_chat' | 'openai_responses' | 'anthropic';
+  @IsIn([...API_FORMATS])
+  format?: 'openai_chat' | 'openai_responses' | 'anthropic';
 
   /** 上游地址是否为完整 URL（含路径） */
   @IsOptional()
   @IsBoolean()
   fullUrl?: boolean;
+
+  /** 上游地址 */
+  @IsString({ message: '上游地址必须为字符串' })
+  @Transform(trim)
+  @MaxLength(500)
+  baseUrl!: string;
+
+  /** 模型 ID */
+  @IsString({ message: '模型 ID 必须为字符串' })
+  @Transform(trim)
+  @MaxLength(100)
+  modelId!: string;
 
   /** 模型展示名称（空 = 显示模型 ID） */
   @IsOptional()
@@ -171,9 +139,35 @@ export class UpdateAiSettingsDto {
   @MaxLength(64)
   modelLabel?: string;
 
-  /** 高级参数（整体 JSON 块） */
+  /** API Key（留空 = 沿用已存密钥） */
+  @IsOptional()
+  @IsString()
+  @Transform(trim)
+  @MaxLength(500)
+  apiKey?: string;
+
+  /** 高级参数 */
   @IsOptional()
   @Type(() => AdvancedAiConfigDto)
   @IsObject()
   advanced?: AdvancedAiConfigDto;
 }
+
+/** 保存 AI 设置（整表提交模型列表）。 */
+export class UpdateAiSettingsDto {
+  @IsArray({ message: 'models 必须为数组' })
+  @ArrayMaxSize(20, { message: '最多 20 个模型' })
+  @ValidateNested({ each: true })
+  @Type(() => SaveAiModelDto)
+  models!: SaveAiModelDto[];
+}
+
+/** 测试连通性入参（可选：直接传一个未保存的模型配置；不传则按 id 或默认文本模型测）。 */
+export class TestAiDto {
+  @IsOptional()
+  @Type(() => SaveAiModelDto)
+  @ValidateNested()
+  model?: SaveAiModelDto;
+}
+
+export { SaveAiModelDto };

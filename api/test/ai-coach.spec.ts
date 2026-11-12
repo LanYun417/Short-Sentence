@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { ClientCoachService } from '../src/modules/client/ai/coach.service.js';
 
@@ -69,13 +70,20 @@ function makeService(opts: { records?: ReturnType<typeof makeRecords>; apiKey?: 
   const aiCallLog = { record: vi.fn(async () => undefined) };
   const aiSettings = {
     current: {
-      genChannel: 'agnes',
-      baseUrl: 'https://ai.example/v1',
-      apiKey: opts.apiKey ?? '',
-      textModel: 'test-model',
-      nimModel: '',
-      nimBaseUrl: '',
-      nimApiKey: '',
+      models: [
+        {
+          id: 'text-1',
+          purpose: 'text',
+          enabled: true,
+          format: 'openai_chat',
+          fullUrl: false,
+          baseUrl: 'https://ai.example/v1',
+          modelId: 'test-model',
+          modelLabel: '',
+          apiKey: opts.apiKey ?? '',
+          advanced: { ...DEFAULT_ADVANCED },
+        },
+      ],
     },
   };
   const service = new ClientCoachService(

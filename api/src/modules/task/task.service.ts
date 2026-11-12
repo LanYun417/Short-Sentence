@@ -30,7 +30,7 @@ import { TeamService } from '../client/team/team.service.js';
 import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { ConfigService } from '../config/config.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
-import { resolveTextChannel } from '../../common/ai/ai.config.js';
+import { resolveModel } from '../../common/ai/ai-protocol.js';
 import {
   buildTaskRegistry,
   cronOf,
@@ -535,11 +535,13 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * 当前实际生效的模型名（渲染任务说明用）。
-   * 文本模型走 resolveTextChannel（genChannel=nim 时为 NIM 模型），图像模型始终是全局 imageModel。
+   * 文本/生图各取模型列表里第一个启用的对应用途模型，都没有则显示「未配置」。
    */
   private currentModelLabels(): TaskModelLabels {
     const settings = this.aiSettings.current;
-    return { textModel: resolveTextChannel(settings).model, imageModel: settings.imageModel };
+    const text = resolveModel(settings.models, 'text');
+    const image = resolveModel(settings.models, 'image');
+    return { textModel: text?.modelId || '未配置', imageModel: image?.modelId || '未配置' };
   }
 
   /** 查某任务最近一次执行（不论成败）。 */

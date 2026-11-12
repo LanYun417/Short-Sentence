@@ -1,4 +1,5 @@
 /**
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
  * 场景封面 AI 生成单测（SentenceGenService.generateCategoryCover / generateMissingCategoryCovers）。
  *
  * 钉住：
@@ -15,6 +16,7 @@ import type { FileService } from '../src/common/file/file.service.js';
 import type { AgnesSentenceProvider } from '../src/common/ai/agnes-sentence.provider.js';
 import type { AgnesImageProvider } from '../src/common/ai/agnes-image.provider.js';
 import { SentenceGenService } from '../src/modules/sentence/sentence-gen.service.js';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 
 /** 生成一张最小的合法 PNG。 */
 async function tinyPng(): Promise<Buffer> {
@@ -85,7 +87,24 @@ function makeService(opts?: { reviewPass?: boolean }) {
     imageGen as unknown as AgnesImageProvider,
     fileService as unknown as FileService,
     {} as never,
-    { current: { imageModel: 'agnes-image-2.5-flash' } } as never,
+    {
+      current: {
+        models: [
+          {
+            id: 'image-1',
+            purpose: 'image',
+            enabled: true,
+            format: 'openai_chat',
+            fullUrl: false,
+            baseUrl: 'https://example.com/v1',
+            modelId: 'agnes-image-2.5-flash',
+            modelLabel: '',
+            apiKey: 'k',
+            advanced: { ...DEFAULT_ADVANCED },
+          },
+        ],
+      },
+    } as never,
   );
   return { service, prisma, categories, sentenceGen, imageGen, fileService, files, logs };
 }

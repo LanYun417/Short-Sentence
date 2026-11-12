@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_ADVANCED } from '../src/common/ai/ai-protocol.js';
 import { Observable, of } from 'rxjs';
 import { ClientAiService, type SseFrame } from '../src/modules/client/ai/client-ai.service.js';
 
@@ -21,7 +22,22 @@ function makeService(explanation: string | null): {
   const aiCallLog = { record: vi.fn(async () => undefined) };
   const aiQuota = { refund: vi.fn(async () => undefined) };
   const aiSettings = {
-    current: { apiKey: 'test-key', baseUrl: 'https://example.com/v1', textModel: 'm', imageModel: 'i' },
+    current: {
+      models: [
+        {
+          id: 'text-1',
+          purpose: 'text',
+          enabled: true,
+          format: 'openai_chat',
+          fullUrl: false,
+          baseUrl: 'https://example.com/v1',
+          modelId: 'm',
+          modelLabel: '',
+          apiKey: 'test-key',
+          advanced: { ...DEFAULT_ADVANCED },
+        },
+      ],
+    },
   };
   const service = new ClientAiService(aiCallLog as never, aiQuota as never, prisma as never, aiSettings as never);
   return { service, updateMany };
