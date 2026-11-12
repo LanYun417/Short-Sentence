@@ -269,74 +269,81 @@ onMounted(() => {
               </template>
 
               <el-form label-width="140px" class="mt-2">
-                <el-form-item label="模型系列">
+                <el-form-item label="模型系列" class="mb-6">
                   <el-select v-model="form.advanced.modelSeries" class="w-full">
                     <el-option v-for="o in MODEL_SERIES_OPTIONS" :key="o.value" :value="o.value" :label="o.label" />
                   </el-select>
                   <span class="ml-2 text-xs text-gray-400">仅 OpenAI 系列模型有意义，未选择时用默认配置</span>
                 </el-form-item>
 
-                <el-form-item label="上下文窗口 输入">
-                  <div class="flex w-full flex-wrap items-center gap-2">
+                <el-form-item label="上下文窗口 输入" class="mb-6">
+                  <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
                       v-model="form.advanced.maxInputTokens"
                       :min="0"
                       :max="100000000"
                       controls-position="right"
-                      class="w-40"
+                      class="w-44"
                     />
-                    <el-button
-                      v-for="p in CONTEXT_IN_PRESETS"
-                      :key="p.label"
-                      size="small"
-                      @click="form.advanced.maxInputTokens = p.value"
-                      >{{ p.label }}</el-button
-                    >
+                    <div class="flex flex-wrap items-center gap-2">
+                      <el-button
+                        v-for="p in CONTEXT_IN_PRESETS"
+                        :key="p.label"
+                        size="small"
+                        @click="form.advanced.maxInputTokens = p.value"
+                        >{{ p.label }}</el-button
+                      >
+                    </div>
                     <span class="text-xs text-gray-400">0 = 上游默认</span>
                   </div>
                 </el-form-item>
-                <el-form-item label="上下文窗口 输出">
-                  <div class="flex w-full flex-wrap items-center gap-2">
+
+                <el-form-item label="上下文窗口 输出" class="mb-6">
+                  <div class="flex w-full flex-wrap items-center gap-4">
                     <el-input-number
                       v-model="form.advanced.maxOutputTokens"
                       :min="0"
                       :max="1000000"
                       controls-position="right"
-                      class="w-40"
+                      class="w-44"
                     />
-                    <el-button
-                      v-for="p in CONTEXT_OUT_PRESETS"
-                      :key="p.label"
-                      size="small"
-                      @click="form.advanced.maxOutputTokens = p.value"
-                      >{{ p.label }}</el-button
-                    >
+                    <div class="flex flex-wrap items-center gap-2">
+                      <el-button
+                        v-for="p in CONTEXT_OUT_PRESETS"
+                        :key="p.label"
+                        size="small"
+                        @click="form.advanced.maxOutputTokens = p.value"
+                        >{{ p.label }}</el-button
+                      >
+                    </div>
                     <span class="text-xs text-gray-400">0 = 全局默认</span>
                   </div>
                 </el-form-item>
 
-                <el-form-item label="工具调用轮数">
-                  <el-input-number
-                    v-model="form.advanced.toolRounds"
-                    :min="0"
-                    :max="10000"
-                    controls-position="right"
-                    class="w-40"
-                    placeholder="500"
-                  />
-                  <span class="ml-2 text-xs text-gray-400">0 = 上游默认</span>
+                <el-form-item label="工具调用轮数" class="mb-6">
+                  <div class="flex w-full flex-wrap items-center gap-4">
+                    <el-input-number
+                      v-model="form.advanced.toolRounds"
+                      :min="0"
+                      :max="10000"
+                      controls-position="right"
+                      class="w-44"
+                      placeholder="500"
+                    />
+                    <span class="text-xs text-gray-400">0 = 上游默认</span>
+                  </div>
                 </el-form-item>
 
-                <el-form-item label="支持图片输入">
+                <el-form-item label="支持图片输入" class="mb-6">
                   <el-radio-group v-model="form.advanced.imageInput">
                     <el-radio :value="true">支持</el-radio>
                     <el-radio :value="false">不支持</el-radio>
                   </el-radio-group>
                 </el-form-item>
 
-                <el-form-item label="思考模式">
+                <el-form-item label="思考模式" class="mb-6">
                   <div class="w-full">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                       <span class="w-16 shrink-0 text-xs text-gray-400">参数名</span>
                       <el-input v-model="form.advanced.thinkingParam" class="w-56" placeholder="如 reasoning_effort" />
                       <el-select v-model="form.advanced.thinkingValue" class="w-40" placeholder="默认">
@@ -344,7 +351,7 @@ onMounted(() => {
                         <el-option v-for="v in form.advanced.thinkingOptions" :key="v" :value="v" :label="v" />
                       </el-select>
                     </div>
-                    <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <div class="mt-3 flex flex-wrap items-center gap-2">
                       <span class="mr-1 text-xs text-gray-400">可选值（回车添加）：</span>
                       <el-tag
                         v-for="v in form.advanced.thinkingOptions"
@@ -366,9 +373,9 @@ onMounted(() => {
                   </div>
                 </el-form-item>
 
-                <el-form-item label="采样参数">
-                  <div class="flex w-full flex-wrap items-center gap-3">
-                    <div class="flex items-center gap-1">
+                <el-form-item label="采样参数" class="mb-6">
+                  <div class="flex w-full flex-wrap items-center gap-6">
+                    <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Temperature</span>
                       <el-input-number
                         v-model="form.advanced.temperature"
@@ -380,7 +387,7 @@ onMounted(() => {
                       />
                       <span class="text-xs text-gray-400">0~2，-1=默认</span>
                     </div>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Top P</span>
                       <el-input-number
                         v-model="form.advanced.topP"
@@ -392,7 +399,7 @@ onMounted(() => {
                       />
                       <span class="text-xs text-gray-400">0~1，-1=默认</span>
                     </div>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">Top K</span>
                       <el-input-number
                         v-model="form.advanced.topK"
