@@ -15,7 +15,7 @@
  *      被复用的后端不属于本次启动，退出时不会误杀。
  *
  * 端口分工（三端不可重叠）：api 3000 / admin 5173 / client 3001。
- * client 的开发服务由 client/nuxt.config.ts 固定为 3001——Nuxt 默认也是 3000，
+ * client 的开发服务由 client-web/nuxt.config.ts 固定为 3001——Nuxt 默认也是 3000，
  * 与后端硬冲突，故此处与 Nuxt 配置必须保持一致。
  *
  * 零第三方依赖（仅 Node 内置模块），与仓库「零第三方运行时依赖」约束一致，
@@ -30,7 +30,7 @@
  * 可用环境变量：
  *   API_PORT              后端端口（默认 3000，需与 api/.env 的 PORT 一致）
  *   WEB_PORT              前端端口（默认 5173，需与 admin/.env 的 VITE_PORT 一致）
- *   CLIENT_PORT           用户端端口（默认 3001，需与 client/nuxt.config.ts 的 NUXT_DEV_PORT 一致）
+ *   CLIENT_PORT           用户端端口（默认 3001，需与 client-web/nuxt.config.ts 的 NUXT_DEV_PORT 一致）
  *   DEV_WAIT_TIMEOUT_MS   等待后端就绪的超时（默认 180000）
  *   DEV_WAIT_INTERVAL_MS  健康检查轮询间隔（默认 500）
  *   NO_COLOR              置任意值即关闭彩色前缀
@@ -49,7 +49,7 @@ const API_PORT = Number(process.env.API_PORT ?? 3000);
 /** 前端端口：与 admin/.env 的 VITE_PORT 保持一致，可用 WEB_PORT 覆盖。 */
 const WEB_PORT = Number(process.env.WEB_PORT ?? 5173);
 
-/** 用户端端口：与 client/nuxt.config.ts 的 NUXT_DEV_PORT 保持一致，可用 CLIENT_PORT 覆盖。 */
+/** 用户端端口：与 client-web/nuxt.config.ts 的 NUXT_DEV_PORT 保持一致，可用 CLIENT_PORT 覆盖。 */
 const CLIENT_PORT = Number(process.env.CLIENT_PORT ?? 3001);
 
 /** 存活探针地址（只证明进程可响应；就绪探针另行软校验）。 */
@@ -99,13 +99,13 @@ const TASKS = {
     env: { VITE_PORT: String(WEB_PORT) },
   },
   client: {
-    label: 'client',
+    label: 'client-web',
     color: USE_COLOR ? '\x1b[35m' : '',
-    command: 'npm --prefix client run dev',
+    command: 'npm --prefix client-web run dev',
     /** 该 dev server 的监听端口（用于启动前预检） */
     port: CLIENT_PORT,
     /** 端口对应的配置项名（报错时提示用户改哪里） */
-    portEnv: 'client/nuxt.config.ts 的 NUXT_DEV_PORT',
+    portEnv: 'client-web/nuxt.config.ts 的 NUXT_DEV_PORT',
     /** 注入子进程，保证「预检的端口」与「实际监听的端口」永远一致 */
     env: { NUXT_DEV_PORT: String(CLIENT_PORT) },
   },

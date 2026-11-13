@@ -6,14 +6,14 @@
 
 ## 文档索引
 
-| 文档                                          | 适用范围         | 内容                                                                     |
-| --------------------------------------------- | ---------------- | ------------------------------------------------------------------------ |
-| [api-nestjs-规范](./api-nestjs-规范.md)       | `api/` 后端      | 分层、DTO、响应、数据层、AI 能力接入、任务与限流、SSE、测试门禁          |
-| [admin-vue-规范](./admin-vue-规范.md)         | `admin/` 中后台  | Vue3.5 + Vite8 + Element Plus + Tailwind 的既有约定与运营页面规范        |
-| [client-nuxt-规范](./client-nuxt-规范.md)     | `client/` 用户端 | Nuxt4 + `@nuxt/ui` + Tailwind、刷题卡交互、SSE 消费、海报、鉴权隔离      |
-| [android-app-规范](./android-app-规范.md)     | `android/` App   | Flutter 设计系统（色板 / 动效令牌 / 图标映射）、页面与弹窗结构、验收标准 |
-| [git-提交规范](./git-提交规范.md)             | 全仓库           | Conventional Commits、分支模型、双远端推送、评审清单                     |
-| [db-backup-recovery](./db-backup-recovery.md) | 全仓库 / 运维    | 一键备份与恢复演练（唯一不可挽回点的兜底）                               |
+| 文档                                          | 适用范围              | 内容                                                                     |
+| --------------------------------------------- | --------------------- | ------------------------------------------------------------------------ |
+| [api-nestjs-规范](./api-nestjs-规范.md)       | `api/` 后端           | 分层、DTO、响应、数据层、AI 能力接入、任务与限流、SSE、测试门禁          |
+| [admin-vue-规范](./admin-vue-规范.md)         | `admin/` 中后台       | Vue3.5 + Vite8 + Element Plus + Tailwind 的既有约定与运营页面规范        |
+| [client-nuxt-规范](./client-nuxt-规范.md)     | `client-web/` 用户端  | Nuxt4 + `@nuxt/ui` + Tailwind、刷题卡交互、SSE 消费、海报、鉴权隔离      |
+| [android-app-规范](./android-app-规范.md)     | `client-android/` App | Flutter 设计系统（色板 / 动效令牌 / 图标映射）、页面与弹窗结构、验收标准 |
+| [git-提交规范](./git-提交规范.md)             | 全仓库                | Conventional Commits、分支模型、双远端推送、评审清单                     |
+| [db-backup-recovery](./db-backup-recovery.md) | 全仓库 / 运维         | 一键备份与恢复演练（唯一不可挽回点的兜底）                               |
 
 ## 快速定位
 

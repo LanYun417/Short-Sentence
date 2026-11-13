@@ -4,7 +4,7 @@
  * 模块职责：把「零第三方运行时依赖」这条项目身份约束从「口头约定」变成「可执行校验」——
  * 任何人 `npm i` 一个包即被拦截。
  *
- * 校验对象：项目根 / api / admin / client 四处 `package.json`。
+ * 校验对象：项目根 / api / admin / client-web 四处 `package.json`。
  * 校验规则：
  * - `dependencies`（运行时依赖）新增 / 移除 / 版本变更 → 校验失败（退出码 1），逐条列出哪个包、哪处 package.json；
  * - `devDependencies` 变化 → 仅告警（退出码 0），因为测试/工具类依赖不破坏运行时零依赖约束；
@@ -32,7 +32,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const BASELINE_PATH = path.join(__dirname, 'deps-baseline.json');
 
 /** 待校验的四处 package.json（相对项目根目录，顺序即输出顺序）。 */
-const TARGETS = ['package.json', 'api/package.json', 'admin/package.json', 'client/package.json'];
+const TARGETS = ['package.json', 'api/package.json', 'admin/package.json', 'client-web/package.json'];
 
 /**
  * 读取并解析 JSON 文件。
@@ -56,7 +56,7 @@ function extractDeps(pkg) {
 }
 
 /**
- * 生成当前三处 package.json 的依赖快照。
+ * 生成当前四处 package.json 的依赖快照。
  * @returns {{ generatedAt: string, packages: Record<string, { dependencies: Record<string, string>, devDependencies: Record<string, string> }> }} 快照对象
  * @throws 任一目标 package.json 缺失时抛出
  */
@@ -193,7 +193,7 @@ function check() {
     return 1;
   }
 
-  console.log('[DepsGuard] ✅ 三处 package.json 的运行时依赖（dependencies）均与基线一致。');
+  console.log('[DepsGuard] ✅ 四处 package.json 的运行时依赖（dependencies）均与基线一致。');
   return 0;
 }
 
@@ -202,7 +202,7 @@ function printHelp() {
   console.log('零依赖哨兵（F8）');
   console.log('');
   console.log('用法：');
-  console.log('  node scripts/deps-guard.mjs            校验三处 package.json 依赖是否偏离基线');
+  console.log('  node scripts/deps-guard.mjs            校验四处 package.json 依赖是否偏离基线');
   console.log('  node scripts/deps-guard.mjs --update   显式更新基线（scripts/deps-baseline.json）');
   console.log('');
   console.log('规则：dependencies（运行时）变更 → 失败；devDependencies 变更 → 仅告警。');

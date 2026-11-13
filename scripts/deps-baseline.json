@@ -107,7 +107,7 @@
         "vue-tsc": "^3.3.11"
       }
     },
-    "client/package.json": {
+    "client-web/package.json": {
       "dependencies": {
         "@nuxt/fonts": "^1.0.1",
         "@nuxt/icon": "^2.5.1",

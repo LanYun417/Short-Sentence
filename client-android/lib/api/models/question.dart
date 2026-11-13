@@ -1,0 +1,294 @@
+/// 刷题模型。
+///
+/// 字段与后端 `NextQuestion` / `AnswerResult` 一一对应
+/// （见 api 的 `modules/client/questions/questions.service.ts`），
+/// 也与 Web 端 `client-web/app/types/index.ts` 的 `NextQuestion` 同构。
+library;
+
+/// 题目来源。
+enum QuestionSource {
+  /// 新题
+  newQuestion('new'),
+
+  /// 复习题（间隔重复排期到期）
+  review('review');
+
+  const QuestionSource(this.value);
+
+  final String value;
+
+  static QuestionSource fromValue(String? value) =>
+      values.firstWhere((e) => e.value == value, orElse: () => QuestionSource.newQuestion);
+}
+
+/// 作答模式。
+enum AnswerMode {
+  /// 默写（自己敲整句）
+  input('input'),
+
+  /// 拼词（点选词块）
+  assemble('assemble');
+
+  const AnswerMode(this.value);
+
+  final String value;
+}
+
+/// 下一题。
+class Question {
+  const Question({
+    required this.sentenceId,
+    required this.translationZh,
+    required this.imageUrl,
+    required this.categoryName,
+    required this.difficulty,
+    required this.todayDone,
+    required this.todayGoal,
+    required this.source,
+    this.festivalName,
+    this.words,
+    this.wordMeanings,
+  });
+
+  final int sentenceId;
+
+  /// 中文题干
+  final String translationZh;
+
+  /// 场景图 URL（16:9）
+  final String? imageUrl;
+
+  final String? categoryName;
+
+  /// 节日题库：所属节日名（普通题为 null）
+  final String? festivalName;
+
+  /// 难度 1/2/3
+  final int difficulty;
+
+  /// 今日已完成题数
+  final int todayDone;
+
+  /// 今日目标题数
+  final int todayGoal;
+
+  final QuestionSource source;
+
+  /// 拼词模式候选词块（仅 assemble 下发；input 恒 null）
+  final List<String>? words;
+
+  /// 拼词模式逐词中文释义（词 → 该词在本句中的含义；旧题/无数据为 null，长按词块不弹提示）
+  final Map<String, String>? wordMeanings;
+
+  factory Question.fromJson(Map<String, dynamic> json) {
+    final words = json['words'];
+    final meanings = json['wordMeanings'];
+    return Question(
+      sentenceId: (json['sentenceId'] as num?)?.toInt() ?? 0,
+      translationZh: json['translationZh'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String?,
+      categoryName: json['categoryName'] as String?,
+      festivalName: json['festivalName'] as String?,
+      difficulty: (json['difficulty'] as num?)?.toInt() ?? 1,
+      todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,
+      todayGoal: (json['todayGoal'] as num?)?.toInt() ?? 0,
+      source: QuestionSource.fromValue(json['source'] as String?),
+      words: words is List ? words.whereType<String>().toList() : null,
+      wordMeanings: meanings is Map
+          ? meanings.map((key, value) => MapEntry(key.toString(), value.toString()))
+          : null,
+    );
+  }
+
+  /// 今日进度 0~1（进度条用）。
+  double get todayProgress {
+    if (todayGoal <= 0) {
+      return 0;
+    }
+    return (todayDone / todayGoal).clamp(0, 1).toDouble();
+  }
+
+  String get difficultyLabel => switch (difficulty) {
+        1 => '基础',
+        2 => '进阶',
+        3 => '挑战',
+        _ => '基础',
+      };
+}
+
+/// 节日题库（用户端「专门刷题」入口）。
+class FestivalBank {
+  const FestivalBank({
+    required this.name,
+    required this.count,
+    this.date,
+    this.coverUrl,
+  });
+
+  /// 节日名（如「春节」）
+  final String name;
+
+  /// 当前题库的题目数（只算就绪且未退场）
+  final int count;
+
+  /// 该期节日的公历日期（YYYY-MM-DD）
+  final String? date;
+
+  /// 封面图 URL：取该节日题库一张已生成配图的题当封面；没有时为 null
+  final String? coverUrl;
+
+  factory FestivalBank.fromJson(Map<String, dynamic> json) => FestivalBank(
+        name: json['name'] as String? ?? '',
+        count: (json['count'] as num?)?.toInt() ?? 0,
+        date: json['date'] as String?,
+        coverUrl: json['coverUrl'] as String?,
+      );
+}
+
+/// 场景题库（题库页「按场景刷」入口；不含节日分类——那是 FestivalBank 的事）。
+class CategoryBank {
+  const CategoryBank({
+    required this.id,
+    required this.name,
+    required this.count,
+    this.nameEn,
+    this.icon,
+  });
+
+  /// 分类 id
+  final int id;
+
+  /// 分类名（如「咖啡店点单」）
+  final String name;
+
+  final String? nameEn;
+  final String? icon;
+
+  /// 就绪且未退场的题目数
+  final int count;
+
+  factory CategoryBank.fromJson(Map<String, dynamic> json) => CategoryBank(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: json['name'] as String? ?? '',
+        nameEn: json['nameEn'] as String?,
+        icon: json['icon'] as String?,
+        count: (json['count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// 提交答案结果（含正确答案，用于翻卡背面）。
+class AnswerResult {
+  const AnswerResult({
+    required this.sentenceId,
+    required this.isCorrect,
+    required this.sentenceEn,
+    required this.validAnswers,
+    required this.translationZh,
+    required this.ipa,
+    required this.explanation,
+    required this.imageUrl,
+    required this.favorited,
+    required this.todayDone,
+    required this.todayGoal,
+    this.xpEarned = 0,
+    this.goalBonus = 0,
+    this.newAchievements = const <AchievementUnlock>[],
+  });
+
+  final int sentenceId;
+  final bool isCorrect;
+
+  /// 标准答案（完整英文句）
+  final String sentenceEn;
+
+  /// 其他可接受表达
+  final List<String> validAnswers;
+
+  final String translationZh;
+
+  /// 音标
+  final String? ipa;
+
+  /// 题目解析（语法 / 时态 / 词形；生题时生成，老题为 null 则不显示解析块）
+  final String? explanation;
+
+  final String? imageUrl;
+
+  /// 当前是否已收藏
+  final bool favorited;
+
+  final int todayDone;
+  final int todayGoal;
+
+  /// 本次作答获得的经验（重复提交命中幂等时为 0）。
+  final int xpEarned;
+
+  /// 本次恰好完成每日目标的额外奖励经验。
+  final int goalBonus;
+
+  /// 本次新解锁的成就。
+  final List<AchievementUnlock> newAchievements;
+
+  /// 本次总共该展示的经验（作答 + 目标奖励）。
+  int get totalXp => xpEarned + goalBonus;
+
+  AnswerResult copyWith({bool? favorited}) {
+    return AnswerResult(
+      sentenceId: sentenceId,
+      isCorrect: isCorrect,
+      sentenceEn: sentenceEn,
+      validAnswers: validAnswers,
+      translationZh: translationZh,
+      ipa: ipa,
+      explanation: explanation,
+      imageUrl: imageUrl,
+      favorited: favorited ?? this.favorited,
+      todayDone: todayDone,
+      todayGoal: todayGoal,
+      xpEarned: xpEarned,
+      goalBonus: goalBonus,
+      newAchievements: newAchievements,
+    );
+  }
+
+  factory AnswerResult.fromJson(Map<String, dynamic> json) {
+    final valid = json['validAnswers'];
+    final unlocked = json['newAchievements'];
+    return AnswerResult(
+      sentenceId: (json['sentenceId'] as num?)?.toInt() ?? 0,
+      isCorrect: json['isCorrect'] as bool? ?? false,
+      sentenceEn: json['sentenceEn'] as String? ?? '',
+      validAnswers: valid is List ? valid.whereType<String>().toList() : const <String>[],
+      translationZh: json['translationZh'] as String? ?? '',
+      ipa: json['ipa'] as String?,
+      explanation: json['explanation'] as String?,
+      imageUrl: json['imageUrl'] as String?,
+      favorited: json['favorited'] as bool? ?? false,
+      todayDone: (json['todayDone'] as num?)?.toInt() ?? 0,
+      todayGoal: (json['todayGoal'] as num?)?.toInt() ?? 0,
+      xpEarned: (json['xpEarned'] as num?)?.toInt() ?? 0,
+      goalBonus: (json['goalBonus'] as num?)?.toInt() ?? 0,
+      newAchievements: unlocked is List
+          ? unlocked
+              .whereType<Map<String, dynamic>>()
+              .map(AchievementUnlock.fromJson)
+              .toList()
+          : const <AchievementUnlock>[],
+    );
+  }
+}
+
+/// 新解锁的成就。
+class AchievementUnlock {
+  const AchievementUnlock({required this.code, required this.name});
+
+  final String code;
+  final String name;
+
+  factory AchievementUnlock.fromJson(Map<String, dynamic> json) {
+    return AchievementUnlock(
+      code: json['code'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+    );
+  }
+}

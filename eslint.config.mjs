@@ -6,8 +6,8 @@ import prettierRecommended from 'eslint-plugin-prettier/recommended';
 
 /**
  * LYAdmin 根目录 ESLint 扁平配置（flat config）。
- * 统一覆盖后端 api/ 与前端 admin/（Vue3 中后台）、client/（Nuxt 用户端）的
- * TypeScript / Vue 源码；android/（Flutter/Dart）不在 ESLint 管辖范围。
+ * 统一覆盖后端 api/ 与前端 admin/（Vue3 中后台）、client-web/（Nuxt 用户端）的
+ * TypeScript / Vue 源码；client-android/（Flutter/Dart）不在 ESLint 管辖范围。
  * 注意：注释内不可出现连续星号加斜杠的 glob 写法，否则会提前闭合块注释。
  */
 export default [
@@ -81,7 +81,7 @@ export default [
 
   // 前端浏览器环境（admin 中后台 + client Nuxt 用户端）
   {
-    files: ['admin/**/*.{ts,vue,js,mjs}', 'client/**/*.{ts,vue,js,mjs}'],
+    files: ['admin/**/*.{ts,vue,js,mjs}', 'client-web/**/*.{ts,vue,js,mjs}'],
     languageOptions: {
       globals: {
         window: 'readonly',

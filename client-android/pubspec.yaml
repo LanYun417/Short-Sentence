@@ -1,0 +1,53 @@
+name: client_android
+description: '「短句」App 移动端（Flutter）——视觉场景英语闪卡。'
+publish_to: 'none'
+
+# The following defines the version and build number for your application.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # ---- 网络 ----
+  # dio：拦截器链（自动带 Bearer / 401 单飞刷新 / 失败重试），替代手写 http
+  dio: ^5.7.0
+
+  # ---- 状态管理 ----
+  # Riverpod：编译安全的依赖注入 + 状态容器（与 Web 端 Pinia 的定位对应）
+  flutter_riverpod: ^2.6.1
+
+  # ---- 路由 ----
+  # go_router：声明式路由 + 深层链接，替代 Navigator 1.0 的手工 push
+  go_router: ^14.6.2
+
+  # ---- 安全存储 ----
+  # flutter_secure_storage：令牌进 Keystore / Keychain（对应 Web 端的 localStorage）
+  flutter_secure_storage: ^9.2.4
+
+  # ---- 配图缓存 ----
+  # cached_network_image：闪卡配图的磁盘缓存 + 占位 + 淡入
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  shaders:
+    # 液态流体背景（刷题页 Hero）：与 Web 端 HeroAurora 同一套 GLSL，
+    # 构建期由 impellerc 编译，运行时经 FragmentProgram.fromAsset 加载。
+    - shaders/liquid.frag
+
+  assets:
+    # 品牌标：由 Web 端 client/public/favicon.svg 经 api 的 sharp 渲染而来
+    # （重新生成：见 api/scripts 里用 sharp 转 PNG 的一次性脚本，源文件改了就重跑）
+    - assets/brand/logo.png

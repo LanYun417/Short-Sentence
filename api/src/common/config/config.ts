@@ -195,7 +195,7 @@ export const config = {
   },
   /**
    * 跨域允许来源（逗号分隔）。默认覆盖开发期两个前端：
-   * admin `:5173`（Vite）与 client `:3001`（Nuxt，见 client/nuxt.config.ts）。
+   * admin `:5173`（Vite）与 client `:3001`（Nuxt，见 client-web/nuxt.config.ts）。
    */
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:3001',
   /** ip2region 离线 IP 库配置（IP 归属地解析；数据文件缺失时自动降级关闭，不影响启动） */

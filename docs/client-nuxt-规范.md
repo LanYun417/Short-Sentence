@@ -1,6 +1,6 @@
-# 用户端规范（client/ · Nuxt 4 「短句」App）
+# 用户端规范（client-web/ · Nuxt 4 「短句」App）
 
-适用于 `client/`（Nuxt 4 + Nuxt UI v4 + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、作答、提交后 3D 翻转看答案。**作答支持两种模式（可随时切换）**：`输入`（自己敲出整句）与 `拼词`（点选打乱的词块拼成句子，词块由后端随题下发）。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
+适用于 `client-web/`（Nuxt 4 + Nuxt UI v4 + Tailwind CSS v4 + Pinia）。产品形态：响应式网页，「视觉场景英语闪卡」——看中文题干、看 16:9 对话场景图、作答、提交后 3D 翻转看答案。**作答支持两种模式（可随时切换）**：`输入`（自己敲出整句）与 `拼词`（点选打乱的词块拼成句子，词块由后端随题下发）。**图片禁止实时生成**：题目与配图均由后端定时任务预生成并入库，前端只消费。
 
 ## 1. 硬性约定
 
@@ -22,11 +22,11 @@
 
 ### 开发端口（不得随意改）
 
-| 端     | 端口 | 配置位置                                        |
-| ------ | ---- | ----------------------------------------------- |
-| api    | 3000 | `api/.env` 的 `PORT`（Dockerfile / nginx 契约） |
-| admin  | 5173 | `admin/.env.development` 的 `VITE_PORT`         |
-| client | 3001 | `client/nuxt.config.ts` 的 `NUXT_DEV_PORT`      |
+| 端         | 端口 | 配置位置                                        |
+| ---------- | ---- | ----------------------------------------------- |
+| api        | 3000 | `api/.env` 的 `PORT`（Dockerfile / nginx 契约） |
+| admin      | 5173 | `admin/.env.development` 的 `VITE_PORT`         |
+| client-web | 3001 | `client-web/nuxt.config.ts` 的 `NUXT_DEV_PORT`  |
 
 - Nuxt 默认端口就是 3000，与后端**硬冲突**：两者同起必有一端启动失败，且 `devProxy` 会把 `/api` 代理回自己形成自环。故此处固定 3001。
 - `vite.server.strictPort = true`：端口被占直接报错，**不允许静默 +1 漂移**（CORS 与防盗链白名单按端口配置，漂移后图片会被判外链）。
@@ -36,7 +36,7 @@
 ## 2. 目录约定
 
 ```
-client/
+client-web/
 ├─ app/
 │  ├─ app.vue             # 根组件：UApp + NuxtLayout + NuxtPage，仅承担全局职责
 │  │                      #   （SSR 预取当前用户/今日句签、JSON-LD），不渲染任何外壳

@@ -8,8 +8,8 @@
 #   guards → 规范漂移（格式 / 依赖基线 / 被 gitignore 吞掉的源码文件 / 原生滚动条）
 #   api    → 后端编译、契约、真实数据库读写（含迁移可执行性）
 #   web    → 前端类型与产物可构建
-#   client → 用户端类型、单测与产物
-#   android→ Flutter 静态检查与单测（app 尚未开发，先守住骨架可编译）
+#   client-web → 用户端类型、单测与产物
+#   client-android → Flutter 静态检查与单测（app 尚未开发，先守住骨架可编译）
 
 name: CI
 
@@ -161,20 +161,20 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: client-web/package-lock.json
       - name: 安装客户端依赖（postinstall 自动执行 nuxt prepare）
-        working-directory: client
+        working-directory: client-web
         run: npm ci --no-audit --no-fund
       # `nuxt build` **不做**类型检查（此前这里写着「构建内含类型检查」，是错的）：
       # 补上 type-check 后立刻抓出 8 处真实类型错误（含 UCard ui.ring 静默失效）。
       - name: 类型检查
-        working-directory: client
+        working-directory: client-web
         run: npm run type-check
       - name: 单测（纯逻辑：答案归一化 / AI 输出解析）
-        working-directory: client
+        working-directory: client-web
         run: npm run test
       - name: 构建产物
-        working-directory: client
+        working-directory: client-web
         run: npm run build
 
   android:
@@ -188,14 +188,14 @@ jobs:
           channel: stable
           cache: true
       - name: 依赖解析
-        working-directory: android
+        working-directory: client-android
         run: flutter pub get
       # 静态检查走 analyze（dart analyze 覆盖 lint + 类型检查），是 Flutter 官方门禁
       - name: 静态检查
-        working-directory: android
+        working-directory: client-android
         run: flutter analyze
       - name: 单元测试
-        working-directory: android
+        working-directory: client-android
         run: flutter test
 
   docker:

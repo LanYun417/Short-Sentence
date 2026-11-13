@@ -1,0 +1,479 @@
+/// 刷题页回归测试：卡片未翻转时不得解引用判分结果。
+///
+/// 这个 bug 的真实形态：`_FlipCard` 的 `back:` 实参在 `_buildCard` 运行时
+/// **立即求值**，于是 `result!` 在「卡片还没翻、result 还是 null」时就被解引用
+/// → 每次进入刷题页必崩（Null check operator used on a null value）。
+///
+/// 所以这里刻意在 **result 为 null**（未提交答案）的状态下渲染页面：
+/// 修复前它会抛异常，修复后（改为 builder）才能正常显示正面。
+///
+/// 用 `QuizPage(autoLoad: false)` 关掉首屏自动抽题：测试环境没有后端，
+/// 且那次请求会留下悬挂定时器让用例失败。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:client_android/api/models/question.dart';
+import 'package:client_android/pages/quiz_page.dart';
+import 'package:client_android/state/quiz_controller.dart';
+import 'package:client_android/theme/motion.dart';
+import 'package:client_android/widgets/shimmer.dart';
+
+Question _question() => Question.fromJson(const <String, dynamic>{
+      'sentenceId': 1117,
+      'translationZh': '我一到就会给你打电话。',
+      'imageUrl': null,
+      'categoryName': '旅行出行',
+      'difficulty': 2,
+      'todayDone': 3,
+      'todayGoal': 20,
+      'source': 'new',
+      'words': null,
+    });
+
+AnswerResult _result() => AnswerResult.fromJson(const <String, dynamic>{
+      'sentenceId': 1117,
+      'isCorrect': true,
+      'sentenceEn': 'I will call you as soon as I arrive.',
+      'validAnswers': <String>[],
+      'translationZh': '我一到就会给你打电话。',
+      'favorited': false,
+      'todayDone': 4,
+      'todayGoal': 20,
+    });
+
+/// 带等价表达的判分结果（用于「查看其他答案」用例）。
+AnswerResult _resultWithAlternatives() => AnswerResult.fromJson(
+      const <String, dynamic>{
+        'sentenceId': 1117,
+        'isCorrect': true,
+        'sentenceEn': 'I will call you as soon as I arrive.',
+        'validAnswers': <String>[
+          "I'll call you as soon as I arrive.",
+          "I'll ring you up the moment I get there.",
+        ],
+        'translationZh': '我一到就会给你打电话。',
+        'favorited': false,
+        'todayDone': 4,
+        'todayGoal': 20,
+      },
+    );
+
+Question _otherQuestion() => Question.fromJson(const <String, dynamic>{
+      'sentenceId': 2222,
+      'translationZh': '我马上就到。',
+      'imageUrl': null,
+      'difficulty': 1,
+      'todayDone': 3,
+      'todayGoal': 20,
+      'source': 'new',
+      'words': null,
+    });
+
+/// 挂载一个预置好状态的 QuizPage，并返回可改状态的容器。
+Future<ProviderContainer> _pump(WidgetTester tester, QuizState state) async {
+  final container = ProviderContainer();
+  container.read(quizControllerProvider.notifier).state = state;
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: QuizPage(autoLoad: false)),
+    ),
+  );
+  return container;
+}
+
+void main() {
+  // 页面里的极光/微光是无限循环动画，会让 pumpAndSettle 永远等不到静止；
+  // 测试里统一关掉（生产默认开启，见 Motion.loopAnimations 注释）。
+  setUp(() => Motion.loopAnimations = false);
+  tearDown(() => Motion.loopAnimations = true);
+
+  testWidgets('未提交答案时渲染正面，不解引用 null 的 result', (tester) async {
+    await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+
+    expect(find.text('我一到就会给你打电话。'), findsOneWidget);
+    expect(find.text('确定'), findsOneWidget);
+    // 背面元素不在（还没翻卡）——这一条正是当年崩溃的场景
+    expect(find.text('下一题'), findsNothing);
+    expect(find.text('收藏'), findsNothing);
+  });
+
+  testWidgets('抽题失败（无题）时显示空态，不崩', (tester) async {
+    await _pump(
+      tester,
+      const QuizState(
+        phase: QuizPhase.idle,
+        error: '网络异常，请检查网络连接',
+      ),
+    );
+
+    expect(find.text('网络异常，请检查网络连接'), findsOneWidget);
+    expect(find.text('重新抽题'), findsOneWidget);
+  });
+
+  testWidgets('判分后翻到背面（下一题 / 收藏）', (tester) async {
+    await _pump(
+      tester,
+      QuizState(
+        question: _question(),
+        phase: QuizPhase.answered,
+        result: _result(),
+      ),
+    );
+    // 翻牌是 420ms 动画，等它播完背面才出现
+    await tester.pumpAndSettle();
+
+    expect(find.text('I will call you as soon as I arrive.'), findsOneWidget);
+    expect(find.text('下一题'), findsOneWidget);
+    // 收藏是星形图标（对齐 Web 端 favPop 设计），不是文字按钮
+    expect(find.byIcon(Icons.star_border_rounded), findsOneWidget);
+    expect(find.text('查看其他答案'), findsNothing); // 本题无等价表达
+  });
+
+  testWidgets('等价表达收起成「查看其他答案」按钮，点开才列出', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: _question(),
+        phase: QuizPhase.answered,
+        result: _resultWithAlternatives(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 收起态：只给入口，等价写法不直出（旧的「这些说法也算对」提示已移除）
+    expect(find.text('查看其他答案'), findsOneWidget);
+    expect(find.text('这些说法也算对'), findsNothing);
+    expect(find.text("I'll ring you up the moment I get there."), findsNothing);
+
+    final entry = find.text('查看其他答案');
+    await tester.ensureVisible(entry);
+    await tester.pumpAndSettle();
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+
+    // 展开态：等价写法列出来
+    expect(find.text("I'll ring you up the moment I get there."), findsOneWidget);
+    expect(find.text("I'll call you as soon as I arrive."), findsOneWidget);
+
+    // 再点一次收起
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+    expect(find.text("I'll ring you up the moment I get there."), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('切难度 / 切作答方式时保留当前卡片，不铺骨架屏', (tester) async {
+    // 旧的 bug：只要 phase==loading 就整页换成骨架屏。而「切难度 / 切作答方式」
+    // 是原地重抽（loadingNext=false），于是用户看到的是页面被重新加载了一遍。
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('确定'), findsOneWidget);
+
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+    );
+    await tester.pump();
+
+    // 卡片还在；作答方式切换现在在卡片下方（换一题右侧），滚下去确认仍在。
+    // 页面 ListView 是懒构建，底部那行一开始不在 element 树里，要拖动让它建出来；
+    // 页面里有多个 Scrollable（scrollUntilVisible 解析不了），改在页面级 ListView 上拖。
+    expect(find.text('我一到就会给你打电话。'), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('默写'),
+      find.byType(ListView).first,
+      const Offset(0, -250),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('默写'), findsOneWidget);
+    // 主按钮改成「换题中…」（不能复用提交的转圈，否则像在判分）
+    expect(find.text('换题中…'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+    // 整页骨架屏（闪烁的来源）不应出现
+    expect(find.byType(ShimmerBox), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('作答痕迹在新题落地时才清空（重抽过程不空屏）', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'I will call you');
+    await tester.pump();
+    expect(find.text('I will call you'), findsOneWidget);
+
+    // 原地重抽中：旧卡还挂着，输入内容必须还在——当场清掉就像页面被刷新了
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+    );
+    await tester.pump();
+    expect(find.text('I will call you'), findsOneWidget);
+
+    // 新题到达：此时才清空
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _otherQuestion(),
+      phase: QuizPhase.answering,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('我马上就到。'), findsOneWidget);
+    expect(find.text('I will call you'), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('拼词模式展示候选词块', (tester) async {
+    await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(const <String, dynamic>{
+          'sentenceId': 2,
+          'translationZh': '测试',
+          'source': 'new',
+          'words': <String>['call', 'you', 'I'],
+        }),
+        phase: QuizPhase.answering,
+        mode: AnswerMode.assemble,
+      ),
+    );
+
+    expect(find.text('call'), findsOneWidget);
+    expect(find.text('you'), findsOneWidget);
+    // 「撤销」常驻显示（未选中时置灰），这是设计调整后的行为
+    expect(find.text('撤销'), findsOneWidget);
+  });
+
+  testWidgets('拼词候选固定位置：选过后原地变已用占位，不重排', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(const <String, dynamic>{
+          'sentenceId': 2,
+          'translationZh': '测试',
+          'source': 'new',
+          'words': <String>['call', 'you', 'I'],
+        }),
+        phase: QuizPhase.answering,
+        mode: AnswerMode.assemble,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 初始：候选区(Wrap)里 3 个词全部就位，没有「已用」标记
+    for (final w in ['call', 'you', 'I']) {
+      expect(
+        find.descendant(of: find.byType(Wrap), matching: find.text(w)),
+        findsOneWidget,
+      );
+    }
+    expect(
+      find.descendant(
+        of: find.byType(Wrap),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsNothing,
+    );
+
+    // 点掉 'call'（候选区在卡片偏下，先滚入视野再点）
+    final call = find.descendant(
+      of: find.byType(Wrap),
+      matching: find.text('call'),
+    );
+    await tester.ensureVisible(call);
+    await tester.pumpAndSettle();
+    await tester.tap(call, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // 候选区仍是 3 个词：'call' 没消失，'you'/'I' 也没前移填补
+    for (final w in ['call', 'you', 'I']) {
+      expect(
+        find.descendant(of: find.byType(Wrap), matching: find.text(w)),
+        findsOneWidget,
+      );
+    }
+    // 'call' 这一格变成已用（纯置灰、不再打钩），整段没有打钩图标
+    expect(
+      find.descendant(
+        of: find.byType(Wrap),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsNothing,
+    );
+    // 已选区出现 'call'，尚未集齐 → 按钮提示剩余，而非自动确定
+    expect(
+      find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.text('call'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('还有 2 个词没用'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('拼词已选区单行不折行，装不下就横向滚动', (tester) async {
+    // 用手机尺寸：宽屏（测试默认 800）下 5 个词本来就摆得下，测不出折行
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const words = <String>['alpha', 'bravo', 'charlie', 'delta', 'echo'];
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(const <String, dynamic>{
+          'sentenceId': 77,
+          'translationZh': '测试',
+          'source': 'new',
+          'words': words,
+        }),
+        phase: QuizPhase.answering,
+        mode: AnswerMode.assemble,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final word in words) {
+      // 点候选区（Wrap 内）的词块；选过的会原地变「已用」并保留占位，
+      // 不重排，所以始终能从候选区点到这个词的槽位。
+      final bankChip = find.descendant(
+        of: find.byType(Wrap),
+        matching: find.text(word),
+      );
+      await tester.ensureVisible(bankChip);
+      await tester.pumpAndSettle();
+      await tester.tap(bankChip);
+      await tester.pumpAndSettle();
+    }
+
+    // 已选的 5 个词块 dy 全相同 = 一行，没有折行。
+    // 用「已选区（横向 SingleChildScrollView）内」限定，避免同时匹配到
+    // 候选区里那个已变灰的占位词块。
+    final rows = <double>{
+      for (final word in words)
+        tester
+            .getCenter(
+              find.descendant(
+                of: find.byType(SingleChildScrollView),
+                matching: find.text(word),
+              ),
+            )
+            .dy,
+    };
+    expect(rows, hasLength(1));
+
+    // 一行装不下 → 已选区是横向可滚动的，且**自动跟到最右**（新词块要看得见）
+    final horizontal = tester
+        .widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView))
+        .where((view) => view.scrollDirection == Axis.horizontal);
+    expect(horizontal, isNotEmpty);
+    final position = horizontal.first.controller!.position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    expect(position.pixels, position.maxScrollExtent);
+
+    // 已自动滚到最右 → 走马灯「向左」翻页按钮出现、右侧隐藏（滚到头的一侧自动隐藏）
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+
+    container.dispose();
+  });
+
+  testWidgets('翻转角度与 flipped 一致（不会出现转一半还显示正面）', (tester) async {
+    final container = await _pump(
+      tester,
+      QuizState(question: _question(), phase: QuizPhase.answering),
+    );
+    // 未提交：正面
+    expect(find.text('确定'), findsOneWidget);
+
+    // 提交判分：flipped 变 true，目标角度必须同步到 180
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.answered,
+      result: _result(),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // 背面出现、正面消失——证明 deg 与 flipped 没有脱节
+    expect(find.text('下一题'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+  });
+
+  testWidgets('配图 URL 经 staticUrl 拼成绝对地址', (tester) async {
+    // 后端返回的是相对路径 /static/webp/xxx.webp，
+    // 直接喂给 CachedNetworkImage 会请求失败（曾经的 bug：显示「配图加载失败」）。
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: Question.fromJson(<String, dynamic>{
+          'sentenceId': 1117,
+          'translationZh': 'x',
+          'source': 'new',
+          'imageUrl': '/static/webp/demo.webp',
+        }),
+        phase: QuizPhase.answering,
+      ),
+    );
+    await tester.pump();
+
+    // 页面上不应出现「配图加载失败」/「配图缺失」
+    expect(find.text('配图加载失败'), findsNothing);
+    expect(find.text('配图缺失'), findsNothing);
+
+    // CachedNetworkImage 内部用的已是绝对地址
+    final image = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+    expect(image.imageUrl, startsWith('http'));
+    expect(image.imageUrl, endsWith('/static/webp/demo.webp'));
+    container.dispose();
+  });
+
+  testWidgets('点下一题后卡片保持背面（不当用户面往回翻）', (tester) async {
+    // 曾经的 bug：loadNext() 一进去就 phase=loading + clearResult，
+    // flipped 立刻变 false → 卡片当着用户的面从 180° 往回转，
+    // 停在中间角度就是「卡片斜着」。现在 loading 期间应保持翻转态。
+    final container = await _pump(
+      tester,
+      QuizState(
+        question: _question(),
+        phase: QuizPhase.answered,
+        result: _result(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('下一题'), findsOneWidget);
+
+    // 进入抽题中
+    container.read(quizControllerProvider.notifier).state = QuizState(
+      question: _question(),
+      phase: QuizPhase.loading,
+      loadingNext: true,
+    );
+    await tester.pump();
+
+    // 仍应是背面（加载态），而不是回到正面
+    expect(find.text('加载下一题…'), findsOneWidget);
+    expect(find.text('确定'), findsNothing);
+    container.dispose();
+  });
+}

@@ -7,7 +7,7 @@
 > 一套开箱即用的通用后台管理基座：JWT 双 Token 鉴权、RBAC + 数据权限、系统管理（用户 / 角色 / 菜单 / 部门 / 字典 / 参数）、三类日志、文件管理、通知中心、在线用户与系统监控（CPU / 内存 / 磁盘 / 网络吞吐）、代码生成器、ECharts 仪表盘与中英双语。前后端 TypeScript 全覆盖，遵循严格分层与统一工程规范。
 >
 > 本仓库同时是**「短句」**（视觉场景英语闪卡）的完整落地：同一个后端（`api/`）之上，
-> 运营后台（`admin/`）、用户端 Web（`client/`，Nuxt 4）与 Android App（`android/`，Flutter）
+> 运营后台（`admin/`）、用户端 Web（`client-web/`，Nuxt 4）与 Android App（`client-android/`，Flutter）
 > **三端同源同契约**。产品能力见[「短句」业务功能](#短句业务功能)。
 
 <p align="center">
@@ -142,15 +142,15 @@ LYAdmin 面向企业内部运营 / 管理场景，提供一套可直接二次开
 short-sentence/
 ├─ api/                      # 后端工程（NestJS 12 + Prisma 7，含 admin 中后台 + client 用户端两套接口域）
 ├─ admin/                    # 中后台前端（Vue3 + Vite + Element Plus，即 ly-admin-web）
-├─ client/                   # 「短句」用户端 Web（Nuxt 4 + @nuxt/ui + Tailwind，规范见 docs/client-nuxt-规范.md）
-├─ android/                  # 「短句」App（Flutter，主要功能已完成；详见 android/README.md）
+├─ client-web/               # 「短句」用户端 Web（Nuxt 4 + @nuxt/ui + Tailwind，规范见 docs/client-nuxt-规范.md）
+├─ client-android/           # 「短句」App（Flutter，主要功能已完成；详见 client-android/README.md）
 ├─ deploy/                   # Docker 部署（compose / Dockerfile / nginx 示例）
 ├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
 ├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
 ├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
 ├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（相对导入可解析）/ check-locale-keys（语言包 key 一致）/ check-native-scrollbar（禁用原生滚动条）
 ├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
-├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client）
+├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client-web）
 ├─ .prettierrc.json           # Prettier 规则
 ├─ .stylelintrc.json          # Stylelint 规则
 ├─ commitlint.config.cjs      # 约定式提交校验规则
@@ -246,7 +246,7 @@ cd ../admin  && npm install   # 运营后台（Vue 3 + Vite）
 cd ../client && npm install   # 用户端 Web（Nuxt 4，postinstall 会跑 nuxt prepare）
 ```
 
-> 只做后端 + 运营后台时，`client/` 可以先不装；移动端另需本机 Flutter SDK（`cd android && flutter pub get`）。
+> 只做后端 + 运营后台时，`client-web/` 可以先不装；移动端另需本机 Flutter SDK（`cd client-android && flutter pub get`）。
 
 ### 3. 配置环境变量
 
@@ -292,7 +292,7 @@ npm run dev -- --client
 
 > **三端端口互不重叠**：api `3000`、admin `5173`、client `3001`。
 > Nuxt 默认端口也是 3000，与后端硬冲突（且 devProxy 会把 `/api` 代理回自己），
-> 故 `client/nuxt.config.ts` 已固定为 3001 并开启 `strictPort`；改端口时须同步
+> 故 `client-web/nuxt.config.ts` 已固定为 3001 并开启 `strictPort`；改端口时须同步
 > `api/.env` 的 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`，否则接口跨域、图片被判外链。
 
 `npm run dev` 由 `scripts/dev.mjs` 编排（零第三方依赖），**保证前端一定在后端就绪之后才启动**：
@@ -374,7 +374,7 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `npm run type-check` | 仅类型检查（`vue-tsc --noEmit`）    |
 | `npm run test`       | vitest 单测（store / 权限等纯逻辑） |
 
-### 用户端 `client/`
+### 用户端 `client-web/`
 
 | 命令                 | 说明                                                        |
 | -------------------- | ----------------------------------------------------------- |
@@ -384,7 +384,7 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `npm run type-check` | 类型检查（`nuxt typecheck`；**`nuxt build` 不做类型检查**） |
 | `npm run test`       | vitest 单测（答案归一化 / AI 输出解析等纯逻辑）             |
 
-### 移动端 `android/`
+### 移动端 `client-android/`
 
 | 命令                | 说明                                          |
 | ------------------- | --------------------------------------------- |
@@ -517,7 +517,7 @@ NODE_ENV=production node dist/main.js
 ```bash
 cd client
 npm ci
-npm run build                                  # 产物在 client/.output/
+npm run build                                  # 产物在 client-web/.output/
 NUXT_API_INTERNAL_URL=http://127.0.0.1:3000/api \
 NUXT_PUBLIC_SITE_URL=https://your-domain.com \
 node .output/server/index.mjs                   # 默认 :3000，可用 PORT 覆盖
@@ -530,11 +530,11 @@ node .output/server/index.mjs                   # 默认 :3000，可用 PORT 覆
 ### Android App
 
 ```bash
-cd android
+cd client-android
 flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-release.apk
 ```
 
-> 接口基址在 `android/lib/config/app_config.dart`（默认 `10.0.2.2` = 模拟器访问宿主机）。
+> 接口基址在 `client-android/lib/config/app_config.dart`（默认 `10.0.2.2` = 模拟器访问宿主机）。
 > 打包正式包前记得按实际后端域名修改；**正式包必须自带 `INTERNET` 权限**（Flutter 模板只给 debug/profile）。
 
 ## 接口约定
@@ -569,7 +569,7 @@ flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-re
    (cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
    (cd admin && npm run type-check && npm run test)
    (cd client && npm run type-check && npm run test)   # 注意：nuxt build 不做类型检查
-   (cd android && flutter analyze && flutter test)
+   (cd client-android && flutter analyze && flutter test)
    ```
 
 5. **PR**：说明背景与改动点，关联相关 Issue，并确保上述检查通过。

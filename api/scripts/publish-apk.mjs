@@ -4,7 +4,7 @@
  *
  * 用法（在 api/ 目录或任意目录均可）：
  *   node scripts/publish-apk.mjs \
- *     --apk ../android/build/app/outputs/flutter-apk/app-release.apk \
+ *     --apk ../client-android/build/app/outputs/flutter-apk/app-release.apk \
  *     --version 1.0.0 --version-code 1 \
  *     --changelog "首个正式版：新增周榜/月榜与首次上榜成就" \
  *     --username admin --password '<超管口令>'
