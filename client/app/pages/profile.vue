@@ -9,7 +9,6 @@ import { useAuthStore } from '~/stores/auth';
 import { apiFetch } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
 import { PASSWORD_HINT } from '~/utils/password';
-import { maskEmail } from '~/utils/email';
 import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -325,15 +324,12 @@ async function onSave(): Promise<void> {
   }
 }
 
-/** 账号邮箱脱敏串（提示验证码发到哪个邮箱；拿不到邮箱时为空）。 */
-const maskedAccountEmail = computed(() => {
-  const email = auth.user?.email ?? '';
-  return email ? maskEmail(email) : '';
-});
+/** 当前账号邮箱（提示验证码发到哪个邮箱；拿不到时为空）。 */
+const accountEmail = computed(() => auth.user?.email ?? '');
 
-/** 邮箱验证码字段帮助文案：明确展示脱敏后的目标邮箱。 */
+/** 邮箱验证码字段帮助文案：明确展示目标邮箱。 */
 const passwordCodeHelp = computed(() => {
-  const target = maskedAccountEmail.value ? `账号邮箱 ${maskedAccountEmail.value}，` : '你的账号邮箱，';
+  const target = accountEmail.value ? `账号邮箱 ${accountEmail.value}，` : '你的账号邮箱，';
   return `发送到${target}6 位数字，5 分钟内有效（改密需验证邮箱归属）`;
 });
 

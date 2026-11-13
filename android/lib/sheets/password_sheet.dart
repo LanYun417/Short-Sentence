@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/password_policy.dart';
-import '../config/email_mask.dart';
 import '../state/auth_controller.dart';
 import '../theme/palette.dart';
 
@@ -77,7 +76,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     }
     setState(() {
       _sendingCode = false;
-      _codeMessage = failure ?? '验证码已发送至 ${maskEmail(email)}，请查收（含垃圾箱）';
+      _codeMessage = failure ?? '验证码已发送至 $email，请查收（含垃圾箱）';
     });
     if (failure != null) {
       return;
@@ -240,7 +239,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
               if (accountEmail.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 4),
                 Text(
-                  '验证码将发送至账号邮箱 ${maskEmail(accountEmail)}',
+                  '验证码将发送至账号邮箱 $accountEmail',
                   style: TextStyle(fontSize: 12, color: colors.inkFaint),
                 ),
               ],
