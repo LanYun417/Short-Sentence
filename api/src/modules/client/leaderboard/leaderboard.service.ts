@@ -17,7 +17,13 @@ import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { RedisService } from '../../../common/redis/redis.service.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
-import { isCorrectLeaderboard, leaderboardDays, leaderboardUnit, type LeaderboardType } from './leaderboard.dto.js';
+import {
+  isCorrectLeaderboard,
+  LEADERBOARD_TYPES,
+  leaderboardDays,
+  leaderboardUnit,
+  type LeaderboardType,
+} from './leaderboard.dto.js';
 
 export interface LeaderboardRow {
   rank: number;
@@ -25,6 +31,11 @@ export interface LeaderboardRow {
   nickname: string;
   avatarUrl: string | null;
   count: number;
+}
+
+/** 后台-榜单行（比客户端多 email；不走缓存，运营要看到实时）。 */
+export interface LeaderboardAdminRow extends LeaderboardRow {
+  email: string;
 }
 
 export interface LeaderboardResult {
@@ -215,32 +226,7 @@ export class LeaderboardService {
 
   /** 查库聚合：今日/周/月走 sentence_record 窗口，打卡榜走 user_checkin 全历史。 */
   private async buildBoard(type: LeaderboardType): Promise<LeaderboardBoard> {
-    const days = leaderboardDays(type);
-    let agg: AggRow[];
-    if (days === 0) {
-      const rows = await this.prisma.userCheckin.groupBy({
-        by: ['userId'],
-        _count: { _all: true },
-      });
-      agg = rows.map((r) => ({ userId: r.userId, countAll: r._count._all, sumCorrect: 0 }));
-    } else {
-      const start = dayjs()
-        .subtract(days - 1, 'day')
-        .startOf('day')
-        .toDate();
-      const end = dayjs().endOf('day').toDate();
-      const rows = await this.prisma.sentenceRecord.groupBy({
-        by: ['userId'],
-        where: { createdAt: { gte: start, lte: end } },
-        _count: { _all: true },
-        _sum: { isCorrect: true },
-      });
-      agg = rows.map((r) => ({
-        userId: r.userId,
-        countAll: r._count._all,
-        sumCorrect: r._sum.isCorrect ?? 0,
-      }));
-    }
+    const agg = await this.aggregateRows(type);
 
     if (agg.length === 0) {
       return {
@@ -266,5 +252,129 @@ export class LeaderboardService {
     const fileMap = new Map<bigint, string>(files.map((f) => [f.id, f.fileUrl]));
 
     return rankLeaderboard(agg, userMap, fileMap, type, LeaderboardService.TOP_N);
+  }
+
+  /** 聚合原始行（buildBoard / 后台共用，避免两套窗口口径漂移）。 */
+  private async aggregateRows(type: LeaderboardType): Promise<AggRow[]> {
+    const days = leaderboardDays(type);
+    if (days === 0) {
+      const rows = await this.prisma.userCheckin.groupBy({
+        by: ['userId'],
+        _count: { _all: true },
+      });
+      return rows.map((r) => ({ userId: r.userId, countAll: r._count._all, sumCorrect: 0 }));
+    }
+    const start = dayjs()
+      .subtract(days - 1, 'day')
+      .startOf('day')
+      .toDate();
+    const end = dayjs().endOf('day').toDate();
+    const rows = await this.prisma.sentenceRecord.groupBy({
+      by: ['userId'],
+      where: { createdAt: { gte: start, lte: end } },
+      _count: { _all: true },
+      _sum: { isCorrect: true },
+    });
+    return rows.map((r) => ({
+      userId: r.userId,
+      countAll: r._count._all,
+      sumCorrect: r._sum.isCorrect ?? 0,
+    }));
+  }
+
+  /* ------------------------------ 后台管理 ------------------------------ */
+
+  /**
+   * 后台：某榜单实时聚合（不读 60s 缓存）。
+   * @param topN 展示条数（硬截断 1~500）
+   */
+  async adminBoard(
+    type: LeaderboardType,
+    topN: number,
+  ): Promise<{ type: LeaderboardType; unit: string; date: string; total: number; top: LeaderboardAdminRow[] }> {
+    const n = Math.min(Math.max(1, Math.floor(topN) || LeaderboardService.TOP_N), 500);
+    const agg = await this.aggregateRows(type);
+    if (agg.length === 0) {
+      return { type, unit: leaderboardUnit(type), date: dayjs().format('YYYY-MM-DD'), total: 0, top: [] };
+    }
+    const users = await this.prisma.clientUser.findMany({
+      where: { id: { in: agg.map((r) => r.userId) }, status: 1 },
+      select: { id: true, nickname: true, email: true, avatarFileId: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const infoMap = new Map<bigint, UserInfo>(
+      users.map((u) => [u.id, { nickname: u.nickname, avatarFileId: u.avatarFileId }]),
+    );
+    const fileIds = users.map((u) => u.avatarFileId).filter((id) => id > 0n);
+    const files = fileIds.length
+      ? await this.prisma.file.findMany({ where: { id: { in: fileIds } }, select: { id: true, fileUrl: true } })
+      : [];
+    const fileMap = new Map<bigint, string>(files.map((f) => [f.id, f.fileUrl]));
+
+    const board = rankLeaderboard(agg, infoMap, fileMap, type, n);
+    const top: LeaderboardAdminRow[] = board.top.map((r) => ({
+      ...r,
+      email: userMap.get(BigInt(r.userId))?.email ?? '',
+    }));
+    return { type, unit: board.unit, date: board.date, total: board.ranks.length, top };
+  }
+
+  /**
+   * 后台：按邮箱/昵称查用户在全部 7 个榜上的名次。
+   * 7 次聚合只在查人时触发一次（7 个 groupBy，运营低频操作可接受）。
+   */
+  async adminUserRanks(keyword: string): Promise<{
+    users: Array<{
+      userId: number;
+      email: string;
+      nickname: string;
+      xp: number;
+      ranks: Array<
+        { type: LeaderboardType; rank: number; count: number } | { type: LeaderboardType; rank: null; count: number }
+      >;
+    }>;
+  }> {
+    const kw = keyword.trim();
+    if (!kw) {
+      return { users: [] };
+    }
+    const users = await this.prisma.clientUser.findMany({
+      where: { OR: [{ email: { contains: kw } }, { nickname: { contains: kw } }], status: 1 },
+      select: { id: true, email: true, nickname: true, xp: true },
+      take: 20,
+    });
+    if (!users.length) {
+      return { users: [] };
+    }
+    const rankMaps = new Map<LeaderboardType, Map<number, { rank: number; count: number }>>();
+    for (const type of LEADERBOARD_TYPES) {
+      const agg = await this.aggregateRows(type);
+      if (!agg.length) {
+        rankMaps.set(type, new Map());
+        continue;
+      }
+      const uids = agg.map((r) => r.userId);
+      const infos = await this.prisma.clientUser.findMany({
+        where: { id: { in: uids }, status: 1 },
+        select: { id: true, nickname: true, avatarFileId: true },
+      });
+      const infoMap = new Map<bigint, UserInfo>(
+        infos.map((u) => [u.id, { nickname: u.nickname, avatarFileId: u.avatarFileId }]),
+      );
+      const board = rankLeaderboard(agg, infoMap, new Map(), type, LeaderboardService.TOP_N);
+      rankMaps.set(type, new Map(board.ranks.map((r) => [r.u, { rank: r.r, count: r.c }])));
+    }
+    return {
+      users: users.map((u) => ({
+        userId: Number(u.id),
+        email: u.email,
+        nickname: u.nickname,
+        xp: u.xp,
+        ranks: LEADERBOARD_TYPES.map((type) => {
+          const hit = rankMaps.get(type)?.get(Number(u.id));
+          return { type, rank: hit?.rank ?? null, count: hit?.count ?? 0 };
+        }),
+      })),
+    };
   }
 }

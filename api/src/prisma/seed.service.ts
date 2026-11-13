@@ -1156,6 +1156,41 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 排行榜：7 个榜单实时查看 + 按用户查全部名次（只读）
+        key: 'sentence:leaderboard',
+        menuName: '排行榜',
+        menuType: MenuType.MENU,
+        path: '/sentence/leaderboard',
+        component: 'sentence/leaderboard',
+        icon: 'trending-up',
+        permission: 'sentence:leaderboard',
+        sort: 16,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+      },
+      {
+        // 打卡管理：日历热力图 + 记录审计 + 补签/撤销（写操作留审计日志）
+        key: 'sentence:checkin',
+        menuName: '打卡管理',
+        menuType: MenuType.MENU,
+        path: '/sentence/checkin',
+        component: 'sentence/checkin',
+        icon: 'calendar-check',
+        permission: 'sentence:checkin',
+        sort: 17,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:checkin:handle',
+            menuName: '补签/撤销',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:checkin:handle',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

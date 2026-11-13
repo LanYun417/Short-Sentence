@@ -27,7 +27,9 @@ import { CategoriesController } from './categories/categories.controller.js';
 import { ClientNoticeController } from './notice/client-notice.controller.js';
 import { ClientNoticeService } from './notice/client-notice.service.js';
 import { LeaderboardController } from './leaderboard/leaderboard.controller.js';
+import { LeaderboardAdminController } from './leaderboard/leaderboard-admin.controller.js';
 import { LeaderboardService } from './leaderboard/leaderboard.service.js';
+import { CheckinAdminController } from './checkin/checkin-admin.controller.js';
 import { TeamController } from './team/team.controller.js';
 import { TeamService } from './team/team.service.js';
 import { ClientCoachController } from './ai/coach.controller.js';
@@ -64,8 +66,11 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     // 音标学习（音标库 / 进度 / 学会了；后台管理控制器 /api/ipa）
     IpaController,
     IpaAdminController,
-    // 今日排行榜（答题数 / 答对数前 100）
+    // 今日排行榜（答题数 / 答对数前 100）——含后台管理控制器 /api/leaderboards
     LeaderboardController,
+    LeaderboardAdminController,
+    // 打卡后台管理控制器 /api/checkins（客户端走 /api/client/checkin）
+    CheckinAdminController,
     // 弱连接学习小队（自动匹配 / 组队打卡）
     TeamController,
     // AI 私教（薄弱点画像 / 可选 AI 点评，独立 controller 不碰 SSE 端点）

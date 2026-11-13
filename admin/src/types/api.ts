@@ -2008,3 +2008,83 @@ export interface GamifyAdminStats {
   unlockTotal: number;
   byEventType: Array<{ eventType: string; count: number; sum: number }>;
 }
+
+/* ------------------------------ 排行榜（后台） ------------------------------ */
+
+export type LeaderboardType =
+  | 'today_answered'
+  | 'today_correct'
+  | 'week_answered'
+  | 'week_correct'
+  | 'month_answered'
+  | 'month_correct'
+  | 'checkin_total';
+
+/** 后台-榜单行（比客户端多 email） */
+export interface LeaderboardAdminRow {
+  rank: number;
+  userId: number;
+  nickname: string;
+  avatarUrl: string | null;
+  count: number;
+  email: string;
+}
+
+/** 后台-实时榜单 */
+export interface LeaderboardAdminBoard {
+  type: LeaderboardType;
+  unit: string;
+  date: string;
+  total: number;
+  top: LeaderboardAdminRow[];
+}
+
+/** 后台-按用户查全部榜名次 */
+export interface LeaderboardUserRanks {
+  users: Array<{
+    userId: number;
+    email: string;
+    nickname: string;
+    xp: number;
+    ranks: Array<{ type: LeaderboardType; rank: number | null; count: number }>;
+  }>;
+}
+
+/* ------------------------------ 打卡管理（后台） ------------------------------ */
+
+/** 后台-某日打卡统计 */
+export interface CheckinDayStat {
+  date: string;
+  total: number;
+  completed: number;
+  rate: number;
+}
+
+/** 后台-打卡统计总览 */
+export interface CheckinAdminStats {
+  days: CheckinDayStat[];
+  totalUsers: number;
+  today: CheckinDayStat;
+}
+
+/** 后台-打卡记录审计条目 */
+export interface CheckinRecordItem {
+  id: number;
+  userId: number;
+  email: string;
+  nickname: string;
+  checkinDate: string;
+  doneCount: number;
+  goalCount: number;
+  completed: boolean;
+  streak: number;
+}
+
+/** 后台-补签结果 */
+export interface CheckinBackfillResult {
+  created: boolean;
+  date: string;
+  doneCount: number;
+  goalCount: number;
+  streak: number;
+}
