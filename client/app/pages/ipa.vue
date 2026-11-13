@@ -127,11 +127,8 @@ async function markLearned(symbol: string): Promise<void> {
         <article
           v-for="p in activeItems"
           :key="p.symbol"
-          class="relative rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 transition dark:bg-slate-900 dark:ring-slate-800/80"
+          class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 transition dark:bg-slate-900 dark:ring-slate-800/80"
         >
-          <UTag v-if="learned.has(p.symbol)" color="primary" variant="subtle" size="sm" class="absolute right-3 top-3"
-            >已掌握</UTag
-          >
           <div class="font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">/{{ p.symbol }}/</div>
           <div class="mt-2 flex flex-wrap items-center gap-1.5">
             <span

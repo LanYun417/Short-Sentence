@@ -275,36 +275,14 @@ class _PhonemeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  '/${phoneme.symbol}/',
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              if (learned)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: colors.success.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '已掌握',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: colors.success,
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            '/${phoneme.symbol}/',
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
