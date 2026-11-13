@@ -367,12 +367,27 @@ onBeforeUnmount(() => {
       </span>
       <div>
         <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">功能</h1>
-        <p class="text-sm text-slate-400">题库 · AI 拓展 · 闯关 · 接龙</p>
+        <p class="text-sm text-slate-400">题库 · AI 拓展 · 音标 · 闯关 · 接龙</p>
       </div>
     </div>
 
-    <!-- 特色玩法入口：情景闯关 / 句子接龙 / 学习小队 -->
-    <div class="anim-in mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3" style="animation-delay: 40ms">
+    <!-- 特色玩法入口：音标学习 / 情景闯关 / 句子接龙 / 学习小队 -->
+    <div class="anim-in mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4" style="animation-delay: 40ms">
+      <NuxtLink
+        to="/ipa"
+        class="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/70 transition active:scale-95 dark:bg-slate-900 dark:ring-slate-800/80"
+      >
+        <span
+          class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300"
+        >
+          <UIcon name="i-lucide-audio-lines" class="h-5 w-5" />
+        </span>
+        <span class="min-w-0">
+          <span class="block text-sm font-semibold text-slate-800 dark:text-slate-100">音标学习</span>
+          <span class="block truncate text-[11px] text-slate-400">48 个音标：跟读 + 测验</span>
+        </span>
+      </NuxtLink>
+
       <NuxtLink
         to="/stages"
         class="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/70 transition active:scale-95 dark:bg-slate-900 dark:ring-slate-800/80"

@@ -593,3 +593,62 @@ export interface ChainTopicDetail {
   remainingToday: number;
   dailyLimit: number;
 }
+
+/* ------------------------------ 音标学习 ------------------------------ */
+
+/** 音标类型（分组与排序由后端下发）。 */
+export type IpaPhonemeType = 'vowel' | 'diphthong' | 'consonant_voiceless' | 'consonant_voiced';
+
+/** 一组音标（单元音 / 双元音 / 清辅音 / 浊辅音）。 */
+export interface IpaPhonemeGroup {
+  type: IpaPhonemeType;
+  title: string;
+  hint: string;
+  items: IpaPhoneme[];
+}
+
+/** 一个音标。 */
+export interface IpaPhoneme {
+  /** 音标符号（不含斜线） */
+  symbol: string;
+  type: IpaPhonemeType;
+  /** 示例词 */
+  exampleWords: string[];
+  /** 中文发音要点 */
+  tips: string;
+  sort: number;
+}
+
+/** 我的音标进度。 */
+export interface IpaProgressItem {
+  symbol: string;
+  learned: boolean;
+  quizCorrect: number;
+  quizWrong: number;
+}
+
+/** 标记「学会了」的响应。 */
+export interface IpaLearnedResult {
+  symbol: string;
+  firstTime: boolean;
+  xpAwarded: boolean;
+  learnedCount: number;
+}
+
+/** 测验题型。 */
+export type IpaQuizType = 'word_to_phoneme' | 'phoneme_to_word';
+
+/** 提交的答案条目。 */
+export interface IpaQuizAnswerItem {
+  type: IpaQuizType;
+  prompt: string;
+  answer: string;
+}
+
+/** 测验判分结果。 */
+export interface IpaQuizResult {
+  correctCount: number;
+  total: number;
+  xpAwarded: number;
+  wrong: Array<{ type: string; prompt: string; correct: string }>;
+}
