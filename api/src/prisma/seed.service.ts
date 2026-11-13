@@ -1668,6 +1668,18 @@ const CONFIG_SEEDS: ConfigSeed[] = [
     configValue: '1',
     remark: '每日学习提醒邮件总开关（1 开启 / 0 停用）；停用后不注册调度',
   },
+  {
+    configName: '网站备案号（ICP）',
+    configKey: 'site.icp',
+    configValue: '',
+    remark: '展示在客户端页脚，点击跳转工信部备案系统 beian.miit.gov.cn；留空则不展示',
+  },
+  {
+    configName: '公安备案号',
+    configKey: 'site.policeIcp',
+    configValue: '',
+    remark: '展示在客户端页脚（带盾牌图标），点击跳转全国互联网安全管理服务平台 beian.gov.cn；留空则不展示',
+  },
 ];
 
 /** 写入内置系统参数（幂等：按 configKey 去重，已存在的键不覆盖现值，便于运维自行调参）。 */

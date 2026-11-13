@@ -14,5 +14,7 @@
 <template>
   <div class="ss-auth-layout min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <slot />
+    <!-- 认证页页脚同样展示备案号（备案要求登录页也可见） -->
+    <SiteFooter class="mx-auto max-w-md px-4" />
   </div>
 </template>

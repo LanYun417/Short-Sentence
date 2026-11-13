@@ -94,6 +94,8 @@ function toggleTheme(): void {
     <main class="relative z-10 min-h-0 flex-1">
       <AppScrollArea>
         <slot />
+        <!-- 下载落地页页脚：备案号 -->
+        <SiteFooter class="mx-auto max-w-2xl px-4" />
       </AppScrollArea>
     </main>
   </div>

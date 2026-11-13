@@ -1,0 +1,46 @@
+<script setup lang="ts">
+/**
+ * 站点页脚：备案号（ICP / 公安备案）。
+ *
+ * 值来自后台「系统管理 → 参数管理」的 site.icp / site.policeIcp
+ * （公开接口 /api/client/site 下发）；两个都为空时整块不渲染。
+ * 公安备案号带盾牌图标，点击跳全国互联网安全管理服务平台。
+ */
+import { useSiteConfig } from '~/composables/useSiteConfig';
+
+const { site, ensureLoaded } = useSiteConfig();
+
+// SSR 预取失败时的客户端兜底（正常路径 app.vue 已 await 过，不会重复请求）
+onMounted(ensureLoaded);
+
+const icp = computed(() => site.value.icp.trim());
+const policeIcp = computed(() => site.value.policeIcp.trim());
+</script>
+
+<template>
+  <footer
+    v-if="icp || policeIcp"
+    class="border-t border-slate-200/70 py-4 text-center text-[11px] leading-relaxed text-slate-400 dark:border-slate-800 dark:text-slate-500"
+  >
+    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+      <a
+        v-if="icp"
+        href="https://beian.miit.gov.cn"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="transition hover:text-sky-600 dark:hover:text-sky-300"
+        >{{ icp }}</a
+      >
+      <a
+        v-if="policeIcp"
+        href="https://beian.gov.cn"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1 transition hover:text-sky-600 dark:hover:text-sky-300"
+      >
+        <UIcon name="i-lucide-shield-check" class="h-3 w-3" />
+        {{ policeIcp }}
+      </a>
+    </div>
+  </footer>
+</template>

@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
 import '../api/notice_api.dart';
+import '../api/site_api.dart';
 import '../config/image_pick.dart';
 import '../state/auth_controller.dart';
 import '../state/growth_controller.dart';
@@ -123,40 +124,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   void _showAbout() {
-    final colors = context.colors;
     showModalBottomSheet<void>(
       context: context,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset('assets/brand/logo.png', width: 56, height: 56),
-            ),
-            const SizedBox(height: 12),
-            Text('短句', style: Theme.of(sheetContext).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(
-              'v1.0.0',
-              style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
-                    color: colors.inkFaint,
-                  ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '看中文，写英文。每天 20 句，间隔重复帮你记得更久。\n'
-              '题目与配图由后台夜间预生成，学习时不再等待。',
-              textAlign: TextAlign.center,
-              style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                    color: colors.inkSoft,
-                    height: 1.7,
-                  ),
-            ),
-          ],
-        ),
-      ),
+      builder: (sheetContext) => _AboutSheet(sheetContext: sheetContext),
     );
   }
 
@@ -318,6 +288,83 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 }
 
 /* ------------------------------ 身份卡 ------------------------------ */
+
+/* ------------------------------ 关于弹窗 ------------------------------ */
+
+/// 「关于短句」弹窗：品牌 + 版本 + 简介 + 备案号。
+///
+/// 备案号来自公开接口 /api/client/site（后台参数 site.icp / site.policeIcp），
+/// 两个都为空时不渲染该区块；接口失败时静默降级为只显示品牌信息。
+class _AboutSheet extends ConsumerWidget {
+  const _AboutSheet({required this.sheetContext});
+
+  final BuildContext sheetContext;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final site = ref.watch(siteConfigProvider).valueOrNull;
+    final icp = site?.icp.trim() ?? '';
+    final policeIcp = site?.policeIcp.trim() ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset('assets/brand/logo.png', width: 56, height: 56),
+          ),
+          const SizedBox(height: 12),
+          Text('短句', style: Theme.of(sheetContext).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'v1.0.0',
+            style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
+                  color: colors.inkFaint,
+                ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '看中文，写英文。每天 20 句，间隔重复帮你记得更久。\n'
+            '题目与配图由后台夜间预生成，学习时不再等待。',
+            textAlign: TextAlign.center,
+            style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                  color: colors.inkSoft,
+                  height: 1.7,
+                ),
+          ),
+          if (icp.isNotEmpty || policeIcp.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            if (icp.isNotEmpty)
+              Text(
+                icp,
+                style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
+                      color: colors.inkFaint,
+                    ),
+              ),
+            if (icp.isNotEmpty && policeIcp.isNotEmpty) const SizedBox(height: 4),
+            if (policeIcp.isNotEmpty)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(Icons.shield_outlined, size: 12, color: colors.inkFaint),
+                  const SizedBox(width: 4),
+                  Text(
+                    policeIcp,
+                    style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
+                          color: colors.inkFaint,
+                        ),
+                  ),
+                ],
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _IdentityCard extends StatelessWidget {
   const _IdentityCard({

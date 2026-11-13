@@ -171,6 +171,10 @@ function onLogout(): void {
         -->
         <div class="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           <slot />
+          <!-- 站点页脚：备案号（ICP / 公安备案），随内容滚动到底部出现 -->
+          <div class="mx-auto max-w-3xl px-4">
+            <SiteFooter />
+          </div>
         </div>
       </AppScrollArea>
     </main>

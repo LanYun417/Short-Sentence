@@ -6,6 +6,7 @@
  */
 import { Module } from '@nestjs/common';
 import { FilesModule } from '../files/files.module.js';
+import { ConfigModule } from '../config/config.module.js';
 import { WordRootModule } from './word-root/word-root.module.js';
 import { SentenceCardModule } from './sentence-card/sentence-card.module.js';
 import { GamifyModule } from './gamify/gamify.module.js';
@@ -30,6 +31,7 @@ import { LeaderboardController } from './leaderboard/leaderboard.controller.js';
 import { LeaderboardAdminController } from './leaderboard/leaderboard-admin.controller.js';
 import { LeaderboardService } from './leaderboard/leaderboard.service.js';
 import { CheckinAdminController } from './checkin/checkin-admin.controller.js';
+import { SiteController } from './site/site.controller.js';
 import { TeamController } from './team/team.controller.js';
 import { TeamService } from './team/team.service.js';
 import { ClientCoachController } from './ai/coach.controller.js';
@@ -50,7 +52,7 @@ import { TeamAdminController } from './team/team-admin.controller.js';
   // WordRootModule：词根词典（搜索 / 查词 / 每日入库）
   // SentenceCardModule：每日句签（领取 / 我的句签；生成走 TaskModule 定时任务）
   // GamifyModule：微游戏化（答题/收藏发 XP、解锁成就、成长概览）
-  imports: [FilesModule, WordRootModule, SentenceCardModule, GamifyModule],
+  imports: [FilesModule, ConfigModule, WordRootModule, SentenceCardModule, GamifyModule],
   controllers: [
     ClientAuthController,
     QuestionsController,
@@ -71,6 +73,10 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     LeaderboardAdminController,
     // 打卡后台管理控制器 /api/checkins（客户端走 /api/client/checkin）
     CheckinAdminController,
+    // 站点公开配置（备案号）/api/client/site（@Public，页脚 / 关于页用）
+    SiteController,
+    // 站点公开配置（备案号）/api/client/site（@Public，页脚 / 关于页用）
+    SiteController,
     // 弱连接学习小队（自动匹配 / 组队打卡）
     TeamController,
     // AI 私教（薄弱点画像 / 可选 AI 点评，独立 controller 不碰 SSE 端点）
