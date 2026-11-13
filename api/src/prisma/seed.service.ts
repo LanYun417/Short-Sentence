@@ -15,6 +15,7 @@ import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common'
 import { DataScope, MenuType, Status, SUPER_ADMIN_ROLE } from '../common/config/constants.js';
 import { hashPassword } from '../common/utils/utils.js';
 import { CHAIN_TOPIC_SEEDS } from '../modules/client/chain/chain-topics.js';
+import { IPA_PHONEME_SEEDS } from '../modules/client/ipa/ipa-seeds.js';
 import { AI_CONFIG_KEYS, LEGACY_AI_CONFIG_KEYS } from '../common/ai/ai.constants.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -1740,6 +1741,7 @@ export async function runSeed(prisma: PrismaService): Promise<void> {
   await seedSentenceCategories(prisma);
   await seedAchievements(prisma);
   await seedChainTopics(prisma);
+  await seedIpaPhonemes(prisma);
 
   logger.log('种子数据初始化完成');
 }
@@ -1822,6 +1824,33 @@ async function seedChainTopics(prisma: PrismaService): Promise<void> {
     }
   }
   logger.log(`接龙主题数据完成，共 ${CHAIN_TOPIC_SEEDS.length} 个（新建 ${created} 个）`);
+}
+
+/* -------------------------------- 音标种子 -------------------------------- */
+
+/**
+ * 音标库种子（48 个国际音标）。
+ * 口径与接龙主题同款：按 symbol 只补不覆盖——修订发音要点时不要新增重复 symbol。
+ * sort 由种子数组顺序决定（即 IPA_PHONEME_SEEDS 中的分组顺序）。
+ */
+async function seedIpaPhonemes(prisma: PrismaService): Promise<void> {
+  let created = 0;
+  for (const [index, seed] of IPA_PHONEME_SEEDS.entries()) {
+    const existing = await prisma.ipaPhoneme.findUnique({ where: { symbol: seed.symbol }, select: { id: true } });
+    if (!existing) {
+      await prisma.ipaPhoneme.create({
+        data: {
+          symbol: seed.symbol,
+          type: seed.type,
+          exampleWords: JSON.stringify(seed.exampleWords),
+          tips: seed.tips,
+          sort: index,
+        },
+      });
+      created += 1;
+    }
+  }
+  logger.log(`音标库数据完成，共 ${IPA_PHONEME_SEEDS.length} 个（新建 ${created} 个）`);
 }
 
 /* --------------------------------- 成就种子 -------------------------------- */

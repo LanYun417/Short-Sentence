@@ -67,6 +67,8 @@ export const ModelName = {
   Achievement: 'Achievement',
   UserAchievement: 'UserAchievement',
   IpBan: 'IpBan',
+  IpaPhoneme: 'IpaPhoneme',
+  IpaLearningRecord: 'IpaLearningRecord',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -347,6 +349,33 @@ export const IpBanScalarFieldEnum = {
 } as const
 
 export type IpBanScalarFieldEnum = (typeof IpBanScalarFieldEnum)[keyof typeof IpBanScalarFieldEnum]
+
+
+export const IpaPhonemeScalarFieldEnum = {
+  id: 'id',
+  symbol: 'symbol',
+  type: 'type',
+  exampleWords: 'exampleWords',
+  tips: 'tips',
+  sort: 'sort',
+  createdAt: 'createdAt'
+} as const
+
+export type IpaPhonemeScalarFieldEnum = (typeof IpaPhonemeScalarFieldEnum)[keyof typeof IpaPhonemeScalarFieldEnum]
+
+
+export const IpaLearningRecordScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  phonemeId: 'phonemeId',
+  learnedAt: 'learnedAt',
+  quizCorrect: 'quizCorrect',
+  quizWrong: 'quizWrong',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IpaLearningRecordScalarFieldEnum = (typeof IpaLearningRecordScalarFieldEnum)[keyof typeof IpaLearningRecordScalarFieldEnum]
 
 
 export const LoginLogScalarFieldEnum = {
@@ -1055,6 +1084,16 @@ export const IpBanOrderByRelevanceFieldEnum = {
 } as const
 
 export type IpBanOrderByRelevanceFieldEnum = (typeof IpBanOrderByRelevanceFieldEnum)[keyof typeof IpBanOrderByRelevanceFieldEnum]
+
+
+export const IpaPhonemeOrderByRelevanceFieldEnum = {
+  symbol: 'symbol',
+  type: 'type',
+  exampleWords: 'exampleWords',
+  tips: 'tips'
+} as const
+
+export type IpaPhonemeOrderByRelevanceFieldEnum = (typeof IpaPhonemeOrderByRelevanceFieldEnum)[keyof typeof IpaPhonemeOrderByRelevanceFieldEnum]
 
 
 export const LoginLogOrderByRelevanceFieldEnum = {

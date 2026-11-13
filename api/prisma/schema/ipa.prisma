@@ -1,0 +1,61 @@
+// use prisma-next
+
+// 「短句」音标学习域（IPA）：48 个国际音标的参考库 + 用户学习记录。
+//
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+//
+// 设计口径：
+// - 音标库是**静态参考数据**（种子写入、不提供后台增删）：内容对标国内通用 48 音标，
+//   Web / App 两端共用一份，避免两端各写一份漂移；
+// - 判分与发奖只在服务端：客户端上报的是「真实答案」（选的词/选的音标），
+//   由服务端比对音标库得出对错并发 XP（幂等 event_key），客户端不直接说"我答对了"。
+
+/// 音标库（48 个国际音标，种子写入）
+model IpaPhoneme {
+  /// 主键
+  id          BigInt  @id @default(autoincrement()) @db.BigInt
+  /// 音标符号（如 iː / tʃ / tr，不含 / 斜线）
+  symbol      String  @unique @db.VarChar(10)
+  /// 类型：vowel 单元音 / diphthong 双元音 / consonant_voiceless 清辅音 / consonant_voiced 浊辅音
+  type        String  @db.VarChar(20)
+  /// 示例词（JSON 字符串数组，2~4 个，如 ["see","tree","meat"]）
+  exampleWords String @map("example_words") @db.Text
+  /// 中文发音要点（怎么摆口型、常见错误）
+  tips        String  @default("") @db.VarChar(200)
+  /// 同组内排序
+  sort        Int     @default(0)
+  /// 创建时间
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  /// 学习记录
+  records IpaLearningRecord[]
+
+  @@index([type, sort])
+  @@map("ipa_phoneme")
+}
+
+/// 音标学习记录（一用户一音标一行；quiz 对错计数用于「我的进度」）
+model IpaLearningRecord {
+  /// 主键
+  id          BigInt   @id @default(autoincrement()) @db.BigInt
+  /// 用户 id（client_user）
+  userId      BigInt   @map("user_id") @db.BigInt
+  /// 音标 id
+  phonemeId   BigInt   @map("phoneme_id") @db.BigInt
+  /// 所属音标
+  phoneme     IpaPhoneme @relation(fields: [phonemeId], references: [id], onDelete: Cascade)
+  /// 首次标记「学会了」的时间（null = 未学会）
+  learnedAt   DateTime? @map("learned_at")
+  /// 测验答对次数（同一音标可反复练，累计）
+  quizCorrect Int      @default(0) @map("quiz_correct")
+  /// 测验答错次数（错题依据）
+  quizWrong   Int      @default(0) @map("quiz_wrong")
+  /// 创建时间
+  createdAt   DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, phonemeId])
+  @@index([userId, learnedAt])
+  @@map("ipa_learning_record")
+}

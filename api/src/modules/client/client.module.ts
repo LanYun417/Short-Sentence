@@ -38,6 +38,8 @@ import { StageService } from './stage/stage.service.js';
 import { ChainController } from './chain/chain.controller.js';
 import { ChainAdminController } from './chain/chain-admin.controller.js';
 import { ChainService } from './chain/chain.service.js';
+import { IpaController } from './ipa/ipa.controller.js';
+import { IpaService } from './ipa/ipa.service.js';
 import { TeamAdminController } from './team/team-admin.controller.js';
 
 @Module({
@@ -58,6 +60,8 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     CategoriesController,
     // 客户端公告读取（广播表 client_notice；后台发布在 NoticeModule）
     ClientNoticeController,
+    // 音标学习（音标库 / 进度 / 学会了 / 测验判分）
+    IpaController,
     // 今日排行榜（答题数 / 答对数前 100）
     LeaderboardController,
     // 弱连接学习小队（自动匹配 / 组队打卡）
@@ -95,6 +99,8 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     StageService,
     // 接龙：客户端与后台审核共用同一份内容校验规则，故意只放一个 service
     ChainService,
+    // 音标学习：判分/发奖走 GamifyModule 的 GamifyService（本模块已 import）
+    IpaService,
   ],
 })
 export class ClientModule {}

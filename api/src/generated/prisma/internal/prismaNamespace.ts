@@ -413,6 +413,8 @@ export const ModelName = {
   Achievement: 'Achievement',
   UserAchievement: 'UserAchievement',
   IpBan: 'IpBan',
+  IpaPhoneme: 'IpaPhoneme',
+  IpaLearningRecord: 'IpaLearningRecord',
   LoginLog: 'LoginLog',
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
@@ -461,7 +463,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1518,6 +1520,138 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.IpBanCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.IpBanCountAggregateOutputType> | number
+        }
+      }
+    }
+    IpaPhoneme: {
+      payload: Prisma.$IpaPhonemePayload<ExtArgs>
+      fields: Prisma.IpaPhonemeFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IpaPhonemeFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IpaPhonemeFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        findFirst: {
+          args: Prisma.IpaPhonemeFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IpaPhonemeFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        findMany: {
+          args: Prisma.IpaPhonemeFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>[]
+        }
+        create: {
+          args: Prisma.IpaPhonemeCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        createMany: {
+          args: Prisma.IpaPhonemeCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.IpaPhonemeDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        update: {
+          args: Prisma.IpaPhonemeUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        deleteMany: {
+          args: Prisma.IpaPhonemeDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IpaPhonemeUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.IpaPhonemeUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaPhonemePayload>
+        }
+        aggregate: {
+          args: Prisma.IpaPhonemeAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIpaPhoneme>
+        }
+        groupBy: {
+          args: Prisma.IpaPhonemeGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpaPhonemeGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IpaPhonemeCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpaPhonemeCountAggregateOutputType> | number
+        }
+      }
+    }
+    IpaLearningRecord: {
+      payload: Prisma.$IpaLearningRecordPayload<ExtArgs>
+      fields: Prisma.IpaLearningRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IpaLearningRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IpaLearningRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.IpaLearningRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IpaLearningRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        findMany: {
+          args: Prisma.IpaLearningRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>[]
+        }
+        create: {
+          args: Prisma.IpaLearningRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        createMany: {
+          args: Prisma.IpaLearningRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.IpaLearningRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        update: {
+          args: Prisma.IpaLearningRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.IpaLearningRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IpaLearningRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.IpaLearningRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IpaLearningRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.IpaLearningRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIpaLearningRecord>
+        }
+        groupBy: {
+          args: Prisma.IpaLearningRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpaLearningRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IpaLearningRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IpaLearningRecordCountAggregateOutputType> | number
         }
       }
     }
@@ -3969,6 +4103,33 @@ export const IpBanScalarFieldEnum = {
 export type IpBanScalarFieldEnum = (typeof IpBanScalarFieldEnum)[keyof typeof IpBanScalarFieldEnum]
 
 
+export const IpaPhonemeScalarFieldEnum = {
+  id: 'id',
+  symbol: 'symbol',
+  type: 'type',
+  exampleWords: 'exampleWords',
+  tips: 'tips',
+  sort: 'sort',
+  createdAt: 'createdAt'
+} as const
+
+export type IpaPhonemeScalarFieldEnum = (typeof IpaPhonemeScalarFieldEnum)[keyof typeof IpaPhonemeScalarFieldEnum]
+
+
+export const IpaLearningRecordScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  phonemeId: 'phonemeId',
+  learnedAt: 'learnedAt',
+  quizCorrect: 'quizCorrect',
+  quizWrong: 'quizWrong',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IpaLearningRecordScalarFieldEnum = (typeof IpaLearningRecordScalarFieldEnum)[keyof typeof IpaLearningRecordScalarFieldEnum]
+
+
 export const LoginLogScalarFieldEnum = {
   id: 'id',
   username: 'username',
@@ -4677,6 +4838,16 @@ export const IpBanOrderByRelevanceFieldEnum = {
 export type IpBanOrderByRelevanceFieldEnum = (typeof IpBanOrderByRelevanceFieldEnum)[keyof typeof IpBanOrderByRelevanceFieldEnum]
 
 
+export const IpaPhonemeOrderByRelevanceFieldEnum = {
+  symbol: 'symbol',
+  type: 'type',
+  exampleWords: 'exampleWords',
+  tips: 'tips'
+} as const
+
+export type IpaPhonemeOrderByRelevanceFieldEnum = (typeof IpaPhonemeOrderByRelevanceFieldEnum)[keyof typeof IpaPhonemeOrderByRelevanceFieldEnum]
+
+
 export const LoginLogOrderByRelevanceFieldEnum = {
   username: 'username',
   ip: 'ip',
@@ -5207,6 +5378,8 @@ export type GlobalOmitConfig = {
   achievement?: Prisma.AchievementOmit
   userAchievement?: Prisma.UserAchievementOmit
   ipBan?: Prisma.IpBanOmit
+  ipaPhoneme?: Prisma.IpaPhonemeOmit
+  ipaLearningRecord?: Prisma.IpaLearningRecordOmit
   loginLog?: Prisma.LoginLogOmit
   operationLog?: Prisma.OperationLogOmit
   httpLog?: Prisma.HttpLogOmit

@@ -8,12 +8,12 @@
  * 老库升级：首次加载发现仍是旧版单模型配置（`ai.agnes.*`）时，自动迁移成模型列表
  * 写入 `ai.models`，并删掉旧键——之后即以模型列表为准。
  */
-import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { clearLegacyAiConfig, loadAiSettings, saveAiModels, type AiSettings } from './ai.config.js';
 
 @Injectable()
-export class AiSettingsService implements OnApplicationBootstrap {
+export class AiSettingsService implements OnModuleInit {
   private readonly logger = new Logger(AiSettingsService.name);
 
   /** 当前生效快照（初值为空列表，启动时 reload 会从库填充）。 */
@@ -21,8 +21,14 @@ export class AiSettingsService implements OnApplicationBootstrap {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /** 启动时从 sys_config 加载一次（老库自动迁移成模型列表）。 */
-  async onApplicationBootstrap(): Promise<void> {
+  /**
+   * 模块初始化阶段就从 sys_config 加载（老库自动迁移成模型列表）。
+   *
+   * 为什么必须赶在 `onApplicationBootstrap`：任务模块的「启动补跑」（接龙主题周更、
+   * 每日句签等）也在启动期执行，若 AI 快照还没填好，补跑会统一报「能力未配置」
+   * 而白跑一轮。onModuleInit 早于所有模块的 onApplicationBootstrap，稳。
+   */
+  async onModuleInit(): Promise<void> {
     await this.reload();
   }
 

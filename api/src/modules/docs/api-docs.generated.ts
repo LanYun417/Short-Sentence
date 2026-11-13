@@ -10465,6 +10465,99 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "Ipa",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/ipa/phonemes",
+        "summary": "音标库（分组分发，公开参考数据，无需登录态也可读）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/ipa/phonemes?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/ipa/progress",
+        "summary": "我的进度（已学会数 + 每个音标的测验统计）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/ipa/progress?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/ipa/learned",
+        "summary": "标记某个音标「学会了」（首次发 XP）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ipa/learned\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/ipa/quiz/submit",
+        "summary": "提交一整套测验答案：服务端判分 + 发 XP + 记错题",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/ipa/quiz/submit\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
     "group": "Leaderboard",
     "endpoints": [
       {

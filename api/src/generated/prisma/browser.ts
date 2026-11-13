@@ -109,6 +109,16 @@ export type UserAchievement = Prisma.UserAchievementModel
  */
 export type IpBan = Prisma.IpBanModel
 /**
+ * Model IpaPhoneme
+ * 音标库（48 个国际音标，种子写入）
+ */
+export type IpaPhoneme = Prisma.IpaPhonemeModel
+/**
+ * Model IpaLearningRecord
+ * 音标学习记录（一用户一音标一行；quiz 对错计数用于「我的进度」）
+ */
+export type IpaLearningRecord = Prisma.IpaLearningRecordModel
+/**
  * Model LoginLog
  * 登录日志表
  */

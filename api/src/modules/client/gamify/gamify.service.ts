@@ -45,6 +45,14 @@ export const XP_RULES = {
   favorite: 3,
   /** 完成每日目标 */
   daily_goal: 20,
+  /**
+   * 音标学习：标记学会一个音标（48 个，全程最多 96 经验，不会喧宾夺主）。
+   */
+  ipa_learned: 2,
+  /**
+   * 音标测验：答对一题（按「音标+日期」幂等，同一天同一音标反复答对只发一次）。
+   */
+  ipa_quiz_correct: 3,
 } as const;
 
 /** CEFR 等级阈值（XP → 等级，只增不减）。 */
