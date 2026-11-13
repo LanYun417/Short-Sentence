@@ -369,8 +369,6 @@ export const IpaLearningRecordScalarFieldEnum = {
   userId: 'userId',
   phonemeId: 'phonemeId',
   learnedAt: 'learnedAt',
-  quizCorrect: 'quizCorrect',
-  quizWrong: 'quizWrong',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

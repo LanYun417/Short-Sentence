@@ -7,8 +7,8 @@
 // 设计口径：
 // - 音标库是**静态参考数据**（种子写入、不提供后台增删）：内容对标国内通用 48 音标，
 //   Web / App 两端共用一份，避免两端各写一份漂移；
-// - 判分与发奖只在服务端：客户端上报的是「真实答案」（选的词/选的音标），
-//   由服务端比对音标库得出对错并发 XP（幂等 event_key），客户端不直接说"我答对了"。
+// - 发奖只在服务端：客户端上报「学会了」真实操作，服务端按幂等 event_key 决定是否发
+//   XP（每音标只发一次），客户端不直接说"我学会了"。
 
 /// 音标库（48 个国际音标，种子写入）
 model IpaPhoneme {
@@ -34,7 +34,7 @@ model IpaPhoneme {
   @@map("ipa_phoneme")
 }
 
-/// 音标学习记录（一用户一音标一行；quiz 对错计数用于「我的进度」）
+/// 音标学习记录（一用户一音标一行；标记「学会了」即一行）
 model IpaLearningRecord {
   /// 主键
   id          BigInt   @id @default(autoincrement()) @db.BigInt
@@ -46,10 +46,6 @@ model IpaLearningRecord {
   phoneme     IpaPhoneme @relation(fields: [phonemeId], references: [id], onDelete: Cascade)
   /// 首次标记「学会了」的时间（null = 未学会）
   learnedAt   DateTime? @map("learned_at")
-  /// 测验答对次数（同一音标可反复练，累计）
-  quizCorrect Int      @default(0) @map("quiz_correct")
-  /// 测验答错次数（错题依据）
-  quizWrong   Int      @default(0) @map("quiz_wrong")
   /// 创建时间
   createdAt   DateTime @default(now()) @map("created_at")
   /// 更新时间

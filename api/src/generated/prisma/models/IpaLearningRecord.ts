@@ -14,7 +14,7 @@ import type * as Prisma from "../internal/prismaNamespace.js"
 
 /**
  * Model IpaLearningRecord
- * 音标学习记录（一用户一音标一行；quiz 对错计数用于「我的进度」）
+ * 音标学习记录（一用户一音标一行；标记「学会了」即一行）
  */
 export type IpaLearningRecordModel = runtime.Types.Result.DefaultSelection<Prisma.$IpaLearningRecordPayload>
 
@@ -30,16 +30,12 @@ export type IpaLearningRecordAvgAggregateOutputType = {
   id: number | null
   userId: number | null
   phonemeId: number | null
-  quizCorrect: number | null
-  quizWrong: number | null
 }
 
 export type IpaLearningRecordSumAggregateOutputType = {
   id: bigint | null
   userId: bigint | null
   phonemeId: bigint | null
-  quizCorrect: number | null
-  quizWrong: number | null
 }
 
 export type IpaLearningRecordMinAggregateOutputType = {
@@ -47,8 +43,6 @@ export type IpaLearningRecordMinAggregateOutputType = {
   userId: bigint | null
   phonemeId: bigint | null
   learnedAt: Date | null
-  quizCorrect: number | null
-  quizWrong: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -58,8 +52,6 @@ export type IpaLearningRecordMaxAggregateOutputType = {
   userId: bigint | null
   phonemeId: bigint | null
   learnedAt: Date | null
-  quizCorrect: number | null
-  quizWrong: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -69,8 +61,6 @@ export type IpaLearningRecordCountAggregateOutputType = {
   userId: number
   phonemeId: number
   learnedAt: number
-  quizCorrect: number
-  quizWrong: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -81,16 +71,12 @@ export type IpaLearningRecordAvgAggregateInputType = {
   id?: true
   userId?: true
   phonemeId?: true
-  quizCorrect?: true
-  quizWrong?: true
 }
 
 export type IpaLearningRecordSumAggregateInputType = {
   id?: true
   userId?: true
   phonemeId?: true
-  quizCorrect?: true
-  quizWrong?: true
 }
 
 export type IpaLearningRecordMinAggregateInputType = {
@@ -98,8 +84,6 @@ export type IpaLearningRecordMinAggregateInputType = {
   userId?: true
   phonemeId?: true
   learnedAt?: true
-  quizCorrect?: true
-  quizWrong?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -109,8 +93,6 @@ export type IpaLearningRecordMaxAggregateInputType = {
   userId?: true
   phonemeId?: true
   learnedAt?: true
-  quizCorrect?: true
-  quizWrong?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -120,8 +102,6 @@ export type IpaLearningRecordCountAggregateInputType = {
   userId?: true
   phonemeId?: true
   learnedAt?: true
-  quizCorrect?: true
-  quizWrong?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -218,8 +198,6 @@ export type IpaLearningRecordGroupByOutputType = {
   userId: bigint
   phonemeId: bigint
   learnedAt: Date | null
-  quizCorrect: number
-  quizWrong: number
   createdAt: Date
   updatedAt: Date
   _count: IpaLearningRecordCountAggregateOutputType | null
@@ -252,8 +230,6 @@ export type IpaLearningRecordWhereInput = {
   userId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   phonemeId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   learnedAt?: Prisma.DateTimeNullableFilter<"IpaLearningRecord"> | Date | string | null
-  quizCorrect?: Prisma.IntFilter<"IpaLearningRecord"> | number
-  quizWrong?: Prisma.IntFilter<"IpaLearningRecord"> | number
   createdAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
   phoneme?: Prisma.XOR<Prisma.IpaPhonemeScalarRelationFilter, Prisma.IpaPhonemeWhereInput>
@@ -264,8 +240,6 @@ export type IpaLearningRecordOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
   learnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   phoneme?: Prisma.IpaPhonemeOrderByWithRelationInput
@@ -280,8 +254,6 @@ export type IpaLearningRecordWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   phonemeId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   learnedAt?: Prisma.DateTimeNullableFilter<"IpaLearningRecord"> | Date | string | null
-  quizCorrect?: Prisma.IntFilter<"IpaLearningRecord"> | number
-  quizWrong?: Prisma.IntFilter<"IpaLearningRecord"> | number
   createdAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
   phoneme?: Prisma.XOR<Prisma.IpaPhonemeScalarRelationFilter, Prisma.IpaPhonemeWhereInput>
@@ -292,8 +264,6 @@ export type IpaLearningRecordOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
   learnedAt?: Prisma.SortOrderInput | Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.IpaLearningRecordCountOrderByAggregateInput
@@ -311,8 +281,6 @@ export type IpaLearningRecordScalarWhereWithAggregatesInput = {
   userId?: Prisma.BigIntWithAggregatesFilter<"IpaLearningRecord"> | bigint | number
   phonemeId?: Prisma.BigIntWithAggregatesFilter<"IpaLearningRecord"> | bigint | number
   learnedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"IpaLearningRecord"> | Date | string | null
-  quizCorrect?: Prisma.IntWithAggregatesFilter<"IpaLearningRecord"> | number
-  quizWrong?: Prisma.IntWithAggregatesFilter<"IpaLearningRecord"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"IpaLearningRecord"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"IpaLearningRecord"> | Date | string
 }
@@ -321,8 +289,6 @@ export type IpaLearningRecordCreateInput = {
   id?: bigint | number
   userId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   phoneme: Prisma.IpaPhonemeCreateNestedOneWithoutRecordsInput
@@ -333,8 +299,6 @@ export type IpaLearningRecordUncheckedCreateInput = {
   userId: bigint | number
   phonemeId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -343,8 +307,6 @@ export type IpaLearningRecordUpdateInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   phoneme?: Prisma.IpaPhonemeUpdateOneRequiredWithoutRecordsNestedInput
@@ -355,8 +317,6 @@ export type IpaLearningRecordUncheckedUpdateInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   phonemeId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -366,8 +326,6 @@ export type IpaLearningRecordCreateManyInput = {
   userId: bigint | number
   phonemeId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -376,8 +334,6 @@ export type IpaLearningRecordUpdateManyMutationInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -387,8 +343,6 @@ export type IpaLearningRecordUncheckedUpdateManyInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   phonemeId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -413,8 +367,6 @@ export type IpaLearningRecordCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
   learnedAt?: Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -423,8 +375,6 @@ export type IpaLearningRecordAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
 }
 
 export type IpaLearningRecordMaxOrderByAggregateInput = {
@@ -432,8 +382,6 @@ export type IpaLearningRecordMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
   learnedAt?: Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -443,8 +391,6 @@ export type IpaLearningRecordMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
   learnedAt?: Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -453,8 +399,6 @@ export type IpaLearningRecordSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   phonemeId?: Prisma.SortOrder
-  quizCorrect?: Prisma.SortOrder
-  quizWrong?: Prisma.SortOrder
 }
 
 export type IpaLearningRecordCreateNestedManyWithoutPhonemeInput = {
@@ -503,8 +447,6 @@ export type IpaLearningRecordCreateWithoutPhonemeInput = {
   id?: bigint | number
   userId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -513,8 +455,6 @@ export type IpaLearningRecordUncheckedCreateWithoutPhonemeInput = {
   id?: bigint | number
   userId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -553,8 +493,6 @@ export type IpaLearningRecordScalarWhereInput = {
   userId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   phonemeId?: Prisma.BigIntFilter<"IpaLearningRecord"> | bigint | number
   learnedAt?: Prisma.DateTimeNullableFilter<"IpaLearningRecord"> | Date | string | null
-  quizCorrect?: Prisma.IntFilter<"IpaLearningRecord"> | number
-  quizWrong?: Prisma.IntFilter<"IpaLearningRecord"> | number
   createdAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"IpaLearningRecord"> | Date | string
 }
@@ -563,8 +501,6 @@ export type IpaLearningRecordCreateManyPhonemeInput = {
   id?: bigint | number
   userId: bigint | number
   learnedAt?: Date | string | null
-  quizCorrect?: number
-  quizWrong?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -573,8 +509,6 @@ export type IpaLearningRecordUpdateWithoutPhonemeInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -583,8 +517,6 @@ export type IpaLearningRecordUncheckedUpdateWithoutPhonemeInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -593,8 +525,6 @@ export type IpaLearningRecordUncheckedUpdateManyWithoutPhonemeInput = {
   id?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   learnedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  quizCorrect?: Prisma.IntFieldUpdateOperationsInput | number
-  quizWrong?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -606,8 +536,6 @@ export type IpaLearningRecordSelect<ExtArgs extends runtime.Types.Extensions.Int
   userId?: boolean
   phonemeId?: boolean
   learnedAt?: boolean
-  quizCorrect?: boolean
-  quizWrong?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   phoneme?: boolean | Prisma.IpaPhonemeDefaultArgs<ExtArgs>
@@ -620,13 +548,11 @@ export type IpaLearningRecordSelectScalar = {
   userId?: boolean
   phonemeId?: boolean
   learnedAt?: boolean
-  quizCorrect?: boolean
-  quizWrong?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type IpaLearningRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "phonemeId" | "learnedAt" | "quizCorrect" | "quizWrong" | "createdAt" | "updatedAt", ExtArgs["result"]["ipaLearningRecord"]>
+export type IpaLearningRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "phonemeId" | "learnedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["ipaLearningRecord"]>
 export type IpaLearningRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   phoneme?: boolean | Prisma.IpaPhonemeDefaultArgs<ExtArgs>
 }
@@ -656,14 +582,6 @@ export type $IpaLearningRecordPayload<ExtArgs extends runtime.Types.Extensions.I
      * 首次标记「学会了」的时间（null = 未学会）
      */
     learnedAt: Date | null
-    /**
-     * 测验答对次数（同一音标可反复练，累计）
-     */
-    quizCorrect: number
-    /**
-     * 测验答错次数（错题依据）
-     */
-    quizWrong: number
     /**
      * 创建时间
      */
@@ -1046,8 +964,6 @@ export interface IpaLearningRecordFieldRefs {
   readonly userId: Prisma.FieldRef<"IpaLearningRecord", 'BigInt'>
   readonly phonemeId: Prisma.FieldRef<"IpaLearningRecord", 'BigInt'>
   readonly learnedAt: Prisma.FieldRef<"IpaLearningRecord", 'DateTime'>
-  readonly quizCorrect: Prisma.FieldRef<"IpaLearningRecord", 'Int'>
-  readonly quizWrong: Prisma.FieldRef<"IpaLearningRecord", 'Int'>
   readonly createdAt: Prisma.FieldRef<"IpaLearningRecord", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"IpaLearningRecord", 'DateTime'>
 }

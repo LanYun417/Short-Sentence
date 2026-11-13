@@ -5,11 +5,9 @@ import type { GamifyService } from '../src/modules/client/gamify/gamify.service.
 
 /**
  * 音标学习的核心不变量：
- * 1. 测验判分**只看示例词关系**：看词选音标、看音标选词两个方向都得由服务端判，
- *    客户端上报什么（哪怕是「我全对」）都不能凭空拿到 XP；
- * 2. 题干/答案不在音标库里的（前端乱造），一律判错、不崩；
- * 3. 「学会了」每音标只发一次 XP（幂等），重复标记不再发；
- * 4. 测验 XP 按「音标+日期」幂等，同一天同一音标重复答对只发一次。
+ * 1. 「学会了」每音标只发一次 XP（幂等），重复标记不再发；
+ * 2. 不存在的音标 → 404，绝不静默发奖；
+ * 3. 斜杠包裹的 symbol（/æ/）与裸 symbol（æ）视为同一个，避免重复计行。
  */
 
 const PHONEMES = [
@@ -82,54 +80,6 @@ function makeService() {
 }
 
 describe('音标学习', () => {
-  it('看词选音标：选对才判对', async () => {
-    const { service } = makeService();
-    const result = await service.submitQuiz(7, {
-      answers: [
-        { type: 'word_to_phoneme', prompt: 'cat', answer: 'æ' },
-        { type: 'word_to_phoneme', prompt: 'cat', answer: 'iː' }, // 反了：cat 不是 iː 的示例词
-      ],
-    });
-    expect(result.correctCount).toBe(1);
-    expect(result.wrong).toHaveLength(1);
-    expect(result.wrong[0]).toMatchObject({ type: 'word_to_phoneme', prompt: 'cat', correct: 'iː' });
-  });
-
-  it('看音标选词：选对才判对', async () => {
-    const { service } = makeService();
-    const result = await service.submitQuiz(7, {
-      answers: [
-        { type: 'phoneme_to_word', prompt: 'æ', answer: 'apple' },
-        { type: 'phoneme_to_word', prompt: 'æ', answer: 'see' },
-      ],
-    });
-    expect(result.correctCount).toBe(1);
-    expect(result.wrong[0]).toMatchObject({ type: 'phoneme_to_word', prompt: 'æ', correct: 'cat' });
-  });
-
-  it('题干/答案不在库里：判错但不崩，也不发 XP', async () => {
-    const { service, xpCalls } = makeService();
-    const result = await service.submitQuiz(7, {
-      answers: [
-        { type: 'word_to_phoneme', prompt: '不存在的词', answer: 'zz' },
-        { type: 'phoneme_to_word', prompt: 'zz', answer: '不存在的词' },
-      ],
-    });
-    expect(result.correctCount).toBe(0);
-    expect(result.wrong).toHaveLength(2);
-    expect(xpCalls).toHaveLength(0);
-  });
-
-  it('答对发 XP（每题一发，event_key 带音标+日期）', async () => {
-    const { service, xpCalls } = makeService();
-    const result = await service.submitQuiz(7, {
-      answers: [{ type: 'word_to_phoneme', prompt: 'cat', answer: 'æ' }],
-    });
-    expect(result.xpAwarded).toBe(3);
-    expect(xpCalls[0].eventType).toBe('ipa_quiz_correct');
-    expect(xpCalls[0].key).toMatch(/^ipa-quiz:7:æ:\d{4}-\d{2}-\d{2}$/);
-  });
-
   it('「学会了」每音标只发一次 XP，重复标记不再发', async () => {
     const { service, xpCalls, records } = makeService();
     const first = await service.markLearned(7, { symbol: '/æ/' });
@@ -139,6 +89,7 @@ describe('音标学习', () => {
     expect(second.firstTime).toBe(false);
     expect(second.xpAwarded).toBe(false);
     expect(xpCalls).toHaveLength(1);
+    // /æ/ 与 æ 视为同一音标，只落一行
     expect(records).toHaveLength(1);
   });
 
@@ -148,24 +99,9 @@ describe('音标学习', () => {
     expect(xpCalls).toHaveLength(0);
   });
 
-  it('测验统计写入记录（对错分别计数）', async () => {
-    const { service, records } = makeService();
-    await service.submitQuiz(7, {
-      answers: [
-        { type: 'word_to_phoneme', prompt: 'cat', answer: 'æ' },
-        { type: 'word_to_phoneme', prompt: 'cat', answer: 'iː' },
-      ],
-    });
-    // æ 一条记录（1 对 0 错），iː 一条记录（0 对 1 错）
-    expect(records).toHaveLength(2);
-    const ae = records.find((r) => String(r.phonemeId) === '2');
-    expect(ae).toMatchObject({ quizCorrect: 1, quizWrong: 0 });
-    const ee = records.find((r) => String(r.phonemeId) === '1');
-    expect(ee).toMatchObject({ quizCorrect: 0, quizWrong: 1 });
-  });
-
-  it('空答案数组：400', async () => {
+  it('标记后进度 learnedCount 反映已学会数', async () => {
     const { service } = makeService();
-    await expect(service.submitQuiz(7, { answers: [] })).rejects.toThrow('答案不能为空');
+    const res = await service.markLearned(7, { symbol: 'æ' });
+    expect(res.learnedCount).toBe(1);
   });
 });

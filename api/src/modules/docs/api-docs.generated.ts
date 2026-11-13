@@ -10503,7 +10503,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/ipa/progress",
-        "summary": "我的进度（已学会数 + 每个音标的测验统计）",
+        "summary": "我的进度（已学会数）",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -10542,17 +10542,6 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X POST \"http://localhost:3000/api/client/ipa/learned\" \\\n  -H \"Authorization: Bearer <accessToken>\""
-        }
-      },
-      {
-        "method": "POST",
-        "path": "/api/client/ipa/quiz/submit",
-        "summary": "提交一整套测验答案：服务端判分 + 发 XP + 记错题",
-        "permission": [],
-        "isPublic": false,
-        "action": "",
-        "examples": {
-          "curl": "curl -X POST \"http://localhost:3000/api/client/ipa/quiz/submit\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

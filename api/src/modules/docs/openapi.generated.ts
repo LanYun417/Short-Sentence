@@ -19139,7 +19139,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "Ipa"
         ],
-        "summary": "我的进度（已学会数 + 每个音标的测验统计）",
+        "summary": "我的进度（已学会数）",
         "operationId": "get__api_client_ipa_progress",
         "parameters": [
           {
@@ -19226,49 +19226,6 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "标记某个音标「学会了」（首次发 XP）",
         "operationId": "post__api_client_ipa_learned",
-        "responses": {
-          "200": {
-            "description": "成功（统一信封 { code, message, data }）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "example": 0,
-                      "description": "业务码，0 表示成功"
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {}
-                  },
-                  "required": [
-                    "code",
-                    "message",
-                    "data"
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/client/ipa/quiz/submit": {
-      "post": {
-        "tags": [
-          "Ipa"
-        ],
-        "summary": "提交一整套测验答案：服务端判分 + 发 XP + 记错题",
-        "operationId": "post__api_client_ipa_quiz_submit",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",

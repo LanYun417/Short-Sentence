@@ -139,7 +139,7 @@ export type IpBan = Prisma.IpBanModel
 export type IpaPhoneme = Prisma.IpaPhonemeModel
 /**
  * Model IpaLearningRecord
- * 音标学习记录（一用户一音标一行；quiz 对错计数用于「我的进度」）
+ * 音标学习记录（一用户一音标一行；标记「学会了」即一行）
  */
 export type IpaLearningRecord = Prisma.IpaLearningRecordModel
 /**
