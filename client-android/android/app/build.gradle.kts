@@ -7,8 +7,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 正式签名：仅当 android/android/key.properties 与其中的 keystore 都存在时启用。
-// 这两个文件都不入库（见 android/android/.gitignore）；没有密钥的机器/CI 仍用 debug
+// 正式签名：仅当 client-android/android/key.properties 与其中的 keystore 都存在时启用。
+// 这两个文件都不入库（见根 .gitignore 的 client-android/android/ 规则）；没有密钥的机器/CI 仍用 debug
 // 签名打 release 包，保证 flutter build apk --release 在任何环境下都能跑通。
 // 发版时把 4 个字段填好即可，无需再改本文件。
 val keystorePropertiesFile = rootProject.file("key.properties")

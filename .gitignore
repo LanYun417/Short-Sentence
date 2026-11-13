@@ -29,6 +29,9 @@ client-android/.flutter-plugins
 client-android/.flutter-plugins-dependencies
 # Android Studio / Gradle 的本机工程文件（flutter create 会生成 .iml，属 IDE 私有配置）
 client-android/android/*.iml
+# Android 发布签名密钥与配置（含明文密码，绝不入库；发版机本地放置于 client-android/android/）
+client-android/android/key.properties
+client-android/android/release-keystore.jks
 
 # 更名残留：原 android/ Flutter 工程已迁至 client-android/，此顶层 android/ 是重复目录。
 # 注意：发布签名密钥 release-keystore.jks 仅存于此目录，切勿删除；仅忽略不入库。
