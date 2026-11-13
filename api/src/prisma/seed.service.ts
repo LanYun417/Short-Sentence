@@ -1127,6 +1127,35 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 成长体系：成就展示字段编辑（code 不可改）+ XP 账本审计 + 手动补偿（只加不减）
+        key: 'sentence:gamify',
+        menuName: '成长体系',
+        menuType: MenuType.MENU,
+        path: '/sentence/gamify',
+        component: 'sentence/gamify',
+        icon: 'trophy',
+        permission: 'sentence:gamify',
+        sort: 15,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:gamify:edit',
+            menuName: '编辑成就',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:gamify:edit',
+            sort: 1,
+          },
+          {
+            key: 'sentence:gamify:handle',
+            menuName: '手动补偿XP',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:gamify:handle',
+            sort: 2,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

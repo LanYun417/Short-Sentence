@@ -44,6 +44,7 @@ export type ClientXpLogMinAggregateOutputType = {
   userId: bigint | null
   eventType: string | null
   amount: number | null
+  remark: string | null
   createdAt: Date | null
 }
 
@@ -53,6 +54,7 @@ export type ClientXpLogMaxAggregateOutputType = {
   userId: bigint | null
   eventType: string | null
   amount: number | null
+  remark: string | null
   createdAt: Date | null
 }
 
@@ -62,6 +64,7 @@ export type ClientXpLogCountAggregateOutputType = {
   userId: number
   eventType: number
   amount: number
+  remark: number
   createdAt: number
   _all: number
 }
@@ -85,6 +88,7 @@ export type ClientXpLogMinAggregateInputType = {
   userId?: true
   eventType?: true
   amount?: true
+  remark?: true
   createdAt?: true
 }
 
@@ -94,6 +98,7 @@ export type ClientXpLogMaxAggregateInputType = {
   userId?: true
   eventType?: true
   amount?: true
+  remark?: true
   createdAt?: true
 }
 
@@ -103,6 +108,7 @@ export type ClientXpLogCountAggregateInputType = {
   userId?: true
   eventType?: true
   amount?: true
+  remark?: true
   createdAt?: true
   _all?: true
 }
@@ -199,6 +205,7 @@ export type ClientXpLogGroupByOutputType = {
   userId: bigint
   eventType: string
   amount: number
+  remark: string
   createdAt: Date
   _count: ClientXpLogCountAggregateOutputType | null
   _avg: ClientXpLogAvgAggregateOutputType | null
@@ -231,6 +238,7 @@ export type ClientXpLogWhereInput = {
   userId?: Prisma.BigIntFilter<"ClientXpLog"> | bigint | number
   eventType?: Prisma.StringFilter<"ClientXpLog"> | string
   amount?: Prisma.IntFilter<"ClientXpLog"> | number
+  remark?: Prisma.StringFilter<"ClientXpLog"> | string
   createdAt?: Prisma.DateTimeFilter<"ClientXpLog"> | Date | string
 }
 
@@ -240,6 +248,7 @@ export type ClientXpLogOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  remark?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _relevance?: Prisma.ClientXpLogOrderByRelevanceInput
 }
@@ -253,6 +262,7 @@ export type ClientXpLogWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.BigIntFilter<"ClientXpLog"> | bigint | number
   eventType?: Prisma.StringFilter<"ClientXpLog"> | string
   amount?: Prisma.IntFilter<"ClientXpLog"> | number
+  remark?: Prisma.StringFilter<"ClientXpLog"> | string
   createdAt?: Prisma.DateTimeFilter<"ClientXpLog"> | Date | string
 }, "id" | "eventKey">
 
@@ -262,6 +272,7 @@ export type ClientXpLogOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  remark?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.ClientXpLogCountOrderByAggregateInput
   _avg?: Prisma.ClientXpLogAvgOrderByAggregateInput
@@ -279,6 +290,7 @@ export type ClientXpLogScalarWhereWithAggregatesInput = {
   userId?: Prisma.BigIntWithAggregatesFilter<"ClientXpLog"> | bigint | number
   eventType?: Prisma.StringWithAggregatesFilter<"ClientXpLog"> | string
   amount?: Prisma.IntWithAggregatesFilter<"ClientXpLog"> | number
+  remark?: Prisma.StringWithAggregatesFilter<"ClientXpLog"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ClientXpLog"> | Date | string
 }
 
@@ -288,6 +300,7 @@ export type ClientXpLogCreateInput = {
   userId: bigint | number
   eventType: string
   amount: number
+  remark?: string
   createdAt?: Date | string
 }
 
@@ -297,6 +310,7 @@ export type ClientXpLogUncheckedCreateInput = {
   userId: bigint | number
   eventType: string
   amount: number
+  remark?: string
   createdAt?: Date | string
 }
 
@@ -306,6 +320,7 @@ export type ClientXpLogUpdateInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.IntFieldUpdateOperationsInput | number
+  remark?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -315,6 +330,7 @@ export type ClientXpLogUncheckedUpdateInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.IntFieldUpdateOperationsInput | number
+  remark?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -324,6 +340,7 @@ export type ClientXpLogCreateManyInput = {
   userId: bigint | number
   eventType: string
   amount: number
+  remark?: string
   createdAt?: Date | string
 }
 
@@ -333,6 +350,7 @@ export type ClientXpLogUpdateManyMutationInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.IntFieldUpdateOperationsInput | number
+  remark?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -342,6 +360,7 @@ export type ClientXpLogUncheckedUpdateManyInput = {
   userId?: Prisma.BigIntFieldUpdateOperationsInput | bigint | number
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.IntFieldUpdateOperationsInput | number
+  remark?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -357,6 +376,7 @@ export type ClientXpLogCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  remark?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -372,6 +392,7 @@ export type ClientXpLogMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  remark?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -381,6 +402,7 @@ export type ClientXpLogMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   amount?: Prisma.SortOrder
+  remark?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -398,6 +420,7 @@ export type ClientXpLogSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   userId?: boolean
   eventType?: boolean
   amount?: boolean
+  remark?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["clientXpLog"]>
 
@@ -409,10 +432,11 @@ export type ClientXpLogSelectScalar = {
   userId?: boolean
   eventType?: boolean
   amount?: boolean
+  remark?: boolean
   createdAt?: boolean
 }
 
-export type ClientXpLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "eventKey" | "userId" | "eventType" | "amount" | "createdAt", ExtArgs["result"]["clientXpLog"]>
+export type ClientXpLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "eventKey" | "userId" | "eventType" | "amount" | "remark" | "createdAt", ExtArgs["result"]["clientXpLog"]>
 
 export type $ClientXpLogPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ClientXpLog"
@@ -431,13 +455,17 @@ export type $ClientXpLogPayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     userId: bigint
     /**
-     * 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill
+     * 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill / manual（后台手动补偿）
      */
     eventType: string
     /**
      * 本次发放经验值（恒为正：本体系只奖励、不扣减）
      */
     amount: number
+    /**
+     * 备注（仅 manual 事件：后台补偿原因；其余事件为空串）
+     */
+    remark: string
     /**
      * 发放时间
      */
@@ -816,6 +844,7 @@ export interface ClientXpLogFieldRefs {
   readonly userId: Prisma.FieldRef<"ClientXpLog", 'BigInt'>
   readonly eventType: Prisma.FieldRef<"ClientXpLog", 'String'>
   readonly amount: Prisma.FieldRef<"ClientXpLog", 'Int'>
+  readonly remark: Prisma.FieldRef<"ClientXpLog", 'String'>
   readonly createdAt: Prisma.FieldRef<"ClientXpLog", 'DateTime'>
 }
     

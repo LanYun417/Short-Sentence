@@ -1970,3 +1970,41 @@ export interface IpaLearningRecordItem {
   symbol: string;
   learnedAt: string;
 }
+
+/* ------------------------------ 成长体系（后台） ------------------------------ */
+
+/** 后台-成就条目（含解锁人数） */
+export interface AchievementAdminItem {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  rewardXp: number;
+  sort: number;
+  /** 解锁该成就的用户数 */
+  unlockCount: number;
+}
+
+/** 后台-XP 账本条目 */
+export interface XpLogAdminItem {
+  id: number;
+  eventKey: string;
+  eventType: string;
+  amount: number;
+  remark: string;
+  userId: number;
+  email: string;
+  nickname: string;
+  createdAt: string;
+}
+
+/** 后台-成长统计总览 */
+export interface GamifyAdminStats {
+  totalXpIssued: number;
+  todayXp: number;
+  logCount: number;
+  userCount: number;
+  unlockTotal: number;
+  byEventType: Array<{ eventType: string; count: number; sum: number }>;
+}

@@ -5,10 +5,12 @@
  */
 import { Module } from '@nestjs/common';
 import { GamifyController } from './gamify.controller.js';
+import { GamifyAdminController } from './gamify-admin.controller.js';
 import { GamifyService } from './gamify.service.js';
 
 @Module({
-  controllers: [GamifyController],
+  // GamifyController：客户端成长概览；GamifyAdminController：后台 /api/gamify（成就编辑 / XP 账本 / 补偿）
+  controllers: [GamifyController, GamifyAdminController],
   providers: [GamifyService],
   exports: [GamifyService],
 })

@@ -16,10 +16,12 @@ model ClientXpLog {
   eventKey  String   @unique @map("event_key") @db.VarChar(160)
   /// 用户 id
   userId    BigInt   @map("user_id") @db.BigInt
-  /// 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill
+  /// 事件类型：answer_correct_first / answer_correct_review / answer_wrong / favorite / daily_goal / achievement / backfill / manual（后台手动补偿）
   eventType String   @map("event_type") @db.VarChar(32)
   /// 本次发放经验值（恒为正：本体系只奖励、不扣减）
   amount    Int      @db.Int
+  /// 备注（仅 manual 事件：后台补偿原因；其余事件为空串）
+  remark    String   @default("") @db.VarChar(200)
   /// 发放时间
   createdAt DateTime @default(now()) @map("created_at")
 

@@ -4058,6 +4058,7 @@ export const ClientXpLogScalarFieldEnum = {
   userId: 'userId',
   eventType: 'eventType',
   amount: 'amount',
+  remark: 'remark',
   createdAt: 'createdAt'
 } as const
 
@@ -4801,7 +4802,8 @@ export type FileOrderByRelevanceFieldEnum = (typeof FileOrderByRelevanceFieldEnu
 
 export const ClientXpLogOrderByRelevanceFieldEnum = {
   eventKey: 'eventKey',
-  eventType: 'eventType'
+  eventType: 'eventType',
+  remark: 'remark'
 } as const
 
 export type ClientXpLogOrderByRelevanceFieldEnum = (typeof ClientXpLogOrderByRelevanceFieldEnum)[keyof typeof ClientXpLogOrderByRelevanceFieldEnum]

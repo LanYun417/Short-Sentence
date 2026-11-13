@@ -8,9 +8,13 @@
  * 3. **只加不减**：无扣减 / 衰减 / 断签清空。
  */
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import type { Prisma } from '../../../generated/prisma/client.js';
 import { config } from '../../../common/config/config.js';
+import { AppException } from '../../../common/exception/app.exception.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { STAGE_STORIES } from '../stage/stage-stories.js';
+import type { GrantXpDto, UpdateAchievementDto } from './dto.js';
 
 /** 东八区偏移（Asia/Shanghai 无夏令时，固定 +8 即可；与 AiQuotaService 同口径）。 */
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -113,6 +117,48 @@ export interface GamifyOverview {
   sceneMap: SceneMapItem[];
   unlockedScenes: number;
   totalScenes: number;
+}
+
+/** 后台-成就条目（带解锁人数）。 */
+export interface AchievementAdminItem {
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  rewardXp: number;
+  sort: number;
+  /** 解锁该成就的用户数 */
+  unlockCount: number;
+}
+
+/** 后台-XP 账本条目。 */
+export interface XpLogAdminItem {
+  id: number;
+  eventKey: string;
+  eventType: string;
+  amount: number;
+  remark: string;
+  userId: number;
+  email: string;
+  nickname: string;
+  createdAt: Date;
+}
+
+/** 后台-成长统计总览。 */
+export interface GamifyAdminStats {
+  /** 累计发放 XP 总量 */
+  totalXpIssued: number;
+  /** 今日发放 XP（东八区自然日） */
+  todayXp: number;
+  /** 账本条数 */
+  logCount: number;
+  /** 有 XP 的用户数 */
+  userCount: number;
+  /** 成就解锁总人次 */
+  unlockTotal: number;
+  /** 按事件类型聚合 */
+  byEventType: Array<{ eventType: string; count: number; sum: number }>;
 }
 
 /** 成就判定上下文（一次查询、多处复用）。 */
@@ -510,6 +556,186 @@ export class GamifyService {
       clearedStages,
       stageTotal,
       bestRank: rankHint && rankHint > 0 ? rankHint : Number.POSITIVE_INFINITY,
+    };
+  }
+
+  /* ------------------------------ 后台管理 ------------------------------ */
+
+  /** 后台：成就列表（全部，含解锁人数；按 sort 升序）。 */
+  async adminListAchievements(): Promise<AchievementAdminItem[]> {
+    const [achievements, groups] = await Promise.all([
+      this.prisma.achievement.findMany({ orderBy: { sort: 'asc' } }),
+      this.prisma.userAchievement.groupBy({
+        by: ['achievementCode'],
+        _count: { _all: true },
+      }),
+    ]);
+    const countMap = new Map(groups.map((g) => [g.achievementCode, g._count._all]));
+    return achievements.map((a) => ({
+      code: a.code,
+      name: a.name,
+      description: a.description,
+      icon: a.icon,
+      category: a.category,
+      rewardXp: a.rewardXp,
+      sort: a.sort,
+      unlockCount: countMap.get(a.code) ?? 0,
+    }));
+  }
+
+  /**
+   * 后台：更新成就展示字段（code 为主键 + 判定键，不可改；不开放增删——
+   * 判定逻辑硬编码在 ACHIEVEMENT_CONDITIONS，凭空加一条永远不解锁）。
+   */
+  async adminUpdateAchievement(code: string, dto: UpdateAchievementDto): Promise<void> {
+    const existing = await this.prisma.achievement.findUnique({ where: { code } });
+    if (!existing) {
+      throw AppException.notFound('成就不存在');
+    }
+    const data: Prisma.AchievementUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.icon !== undefined) data.icon = dto.icon;
+    if (dto.category !== undefined) data.category = dto.category;
+    if (dto.rewardXp !== undefined) data.rewardXp = dto.rewardXp;
+    if (dto.sort !== undefined) data.sort = dto.sort;
+    await this.prisma.achievement.update({ where: { code }, data });
+  }
+
+  /** 后台-XP 账本条目。 */
+  /** 后台：XP 账本分页审计。
+   * 关键字匹配用户邮箱/昵称；可按事件类型、日期范围筛选。
+   */
+  async adminXpLogs(query: {
+    keyword?: string;
+    eventType?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ list: XpLogAdminItem[]; total: number }> {
+    const where: Prisma.ClientXpLogWhereInput = {};
+    if (query.eventType) {
+      where.eventType = query.eventType;
+    }
+    const gte = query.dateFrom ? new Date(`${query.dateFrom}T00:00:00`) : undefined;
+    const lte = query.dateTo ? new Date(`${query.dateTo}T23:59:59.999`) : undefined;
+    if (gte || lte) {
+      where.createdAt = { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) };
+    }
+    const keyword = query.keyword?.trim();
+    if (keyword) {
+      const users = await this.prisma.clientUser.findMany({
+        where: { OR: [{ email: { contains: keyword } }, { nickname: { contains: keyword } }] },
+        select: { id: true },
+      });
+      if (!users.length) {
+        return { list: [], total: 0 };
+      }
+      where.userId = { in: users.map((u) => u.id) };
+    }
+    const [total, rows] = await Promise.all([
+      this.prisma.clientXpLog.count({ where }),
+      this.prisma.clientXpLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+    ]);
+    const users = await this.prisma.clientUser.findMany({
+      where: { id: { in: rows.map((r) => r.userId) } },
+      select: { id: true, email: true, nickname: true },
+    });
+    const userMap = new Map(users.map((u) => [String(u.id), u]));
+    const list: XpLogAdminItem[] = rows.map((r) => {
+      const u = userMap.get(String(r.userId));
+      return {
+        id: Number(r.id),
+        eventKey: r.eventKey,
+        eventType: r.eventType,
+        amount: r.amount,
+        remark: r.remark,
+        userId: Number(r.userId),
+        email: u?.email ?? '',
+        nickname: u?.nickname ?? '',
+        createdAt: r.createdAt,
+      };
+    });
+    return { list, total };
+  }
+
+  /**
+   * 后台：手动补偿 XP（只加不减红线——amount 恒为正，不提供扣减入口）。
+   *
+   * 绕过每日上限（运营主动行为，非事件驱动刷量），但仍走唯一 event_key 幂等：
+   * eventKey = `manual:{adminUserId}:{uuid}`，重试不重复发。
+   */
+  async adminGrantXp(adminUserId: number, dto: GrantXpDto): Promise<{ granted: boolean; balance: number }> {
+    const user = await this.prisma.clientUser.findUnique({
+      where: { email: dto.email.trim().toLowerCase() },
+      select: { id: true, xp: true },
+    });
+    if (!user) {
+      throw AppException.notFound('用户不存在（按邮箱查不到 client_user）');
+    }
+    const eventKey = `manual:${adminUserId}:${randomUUID()}`;
+    try {
+      await this.prisma.clientXpLog.create({
+        data: {
+          eventKey,
+          userId: user.id,
+          eventType: 'manual',
+          amount: dto.amount,
+          remark: dto.reason.trim(),
+        },
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        const current = await this.prisma.clientUser.findUnique({ where: { id: user.id }, select: { xp: true } });
+        return { granted: false, balance: current?.xp ?? 0 };
+      }
+      throw error;
+    }
+    const updated = await this.prisma.clientUser.update({
+      where: { id: user.id },
+      data: { xp: { increment: dto.amount } },
+      select: { xp: true },
+    });
+    return { granted: true, balance: updated.xp };
+  }
+
+  /** 后台-成长统计总览。 */
+  /** 后台：成长统计总览。 */
+  async adminStats(): Promise<GamifyAdminStats> {
+    const dayStart = shanghaiDayStart();
+    const [issued, today, logCount, userCount, unlockCount, byEventType] = await Promise.all([
+      this.prisma.clientXpLog.aggregate({ _sum: { amount: true } }),
+      this.prisma.clientXpLog.aggregate({
+        where: { createdAt: { gte: dayStart } },
+        _sum: { amount: true },
+      }),
+      this.prisma.clientXpLog.count(),
+      this.prisma.clientUser.count({ where: { xp: { gt: 0 } } }),
+      this.prisma.userAchievement.count(),
+      this.prisma.clientXpLog.groupBy({
+        by: ['eventType'],
+        _count: { _all: true },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: 'desc' } },
+      }),
+    ]);
+    return {
+      totalXpIssued: issued._sum.amount ?? 0,
+      todayXp: today._sum.amount ?? 0,
+      logCount,
+      userCount,
+      unlockTotal: unlockCount,
+      byEventType: byEventType.map((g) => ({
+        eventType: g.eventType,
+        count: g._count._all,
+        sum: g._sum.amount ?? 0,
+      })),
     };
   }
 }
