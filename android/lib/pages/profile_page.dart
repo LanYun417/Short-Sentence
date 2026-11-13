@@ -231,6 +231,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.audio_file_outlined,
+                    label: '音标学习',
+                    hint: '48 个国际音标：跟读 + 标记掌握',
+                    onTap: () => context.push('/ipa'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.campaign_outlined,
                     label: '消息中心',
                     hint: '运营公告与活动通知',

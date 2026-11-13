@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'pages/achievements_page.dart';
 import 'pages/chain_page.dart';
 import 'pages/dialogue_page.dart';
+import 'pages/ipa_page.dart';
 import 'pages/leaderboard_page.dart';
 import 'pages/login_page.dart';
 import 'pages/scene_page.dart';
@@ -71,6 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
       GoRoute(path: '/team', builder: (context, state) => const TeamPage()),
+      GoRoute(path: '/ipa', builder: (context, state) => const IpaPage()),
       GoRoute(path: '/achievements', builder: (context, state) => const AchievementsPage()),
       GoRoute(path: '/scenes', builder: (context, state) => const ScenesPage()),
     ],
