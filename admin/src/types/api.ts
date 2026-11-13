@@ -1927,3 +1927,46 @@ export interface ChainTopicAdminItem {
   entryCount: number;
   createdAt: string;
 }
+
+/* ------------------------------ 音标管理（后台） ------------------------------ */
+
+/** 音标类型 */
+export type IpaPhonemeType = 'vowel' | 'diphthong' | 'consonant_voiceless' | 'consonant_voiced';
+
+/** 后台-音标条目（带学会人数） */
+export interface IpaAdminPhoneme {
+  id: number;
+  symbol: string;
+  type: string;
+  exampleWords: string[];
+  tips: string;
+  sort: number;
+  /** 学会该音标的用户数 */
+  learnedCount: number;
+  createdAt: string;
+}
+
+/** 后台-音标学习统计总览 */
+export interface IpaAdminStats {
+  totalPhonemes: number;
+  /** 累计「学会了」标记数 */
+  totalLearned: number;
+  /** 学习用户数（去重） */
+  learnerCount: number;
+  /** 今日学会标记数 */
+  todayLearned: number;
+  /** 近 7 天趋势 */
+  trend: Array<{ date: string; count: number }>;
+  /** 学会人数最多的音标 Top5 */
+  top: Array<{ symbol: string; count: number }>;
+}
+
+/** 后台-音标学习记录审计条目 */
+export interface IpaLearningRecordItem {
+  id: number;
+  userId: number;
+  email: string;
+  nickname: string;
+  symbol: string;
+  learnedAt: string;
+}

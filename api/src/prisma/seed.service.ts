@@ -1098,6 +1098,35 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 音标学习：音标库内容编辑（symbol 为业务主键不可改）+ 重置种子 + 学习统计/记录审计
+        key: 'sentence:ipa',
+        menuName: '音标管理',
+        menuType: MenuType.MENU,
+        path: '/sentence/ipa',
+        component: 'sentence/ipa',
+        icon: 'mic',
+        permission: 'sentence:ipa',
+        sort: 14,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'sentence:ipa:edit',
+            menuName: '编辑音标',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:ipa:edit',
+            sort: 1,
+          },
+          {
+            key: 'sentence:ipa:handle',
+            menuName: '重置种子',
+            menuType: MenuType.BUTTON,
+            permission: 'sentence:ipa:handle',
+            sort: 2,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）

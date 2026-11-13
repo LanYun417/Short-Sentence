@@ -39,6 +39,7 @@ import { ChainController } from './chain/chain.controller.js';
 import { ChainAdminController } from './chain/chain-admin.controller.js';
 import { ChainService } from './chain/chain.service.js';
 import { IpaController } from './ipa/ipa.controller.js';
+import { IpaAdminController } from './ipa/ipa-admin.controller.js';
 import { IpaService } from './ipa/ipa.service.js';
 import { TeamAdminController } from './team/team-admin.controller.js';
 
@@ -60,8 +61,9 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     CategoriesController,
     // 客户端公告读取（广播表 client_notice；后台发布在 NoticeModule）
     ClientNoticeController,
-    // 音标学习（音标库 / 进度 / 学会了 / 测验判分）
+    // 音标学习（音标库 / 进度 / 学会了；后台管理控制器 /api/ipa）
     IpaController,
+    IpaAdminController,
     // 今日排行榜（答题数 / 答对数前 100）
     LeaderboardController,
     // 弱连接学习小队（自动匹配 / 组队打卡）
