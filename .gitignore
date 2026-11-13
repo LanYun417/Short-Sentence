@@ -30,6 +30,10 @@ client-android/.flutter-plugins-dependencies
 # Android Studio / Gradle 的本机工程文件（flutter create 会生成 .iml，属 IDE 私有配置）
 client-android/android/*.iml
 
+# 更名残留：原 android/ Flutter 工程已迁至 client-android/，此顶层 android/ 是重复目录。
+# 注意：发布签名密钥 release-keystore.jks 仅存于此目录，切勿删除；仅忽略不入库。
+/android/
+
 # Logs（运行时日志目录用精确路径：`logs/` 通配会误伤 src/modules/logs/ 源码目录，
 # 使 ripgrep / 编辑器全局搜索跳过整个日志模块）
 api/logs/
