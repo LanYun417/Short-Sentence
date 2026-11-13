@@ -12,17 +12,17 @@
  * 会导致认证页在页面间 SPA 导航时内容不渲染。
  */
 import { useAuthStore } from '~/stores/auth';
-import { useSiteConfig } from '~/composables/useSiteConfig';
+import { useSiteFiling } from '~/composables/useSiteFiling';
 import type { ClientUserProfile } from '~/types';
 
 const auth = useAuthStore();
 
 /**
- * SSR 预取站点公开配置（备案号）：/client/site 是 @Public 接口，未登录也能取，
+ * SSR 预取站点备案号：/client/site 是 @Public 接口，未登录也能取，
  * 让页脚备案号随首屏 HTML 一起渲染（备案号要求登录页也可见）。
  */
-const { ensureLoaded: ensureSiteConfig } = useSiteConfig();
-await ensureSiteConfig();
+const { ensureLoaded: ensureSiteFiling } = useSiteFiling();
+await ensureSiteFiling();
 
 /**
  * SSR 预取当前用户：首屏 HTML 直接带昵称/头像，不再等水合后闪空。

@@ -5,16 +5,18 @@
  * 值来自后台「系统管理 → 参数管理」的 site.icp / site.policeIcp
  * （公开接口 /api/client/site 下发）；两个都为空时整块不渲染。
  * 公安备案号带盾牌图标，点击跳全国互联网安全管理服务平台。
+ *
+ * 读取一律 `?? ''` 兜底：状态可能来自水合/旧 payload，字段缺失时不能让整页 500。
  */
-import { useSiteConfig } from '~/composables/useSiteConfig';
+import { useSiteFiling } from '~/composables/useSiteFiling';
 
-const { site, ensureLoaded } = useSiteConfig();
+const { site, ensureLoaded } = useSiteFiling();
 
 // SSR 预取失败时的客户端兜底（正常路径 app.vue 已 await 过，不会重复请求）
 onMounted(ensureLoaded);
 
-const icp = computed(() => site.value.icp.trim());
-const policeIcp = computed(() => site.value.policeIcp.trim());
+const icp = computed(() => (site.value?.icp ?? '').trim());
+const policeIcp = computed(() => (site.value?.policeIcp ?? '').trim());
 </script>
 
 <template>
