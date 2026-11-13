@@ -623,8 +623,6 @@ export interface IpaPhoneme {
 export interface IpaProgressItem {
   symbol: string;
   learned: boolean;
-  quizCorrect: number;
-  quizWrong: number;
 }
 
 /** 标记「学会了」的响应。 */
@@ -633,22 +631,4 @@ export interface IpaLearnedResult {
   firstTime: boolean;
   xpAwarded: boolean;
   learnedCount: number;
-}
-
-/** 测验题型。 */
-export type IpaQuizType = 'word_to_phoneme' | 'phoneme_to_word';
-
-/** 提交的答案条目。 */
-export interface IpaQuizAnswerItem {
-  type: IpaQuizType;
-  prompt: string;
-  answer: string;
-}
-
-/** 测验判分结果。 */
-export interface IpaQuizResult {
-  correctCount: number;
-  total: number;
-  xpAwarded: number;
-  wrong: Array<{ type: string; prompt: string; correct: string }>;
 }
