@@ -33,6 +33,8 @@ import '../widgets/staggered.dart';
 import '../sheets/claim_card.dart';
 import '../sheets/sentence_card_sheet.dart';
 import '../api/models/memory_stats.dart';
+import '../api/gamify_api.dart';
+import '../api/models/weekly_report.dart';
 import '../api/questions_api.dart';
 
 class GrowthPage extends ConsumerStatefulWidget {
@@ -154,6 +156,12 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                           // 情景闯关：给「下一步练什么」一个带剧情的答案（关卡 = 场景）
                           ref.watch(stageOverviewProvider).when(
                             data: (overview) => _StageCard(overview: overview),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 14),
+                          ref.watch(weeklyReportProvider).when(
+                            data: (report) => _WeeklyReportCard(report: report),
                             loading: () => const SizedBox.shrink(),
                             error: (_, _) => const SizedBox.shrink(),
                           ),
@@ -690,6 +698,125 @@ final memoryStatsProvider = FutureProvider<MemoryStats>((ref) async {
   final api = ref.watch(questionsApiProvider);
   return api.getMemoryStats();
 });
+
+/// 周学习报告（服务端按东八区周一 00:00 聚合）。
+final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
+  final api = ref.watch(gamifyApiProvider);
+  return api.weeklyReport();
+});
+
+/// 周学习报告卡片：把这一周的努力变成看得懂的一屏（答题 / 正确率 / 活跃天数 /
+/// 每日柱状 / 经验 / 连续打卡 / 最常练 / 与上周对比）。
+///
+/// 数字全部来自服务端聚合，客户端不自己算「本周」——否则与分享文案、Web 端口径会漂移。
+class _WeeklyReportCard extends StatelessWidget {
+  const _WeeklyReportCard({required this.report});
+  final WeeklyReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hint = theme.textTheme.bodySmall?.color;
+    final maxDaily = report.daily.fold<int>(1, (max, d) => d.answered > max ? d.answered : max);
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Text('本周学习报告',
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('周一 00:00 至今',
+                  style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (report.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Column(
+                children: <Widget>[
+                  Text('本周还没有学习记录',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: hint)),
+                  const SizedBox(height: 4),
+                  Text('刷几道题，周日回来看看这一周攒下了什么',
+                      style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+                ],
+              ),
+            )
+          else ...<Widget>[
+            Row(
+              children: <Widget>[
+                _MemoryStat(value: '${report.answered}', label: '本周答题', color: context.colors.brand),
+                _MemoryStat(
+                    value: '${(report.accuracy * 100).round()}%', label: '正确率', color: Colors.green),
+                _MemoryStat(value: '${report.activeDays}/7', label: '活跃天数', color: Colors.orange),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 56,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  for (final day in report.daily)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: <Widget>[
+                            Container(
+                              height: day.answered == 0 ? 3 : (day.answered / maxDaily) * 40,
+                              decoration: BoxDecoration(
+                                color: context.colors.brand.withValues(
+                                    alpha: day.answered == 0 ? 0.15 : 0.85),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(day.weekday.replaceFirst('周', ''),
+                                style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              children: <Widget>[
+                Text('本周 +${report.xpGained} 经验',
+                    style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+                if (report.newAchievements > 0)
+                  Text('新解锁 ${report.newAchievements} 个成就',
+                      style: theme.textTheme.labelSmall?.copyWith(color: Colors.amber.shade700)),
+                if (report.streak > 0)
+                  Text('连续打卡 ${report.streak} 天',
+                      style: theme.textTheme.labelSmall?.copyWith(color: Colors.deepOrange)),
+                if (report.topCategory != null)
+                  Text('最常练「${report.topCategory!.name}」',
+                      style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+                Text(
+                  '比上周${report.deltaAnswered >= 0 ? '多' : '少'} ${report.deltaAnswered.abs()} 题',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: report.deltaAnswered >= 0 ? Colors.green : hint,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _MemoryHealthCard extends StatelessWidget {
   const _MemoryHealthCard({required this.stats});

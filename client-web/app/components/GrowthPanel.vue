@@ -197,6 +197,9 @@ function iconOf(name: string): string {
       </div>
     </div>
 
+    <!-- 周学习报告：把这一周的努力变成一张看得懂、可分享的卡 -->
+    <WeeklyReportCard />
+
     <!-- 记忆巩固独立成卡，与上方「场景探索」卡片之间由外层 space-y 留出间隙 -->
     <MemoryHealthCard />
 
