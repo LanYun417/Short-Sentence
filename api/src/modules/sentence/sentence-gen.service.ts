@@ -13,7 +13,7 @@
  *   本服务只暴露执行入口。早期版本在此处自行 addCronJob，结果后台「定时任务」页看不到它、
  *   执行记录也不进 sys_task_log——运维以为没配，其实在跑。
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { config } from '../../common/config/config.js';
 import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
 import {
@@ -45,6 +45,14 @@ import { COVER_GEN_LOG_TYPE, SENTENCE_STATUS } from './sentence.dto.js';
  * 逼近 180s 超时阈值（约 1/4 的批次直接超时并重试）；降到 20 条后单次约 40~70s，留足余量。
  */
 const TEXT_CHUNK = 20;
+
+/**
+ * 启动补偿只处理「卡住超过 10 分钟」的 pending_image 题。
+ *
+ * 运营点「重新生图」会先把题置成 pending_image，正常几十秒内就会推进到 ready/offline；
+ * 给一个明显宽于该窗口的缓冲，就不会把刚发起的重新生图误判成中断孤儿。
+ */
+const STALE_PENDING_IMAGE_MS = 10 * 60 * 1000;
 
 /** 连续多少批零净增即停止（全部重复时的死循环保护）。 */
 const MAX_EMPTY_CHUNKS = 3;
@@ -146,7 +154,7 @@ export interface BackfillWordMeaningsResult {
 }
 
 @Injectable()
-export class SentenceGenService {
+export class SentenceGenService implements OnModuleInit {
   private readonly logger = new Logger(SentenceGenService.name);
   /** 进程内互斥标志。 */
   private running = false;
@@ -181,6 +189,61 @@ export class SentenceGenService {
     private readonly budget: AiBudgetService,
     private readonly aiSettings: AiSettingsService,
   ) {}
+
+  /**
+   * 启动补偿：把「配图已入库、却卡在 pending_image」的节日批次题恢复为 ready。
+   *
+   * 背景：生图成功后置 ready 只发生在**本批次的进程内流水线**里
+   * （`enqueuePendingImages` → `generateImage`）。进程在批次中途被关机/重启时，
+   * 图片文件已经落库，但那批题永远停在 pending_image；而用户端
+   * `listFestivals` 只统计 `status='ready'`，于是出现「库里 100 题、端上只显示 57 题」，
+   * 甚至整个节日从题库列表消失（元宵节曾整节 101 题全卡住）。
+   *
+   * 四道保险，避免误伤运营动作或下发坏题：
+   * 1. 只看 `imageFileId > 0`——配图确实已生成，恢复它零成本、不烧 AI 配额；
+   *    没有配图的题仍要等生图，不能强行置 ready（会下发无图题卡）。
+   * 2. 只看**卡住超过 10 分钟**的题——运营刚点「重新生图」也会短暂进入
+   *    pending_image，不能被抢先改状态；生图正常几十秒内就会推进到 ready。
+   * 3. 限定节日题库（`festivalName` 非空）且未退场、非手工题（`genTaskId > 0`）——
+   *    运营对日常题的单题下架/重新生图保持原语义，不被批量改写。
+   * 4. **不按批次状态排除**：本方法跑在应用启动钩子上，此刻进程还没执行过任何批次，
+   *    库里残留的 running/pending 全是上一次进程被关机/崩溃留下的僵尸批次
+   *    （实测本地就有 9 个心跳停在半个月前的 running 批次）。若把它们排除，
+   *    恰好会漏掉最需要补偿的那批题——正是本次节日题库缺口的来源。
+   *
+   * 补偿失败只记日志，绝不阻断应用启动。
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const recovered = await this.recoverStalePendingImages();
+      if (recovered > 0) {
+        this.logger.log(`[SentenceGen] 启动补偿：${recovered} 题已有配图却卡在 pending_image，已恢复为 ready`);
+      }
+    } catch (error) {
+      this.logger.warn(`[SentenceGen] 启动补偿失败（不影响启动）：${this.errText(error)}`);
+    }
+  }
+
+  /**
+   * 恢复卡在 pending_image 的孤儿题，返回实际更新条数。
+   * 抽成公开方法便于管理端日后复用/单测；本身幂等，重复执行返回 0。
+   */
+  async recoverStalePendingImages(): Promise<number> {
+    const staleBefore = new Date(Date.now() - STALE_PENDING_IMAGE_MS);
+    const { count } = await this.prisma.sentence.updateMany({
+      where: {
+        status: SENTENCE_STATUS.PENDING_IMAGE,
+        imageFileId: { gt: 0n },
+        retiredAt: null,
+        genTaskId: { gt: 0n },
+        festivalName: { not: null },
+        NOT: { festivalName: '' },
+        updatedAt: { lt: staleBefore },
+      },
+      data: { status: SENTENCE_STATUS.READY },
+    });
+    return count;
+  }
 
   /** 取生图闸门（懒加载：首次用到时才按配置建）。 */
   private imageGate(): Semaphore {
