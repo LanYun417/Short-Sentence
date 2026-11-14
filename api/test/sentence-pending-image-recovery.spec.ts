@@ -26,6 +26,10 @@ function buildService(count: number, error?: Error) {
         return { count };
       },
     },
+    // onModuleInit 会连带跑僵尸批次回收，给一个返回 0 的假实现，避免无关注释噪音
+    sentenceGenTask: {
+      updateMany: async () => ({ count: 0 }),
+    },
   };
   const service = new SentenceGenService(
     prisma as never,
@@ -99,5 +103,70 @@ describe('SentenceGenService.recoverStalePendingImages', () => {
     await service.onModuleInit();
     expect(log).toHaveBeenCalledWith(expect.stringContaining('3 题已有配图'));
     log.mockRestore();
+  });
+});
+
+describe('SentenceGenService.recoverStaleBatches', () => {
+  /** 构造带 sentenceGenTask.updateMany 的最小 prisma 假对象。 */
+  function buildBatchService(count: number, error?: Error) {
+    const calls: Array<{ where: Record<string, unknown>; data: Record<string, unknown> }> = [];
+    const prisma = {
+      sentence: { updateMany: async () => ({ count: 0 }) },
+      sentenceGenTask: {
+        updateMany: async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+          calls.push(args);
+          if (error) throw error;
+          return { count };
+        },
+      },
+    };
+    const service = new SentenceGenService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    return { service, calls };
+  }
+
+  it('只回收 running/pending 且心跳超时的批次，并写明失败原因', async () => {
+    const { service, calls } = buildBatchService(9);
+
+    const recovered = await service.recoverStaleBatches();
+
+    expect(recovered).toBe(9);
+    expect(calls).toHaveLength(1);
+    const { where, data } = calls[0]!;
+    // 只碰运行中/待处理，已终态（success/failed/cancelled/paused）绝不动
+    expect(where.status).toEqual({ in: ['running', 'pending'] });
+    // 心跳超时；从未有心跳的按 createdAt 兜底，避免漏掉创建后就没起来的批次
+    const conditions = where.OR as Array<Record<string, any>>;
+    expect(conditions).toHaveLength(2);
+    expect(conditions[0]).toMatchObject({ lastHeartbeatAt: { lt: expect.any(Date) } });
+    expect(conditions[1]).toMatchObject({ lastHeartbeatAt: null, createdAt: { lt: expect.any(Date) } });
+    expect(data.status).toBe('failed');
+    expect(data.errorMessage).toContain('心跳超时');
+    expect(data.finishedAt).toBeInstanceOf(Date);
+  });
+
+  it('心跳阈值约 30 分钟', async () => {
+    const { service, calls } = buildBatchService(0);
+    await service.recoverStaleBatches();
+    const stale = (calls[0]!.where.OR as Array<Record<string, any>>)[0].lastHeartbeatAt.lt as Date;
+    const elapsed = Date.now() - stale.getTime();
+    expect(elapsed).toBeGreaterThanOrEqual(30 * 60 * 1000 - 1000);
+    expect(elapsed).toBeLessThan(30 * 60 * 1000 + 1000);
+  });
+
+  it('没有僵尸批次时返回 0', async () => {
+    const { service } = buildBatchService(0);
+    expect(await service.recoverStaleBatches()).toBe(0);
+  });
+
+  it('数据库异常不阻断应用启动', async () => {
+    const { service } = buildBatchService(0, new Error('db down'));
+    await expect(service.recoverStaleBatches()).resolves.toBe(0);
   });
 });

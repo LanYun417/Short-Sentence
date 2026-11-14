@@ -54,6 +54,14 @@ const TEXT_CHUNK = 20;
  */
 const STALE_PENDING_IMAGE_MS = 10 * 60 * 1000;
 
+/**
+ * 僵尸批次心跳阈值（30 分钟）。
+ *
+ * 正常批次每个阶段都会更新心跳：一批生文 40~70s、一张图 10~40s，
+ * 最慢的阶段间隔也远小于该阈值。超过 30 分钟没有心跳即可判定批次进程已死。
+ */
+const BATCH_STALE_MS = 30 * 60 * 1000;
+
 /** 连续多少批零净增即停止（全部重复时的死循环保护）。 */
 const MAX_EMPTY_CHUNKS = 3;
 
@@ -221,6 +229,43 @@ export class SentenceGenService implements OnModuleInit {
       }
     } catch (error) {
       this.logger.warn(`[SentenceGen] 启动补偿失败（不影响启动）：${this.errText(error)}`);
+    }
+    await this.recoverStaleBatches();
+  }
+
+  /**
+   * 回收僵尸批次：进程被关机/崩溃后，库里会残留 status 停在 running/pending 的批次。
+   *
+   * 前端「生成任务」页靠心跳区分「还在跑」与「卡住了」，但进程已经不在，
+   * 这些行会永远显示「进行中」——运营无法判断真实状态，也不敢再触发新批次
+   * （怕与「正在跑的」叠加烧配额）。本地实测曾积压 9 个心跳停在半个月前的僵尸行。
+   *
+   * 判据：运行中/待处理且心跳早于阈值（从未有心跳的按创建时间兜底）。
+   * 置为 failed 并写明原因，运营据此重新触发补跑即可；已有产出不回滚。
+   */
+  async recoverStaleBatches(): Promise<number> {
+    try {
+      const staleBefore = new Date(Date.now() - BATCH_STALE_MS);
+      const { count } = await this.prisma.sentenceGenTask.updateMany({
+        where: {
+          status: { in: ['running', 'pending'] },
+          OR: [{ lastHeartbeatAt: { lt: staleBefore } }, { lastHeartbeatAt: null, createdAt: { lt: staleBefore } }],
+        },
+        data: {
+          status: 'failed',
+          stage: 'done',
+          errorMessage: '批次进程异常退出（心跳超时），已自动标记为失败，可重新触发补跑',
+          finishedAt: new Date(),
+        },
+      });
+      if (count > 0) {
+        this.logger.log(`[SentenceGen] 启动补偿：${count} 个心跳超时的僵尸批次已标记为 failed`);
+      }
+      return count;
+    } catch (error) {
+      // 与题目补偿一致：环境异常不能阻断应用启动，下次启动会再试
+      this.logger.warn(`[SentenceGen] 僵尸批次回收失败（不影响启动）：${this.errText(error)}`);
+      return 0;
     }
   }
 
