@@ -77,6 +77,12 @@ export interface NextQuestion {
   /** 本题来源：new 新题 / review 复习题 */
   source: 'new' | 'review';
   /**
+   * 只听发音（TTS）用的原文：盲听模式下题面不给中文题干，
+   * 前端只朗读这个字符串、**不渲染成文字**——答案文本绝不能出现在 DOM 里。
+   * 与 words 同理：都是给「作答」而非「阅读」用。
+   */
+  ttsText: string;
+  /**
    * 拼词模式的候选词块（打乱后的英文单词，含原标点）。
    * **恒定下发**（不再依赖 mode）——这样客户端切换「输入 / 拼词」时沿用当前题即可，
    * 无需重抽（Web / App 一致）。词块为打乱顺序，不构成答案的直接泄露。
@@ -256,6 +262,12 @@ const XP_EVENT: Record<
     review: 'answer_correct_review_assemble',
     wrong: 'answer_wrong_assemble',
   },
+  // 盲听模式：题干不给，只靠听发音写整句——难度不低于默写，按标准规则发放
+  listen: {
+    first: 'answer_correct_first',
+    review: 'answer_correct_review',
+    wrong: 'answer_wrong',
+  },
 };
 
 @Injectable()
@@ -398,6 +410,7 @@ export class QuestionsService {
       todayDone: today?.doneCount ?? 0,
       todayGoal: config.sentence.dailyGoal,
       source,
+      ttsText: sentence.sentenceEn,
       words: shuffleWords(sentence.sentenceEn),
       wordMeanings: this.parseWordMeanings(sentence.wordMeanings),
     };
@@ -659,8 +672,8 @@ export class QuestionsService {
       });
 
     // 微游戏化：按作答质量与模式发 XP（服务端权威 + event_key 幂等），并尝试解锁成就
-    // 模式只决定用哪组规则，经验值恒由服务端算——拼词模式经验约为默写六成
-    const rule = XP_EVENT[dto.mode === 'assemble' ? 'assemble' : 'input'];
+    // 模式只决定用哪组规则，经验值恒由服务端算——拼词约为默写六成，盲听按默写标准
+    const rule = XP_EVENT[dto.mode ?? 'input'];
     const eventType: keyof typeof XP_RULES = isCorrect ? (last ? rule.review : rule.first) : rule.wrong;
     // 返回值给客户端做「+N XP」的即时反馈：幂等命中（重复提交）时为 0，不虚报
     const xpAwarded = await this.gamify.awardXp(userId, eventType, `answer:${record.id}`, XP_RULES[eventType]);

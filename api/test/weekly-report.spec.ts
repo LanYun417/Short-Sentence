@@ -39,15 +39,7 @@ function makeService(records: Array<{ isCorrect: number; createdAt: Date; catego
     userAchievement: { count: vi.fn(async () => 2) },
     userCheckin: { findFirst: vi.fn(async () => ({ streak: 5 })) },
   };
-  return new GamifyService(
-    prisma as unknown as PrismaService,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
+  return new GamifyService(prisma as unknown as PrismaService);
 }
 
 describe('GamifyService.weeklyReport', () => {

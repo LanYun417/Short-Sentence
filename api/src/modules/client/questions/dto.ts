@@ -8,8 +8,9 @@ import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-va
  * 作答模式：
  * - input    默写（自己敲出整句，默认）
  * - assemble 拼词（点选词块拼成句子，见 /questions/next 下发的 words）
+ * - listen   听力（不显示中文题干，先听发音再默写——与同类闪卡最大的差异点）
  */
-export const ANSWER_MODES = ['input', 'assemble'] as const;
+export const ANSWER_MODES = ['input', 'assemble', 'listen'] as const;
 export type AnswerMode = (typeof ANSWER_MODES)[number];
 
 /** 提交答案入参。 */
