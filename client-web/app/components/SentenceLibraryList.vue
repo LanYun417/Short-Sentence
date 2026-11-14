@@ -22,11 +22,17 @@ function itemSrc(url?: string | null): string {
 }
 
 const props = defineProps<{
-  /** favorites 收藏夹 / history 学习记录（全量历史） */
-  mode: 'favorites' | 'history';
+  /** favorites 收藏夹 / review 复习池（答错且到期）/ history 学习记录（全量历史） */
+  mode: 'favorites' | 'review' | 'history';
 }>();
 
 const isHistory = computed(() => props.mode === 'history');
+const isReview = computed(() => props.mode === 'review');
+
+/** 列表接口：三种模式各对应一个后端端点。 */
+const listEndpoint = computed(() =>
+  isHistory.value ? '/client/history' : isReview.value ? '/client/review' : '/client/favorites',
+);
 
 const items = ref<SentenceLibraryItem[]>([]);
 const total = ref(0);
@@ -176,10 +182,9 @@ async function loadMore(): Promise<void> {
     if (categoryId.value) query.categoryId = categoryId.value;
     if (from.value) query.from = from.value;
     if (to.value) query.to = to.value;
-    const data = await apiFetch<{ list: SentenceLibraryItem[]; total: number }>(
-      isHistory.value ? '/client/history' : '/client/favorites',
-      { query },
-    );
+    const data = await apiFetch<{ list: SentenceLibraryItem[]; total: number }>(listEndpoint.value, {
+      query,
+    });
     items.value.push(...data.list);
     total.value = data.total;
     page.value += 1;
@@ -220,7 +225,7 @@ watch([type, difficulty, categoryId, from, to], () => {
 const ssrQuery = isHistory.value ? { page: 1, pageSize, type: 'all' } : { page: 1, pageSize };
 const { data: ssrPage } = await useSsrApi<{ list: SentenceLibraryItem[]; total: number }>(
   `ss:${props.mode}`,
-  isHistory.value ? '/client/history' : '/client/favorites',
+  listEndpoint.value,
   ssrQuery,
 );
 if (ssrPage.value) {
@@ -278,15 +283,24 @@ onBeforeUnmount(() => {
 });
 
 /* ----------------------------- 文案 ----------------------------- */
-const title = computed(() => (isHistory.value ? '学习记录' : '我的收藏'));
-const subtitle = computed(() =>
-  isHistory.value ? '回顾你答过的每一句，按时间、对错、难度与场景筛选' : '收藏的句子随时回看',
-);
+const title = computed(() => {
+  if (isHistory.value) return '学习记录';
+  return isReview.value ? '复习' : '我的收藏';
+});
+const subtitle = computed(() => {
+  if (isHistory.value) return '回顾你答过的每一句，按时间、对错、难度与场景筛选';
+  return isReview.value ? '答错且到期的句子，按到期时间就近安排' : '收藏的句子随时回看';
+});
 const emptyText = computed(() => {
   if (isHistory.value) {
     return hasActiveFilter.value
       ? { title: '没有符合筛选条件的记录', desc: '试着放宽筛选条件' }
       : { title: '还没有学习记录', desc: '去刷几道题，再来这里回顾吧' };
+  }
+  if (isReview.value) {
+    return hasActiveFilter.value
+      ? { title: '没有符合筛选条件的复习题', desc: '试着放宽筛选条件' }
+      : { title: '暂时没有要复习的', desc: '按记忆曲线，答错的句子还会再来找你' };
   }
   return hasActiveFilter.value
     ? { title: '没有符合筛选条件的收藏', desc: '试着放宽筛选条件' }
@@ -303,7 +317,10 @@ const emptyText = computed(() => {
           <span
             class="grid h-8 w-8 place-items-center rounded-xl bg-linear-to-br from-sky-500 to-indigo-600 text-white"
           >
-            <UIcon :name="isHistory ? 'i-lucide-calendar' : 'i-lucide-star'" class="h-4.5 w-4.5" />
+            <UIcon
+              :name="isHistory ? 'i-lucide-calendar' : isReview ? 'i-lucide-repeat' : 'i-lucide-star'"
+              class="h-4.5 w-4.5"
+            />
           </span>
           {{ title }}
         </h1>
@@ -416,7 +433,10 @@ const emptyText = computed(() => {
       <span
         class="anim-float grid h-16 w-16 place-items-center rounded-3xl bg-linear-to-br from-sky-50 to-indigo-100 text-sky-500 dark:from-slate-800 dark:to-slate-700 dark:text-sky-400"
       >
-        <UIcon :name="isHistory ? 'i-lucide-book-search' : 'i-lucide-star'" class="h-8 w-8" />
+        <UIcon
+          :name="isHistory ? 'i-lucide-book-search' : isReview ? 'i-lucide-repeat' : 'i-lucide-star'"
+          class="h-8 w-8"
+        />
       </span>
       <p class="mt-4 font-semibold text-slate-700 dark:text-slate-200">{{ emptyText.title }}</p>
       <p class="mt-1 text-sm text-slate-400">{{ emptyText.desc }}</p>
