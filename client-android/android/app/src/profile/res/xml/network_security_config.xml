@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  profile 构建：与 debug 一致放行明文 HTTP。
+
+  profile 模式的 `flutter run` 常用于性能分析，同样要连本地开发服务
+  （http://10.0.2.2:3000 或局域网地址）；若只给 debug 放行，profile 跑起来
+  会表现为「所有接口网络异常」，很难联想到是构建类型差异。
+
+  覆盖 src/main 的同名文件；release 不含本文件，正式包仍默认禁明文。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

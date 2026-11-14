@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  debug 构建：放行明文 HTTP，供本地/局域网开发服务使用。
+
+  覆盖 src/main 的同名文件（Gradle 资源合并里 buildType 优先级更高），
+  release 不含本文件，因此正式包仍默认禁明文，见 main 版注释。
+
+  为什么用 base-config 全放行，而不是枚举 domain：
+  - `<domain>` 只认具体主机名 / IP 字面量，不支持 192.168.0.0 这类 CIDR 网段；
+    真机 IP 由路由器分配，写死几个地址根本覆盖不到；
+  - 开发期本来就要连 10.0.2.2（模拟器）、localhost、各种 192.168.x.x / 172.x，
+    逐个列举既啰嗦又容易漏。debug 包不发布，全放行是最省心且不会误判策略的做法。
+
+  症状提示：若明文被系统拦掉，报错是 "Cleartext HTTP traffic to ... not permitted"，
+  看起来像网络不通，其实是这份策略在起作用。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

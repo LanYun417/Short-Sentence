@@ -1,26 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  网络安全配置：仅 debug 构建放行明文 HTTP。
+  网络安全配置（main = 所有构建的默认基线）：**默认禁止明文 HTTP**。
 
-  为什么需要：API 在开发期跑在 http://<host>:3000（Android 模拟器用
-  10.0.2.2 访问宿主机）。Android 9（API 28）起默认禁用明文流量，
-  不放行的话 App 里所有 http 请求会被系统直接拦掉，
-  报错往往是 "Cleartext HTTP traffic to ... not permitted"——症状像网络不通，
-  但其实是策略问题，很难凭现象猜到。
+  Android 9（API 28）起默认禁用明文流量。release 走 HTTPS，因此这里不放行任何明文，
+  也不写 domain-config 白名单——白名单写在 main 里会被 release 一并继承，
+  等于给正式包开了口子。
 
-  生产构建**不要**继承这份配置：release 走 HTTPS，
-  base-config 里刻意不写 cleartextTrafficPermitted（默认 false）。
+  开发期需要 http://<host>:3000（模拟器 10.0.2.2、真机局域网、localhost）时，
+  由 debug / profile sourceSet 下的同名文件覆盖本文件来放行，见：
+    - src/debug/res/xml/network_security_config.xml
+    - src/profile/res/xml/network_security_config.xml
+  Gradle 资源合并时 buildType 目录优先级高于 main，release 不含这两份文件，
+  自然只剩这份禁明文的基线。
+
+  注意：`<domain>` 元素只接受具体主机名 / IP 字面量，**不支持 CIDR 网段**；
+  以前写的 192.168.0.0 / 172.16.0.0 之类既匹配不到真机 IP，又会误导排查。
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
-
-    <!-- 真机/模拟器调试：允许自建局域网服务（10.0.2.2 / 192.168.x.x / localhost） -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">127.0.0.1</domain>
-        <domain includeSubdomains="false">192.168.0.0</domain>
-        <domain includeSubdomains="false">192.168.1.0</domain>
-        <domain includeSubdomains="false">172.16.0.0</domain>
-    </domain-config>
 </network-security-config>

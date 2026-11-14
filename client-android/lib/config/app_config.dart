@@ -12,8 +12,9 @@
 /// **为什么默认是 `10.0.2.2` 而不是 `localhost`**：Android 模拟器里的 `localhost`
 /// 指向模拟器自身，访问不了宿主机；`10.0.2.2` 是模拟器提供的「宿主机回环」别名。
 ///
-/// 注意 Android 9+ 默认禁止明文 HTTP，见
-/// `android/app/src/main/res/xml/network_security_config.xml`（仅 debug 放行）。
+/// 注意 Android 9+ 默认禁止明文 HTTP：main 基线禁明文，由 debug / profile
+/// sourceSet 的同名 `network_security_config.xml` 覆盖放行（release 不含，
+/// 正式包仍只能走 HTTPS）。
 class AppConfig {
   const AppConfig._();
 
