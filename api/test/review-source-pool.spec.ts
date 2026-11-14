@@ -144,6 +144,18 @@ describe('到期复习题口径', () => {
 });
 
 describe('复习池列表口径', () => {
+  it('kind=wrong 时只看错题（错题本视角），默认仍是全部到期题', async () => {
+    const { service, listWhere } = makeService();
+    await service.listReview(1, { kind: 'wrong' });
+
+    const wrongWhere = listWhere[0] as Record<string, unknown>;
+    expect(wrongWhere.isCorrect).toBe(0);
+
+    await service.listReview(1, {});
+    const allWhere = listWhere[1] as Record<string, unknown>;
+    expect(allWhere.isCorrect).toBeUndefined();
+  });
+
   it('listReview 不限 isCorrect 且返回该字段（前端区分错题/巩固）', async () => {
     const { service, listWhere, listSelect } = makeService();
     const result = await service.listReview(1, {});

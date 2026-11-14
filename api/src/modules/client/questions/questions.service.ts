@@ -821,9 +821,14 @@ export class QuestionsService {
     // 复习池 = 所有到期该复习的题（答错当天复现 + 答对按间隔到期），
     // 与 memory-stats 的「今日待复习」同一口径——否则用户在记忆健康卡片看到
     // 「N 题待复习」、点进来却是另一批题，数字对不上就等于没打通。
+    //
+    // `kind=wrong` 只看错题（用户口中的「错题本」）：不新增页面，作为复习池的
+    // 筛选维度，避免为「错题」再造一个入口、加重导航负担。
+    const kind = query.kind === 'wrong' ? 'wrong' : 'all';
     const where = {
       userId: BigInt(userId),
       nextReviewAt: { lte: new Date() },
+      ...(kind === 'wrong' ? { isCorrect: 0 } : {}),
       // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
       sentence: { status: 'ready', retiredAt: null },
     };
