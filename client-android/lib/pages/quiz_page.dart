@@ -306,7 +306,9 @@ class _QuizPageState extends ConsumerState<QuizPage>
           ),
           _ => EmptyState(
             title: state.error ?? '准备抽题…',
-            message: state.error == null ? null : '检查一下网络，或者稍后再试',
+            // 副文案跟着错误类型走：超时劝「等一会」，连接类劝「查网络」，
+            // 都是一句「检查一下网络」会把两类用户带向错误动作。
+            message: state.error == null ? null : _networkHint(state.error!),
             icon: state.error == null
                 ? Icons.hourglass_empty_rounded
                 : Icons.cloud_off_rounded,
@@ -319,7 +321,14 @@ class _QuizPageState extends ConsumerState<QuizPage>
     );
   }
 
-  Widget _buildBody(
+  /// 抽题失败时按错误类型给副文案（与 ApiException.network 的分级口径一致）。
+String _networkHint(String error) {
+  if (error.contains('超时')) return '网络似乎有点慢，稍等一下再试';
+  if (error.contains('安全连接')) return '可能是系统时间不准，或代理干扰了连接';
+  return '检查一下网络，或者稍后再试';
+}
+
+Widget _buildBody(
     QuizState state,
     CardState cards,
     CheckinToday? checkin,

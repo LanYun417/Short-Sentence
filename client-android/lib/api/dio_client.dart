@@ -87,7 +87,8 @@ Dio createDio(AuthStorage storage) {
             statusCode: -1,
             data: <String, dynamic>{
               'code': -1,
-              'message': ApiException.network(error.error).message,
+              // 带上 Dio 的错误类别：超时类的底层 error 常为 null，只靠 error 判不出
+              'message': ApiException.network(error.error, error.type).message,
             },
           );
           return handler.reject(

@@ -4,6 +4,9 @@
 /// 而不是笼统的「请求失败」——用户在登录页看到什么，全凭这里。
 library;
 
+import 'dart:io' show HandshakeException;
+
+import 'package:dio/dio.dart' show DioExceptionType;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:client_android/api/api_exception.dart';
 
@@ -57,6 +60,26 @@ void main() {
     test('其他网络异常给网络文案', () {
       final exception = ApiException.network(Exception('SocketException'));
       expect(exception.message, contains('网络'));
+    });
+
+    test('Dio 超时类别优先判为超时（底层 error 为 null 也准）', () {
+      // 超时的 error.error 常为 null，只靠异常文本判不出；Dio 的类别是更可靠的判据
+      final exception = ApiException.network(null, DioExceptionType.receiveTimeout);
+      expect(exception.message, contains('超时'));
+    });
+
+    test('Dio 连接超时类别同样判为超时', () {
+      final exception = ApiException.network(null, DioExceptionType.connectionTimeout);
+      expect(exception.message, contains('超时'));
+    });
+
+    test('TLS 握手失败单独给安全连接文案', () {
+      // 证书/握手问题与断网方向完全不同：前者多半是系统时间或代理
+      final exception = ApiException.network(
+        const HandshakeException('handshake error'),
+      );
+      expect(exception.message, contains('安全连接'));
+      expect(exception.message, isNot(contains('超时')));
     });
   });
 }

@@ -5,6 +5,11 @@
 /// 网络层错误（超时、断网）单独归一，避免把 `SocketException` 直接抛到 UI。
 library;
 
+import 'dart:async' show TimeoutException;
+import 'dart:io' show HandshakeException;
+
+import 'package:dio/dio.dart' show DioExceptionType;
+
 /// 接口异常（含可直接展示给用户的中文 message）。
 class ApiException implements Exception {
   const ApiException({required this.message, this.code = 0, this.statusCode = 0});
@@ -33,10 +38,25 @@ class ApiException implements Exception {
   }
 
   /// 网络层异常归一（超时 / 断网 / 连接失败）。
-  factory ApiException.network([Object? error]) {
-    final text = error?.toString() ?? '';
-    if (text.contains('TimeoutException') || text.toLowerCase().contains('timeout')) {
+  ///
+  /// **按类型分级文案**，而不是一律「网络异常」：用户看到「超时」会想再点一次，
+  /// 看到「网络异常」会去查 Wi-Fi；同一句文案会把两类人都带向错误动作。
+  /// [type] 是 Dio 的错误类别（优先判据：有些超时的底层 error 为 null）；
+  /// 调用方不传时回落到按底层异常类型判断。
+  factory ApiException.network([Object? error, DioExceptionType? type]) {
+    final isTimeout =
+        type == DioExceptionType.connectionTimeout ||
+        type == DioExceptionType.sendTimeout ||
+        type == DioExceptionType.receiveTimeout ||
+        error is TimeoutException ||
+        error.toString().contains('TimeoutException');
+    if (isTimeout) {
       return const ApiException(message: '网络超时，请检查连接后重试', statusCode: -1);
+    }
+    // 证书/握手失败：多数是系统时间不准或代理/防火墙劫持，提示方向完全不同
+    final isTls = error is HandshakeException || error.toString().contains('HandshakeException');
+    if (isTls) {
+      return const ApiException(message: '安全连接失败，请检查系统时间或网络环境', statusCode: -1);
     }
     return const ApiException(message: '网络异常，请检查网络连接', statusCode: -1);
   }

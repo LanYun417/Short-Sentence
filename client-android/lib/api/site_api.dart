@@ -30,7 +30,7 @@ class SiteApi {
     } on DioException catch (error) {
       final response = error.response;
       if (response == null) {
-        throw ApiException.network(error.error);
+        throw ApiException.network(error.error, error.type);
       }
       throw ApiException.fromResponse(response.statusCode, response.data);
     }

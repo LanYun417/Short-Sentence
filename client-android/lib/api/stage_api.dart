@@ -155,7 +155,7 @@ class StageApi {
   ApiException _wrap(DioException error) {
     final response = error.response;
     if (response == null) {
-      return ApiException.network(error.error);
+      return ApiException.network(error.error, error.type);
     }
     return ApiException.fromResponse(response.statusCode, response.data);
   }
