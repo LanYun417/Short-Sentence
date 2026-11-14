@@ -79,10 +79,17 @@ class LibraryTabData {
 
 /// 语句库状态。
 class LibraryState {
-  const LibraryState({this.tab = LibraryTab.favorites, this.tabs = const {}});
+  const LibraryState({
+    this.tab = LibraryTab.favorites,
+    this.tabs = const {},
+    this.reviewWrongOnly = false,
+  });
 
   final LibraryTab tab;
   final Map<LibraryTab, LibraryTabData> tabs;
+
+  /// 复习池是否只看错题（错题本视角）。只影响 review 分区，切换时重拉该分区。
+  final bool reviewWrongOnly;
 
   LibraryTabData get current => tabs[tab] ?? const LibraryTabData();
   LibraryTabData of(LibraryTab tab) => tabs[tab] ?? const LibraryTabData();
@@ -90,8 +97,13 @@ class LibraryState {
   LibraryState copyWith({
     LibraryTab? tab,
     Map<LibraryTab, LibraryTabData>? tabs,
+    bool? reviewWrongOnly,
   }) {
-    return LibraryState(tab: tab ?? this.tab, tabs: tabs ?? this.tabs);
+    return LibraryState(
+      tab: tab ?? this.tab,
+      tabs: tabs ?? this.tabs,
+      reviewWrongOnly: reviewWrongOnly ?? this.reviewWrongOnly,
+    );
   }
 }
 
@@ -104,6 +116,19 @@ class LibraryController extends Notifier<LibraryState> {
   LibraryState build() => const LibraryState();
 
   LibraryApi get _api => ref.read(libraryApiProvider);
+
+  /// 切换复习池筛选（全部 / 只看错题）：清空该分区数据后重拉第一页。
+  ///
+  /// 只在 review 分区生效；切到别的分区再回来会沿用当前筛选（符合「我刚才在看错题」的预期）。
+  Future<void> setReviewWrongOnly(bool wrongOnly) async {
+    if (state.reviewWrongOnly == wrongOnly) {
+      return;
+    }
+    final tabs = Map<LibraryTab, LibraryTabData>.from(state.tabs)
+      ..remove(LibraryTab.review);
+    state = state.copyWith(reviewWrongOnly: wrongOnly, tabs: tabs);
+    await refresh(LibraryTab.review);
+  }
 
   /// 切分区（未加载过则拉第一页）。
   Future<void> switchTab(LibraryTab tab) async {
@@ -180,6 +205,7 @@ class LibraryController extends Notifier<LibraryState> {
         LibraryTab.review => await _api.review(
           page: nextPage,
           pageSize: kLibraryPageSize,
+          wrongOnly: state.reviewWrongOnly,
         ),
         LibraryTab.history => await _api.history(
           page: nextPage,

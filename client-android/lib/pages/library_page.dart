@@ -154,6 +154,31 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 ],
               ),
             ),
+            // 复习池筛选：全部到期 / 只看错题（错题本视角）。
+            // 不新增独立页面——「错题」是复习池的一个视图，多一个入口只会加重导航负担。
+            if (state.tab == LibraryTab.review)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Row(
+                  children: <Widget>[
+                    _ReviewKindChip(
+                      label: '全部到期',
+                      selected: !state.reviewWrongOnly,
+                      onTap: () => ref
+                          .read(libraryControllerProvider.notifier)
+                          .setReviewWrongOnly(false),
+                    ),
+                    const SizedBox(width: 8),
+                    _ReviewKindChip(
+                      label: '只看错题',
+                      selected: state.reviewWrongOnly,
+                      onTap: () => ref
+                          .read(libraryControllerProvider.notifier)
+                          .setReviewWrongOnly(true),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: Stack(
                 children: <Widget>[
@@ -309,6 +334,46 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             child: tile,
           );
         },
+      ),
+    );
+  }
+}
+
+/// 复习池筛选 chip（全部到期 / 只看错题）。
+class _ReviewKindChip extends StatelessWidget {
+  const _ReviewKindChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return PressScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? colors.brand.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? colors.brand : colors.inkSoft.withValues(alpha: 0.25),
+            width: selected ? 1.2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: selected ? colors.brand : colors.inkSoft,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+        ),
       ),
     );
   }

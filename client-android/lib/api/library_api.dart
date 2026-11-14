@@ -27,11 +27,13 @@ class LibraryApi {
   }
 
   /// 复习池（答错且到期的题）。
+  /// 复习池。`wrongOnly` = 只看错题（错题本视角），服务端按 kind=wrong 过滤。
   Future<PageResult<SentenceLibraryItem>> review({
     int page = 1,
     int pageSize = 20,
+    bool wrongOnly = false,
   }) {
-    return _paged('/client/review', page, pageSize);
+    return _paged('/client/review', page, pageSize, extraQuery: wrongOnly ? <String, dynamic>{'kind': 'wrong'} : null);
   }
 
   /// 历史记录。
@@ -45,12 +47,17 @@ class LibraryApi {
   Future<PageResult<SentenceLibraryItem>> _paged(
     String path,
     int page,
-    int pageSize,
-  ) async {
+    int pageSize, {
+    Map<String, dynamic>? extraQuery,
+  }) async {
     try {
       final response = await _dio.get<dynamic>(
         path,
-        queryParameters: <String, dynamic>{'page': page, 'pageSize': pageSize},
+        queryParameters: <String, dynamic>{
+          'page': page,
+          'pageSize': pageSize,
+          ...?extraQuery,
+        },
       );
       final data = _data(response);
       final list = data['list'];

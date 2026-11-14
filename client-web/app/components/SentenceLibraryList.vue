@@ -46,12 +46,19 @@ const errorMessage = ref('');
 const hasMore = computed(() => items.value.length < total.value);
 
 /* ----------------------------- 筛选状态（两种模式共用） ----------------------------- */
+/** 复习池筛选选项（错题本视角：只看答错过的）。 */
+const REVIEW_KIND_OPTIONS = [
+  { label: '全部', value: 'all' as const },
+  { label: '错题', value: 'wrong' as const },
+];
 const TYPE_OPTIONS = [
   { label: '全部', value: 'all' as const },
   { label: '错题', value: 'wrong' as const },
   { label: '对题', value: 'right' as const },
 ];
 const type = ref<'all' | 'wrong' | 'right'>('all');
+/** 复习池筛选：all 全部到期题 / wrong 只看错题（用户口中的「错题本」）。 */
+const reviewKind = ref<'all' | 'wrong'>('all');
 // 难度档位**直接复用刷题页的定义**（基础 / 进阶 / 挑战）——两处口径必须一致，
 // 否则用户在这里筛「中」、刷题页选「进阶」，同一个值出现两套叫法会歧义。
 // 用 undefined 而不是 null 表示「未筛选」：@nuxt/ui 的 USelect 模型值是 `T | undefined`，
@@ -178,6 +185,9 @@ async function loadMore(): Promise<void> {
     if (isHistory.value) {
       query.type = type.value;
     }
+    if (isReview.value && reviewKind.value === 'wrong') {
+      query.kind = 'wrong';
+    }
     if (difficulty.value) query.difficulty = difficulty.value;
     if (categoryId.value) query.categoryId = categoryId.value;
     if (from.value) query.from = from.value;
@@ -214,7 +224,7 @@ async function runQuery(): Promise<void> {
   rootEl()?.scrollTo({ top: 0 });
 }
 
-watch([type, difficulty, categoryId, from, to], () => {
+watch([type, reviewKind, difficulty, categoryId, from, to], () => {
   void runQuery();
 });
 
@@ -333,18 +343,20 @@ const emptyText = computed(() => {
     <div class="anim-in mb-4 space-y-3">
       <div class="flex flex-wrap items-center gap-2">
         <!-- 类型分段（仅学习记录：对错筛选对收藏无意义） -->
-        <div v-if="isHistory" class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+        <div v-if="isHistory || isReview" class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
           <button
-            v-for="opt in TYPE_OPTIONS"
+            v-for="opt in isReview ? REVIEW_KIND_OPTIONS : TYPE_OPTIONS"
             :key="opt.value"
             type="button"
             class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition"
             :class="
-              type === opt.value
+              (isReview ? reviewKind : type) === opt.value
                 ? 'bg-white text-sky-600 shadow-sm dark:bg-slate-700 dark:text-sky-300'
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
             "
-            @click="type = opt.value"
+            @click="
+              isReview ? (reviewKind = opt.value as 'all' | 'wrong') : (type = opt.value as 'all' | 'wrong' | 'right')
+            "
           >
             {{ opt.label }}
           </button>
