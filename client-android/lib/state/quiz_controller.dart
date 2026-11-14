@@ -167,8 +167,8 @@ class QuizController extends Notifier<QuizState> {
     state = state.copyWith(mode: mode, error: null);
   }
 
-  /// 抽下一题。
-  Future<void> loadNext({int? difficulty}) async {
+  /// 抽下一题（source = 'review'/'new' 时只走一侧，不给难度）。
+  Future<void> loadNext({int? difficulty, String? source}) async {
     // 注：这里**不**清 result。加载期间要保留上一题的 result（连同它的
     // todayDone），否则页面会回落到 question.todayDone（抽题时的旧计数，
     // 还没算上刚答的这题），表现为「今日刷题」先 -1 再 +1 的闪烁。
@@ -183,9 +183,11 @@ class QuizController extends Notifier<QuizState> {
     try {
       final question = await _api.next(
         NextQuestionQuery(
-          difficulty: difficulty ?? state.difficulty,
+          // 纯复习/纯新题不给难度：难度只作用于新题，复习题必须按间隔排期走
+          difficulty: source == null ? difficulty ?? state.difficulty : null,
           festival: state.festival,
           categoryId: state.category,
+          source: source,
         ),
       );
       state = state.copyWith(
@@ -207,6 +209,13 @@ class QuizController extends Notifier<QuizState> {
       );
     }
   }
+
+  /// 「开始复习」：只抽到期复习题（不掺新题、不按难度过滤）。
+  ///
+  /// 复习要成串才有效果——从「N 张到期」点进来的用户期待一路都是到期题，
+  /// 混入新题会把间隔重复的安排冲散（刷两张就散，等于没复习）。
+  /// 后端抽不到到期题时返回 404，文案由页面按错误类型展示。
+  Future<void> startReview() => loadNext(source: 'review');
 
   /// 切换难度（立刻按新难度抽题；只影响新题）。
   Future<void> setDifficulty(int value) async {

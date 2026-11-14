@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/models/library_item.dart';
 import '../state/library_controller.dart';
+import '../state/quiz_controller.dart';
+import '../state/shell_controller.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../widgets/app_card.dart';
@@ -229,15 +231,30 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 108),
-        itemCount: data.items.length + (showFooter ? 1 : 0),
+        // 复习 Tab 顶部固定一条「开始复习」入口（有到期题时才占位）
+        itemCount:
+            data.items.length +
+            (showFooter ? 1 : 0) +
+            (state.tab == LibraryTab.review && data.total > 0 ? 1 : 0),
         separatorBuilder: (context, index) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          if (index >= data.items.length) {
+          // 第一条：一键开刷入口（只在复习 Tab 且确有待复习题时出现）
+          if (state.tab == LibraryTab.review && data.total > 0 && index == 0) {
+            return const StaggeredEntrance(
+              index: 0,
+              child: _StartReviewBanner(),
+            );
+          }
+          // 后续索引整体前移 1（让位给 banner）
+          final listIndex = state.tab == LibraryTab.review && data.total > 0
+              ? index - 1
+              : index;
+          if (listIndex >= data.items.length) {
             return _Footer(loading: data.loadingMore);
           }
-          final item = data.items[index];
+          final item = data.items[listIndex];
           final tile = StaggeredEntrance(
-            index: index,
+            index: listIndex,
             child: SentenceTile(
               item: item,
               showAccuracy: state.tab == LibraryTab.history,
@@ -292,6 +309,82 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             child: tile,
           );
         },
+      ),
+    );
+  }
+}
+
+/// 「开始复习」入口条：显示到期题数，点击直接开刷（只抽到期复习题）并跳回刷题 Tab。
+///
+/// 为什么放在列表顶部而不是只在空态：用户进来先看到「N 张到期 + 开始复习」，
+/// 比滚列表更直接；答完一串回来列表仍在，形成「复习 → 回来看剩余」的闭环。
+class _StartReviewBanner extends ConsumerWidget {
+  const _StartReviewBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = ref.watch(libraryControllerProvider).current.total;
+    return PressScale(
+      onTap: () async {
+        // 先切回刷题 Tab（与题库页选完即回的体验一致），再发起纯复习抽题
+        ref.read(shellControllerProvider.notifier).go(0);
+        await ref.read(quizControllerProvider.notifier).startReview();
+      },
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: context.colors.brand.withValues(alpha: 0.12),
+              ),
+              child: Icon(
+                Icons.repeat_rounded,
+                color: context.colors.brand,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '$total 张到期待复习',
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '答错的当天复现，答对的按间隔重复排期',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: context.colors.inkSoft),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () async {
+                ref.read(shellControllerProvider.notifier).go(0);
+                await ref.read(quizControllerProvider.notifier).startReview();
+              },
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text('开始复习'),
+            ),
+          ],
+        ),
       ),
     );
   }

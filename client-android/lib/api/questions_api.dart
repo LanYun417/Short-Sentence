@@ -20,7 +20,7 @@ import 'models/memory_stats.dart';
 ///
 /// 词块现随题**恒定下发**，故不再携带作答模式——切换模式沿用当前题即可（与 Web 端一致）。
 class NextQuestionQuery {
-  const NextQuestionQuery({this.difficulty, this.festival, this.categoryId});
+  const NextQuestionQuery({this.difficulty, this.festival, this.categoryId, this.source});
 
   /// 目标难度（1/2/3；不传则不限）
   final int? difficulty;
@@ -31,10 +31,14 @@ class NextQuestionQuery {
   /// 场景分类 id（传了则只从该场景的题库抽题；与 festival 互斥，festival 优先）
   final int? categoryId;
 
+  /// 抽题来源：review 只抽到期复习题（复习要成串）/ new 只抽新题；不传走日常混抽。
+  final String? source;
+
   Map<String, dynamic> toQuery() => <String, dynamic>{
         if (difficulty != null) 'difficulty': difficulty,
         if (festival != null) 'festival': festival,
         if (categoryId != null) 'categoryId': categoryId,
+        if (source != null) 'source': source,
       };
 }
 
