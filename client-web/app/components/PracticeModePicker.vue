@@ -20,17 +20,17 @@ const activeIndex = computed(() => {
 </script>
 
 <template>
-  <!-- p-1(0.5rem) + gap-1(0.25rem) = 0.75rem，滑块宽 = (100% - 0.75rem) / 2；
+  <!-- p-1(0.5rem) + gap-1(0.25rem) = 0.75rem，滑块宽 = (100% - 0.75rem) / 3；
        位移用 `calc(下标 * (100% + 0.25rem))`——transform 的百分比相对元素自身尺寸，
        所以 100% 恰好是「一格」，再加一个 gap 就落在下一格起点。 -->
   <div
-    class="relative inline-grid grid-cols-2 gap-1 rounded-lg bg-slate-100/80 p-1 ring-1 ring-slate-200/70 dark:bg-slate-800/60 dark:ring-slate-700/60"
+    class="relative inline-grid grid-cols-3 gap-1 rounded-lg bg-slate-100/80 p-1 ring-1 ring-slate-200/70 dark:bg-slate-800/60 dark:ring-slate-700/60"
     role="radiogroup"
     aria-label="作答方式"
   >
     <span
       aria-hidden="true"
-      class="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-0.75rem)/2)] rounded-md bg-linear-to-br from-sky-500 to-indigo-500 shadow-md shadow-indigo-500/30 transition-transform duration-300 ease-out"
+      class="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-0.75rem)/3)] rounded-md bg-linear-to-br from-sky-500 to-indigo-500 shadow-md shadow-indigo-500/30 transition-transform duration-300 ease-out"
       :style="{ transform: `translateX(calc(${activeIndex} * (100% + 0.25rem)))` }"
     />
 

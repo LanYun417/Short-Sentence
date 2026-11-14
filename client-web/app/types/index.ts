@@ -52,6 +52,8 @@ export interface NextQuestion {
   words: string[] | null;
   /** 选词模式的逐词中文释义（词 → 含义）；旧题 / 无数据为 null（不显示悬浮提示） */
   wordMeanings: Record<string, string> | null;
+  /** 盲听模式专用：TTS 朗读用的英文原句。只朗读、不渲染（题面严禁泄露答案） */
+  ttsText: string;
 }
 
 /** 节日题库（用户端「专门刷题」入口）。 */

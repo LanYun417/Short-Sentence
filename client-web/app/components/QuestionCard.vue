@@ -63,10 +63,42 @@ const flipped = computed(() => props.result !== null);
 const totalXp = computed(() => (props.result?.xpEarned ?? 0) + (props.result?.goalBonus ?? 0));
 
 /**
+ * 是否走盲听作答：题干只靠听（后端随题下发仅供朗读的 ttsText），不显示中文释义。
+ * 与后端 ANSWER_MODES 的 listen 对应；切换模式不重抽题，仅本地偏好变化。
+ */
+const listen = computed(() => props.mode === 'listen');
+
+/**
  * 是否走拼词作答。
  * 词块由后端随题下发；万一缺失（旧缓存、接口异常）自动回落到输入框，不至于卡住。
  */
 const assembleMode = computed(() => props.mode === 'assemble' && (props.question.words?.length ?? 0) > 0);
+
+/** 浏览器是否支持语音合成（SSR / 老旧浏览器兜底 false，模板据此给降级文案）。 */
+const speechSupported = ref(false);
+onMounted(() => {
+  speechSupported.value = typeof window !== 'undefined' && 'speechSynthesis' in window;
+});
+
+/** 本朝向播放过至少一次（「再听一次」按钮在听过之后才出现）。 */
+const replayed = ref(false);
+
+/**
+ * 朗读当前题的英文原句（盲听题面唯一信息源）。
+ * 用浏览器原生 speechSynthesis：零依赖、无网络请求；失败时静默——
+ * 盲听途中弹原生 alert 会直接把用户踢出作答状态。
+ */
+function speak(): void {
+  if (!speechSupported.value || !props.question.ttsText) {
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(props.question.ttsText);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.9;
+  window.speechSynthesis.speak(utterance);
+  replayed.value = true;
+}
 
 /** 拼词模式下词块是否已全部用上（决定「确定」可用性，避免点一个词就交）。 */
 const wordsAllUsed = computed(() => {
@@ -123,6 +155,7 @@ watch(
   () => props.question.sentenceId,
   () => {
     answer.value = '';
+    replayed.value = false;
     // 等翻牌动画基本结束再聚焦，避免输入法键盘在动画途中弹出
     window.setTimeout(focusInput, 320);
   },
@@ -402,7 +435,26 @@ async function onSubmitReport(): Promise<void> {
         </div>
 
         <!-- 题干 -->
-        <div class="mb-4 rounded-2xl bg-slate-50 px-4 py-3 text-center dark:bg-slate-700/40">
+        <div v-if="listen" class="mb-4 rounded-2xl bg-sky-50 px-4 py-3 text-center dark:bg-sky-900/30">
+          <p class="text-sm text-sky-700 dark:text-sky-200">先听发音，再写出英文</p>
+          <div class="mt-2 flex items-center justify-center gap-2">
+            <UButton
+              size="sm"
+              color="primary"
+              variant="soft"
+              icon="i-lucide-volume-2"
+              :disabled="!speechSupported"
+              @click="speak"
+            >
+              播放
+            </UButton>
+            <UButton v-if="replayed" size="sm" color="neutral" variant="ghost" @click="speak">再听一次</UButton>
+          </div>
+          <p class="mt-1.5 text-[11px] text-slate-400">
+            {{ speechSupported ? '实在想不出？切回「输入」即可看题干' : '当前浏览器不支持语音朗读，请切回「输入」' }}
+          </p>
+        </div>
+        <div v-else class="mb-4 rounded-2xl bg-slate-50 px-4 py-3 text-center dark:bg-slate-700/40">
           <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
             {{ question.translationZh }}
           </h2>
@@ -412,7 +464,7 @@ async function onSubmitReport(): Promise<void> {
           class="aspect-video overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-black/5 dark:bg-slate-700 dark:ring-white/10"
         >
           <img
-            v-if="question.imageUrl && !imgError"
+            v-if="!listen && question.imageUrl && !imgError"
             :src="imageSrc"
             :alt="question.translationZh"
             class="anim-fade h-full w-full object-cover transition-transform duration-700 hover:scale-105"

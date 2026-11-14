@@ -31,12 +31,13 @@ export type DifficultyLevel = (typeof DIFFICULTIES)[number]['value'];
  * - input    ：自己敲出整句，经验全额
  * - assemble ：点选打乱词块拼句，上手更轻，经验按约六成发放
  */
-export type AnswerMode = 'input' | 'assemble';
+export type AnswerMode = 'input' | 'assemble' | 'listen';
 
 /** 模式选项（顺序即分段控件的排列，默认档在首位）。 */
 export const ANSWER_MODES = [
   { value: 'input', label: '输入', icon: 'i-lucide-keyboard' },
   { value: 'assemble', label: '拼词', icon: 'i-lucide-blocks' },
+  { value: 'listen', label: '盲听', icon: 'i-lucide-headphones' },
 ] as const;
 
 /** 读取难度偏好（Cookie 优先——SSR 也可读；其次 localStorage；缺省 2 进阶）。 */
