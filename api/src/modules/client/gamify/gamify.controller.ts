@@ -5,7 +5,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import type { ClientUserContext } from '../../../common/types.js';
-import { GamifyService, type GamifyOverview } from './gamify.service.js';
+import { GamifyService, type GamifyOverview, type WeeklyReport } from './gamify.service.js';
 
 @Controller('client/gamify')
 export class GamifyController {
@@ -15,5 +15,11 @@ export class GamifyController {
   @Get('overview')
   async overview(@CurrentClientUser() user: ClientUserContext): Promise<GamifyOverview> {
     return this.gamify.overview(user.userId);
+  }
+
+  /** 周学习报告（本周答题/正确率/活跃天数/经验/成就/连续打卡 + 每日明细 + 上周对比）。 */
+  @Get('weekly-report')
+  async weeklyReport(@CurrentClientUser() user: ClientUserContext): Promise<WeeklyReport> {
+    return this.gamify.weeklyReport(user.userId);
   }
 }

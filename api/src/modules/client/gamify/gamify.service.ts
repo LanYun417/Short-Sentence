@@ -27,6 +27,25 @@ function shanghaiDayStart(): Date {
   );
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 本周一（东八区）零点：周报的固定统计区间。
+ * 以周一为一周之始（getUTCDay 的 0 是周日，需要回退 6 天），
+ * 与用户「本周」的直觉一致，也不会出现周日被拆到下一周的问题。
+ */
+function shanghaiWeekStart(): Date {
+  const dayStart = shanghaiDayStart();
+  const shanghaiNow = new Date(dayStart.getTime() + SHANGHAI_OFFSET_MS);
+  const sinceMonday = (shanghaiNow.getUTCDay() + 6) % 7;
+  return new Date(dayStart.getTime() - sinceMonday * DAY_MS);
+}
+
+/** 东八区日期键（YYYY-MM-DD），用于按天归组。 */
+function shanghaiDateKey(date: Date): string {
+  return new Date(date.getTime() + SHANGHAI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
 /** XP 发放规则（服务端权威，客户端不参与）。 */
 export const XP_RULES = {
   /** 首次答对（该题此前无作答记录） */
@@ -108,6 +127,29 @@ export interface SceneMapItem {
 }
 
 /** 成长概览。 */
+/** 周学习报告：一周（周一 00:00 至今）的学习数据聚合，供「周报」卡片展示与分享。 */
+export interface WeeklyReport {
+  /** 本周答题数 / 答对数 / 正确率（0~1，未答题时为 0） */
+  answered: number;
+  correct: number;
+  accuracy: number;
+  /** 本周有作答的天数（0~7） */
+  activeDays: number;
+  /** 本周获得经验值 */
+  xpGained: number;
+  /** 本周新解锁成就数 */
+  newAchievements: number;
+  /** 当前连续打卡天数（截止最近一次打卡） */
+  streak: number;
+  /** 每日明细：周一 → 周日（未来日期为 0） */
+  daily: Array<{ date: string; weekday: string; answered: number; correct: number }>;
+  /** 本周练得最多的场景（null = 本周没有作答） */
+  topCategory: { name: string; count: number } | null;
+  /** 上周答题数，以及本周相对上周的变化量（可为负） */
+  prevAnswered: number;
+  deltaAnswered: number;
+}
+
 export interface GamifyOverview {
   xp: number;
   level: LevelInfo;
@@ -736,6 +778,89 @@ export class GamifyService {
         count: g._count._all,
         sum: g._sum.amount ?? 0,
       })),
+    };
+  }
+
+  /**
+   * 周学习报告（P1 留存功能）：一周（周一 00:00 至今）的数据聚合。
+   *
+   * 为什么后端聚合而不是前端拼：数据散在 sentence_record / client_xp_log /
+   * user_achievement / user_checkin 四处，前端拼会重复实现口径（尤其「本周」
+   * 的时区边界），且分享文案必须与服务端数字一致。
+   */
+  async weeklyReport(userId: number): Promise<WeeklyReport> {
+    const uid = BigInt(userId);
+    const weekStart = shanghaiWeekStart();
+    const prevWeekStart = new Date(weekStart.getTime() - 7 * DAY_MS);
+    const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+    const [records, prevAnswered, xpAgg, newAchievements, lastCheckin] = await Promise.all([
+      this.prisma.sentenceRecord.findMany({
+        where: { userId: uid, createdAt: { gte: weekStart } },
+        select: { isCorrect: true, createdAt: true, sentence: { select: { category: { select: { name: true } } } } },
+      }),
+      this.prisma.sentenceRecord.count({
+        where: { userId: uid, createdAt: { gte: prevWeekStart, lt: weekStart } },
+      }),
+      this.prisma.clientXpLog.aggregate({
+        where: { userId: uid, createdAt: { gte: weekStart } },
+        _sum: { amount: true },
+      }),
+      this.prisma.userAchievement.count({ where: { userId: uid, unlockedAt: { gte: weekStart } } }),
+      this.prisma.userCheckin.findFirst({
+        where: { userId: uid },
+        orderBy: { checkinDate: 'desc' },
+        select: { streak: true },
+      }),
+    ]);
+
+    const daily = WEEKDAYS.map((weekday, index) => ({
+      date: shanghaiDateKey(new Date(weekStart.getTime() + index * DAY_MS)),
+      weekday,
+      answered: 0,
+      correct: 0,
+    }));
+    const dailyIndex = new Map(daily.map((item, index) => [item.date, index]));
+    const categoryCount = new Map<string, number>();
+    let correct = 0;
+
+    for (const record of records) {
+      if (record.isCorrect === 1) {
+        correct += 1;
+      }
+      const index = dailyIndex.get(shanghaiDateKey(record.createdAt));
+      if (index !== undefined) {
+        daily[index]!.answered += 1;
+        if (record.isCorrect === 1) {
+          daily[index]!.correct += 1;
+        }
+      }
+      const name = record.sentence?.category?.name;
+      if (name) {
+        categoryCount.set(name, (categoryCount.get(name) ?? 0) + 1);
+      }
+    }
+
+    let topCategory: WeeklyReport['topCategory'] = null;
+    for (const [name, count] of categoryCount) {
+      if (!topCategory || count > topCategory.count) {
+        topCategory = { name, count };
+      }
+    }
+
+    const answered = records.length;
+    return {
+      answered,
+      correct,
+      accuracy: answered > 0 ? Math.round((correct / answered) * 1000) / 1000 : 0,
+      activeDays: daily.filter((item) => item.answered > 0).length,
+      xpGained: xpAgg._sum.amount ?? 0,
+      newAchievements,
+      streak: lastCheckin?.streak ?? 0,
+      daily,
+      topCategory,
+      prevAnswered,
+      deltaAnswered: answered - prevAnswered,
     };
   }
 }
