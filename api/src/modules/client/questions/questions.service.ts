@@ -154,7 +154,7 @@ export interface SentenceLibraryItem {
   reviewLevel?: number;
   /** 复习池专用：下次复习时间 */
   nextReviewAt: Date | null;
-  /** 历史记录专用：本次作答是否正确（仅 listHistory 返回） */
+  /** 历史记录专用：本次作答是否正确（listHistory / listReview 返回） */
   isCorrect?: boolean;
   /** 历史记录专用：用户本次的实际作答（答错时回显；仅 listHistory 返回） */
   userAnswer?: string | null;
@@ -280,8 +280,16 @@ export class QuestionsService {
    *   不混入日常题与复习题；不传走日常混抽。
    * @param categoryId 场景分类 id。传了则只从该场景的题库抽题（专门刷题）；
    *   与 festival 互斥，festival 优先；两者都不传走日常混抽。
+   * @param source 抽题来源偏好：`review` 只抽到期复习题（复习要成串才有效果）、
+   *   `new` 只抽新题；不传走日常混抽。节日/场景专项优先于此参数。
    */
-  async next(userId: number, difficulty?: number, festival?: string, categoryId?: number): Promise<NextQuestion> {
+  async next(
+    userId: number,
+    difficulty?: number,
+    festival?: string,
+    categoryId?: number,
+    source?: 'review' | 'new',
+  ): Promise<NextQuestion> {
     const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
     // 「累计答对」降权：答对越多，随机抽中概率越低（不再硬禁抽——
     // 毕业题靠拉长的复习间隔自然淡出，到期仍会出现，符合间隔重复）。
@@ -306,27 +314,49 @@ export class QuestionsService {
       return this.buildNextQuestion(userId, categorySentenceId, 'new');
     }
 
+    // 「复习中心」一键开刷：只走一侧，不给概率。
+    // 复习要成串才有效果——从「今日待复习 N」点进来的用户期待一路都是到期复习题，
+    // 混入新题会把间隔重复的安排冲散（刷两张就散，等于没复习）。
+    if (source === 'review') {
+      const reviewId = await this.pickDueReviewSentence(userId, recentIds);
+      if (reviewId === null) {
+        throw AppException.notFound('今日没有到期要复习的题，去刷点新题吧');
+      }
+      return this.buildNextQuestion(userId, reviewId, 'review');
+    }
+    if (source === 'new') {
+      let newId = await this.pickReadySentence(recentIds, difficulty, mastery);
+      // 指定难度下没有可用新题：回落到不限难度，避免用户被卡住
+      if (newId === null && difficulty) {
+        newId = await this.pickReadySentence(recentIds, undefined, mastery);
+      }
+      if (newId === null) {
+        throw AppException.notFound('暂无可用的新题，稍后再来');
+      }
+      return this.buildNextQuestion(userId, newId, 'new');
+    }
+
     const wantNew = Math.random() < config.sentence.newRatio;
 
     let sentenceId: number | null;
-    let source: 'new' | 'review';
+    let pickedSource: 'new' | 'review';
     if (wantNew) {
       sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery);
-      source = 'new';
+      pickedSource = 'new';
       // 指定难度下没有可用新题：回落到不限难度，避免用户被卡住
       if (sentenceId === null && difficulty) {
         sentenceId = await this.pickReadySentence(recentIds, undefined, mastery);
       }
       if (sentenceId === null) {
         sentenceId = await this.pickDueReviewSentence(userId, recentIds);
-        source = 'review';
+        pickedSource = 'review';
       }
     } else {
       sentenceId = await this.pickDueReviewSentence(userId, recentIds);
-      source = 'review';
+      pickedSource = 'review';
       if (sentenceId === null) {
         sentenceId = await this.pickReadySentence(recentIds, difficulty, mastery);
-        source = 'new';
+        pickedSource = 'new';
         if (sentenceId === null && difficulty) {
           sentenceId = await this.pickReadySentence(recentIds, undefined, mastery);
         }
@@ -335,7 +365,7 @@ export class QuestionsService {
     if (sentenceId === null) {
       throw AppException.notFound('暂无可用题目，休息一下 or 等待每日更新');
     }
-    return this.buildNextQuestion(userId, sentenceId, source);
+    return this.buildNextQuestion(userId, sentenceId, pickedSource);
   }
 
   /** 题目 id → 下一张卡（含今日进度与拼词词块）。 */
@@ -788,9 +818,11 @@ export class QuestionsService {
   /** 复习池（分页：答错且到期，按到期时间升序）。 */
   async listReview(userId: number, query: Record<string, unknown>): Promise<PageResult<SentenceLibraryItem>> {
     const { page, pageSize, offset, limit } = parsePagination(query);
+    // 复习池 = 所有到期该复习的题（答错当天复现 + 答对按间隔到期），
+    // 与 memory-stats 的「今日待复习」同一口径——否则用户在记忆健康卡片看到
+    // 「N 题待复习」、点进来却是另一批题，数字对不上就等于没打通。
     const where = {
       userId: BigInt(userId),
-      isCorrect: 0,
       nextReviewAt: { lte: new Date() },
       // 已退场的旧节日题不再进复习池（收藏/历史仍可见）
       sentence: { status: 'ready', retiredAt: null },
@@ -803,6 +835,7 @@ export class QuestionsService {
         take: limit,
         select: {
           createdAt: true,
+          isCorrect: true,
           reviewLevel: true,
           nextReviewAt: true,
           sentence: {
@@ -837,6 +870,8 @@ export class QuestionsService {
         categoryName: sentence.category?.name ?? null,
         difficulty: sentence.difficulty,
         createdAt: row.createdAt,
+        // 复习池现在含两类题：答错（当天复现）与答对（间隔到期巩固）
+        isCorrect: row.isCorrect === 1,
         reviewLevel: row.reviewLevel,
         nextReviewAt: row.nextReviewAt,
       });
@@ -974,9 +1009,13 @@ export class QuestionsService {
 
   /** 取一道到期复习题（到期最早的优先，候选批内随机打散避免「永远同一题」）。 */
   private async pickDueReviewSentence(userId: number, excludeIds: number[]): Promise<number | null> {
+    // 到期即该复习，不分答对答错：
+    // - 答错：nextReviewAt 恒为当天（当天立即复现，见 answer 的排期逻辑）
+    // - 答对：按间隔重复排期（1/3/7/N 天后），到期正是巩固时点
+    // 历史上这里写死 isCorrect: 0，结果「答对且到期」的题谁都抽不到——
+    // 记忆健康页的待复习数字由此而来，用户却永远刷不到，曲线成了摆设。
     const where: Record<string, unknown> = {
       userId: BigInt(userId),
-      isCorrect: 0,
       nextReviewAt: { lte: new Date() },
       // 已退场的旧节日题不再进复习池（收藏/历史仍可见）；无配图的题同样不进
       sentence: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },

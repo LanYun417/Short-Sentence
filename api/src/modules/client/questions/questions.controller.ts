@@ -21,7 +21,7 @@ export class QuestionsController {
    */
   @Get('next')
   next(@CurrentClientUser() user: ClientUserContext, @Query() query: NextQuestionQueryDto) {
-    return this.questions.next(user.userId, query.difficulty, query.festival, query.categoryId);
+    return this.questions.next(user.userId, query.difficulty, query.festival, query.categoryId, query.source);
   }
 
   /** 记忆健康概览（遗忘曲线 / 待复习分布可视化）。 */

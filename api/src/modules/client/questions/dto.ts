@@ -74,4 +74,16 @@ export class NextQuestionQueryDto {
   @IsInt({ message: '分类 id 必须为整数' })
   @Min(1, { message: '分类 id 最小为 1' })
   categoryId?: number;
+
+  /**
+   * 抽题来源偏好：`review` 只抽到期复习题（不掺新题）/ `new` 只抽新题。
+   * 不传走「日常混抽」（按 newRatio 概率二选一）。
+   *
+   * 存在的理由：复习要成串才有效果——用户从「今日待复习 N」点进来时，
+   * 期待一路都是到期复习题；若混入新题，一次只刷一两张就散掉，
+   * 记忆曲线的安排就被冲掉了。festival / categoryId 仍优先于此参数。
+   */
+  @IsOptional()
+  @IsIn(['review', 'new'], { message: 'source 只支持 review / new' })
+  source?: 'review' | 'new';
 }
