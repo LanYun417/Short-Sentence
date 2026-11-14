@@ -87,7 +87,11 @@ function persistMode(cookieValue: Ref<string | null>, value: AnswerMode): void {
  * 否则服务端已按该题库抽好题，页面却还显示「日常混抽」的状态，
  * 客户端还会因为状态对不上而白抽一次题（闪一下）。
  */
-export function useQuestionSession(initialFestival: string | null = null, initialCategory: number | null = null) {
+export function useQuestionSession(
+  initialFestival: string | null = null,
+  initialCategory: number | null = null,
+  initialSource: 'review' | null = null,
+) {
   // useCookie 必须在 setup/nuxt 上下文里创建（模块顶层没有实例会抛错）
   const difficultyCookie = useCookie<number | null>('ss_difficulty', {
     maxAge: 60 * 60 * 24 * 7,
@@ -116,6 +120,11 @@ export function useQuestionSession(initialFestival: string | null = null, initia
   const festival = ref<string | null>(initialFestival);
   /** 当前选择的场景题库 id（null = 不限场景；与节日互斥，同时只锁一个范围） */
   const category = ref<number | null>(initialCategory);
+  /**
+   * 抽题来源：'review' = 只抽到期复习题（从「今日待复习」点进来），null = 日常混抽。
+   * 与 festival/category 互斥——切进专项题库时清空，避免两个范围打架。
+   */
+  const source = ref<'review' | null>(initialSource);
   /** 可选的节日题库（只含有就绪题目的节日） */
   const festivals = ref<FestivalBank[]>([]);
 
@@ -127,9 +136,11 @@ export function useQuestionSession(initialFestival: string | null = null, initia
       question.value = await apiFetch<NextQuestion>('/client/questions/next', {
         // festival / categoryId 为 undefined 时 ofetch 会自动省略该参数（走日常混抽）
         query: {
-          difficulty: difficulty.value,
+          // 纯复习不给难度：难度只作用于新题，复习题必须按间隔排期走
+          difficulty: source.value === 'review' ? undefined : difficulty.value,
           festival: festival.value ?? undefined,
           categoryId: category.value ?? undefined,
+          source: source.value ?? undefined,
         },
       });
       result.value = null;
@@ -152,6 +163,8 @@ export function useQuestionSession(initialFestival: string | null = null, initia
     }
     festival.value = name;
     category.value = null;
+    // 切进专项题库即退出复习模式：两个范围同时存在会让「只刷到期题」失去意义
+    source.value = null;
     await loadNext();
   }
 
@@ -162,6 +175,16 @@ export function useQuestionSession(initialFestival: string | null = null, initia
     }
     category.value = id;
     festival.value = null;
+    source.value = null;
+    await loadNext();
+  }
+
+  /** 退出复习模式，回到日常混抽（无到期题时给用户一条出路）。 */
+  async function exitReview(): Promise<void> {
+    if (source.value === null) {
+      return;
+    }
+    source.value = null;
     await loadNext();
   }
 
@@ -248,6 +271,8 @@ export function useQuestionSession(initialFestival: string | null = null, initia
     setMode,
     setFestival,
     setCategory,
+    source,
+    exitReview,
     prefill,
     submit,
     toggleFavorite,

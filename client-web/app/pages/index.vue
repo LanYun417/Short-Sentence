@@ -37,6 +37,13 @@ const categoryParam = computed(() => {
   return Number.isInteger(id) && id > 0 ? id : null;
 });
 
+/**
+ * `?source=review`：从「今日待复习」点进来时只抽到期复习题（不掺新题）。
+ * 复习要成串才有效果——混入新题会把间隔重复的安排冲散（刷两张就散）。
+ * 与 festival/category 互斥：专项题库优先，进入专项时 source 自然失效。
+ */
+const sourceParam = computed(() => (route.query.source === 'review' ? 'review' : null));
+
 const {
   question,
   result,
@@ -57,7 +64,9 @@ const {
   prefill,
   submit,
   toggleFavorite,
-} = useQuestionSession(festivalParam.value, categoryParam.value);
+  source,
+  exitReview,
+} = useQuestionSession(festivalParam.value, categoryParam.value, sourceParam.value);
 
 // 客户端路由改了 ?festival= / ?category= 时跟着切（SSR 直达时初始值已经一致，不会重复抽题）
 watch(festivalParam, (name) => {
@@ -76,10 +85,13 @@ watch(categoryParam, (id) => {
  * （拼词词块随题恒定下发）。预取失败（令牌过期等）返回 null，onMounted 走客户端流程兜底。
  */
 const { data: ssrQuestion } = await useSsrApi<NextQuestion>('ss:question', '/client/questions/next', {
-  difficulty: difficulty.value,
+  // 纯复习不给难度：难度只作用于新题，复习题必须按间隔排期走
+  difficulty: sourceParam.value === 'review' ? undefined : difficulty.value,
   // 从题库页带 ?festival=元旦 / ?category=3 直达时，服务端就按该题库抽题（首屏即是专项题，不先闪一张日常题）
   festival: festivalParam.value ?? undefined,
   categoryId: categoryParam.value ?? undefined,
+  // 从「今日待复习」带 ?source=review 直达时，首屏就是到期复习题
+  source: sourceParam.value ?? undefined,
 });
 if (ssrQuestion.value) {
   prefill(ssrQuestion.value);
@@ -320,6 +332,17 @@ async function onExitBank(): Promise<void> {
     await navigateTo({ path: '/', query: {} }, { replace: true });
   }
 }
+
+/** 是否处于「只刷到期复习题」模式。 */
+const isReviewMode = computed(() => source.value === 'review');
+
+/** 退出复习模式：回到日常混抽，并清掉地址栏的 source（否则刷新又回到复习模式）。 */
+async function onExitReview(): Promise<void> {
+  await exitReview();
+  if (route.query.source) {
+    await navigateTo({ path: '/', query: {} }, { replace: true });
+  }
+}
 </script>
 
 <template>
@@ -377,14 +400,27 @@ async function onExitBank(): Promise<void> {
       </div>
     </section>
 
-    <!-- 难度选择：只在日常混抽时可用（专项题库是一套固定题，不按难度筛） -->
-    <div v-if="!festival && !category" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
+    <!-- 复习模式：只刷到期复习题（不掺新题），给出明确状态与退出入口 -->
+    <div
+      v-if="isReviewMode"
+      class="anim-in mb-4 flex items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 dark:border-sky-400/30 dark:bg-sky-400/10"
+      :style="{ animationDelay: '36ms' }"
+    >
+      <div class="flex min-w-0 items-center gap-2 text-sm text-sky-800 dark:text-sky-200">
+        <UIcon name="i-lucide-repeat" class="h-4 w-4 shrink-0" />
+        <span class="truncate">正在复习到期句子</span>
+      </div>
+      <UButton size="xs" color="neutral" variant="soft" @click="onExitReview">退出复习</UButton>
+    </div>
+
+    <!-- 难度选择：只在日常混抽时可用（专项题库固定题不按难度筛；复习题按排期走，难度只作用于新题） -->
+    <div v-if="!festival && !category && !isReviewMode" class="anim-in mb-4" :style="{ animationDelay: '40ms' }">
       <DifficultyPicker :model-value="difficulty" @update:model-value="setDifficulty" />
     </div>
 
     <!-- 专项模式：正在专门刷某个节日 / 场景题库（难度选择器此时隐藏，这里给出明确状态与退出入口） -->
     <div
-      v-else
+      v-if="!isReviewMode && (festival || category)"
       class="anim-in mb-4 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-400/30 dark:bg-amber-400/10"
       :style="{ animationDelay: '40ms' }"
     >

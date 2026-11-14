@@ -157,6 +157,11 @@ useEchart(curveRef, () => {
     <p class="mb-1 mt-4 text-xs text-slate-400">未来 30 天复习分布</p>
     <div ref="barRef" class="h-20 w-full"></div>
 
+    <!-- 一键开刷：数字再好看，点得进去才算「复习中心」 -->
+    <UButton v-if="(data?.dueToday ?? 0) > 0" to="/?source=review" block size="lg" class="mt-4" icon="i-lucide-repeat">
+      开始复习（{{ data?.dueToday }} 张到期）
+    </UButton>
+
     <p class="mb-1 mt-4 text-xs text-slate-400">记忆保留率（每复习一次即被拉平）</p>
     <div ref="curveRef" class="h-20 w-full"></div>
   </div>
