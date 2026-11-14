@@ -463,7 +463,7 @@ Widget _buildBody(
             ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 176,
+              width: 232,
               height: 40,
               child: SegmentedControl<AnswerMode>(
                 value: state.mode,
@@ -482,6 +482,11 @@ Widget _buildBody(
                     value: AnswerMode.assemble,
                     label: '拼词',
                     icon: Icons.extension_outlined,
+                  ),
+                  Segment<AnswerMode>(
+                    value: AnswerMode.listen,
+                    label: '盲听',
+                    icon: Icons.headphones_outlined,
                   ),
                 ],
               ),
@@ -1427,6 +1432,7 @@ class _FrontFace extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.colors;
     final assemble = mode == AnswerMode.assemble && question.words != null;
+    final listen = mode == AnswerMode.listen;
 
     return _CardFace(
       child: Column(
@@ -1477,16 +1483,38 @@ class _FrontFace extends StatelessWidget {
           const SizedBox(height: 18),
 
           // 题干：居中大字，不加底框（更干净，也让配图成为视觉主体）
-          Text(
-            question.translationZh,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontSize: 20,
-              height: 1.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
+          if (listen)
+            // 盲听模式：题干只靠听——播放按钮 + 提示，不给中文释义
+            Column(
+              children: <Widget>[
+                Text(
+                  '先听发音，再写出英文',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.inkSoft,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SentenceTtsButton(text: question.ttsText, lang: 'en-US'),
+                const SizedBox(height: 8),
+                Text(
+                  '实在想不出？切回「默写」即可看题干',
+                  style: theme.textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+                ),
+              ],
+            )
+          else
+            Text(
+              question.translationZh,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontSize: 20,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+              ),
             ),
-          ),
           const SizedBox(height: 16),
 
           // 场景图 16:9
@@ -1494,12 +1522,14 @@ class _FrontFace extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: AspectRatio(
               aspectRatio: 16 / 9,
-              child: question.imageUrl == null
+              // 盲听模式隐藏配图：图由句子内容生成，会把题意直接泄露给「盲」听；
+              // 占位文案点明是模式行为，避免被当成「配图缺失」的 bug。
+              child: listen || question.imageUrl == null
                   ? Container(
                       color: colors.cardMuted,
                       child: Center(
                         child: Text(
-                          '配图缺失',
+                          listen ? '盲听模式 · 配图已隐藏' : '配图缺失',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.inkFaint,
                           ),

@@ -27,7 +27,10 @@ enum AnswerMode {
   input('input'),
 
   /// 拼词（点选词块）
-  assemble('assemble');
+  assemble('assemble'),
+
+  /// 盲听（不显示中文题干，先听发音再写出整句——与同类闪卡最大的差异点）
+  listen('listen');
 
   const AnswerMode(this.value);
 
@@ -48,6 +51,7 @@ class Question {
     this.festivalName,
     this.words,
     this.wordMeanings,
+    required this.ttsText,
   });
 
   final int sentenceId;
@@ -62,6 +66,9 @@ class Question {
 
   /// 节日题库：所属节日名（普通题为 null）
   final String? festivalName;
+
+  /// 盲听模式专用：TTS 朗读用的英文原句。**只朗读、不渲染**（题面严禁泄露答案）。
+  final String ttsText;
 
   /// 难度 1/2/3
   final int difficulty;
@@ -97,6 +104,7 @@ class Question {
       wordMeanings: meanings is Map
           ? meanings.map((key, value) => MapEntry(key.toString(), value.toString()))
           : null,
+      ttsText: json['ttsText'] as String? ?? '',
     );
   }
 
