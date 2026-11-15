@@ -25,7 +25,8 @@
     "pages/chains/chains",
     "pages/chains/detail/detail",
     "pages/team/team",
-    "pages/profile-edit/profile-edit"
+    "pages/profile-edit/profile-edit",
+    "pages/account-delete/account-delete"
   ],
   "window": {
     "backgroundTextStyle": "dark",

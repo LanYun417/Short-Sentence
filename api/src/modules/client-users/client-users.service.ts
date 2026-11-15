@@ -43,6 +43,35 @@ const USER_GENDER_LABEL: Record<string, string> = {
   secret: '保密',
 };
 
+/** 注销记录项（**不含用户标识**——注销即与身份脱钩，表里本来就没有）。 */
+export interface ClientDeletionItem {
+  id: number;
+  /** 原因类型：no_time / too_hard / content / bugs / privacy / other / unspecified */
+  reasonType: string;
+  /** 用户自填的补充说明 */
+  reasonDetail: string | null;
+  /** 注销时的经验值快照 */
+  xp: number;
+  /** 注销时的累计打卡天数 */
+  checkinDays: number;
+  /** 注销时的答题数（近 30 天，答题记录只保留 30 天） */
+  answerCount: number;
+  /** 注册时间 */
+  registeredAt: Date;
+  /** 注销时间 */
+  createdAt: Date;
+  /** 账号存活天数（注册 → 注销），用来回答「用了多久才走」 */
+  lifespanDays: number;
+}
+
+/** 注销记录列表（分页 + 全量原因分布）。 */
+export interface ClientDeletionList extends PageResult<ClientDeletionItem> {
+  /** 近 30 天注销数 */
+  last30Days: number;
+  /** 各原因计数（全量，不受分页影响），按数量倒序 */
+  reasonStats: Array<{ reasonType: string; count: number }>;
+}
+
 /** 列表项。 */
 export interface ClientUserItem {
   id: number;
@@ -154,6 +183,51 @@ export class ClientUsersService {
       });
     }
     return buildPageResult(list, total, page, pageSize);
+  }
+
+  /**
+   * 账号注销记录（分页 + 原因分布）。
+   *
+   * 表里刻意没有 userId / 邮箱——注销即与身份脱钩。因此这里也**不能**按用户搜，
+   * 只能按时间与原因看趋势；想追某个人是否注销了，看 client_user.deleted_at。
+   */
+  async deletions(query: Record<string, unknown>): Promise<ClientDeletionList> {
+    const { page, pageSize, offset, limit } = parsePagination(query);
+    const [rows, total, grouped, last30Days] = await Promise.all([
+      this.prisma.clientAccountDeletion.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.clientAccountDeletion.count(),
+      this.prisma.clientAccountDeletion.groupBy({ by: ['reasonType'], _count: { _all: true } }),
+      this.prisma.clientAccountDeletion.count({
+        where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+      }),
+    ]);
+
+    const list: ClientDeletionItem[] = rows.map((row) => ({
+      id: Number(row.id),
+      reasonType: row.reasonType,
+      reasonDetail: row.reasonDetail,
+      xp: row.xp,
+      checkinDays: row.checkinDays,
+      answerCount: row.answerCount,
+      registeredAt: row.registeredAt,
+      createdAt: row.createdAt,
+      lifespanDays: Math.max(
+        0,
+        Math.floor((row.createdAt.getTime() - row.registeredAt.getTime()) / (24 * 60 * 60 * 1000)),
+      ),
+    }));
+
+    return {
+      ...buildPageResult(list, total, page, pageSize),
+      last30Days,
+      reasonStats: grouped
+        .map((item) => ({ reasonType: item.reasonType, count: item._count._all }))
+        .sort((a, b) => b.count - a.count),
+    };
   }
 
   /** 创建任务（流式 CSV；筛选与列表共用 buildUserWhere）。 */

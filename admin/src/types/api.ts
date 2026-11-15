@@ -1183,6 +1183,39 @@ export interface ClientUserQuery extends PageQuery {
   gender?: string;
 }
 
+/* ------------------------------ 客户端用户 · 账号注销 ------------------------------ */
+
+/** 注销原因类型（与后端 DELETION_REASON_TYPES 对齐；unspecified = 用户未选择） */
+export type ClientDeletionReason = 'no_time' | 'too_hard' | 'content' | 'bugs' | 'privacy' | 'other' | 'unspecified';
+
+/**
+ * 账号注销记录。
+ * **不含任何用户标识**：注销即与身份脱钩，后端表里也没有 userId / 邮箱。
+ */
+export interface ClientDeletionItem {
+  id: number;
+  reasonType: ClientDeletionReason;
+  reasonDetail: string | null;
+  /** 注销时的经验值快照 */
+  xp: number;
+  /** 注销时的累计打卡天数 */
+  checkinDays: number;
+  /** 注销时的答题数（近 30 天） */
+  answerCount: number;
+  registeredAt: string;
+  createdAt: string;
+  /** 账号存活天数（注册 → 注销） */
+  lifespanDays: number;
+}
+
+/** 注销记录列表（分页 + 全量原因分布） */
+export interface ClientDeletionList extends PageResult<ClientDeletionItem> {
+  /** 近 30 天注销数 */
+  last30Days: number;
+  /** 各原因计数（全量，不受分页影响） */
+  reasonStats: Array<{ reasonType: ClientDeletionReason; count: number }>;
+}
+
 /* ------------------------------ 客户端用户 · 成长与句签 ------------------------------ */
 
 /** 客户端用户成长：CEFR 等级信息 */

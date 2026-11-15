@@ -121,6 +121,21 @@ client-miniapp/
 - 发消息先乐观追加用户气泡；**失败要回滚这条气泡并还原输入**，否则本地记录与服务端历史不一致。
 - 消息只保留 `contentEn` 主文本，中文按 `showTranslation` 显隐；不复述情绪/动作旁白。
 
+### 注销账号（pages/account-delete/*）
+
+注销**不可逆**，所以这一页有两条硬约束，改它之前先读：
+
+1. **必须二次身份校验**，光有 accessToken 不够（那可能只是捡到的手机）：
+   - 邮箱账号 → `POST /client/auth/deletion-code` 发码到**本人**邮箱，
+     再带 `emailCode` 调 `DELETE /client/auth/me`；
+   - 微信账号 → `wx.login` 取 code 当 `wechatCode` 传，服务端反查 openid 比对。
+   - 发码端点**故意不复用公开的 `email-code`**：那个口子能给别人发验证码。
+2. **原因是可选的**，不选也能注销（`reasonType` 落 `unspecified`）——
+   不能拿问卷卡住用户的法定权利，但选了会匿名留存供产品分析。
+
+服务端把注销记录写进 `client_account_deletion`，**表里没有 userId / 邮箱**：
+注销即与身份脱钩，所以后台只能看趋势，不能追溯到具体账号。
+
 ## 六、开发与联调
 
 1. `cd api && npm run start:dev`（`:3000`）。

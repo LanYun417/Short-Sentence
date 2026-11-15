@@ -28,8 +28,12 @@ import { FilesService } from '../../files/files.service.js';
 import { AccountLockService } from '../../../common/auth/account-lock.service.js';
 import { IpBanService } from '../../../common/security/ip-ban.service.js';
 import { EmailCodeService } from './email-code.service.js';
+import type { DeleteClientAccountDto } from './dto.js';
 import { CaptchaService } from '../../../common/auth/captcha.service.js';
 import type { CaptchaResult } from '../../../common/types.js';
+
+/** 微信建号用的占位邮箱后缀（这类账号没有可收信的真实邮箱，不能发验证码）。 */
+const WECHAT_EMAIL_SUFFIX = '@wx.local';
 
 /** 对外返回的客户端用户信息（不含口令）。 */
 export interface ClientUserProfile {
@@ -230,7 +234,7 @@ export class ClientAuthUserService {
     }
 
     // 新用户：openid 作为唯一凭据派生邮箱占位；口令随机不可登录，仅微信通道可用
-    const email = `${session.openid}@wx.local`;
+    const email = `${session.openid}${WECHAT_EMAIL_SUFFIX}`;
     const created = await this.prisma.clientUser.create({
       data: {
         email,
@@ -248,18 +252,68 @@ export class ClientAuthUserService {
   }
 
   /**
+   * 发送注销验证码（**只发给当前登录用户本人**）。
+   *
+   * 为什么不复用公开的 `POST /client/auth/email-code`：那个端点无需登录，
+   * 一旦允许 purpose=delete，任何人都能给任意邮箱发「注销账号验证码」——
+   * 既是骚扰，也会让用户收到一封莫名其妙的邮件。这里锁定本人邮箱。
+   */
+  async sendDeletionCode(userId: number): Promise<void> {
+    const user = await this.prisma.clientUser.findUnique({
+      where: { id: BigInt(userId) },
+      select: { email: true },
+    });
+    if (!user) {
+      throw AppException.unauthorized('用户不存在');
+    }
+    if (user.email.endsWith(WECHAT_EMAIL_SUFFIX)) {
+      throw AppException.badRequest('微信账号没有绑定邮箱，请用微信身份校验');
+    }
+    await this.emailCode.issue(user.email, 'delete');
+  }
+
+  /**
    * 注销账号（软删）。
+   * - **先做二次身份校验**（见 assertDeletionIdentity）：注销不可逆，不能只凭 accessToken；
    * - 令所有令牌立即失效（scope=client 黑名单）；
    * - 匿名化身份字段（昵称/邮箱/签名/头像/背景），清空微信绑定，使旧微信无法再登录原账号；
    * - 删除学习历史（sentence_record，含用户输入的个人数据）；打卡/成就/句签/接龙等保留——
-   *   其作者身份已随账号匿名化（显示「已注销用户」），符合「投稿/接龙保留匿名」的隐私政策口径。
+   *   其作者身份已随账号匿名化（显示「已注销用户」），符合「投稿/接龙保留匿名」的隐私政策口径；
+   * - 落一条**不含任何用户标识**的注销记录，供产品分析与合规审计。
    */
-  async deleteAccount(userId: number): Promise<void> {
+  async deleteAccount(userId: number, dto: DeleteClientAccountDto = {}): Promise<void> {
     const uid = BigInt(userId);
+    const user = await this.prisma.clientUser.findUnique({
+      where: { id: uid },
+      select: { email: true, wechatOpenid: true, xp: true, createdAt: true },
+    });
+    if (!user) {
+      throw AppException.unauthorized('用户不存在');
+    }
+
+    await this.assertDeletionIdentity(userId, user, dto);
+
+    // 快照必须在删除前取：记录写完后 sentence_record 已被清空，就查不到了
+    const [checkinDays, answerCount] = await Promise.all([
+      this.prisma.userCheckin.count({ where: { userId: uid } }),
+      this.prisma.sentenceRecord.count({ where: { userId: uid } }),
+    ]);
+
     // 先令所有旧令牌失效，避免注销后仍能凭旧 token 操作
     await this.blacklist.recordLogout(userId, 'client');
     const random = crypto.randomBytes(6).toString('hex');
     await this.prisma.$transaction(async (tx) => {
+      // 匿名留痕：刻意不写 userId / 邮箱，注销后与身份彻底脱钩
+      await tx.clientAccountDeletion.create({
+        data: {
+          reasonType: dto.reasonType ?? 'unspecified',
+          reasonDetail: dto.reasonDetail?.trim() || null,
+          xp: user.xp,
+          checkinDays,
+          answerCount,
+          registeredAt: user.createdAt,
+        },
+      });
       await tx.clientUser.update({
         where: { id: uid },
         data: {
@@ -281,7 +335,53 @@ export class ClientAuthUserService {
       // 学习历史属个人数据，随注销清除
       await tx.sentenceRecord.deleteMany({ where: { userId: uid } });
     });
-    this.logger.log(`[ClientAuth] 用户注销: ${userId}`);
+    this.logger.log(`[ClientAuth] 用户注销: ${userId}（原因: ${dto.reasonType ?? '未选择'}）`);
+  }
+
+  /**
+   * 注销前的二次身份校验：按账号类型选一条**可验证**的通道。
+   *
+   * - 邮箱账号 → 邮箱验证码（先调 sendDeletionCode 发送，5 分钟有效、一次性）；
+   * - 微信账号 → 小程序 `wx.login` 的 code 反查 openid，必须与账号绑定的一致；
+   *   这条比验证码更顺：wx.login 无感，用户只需点一次授权。
+   * - 兜底：微信建号的账号在「服务端已停用微信登录」时没有任何可验证通道，
+   *   此时仅凭登录态放行并告警——否则这类用户永远注销不掉，违反隐私政策承诺。
+   */
+  private async assertDeletionIdentity(
+    userId: number,
+    user: { email: string; wechatOpenid: string | null },
+    dto: DeleteClientAccountDto,
+  ): Promise<void> {
+    if (!user.email.endsWith(WECHAT_EMAIL_SUFFIX)) {
+      if (!dto.emailCode) {
+        throw AppException.badRequest('请输入邮箱验证码（先点「获取验证码」再提交）');
+      }
+      const ok = await this.emailCode.verify(user.email, 'delete', dto.emailCode);
+      if (!ok) {
+        throw AppException.badRequest('验证码错误或已过期，请重新获取');
+      }
+      return;
+    }
+
+    if (!user.wechatOpenid) {
+      // 既没有真实邮箱、也没有微信绑定：属于历史脏数据，无任何通道可验
+      this.logger.warn(`[ClientAuth] 账号无可验证通道，仅凭登录态注销: ${userId}`);
+      return;
+    }
+
+    const { appId, appSecret } = config.wechat.miniProgram;
+    if (!appId || !appSecret) {
+      this.logger.warn(`[ClientAuth] 微信登录未配置，跳过二次校验直接注销: ${userId}`);
+      return;
+    }
+
+    if (!dto.wechatCode) {
+      throw AppException.badRequest('请重新授权微信身份后再注销');
+    }
+    const session = await this.wechat.code2Session(dto.wechatCode);
+    if (session.openid !== user.wechatOpenid) {
+      throw AppException.badRequest('微信身份校验失败，请用注册本账号的微信号操作');
+    }
   }
 
   /**

@@ -1,0 +1,65 @@
+<view class="page">
+  <!-- 影响说明 -->
+  <view class="warn">
+    <text class="warn-title">注销后会发生什么</text>
+    <text class="warn-item">· 学习记录、错题本与收藏会被清除</text>
+    <text class="warn-item">· 经验值、成就、打卡与排行榜名次会消失</text>
+    <text class="warn-item">· 账号无法找回；原邮箱或微信可重新注册一个全新账号</text>
+  </view>
+
+  <!-- 原因（可选） -->
+  <view class="section">
+    <view class="row-between">
+      <text class="label">为什么离开</text>
+      <text class="muted small">可选，不填也能注销</text>
+    </view>
+    <view class="chips">
+      <view
+        wx:for="{{reasons}}"
+        wx:key="value"
+        class="chip {{reason === item.value ? 'chip-active' : ''}}"
+        data-value="{{item.value}}"
+        bindtap="onPickReason"
+      >{{item.label}}</view>
+    </view>
+    <textarea
+      class="textarea"
+      value="{{detail}}"
+      placeholder="想补充两句？我们会认真看（可不填）"
+      placeholder-class="ph"
+      maxlength="200"
+      bindinput="onDetail"
+    />
+    <view class="counter">{{detail.length}}/200</view>
+  </view>
+
+  <!-- 身份校验 -->
+  <view class="section">
+    <text class="label">身份校验</text>
+    <view wx:if="{{isWechatAccount}}" class="verify-tip">
+      本账号由微信登录创建，注销时会校验你的微信身份，无需输入验证码。
+    </view>
+    <block wx:else>
+      <view class="verify-tip">验证码将发送到 {{emailMasked}}</view>
+      <view class="code-row">
+        <input
+          class="input"
+          type="number"
+          maxlength="6"
+          value="{{emailCode}}"
+          placeholder="6 位验证码"
+          placeholder-class="ph"
+          bindinput="onCode"
+        />
+        <view class="code-btn {{cooldown > 0 || sending ? 'code-btn-off' : ''}}" bindtap="onSendCode">
+          {{cooldown > 0 ? cooldown + 's 后重发' : (sending ? '发送中…' : '获取验证码')}}
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <button class="btn btn-danger btn-block" loading="{{submitting}}" bindtap="onSubmit">注销账号</button>
+  <view class="foot">
+    <text class="muted small">注销后如需继续练习，可用原邮箱或微信重新注册。</text>
+  </view>
+</view>

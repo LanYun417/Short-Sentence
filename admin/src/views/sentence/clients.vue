@@ -10,6 +10,7 @@ import {
   backfillClientUserSentenceCardsApi,
   deleteClientUserApi,
   forceClientUserOfflineApi,
+  getClientDeletionsApi,
   getClientUserAiQuotaApi,
   exportClientUsersApi,
   getClientUserDetailApi,
@@ -29,6 +30,7 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MESSAGE, PASSWORD_REGEX } from '@/utils/v
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
+  ClientDeletionItem,
   ClientUserDetail,
   ClientUserGrowth,
   ClientUserItem,
@@ -71,6 +73,53 @@ function correctRate(row: ClientUserItem): string {
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detail = ref<ClientUserDetail | null>(null);
+
+/* ---------------------------- 注销记录 ---------------------------- */
+
+/** 原因码 → 中文（与后端 DELETION_REASON_TYPES 一一对应）。 */
+const DELETION_REASON_LABEL: Record<string, string> = {
+  no_time: '没时间练',
+  too_hard: '内容太难',
+  content: '内容不满意',
+  bugs: '使用有问题',
+  privacy: '隐私顾虑',
+  other: '其他原因',
+  unspecified: '未选择',
+};
+
+const deletionVisible = ref(false);
+const deletionLoading = ref(false);
+const deletionList = ref<ClientDeletionItem[]>([]);
+const deletionTotal = ref(0);
+const deletionLast30 = ref(0);
+const deletionStats = ref<Array<{ reasonType: string; count: number }>>([]);
+const deletionPage = ref({ page: 1, pageSize: 20 });
+
+/** 拉注销记录（表里无用户标识，只能按时间与原因看趋势）。 */
+async function loadDeletions() {
+  deletionLoading.value = true;
+  try {
+    const data = await getClientDeletionsApi(deletionPage.value);
+    deletionList.value = data.list;
+    deletionTotal.value = data.total;
+    deletionLast30.value = data.last30Days;
+    deletionStats.value = data.reasonStats;
+  } finally {
+    deletionLoading.value = false;
+  }
+}
+
+/** 打开注销记录弹层。 */
+function openDeletions() {
+  deletionVisible.value = true;
+  deletionPage.value = { page: 1, pageSize: 20 };
+  void loadDeletions();
+}
+
+/** 原因码转中文（未知码原样显示，便于发现前后端不同步）。 */
+function reasonLabel(code: string): string {
+  return DELETION_REASON_LABEL[code] ?? code;
+}
 
 /** 今日 AI 额度用量（与客户端每日额度同一数据源）。 */
 const aiQuota = ref<AiQuotaUsage | null>(null);
@@ -370,6 +419,10 @@ onMounted(() => {
       <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3 table-page__toolbar">
         <span class="text-[15px] font-semibold text-ink">客户端用户（共 {{ total }}）</span>
         <div class="flex flex-wrap items-center gap-2">
+          <el-button @click="openDeletions">
+            <template #icon><i class="bi bi-person-dash" /></template>
+            注销记录
+          </el-button>
           <el-button :loading="exporting" @click="handleExport">
             <template #icon><i class="bi bi-download" /></template>
             导出
@@ -723,6 +776,54 @@ onMounted(() => {
         <el-button @click="pwdVisible = false">取消</el-button>
         <el-button type="primary" :loading="pwdSaving" @click="submitResetPwd">确定重置</el-button>
       </template>
+    </BasicDialog>
+
+    <!-- 注销记录：匿名数据，只看趋势，不可追溯到具体账号 -->
+    <BasicDialog v-model="deletionVisible" title="账号注销记录" width="820px" :show-footer="false">
+      <div v-loading="deletionLoading">
+        <div class="mb-3 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+          <span class="text-[15px] text-ink">
+            近 30 天注销 <b>{{ deletionLast30 }}</b> 个
+          </span>
+          <span class="text-sm text-gray-400">累计 {{ deletionTotal }} 条</span>
+          <span class="text-xs text-gray-400">记录不含用户标识，无法追溯到具体账号。</span>
+        </div>
+
+        <div v-if="deletionStats.length" class="mb-3 flex flex-wrap gap-2">
+          <el-tag v-for="s in deletionStats" :key="s.reasonType" type="info" effect="plain" size="small">
+            {{ reasonLabel(s.reasonType) }} · {{ s.count }}
+          </el-tag>
+        </div>
+
+        <el-scrollbar max-height="46vh">
+          <el-table :data="deletionList" size="small" empty-text="暂无注销记录">
+            <el-table-column label="注销时间" width="160">
+              <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+            </el-table-column>
+            <el-table-column label="原因" width="110">
+              <template #default="{ row }">{{ reasonLabel(row.reasonType) }}</template>
+            </el-table-column>
+            <el-table-column label="补充说明" min-width="170" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.reasonDetail || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="用多久" width="86">
+              <template #default="{ row }">{{ row.lifespanDays }} 天</template>
+            </el-table-column>
+            <el-table-column prop="xp" label="XP" width="72" />
+            <el-table-column prop="checkinDays" label="打卡" width="72" />
+            <el-table-column prop="answerCount" label="答题" width="72" />
+          </el-table>
+        </el-scrollbar>
+
+        <Pagination
+          v-model:current-page="deletionPage.page"
+          v-model:page-size="deletionPage.pageSize"
+          class="mt-3"
+          :total="deletionTotal"
+          @size-change="loadDeletions"
+          @current-change="loadDeletions"
+        />
+      </div>
     </BasicDialog>
   </div>
 </template>

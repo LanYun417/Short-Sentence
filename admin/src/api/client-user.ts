@@ -5,6 +5,7 @@ import { del, get, post, put, request } from './request';
 import type {
   AiQuotaUsage,
   BackfillSentenceCardsResult,
+  ClientDeletionList,
   ClientUserDetail,
   ClientUserGrowth,
   ClientUserItem,
@@ -12,6 +13,7 @@ import type {
   ClientUserQuery,
   ClientUserSentenceCard,
   GrantSentenceCardResult,
+  PageQuery,
   PageResult,
 } from '@/types/api';
 
@@ -88,4 +90,9 @@ export function forceClientUserOfflineApi(id: number): Promise<null> {
 /** 删除用户（级联清理学习数据，日志类表保留） */
 export function deleteClientUserApi(id: number): Promise<null> {
   return del<null>(`/client-users/${id}`);
+}
+
+/** 账号注销记录（分页 + 原因分布；表里无用户标识，只能按时间/原因看趋势） */
+export function getClientDeletionsApi(params: PageQuery): Promise<ClientDeletionList> {
+  return get<ClientDeletionList>('/client-users/deletions', params);
 }

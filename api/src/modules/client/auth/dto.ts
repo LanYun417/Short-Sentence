@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -158,4 +159,48 @@ export class WechatLoginDto {
   @IsString({ message: 'code 必须为字符串' })
   @IsNotEmpty({ message: 'code 不能为空' })
   code!: string;
+}
+
+/**
+ * 注销原因类型（可选；用户不选时由服务端落 `unspecified`）。
+ *
+ * 取值刻意做成"用户能自己对号入座"的口语化分类，而不是内部归因标签——
+ * 它只服务于一个目的：知道用户为什么走，而不是给用户分类。
+ */
+export const DELETION_REASON_TYPES = ['no_time', 'too_hard', 'content', 'bugs', 'privacy', 'other'] as const;
+
+export type DeletionReasonType = (typeof DELETION_REASON_TYPES)[number];
+
+/**
+ * 注销账号入参。
+ *
+ * 身份校验按账号类型二选一（由服务端判定，前端不必猜）：
+ * - 邮箱账号：`emailCode`（先调 `POST /client/auth/deletion-code` 发到本人邮箱）
+ * - 微信账号：`wechatCode`（小程序 `wx.login` 拿到的 code，服务端反查 openid 比对）
+ *
+ * 两种都不传时会直接被拒——注销不可逆，不能只凭一个可能被盗的 accessToken 就执行。
+ */
+export class DeleteClientAccountDto {
+  /** 邮箱验证码（邮箱账号必填） */
+  @IsOptional()
+  @IsString({ message: '邮箱验证码必须为字符串' })
+  @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
+  emailCode?: string;
+
+  /** 微信身份凭证（微信账号必填；wx.login 的 code，一次性且 5 分钟有效） */
+  @IsOptional()
+  @IsString({ message: '微信凭证必须为字符串' })
+  @MaxLength(200, { message: '微信凭证过长' })
+  wechatCode?: string;
+
+  /** 注销原因（可选） */
+  @IsOptional()
+  @IsIn([...DELETION_REASON_TYPES], { message: '注销原因不正确' })
+  reasonType?: DeletionReasonType;
+
+  /** 补充说明（可选，最多 200 字） */
+  @IsOptional()
+  @IsString({ message: '补充说明必须为字符串' })
+  @MaxLength(200, { message: '补充说明最多 200 字' })
+  reasonDetail?: string;
 }

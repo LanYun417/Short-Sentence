@@ -78,6 +78,11 @@ export type ChainEntryLike = Prisma.ChainEntryLikeModel
  */
 export type ChainEntryReport = Prisma.ChainEntryReportModel
 /**
+ * Model ClientAccountDeletion
+ * 账号注销记录（匿名，不含任何用户标识）
+ */
+export type ClientAccountDeletion = Prisma.ClientAccountDeletionModel
+/**
  * Model ClientFeedback
  * 客户端用户反馈（对产品本身的意见）
  */

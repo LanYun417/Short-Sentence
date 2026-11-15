@@ -21,6 +21,7 @@ import {
   ClientLoginDto,
   ClientRefreshDto,
   ClientRegisterDto,
+  DeleteClientAccountDto,
   SendEmailCodeDto,
   SetClientBackgroundDto,
   UpdateClientProfileDto,
@@ -179,12 +180,27 @@ export class ClientAuthController {
   }
 
   /**
+   * 发送注销验证码（只发给当前登录用户本人的邮箱）。
+   * 与公开的 `email-code` 分开：注销验证码不能允许给任意邮箱发。
+   */
+  @Post('deletion-code')
+  async sendDeletionCode(@CurrentClientUser() user: ClientUserContext): Promise<ResponseEnvelope<null>> {
+    await this.clientAuth.sendDeletionCode(user.userId);
+    return { __raw: true, data: null, message: '验证码已发送，请查收邮箱' };
+  }
+
+  /**
    * 注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。
+   * **需二次身份校验**：邮箱账号传 emailCode（先调 `deletion-code`），
+   * 微信账号传 wechatCode（wx.login 的 code），两者都不传会被拒。
    * 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号。
    */
   @Delete('me')
-  async deleteAccount(@CurrentClientUser() user: ClientUserContext): Promise<ResponseEnvelope<null>> {
-    await this.clientAuth.deleteAccount(user.userId);
+  async deleteAccount(
+    @CurrentClientUser() user: ClientUserContext,
+    @Body() dto: DeleteClientAccountDto,
+  ): Promise<ResponseEnvelope<null>> {
+    await this.clientAuth.deleteAccount(user.userId, dto);
     return { __raw: true, data: null, message: '账号已注销' };
   }
 

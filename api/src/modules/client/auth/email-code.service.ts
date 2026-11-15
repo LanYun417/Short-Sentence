@@ -19,6 +19,8 @@ const PURPOSE_ACTION = {
   register: '注册',
   login: '登录',
   reset: '重置密码',
+  // 注销是不可逆操作，必须二次确认身份（详见 ClientAuthUserService.deleteAccount）
+  delete: '注销账号',
 } as const;
 
 export type EmailCodePurpose = keyof typeof PURPOSE_ACTION;

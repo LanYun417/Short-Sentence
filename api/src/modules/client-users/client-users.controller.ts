@@ -11,7 +11,12 @@ import { IdParamDto } from '../../common/dto/id-param.dto.js';
 import type { PageResult } from '../../common/types.js';
 import { writeCsvStream } from '../../common/utils/csv-stream.js';
 import { AiQuotaService, type AiQuotaUsage } from '../../common/ai/ai-quota.service.js';
-import { ClientUsersService, type ClientUserDetail, type ClientUserItem } from './client-users.service.js';
+import {
+  ClientUsersService,
+  type ClientDeletionList,
+  type ClientUserDetail,
+  type ClientUserItem,
+} from './client-users.service.js';
 import { ClientUserResetPasswordDto, ClientUserStatusDto, GrantSentenceCardDto } from './dto.js';
 import { GamifyService, type GamifyOverview } from '../client/gamify/gamify.service.js';
 import {
@@ -51,20 +56,38 @@ export class ClientUsersController {
     return this.clientUsers.list(query);
   }
 
-  /** 详情（含学习数据与最近答题）。 */
-  @Get(':id')
-  @RequirePermissions('client:user:query')
-  detail(@Param() params: IdParamDto): Promise<ClientUserDetail> {
-    return this.clientUsers.detail(params.id);
+  /**
+   * 账号注销记录（分页 + 原因分布）。
+   *
+   * **必须声明在 `@Get(':id')` 之前**：Nest 按声明顺序注册路由，
+   * `/client-users/deletions` 若排在 `:id` 之后会先命中详情并被参数校验拒掉。
+   */
+  @Get('deletions')
+  @RequirePermissions('client:user:list')
+  deletions(@Query() query: Record<string, unknown>): Promise<ClientDeletionList> {
+    return this.clientUsers.deletions(query);
   }
 
-  /** 导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。 */
+  /**
+   * 导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。
+   *
+   * **必须声明在 `@Get(':id')` 之前**。此前它排在下面，请求先命中 `:id`，
+   * 被 `IdParamDto` 判为「id 必须为正整数」→ 后台「导出」按钮一直是 400。
+   * 所有**单段**固定路径（deletions / export）都要放在 `:id` 之前。
+   */
   @Get('export')
   @RequirePermissions('client:user:query')
   @RawResponse()
   async exportUsers(@Query() query: Record<string, unknown>, @Res() res: Response): Promise<void> {
     const task = await this.clientUsers.createUserExport(query);
     await writeCsvStream(res, task.filename, task.header, task.rows);
+  }
+
+  /** 详情（含学习数据与最近答题）。 */
+  @Get(':id')
+  @RequirePermissions('client:user:query')
+  detail(@Param() params: IdParamDto): Promise<ClientUserDetail> {
+    return this.clientUsers.detail(params.id);
   }
 
   /** 今日 AI 额度用量（运营排查「这个人是不是把 AI 刷爆了」用）。 */

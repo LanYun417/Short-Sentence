@@ -10565,7 +10565,7 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         "tags": [
           "客户端认证"
         ],
-        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
+        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 **需二次身份校验**：邮箱账号传 emailCode（先调 `deletion-code`）， 微信账号传 wechatCode（wx.login 的 code），两者都不传会被拒。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
         "operationId": "delete__api_client_auth_me",
         "responses": {
           "200": {
@@ -10637,6 +10637,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "上传头像（单文件；自动替换旧头像并清理原文件）",
         "operationId": "post__api_client_auth_avatar",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/auth/deletion-code": {
+      "post": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "发送注销验证码（只发给当前登录用户本人的邮箱）。 与公开的 `email-code` 分开：注销验证码不能允许给任意邮箱发",
+        "operationId": "post__api_client_auth_deletion_code",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
@@ -11925,12 +11968,97 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client-users/deletions": {
+      "get": {
+        "tags": [
+          "客户端用户"
+        ],
+        "summary": "账号注销记录（分页 + 原因分布）。 **必须声明在 `@Get(':id')` 之前**：Nest 按声明顺序注册路由， `/client-users/deletions` 若排在 `:id` 之后会先命中详情并被参数校验拒掉",
+        "operationId": "get__api_client_users_deletions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client-users/export": {
       "get": {
         "tags": [
           "客户端用户"
         ],
-        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）",
+        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。 **必须声明在 `@Get(':id')` 之前**。此前它排在下面，请求先命中 `:id`， 被 `IdParamDto` 判为「id 必须为正整数」→ 后台「导出」按钮一直是 400。 所有**单段**固定路径（deletions / export）都要放在 `:id` 之前",
         "operationId": "get__api_client_users_export",
         "responses": {
           "200": {

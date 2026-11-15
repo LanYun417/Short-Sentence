@@ -26,8 +26,13 @@ function persistSession(result: ClientAuthResult): void {
   }
 }
 
-/** wx.login 取 code（Promise 化）。 */
-function getWxLoginCode(): Promise<string> {
+/**
+ * wx.login 取 code（Promise 化）。
+ *
+ * 除了登录，注销账号时也用它做**二次身份校验**：服务端拿 code 反查 openid，
+ * 与本账号绑定的 openid 比对，证明操作人确实是这个微信号本人。
+ */
+export function getWxLoginCode(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     wx.login({
       success: (res) => {

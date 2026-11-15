@@ -56,6 +56,7 @@ export const ModelName = {
   ChainEntry: 'ChainEntry',
   ChainEntryLike: 'ChainEntryLike',
   ChainEntryReport: 'ChainEntryReport',
+  ClientAccountDeletion: 'ClientAccountDeletion',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -192,6 +193,20 @@ export const ChainEntryReportScalarFieldEnum = {
 } as const
 
 export type ChainEntryReportScalarFieldEnum = (typeof ChainEntryReportScalarFieldEnum)[keyof typeof ChainEntryReportScalarFieldEnum]
+
+
+export const ClientAccountDeletionScalarFieldEnum = {
+  id: 'id',
+  reasonType: 'reasonType',
+  reasonDetail: 'reasonDetail',
+  xp: 'xp',
+  checkinDays: 'checkinDays',
+  answerCount: 'answerCount',
+  registeredAt: 'registeredAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ClientAccountDeletionScalarFieldEnum = (typeof ClientAccountDeletionScalarFieldEnum)[keyof typeof ClientAccountDeletionScalarFieldEnum]
 
 
 export const ClientFeedbackScalarFieldEnum = {
@@ -1000,6 +1015,14 @@ export const ChainEntryReportOrderByRelevanceFieldEnum = {
 } as const
 
 export type ChainEntryReportOrderByRelevanceFieldEnum = (typeof ChainEntryReportOrderByRelevanceFieldEnum)[keyof typeof ChainEntryReportOrderByRelevanceFieldEnum]
+
+
+export const ClientAccountDeletionOrderByRelevanceFieldEnum = {
+  reasonType: 'reasonType',
+  reasonDetail: 'reasonDetail'
+} as const
+
+export type ClientAccountDeletionOrderByRelevanceFieldEnum = (typeof ClientAccountDeletionOrderByRelevanceFieldEnum)[keyof typeof ClientAccountDeletionOrderByRelevanceFieldEnum]
 
 
 export const ClientFeedbackOrderByRelevanceFieldEnum = {

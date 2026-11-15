@@ -5850,6 +5850,17 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/client/auth/deletion-code",
+        "summary": "发送注销验证码（只发给当前登录用户本人的邮箱）。 与公开的 `email-code` 分开：注销验证码不能允许给任意邮箱发",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/deletion-code\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/client/auth/email-code",
         "summary": "发送邮箱验证码（注册/登录/重置密码；同邮箱同用途 60 秒只能发一次）",
         "permission": [],
@@ -5950,7 +5961,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "DELETE",
         "path": "/api/client/auth/me",
-        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
+        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 **需二次身份校验**：邮箱账号传 emailCode（先调 `deletion-code`）， 微信账号传 wechatCode（wx.login 的 code），两者都不传会被拒。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -6345,8 +6356,43 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "GET",
+        "path": "/api/client-users/deletions",
+        "summary": "账号注销记录（分页 + 原因分布）。 **必须声明在 `@Get(':id')` 之前**：Nest 按声明顺序注册路由， `/client-users/deletions` 若排在 `:id` 之后会先命中详情并被参数校验拒掉",
+        "permission": [
+          "client:user:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client-users/deletions?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client-users/export",
-        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）",
+        "summary": "导出客户端用户 CSV（流式；筛选与列表共用同一套条件）。 **必须声明在 `@Get(':id')` 之前**。此前它排在下面，请求先命中 `:id`， 被 `IdParamDto` 判为「id 必须为正整数」→ 后台「导出」按钮一直是 400。 所有**单段**固定路径（deletions / export）都要放在 `:id` 之前",
         "permission": [
           "client:user:query"
         ],

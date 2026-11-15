@@ -5,14 +5,14 @@
  */
 import { fetchTodayCheckin } from '../../services/checkin';
 import { fetchGamifyOverview } from '../../services/gamify';
-import { deleteAccount, exportMyData, writeExportFile } from '../../services/profile';
+import { exportMyData, writeExportFile } from '../../services/profile';
 import type { ClientUserProfile } from '../../services/types';
 import { fetchProfile, isLoggedIn, logout, sessionReady } from '../../utils/auth';
-import { showError, toast, toastSuccess } from '../../utils/feedback';
+import { showError, toast } from '../../utils/feedback';
 import { absoluteUrl, initialOf } from '../../utils/format';
 import { goLogin } from '../../utils/nav';
 import { syncNoticeBadge } from '../../utils/notice-badge';
-import { clearSession, getCachedUser } from '../../utils/storage';
+import { getCachedUser } from '../../utils/storage';
 
 /** 微信登录自动建的占位邮箱后缀（不展示给用户）。 */
 const WECHAT_PLACEHOLDER_SUFFIX = '@wx.local';
@@ -78,7 +78,6 @@ interface ProfileCustom {
   onMenu(event: WechatMiniprogram.TouchEvent): void;
   onExport(): Promise<void>;
   onDelete(): void;
-  doDelete(): Promise<void>;
   onLogout(): void;
 }
 
@@ -200,45 +199,14 @@ Page<ProfileData, ProfileCustom>({
     });
   },
 
-  /** 注销账号：两次确认，防止误触。 */
+  /**
+   * 去注销页。
+   *
+   * 注销要二次身份校验（邮箱验证码 / 微信授权）+ 可选原因，弹窗装不下；
+   * 单独一页（pages/account-delete）比套三层 showModal 清楚得多。
+   */
   onDelete() {
-    wx.showModal({
-      title: '注销账号',
-      content: '注销后将清空学习记录、成就与收藏，且无法恢复。确定继续？',
-      confirmText: '继续',
-      confirmColor: '#ef4444',
-      success: (first) => {
-        if (!first.confirm) {
-          return;
-        }
-        wx.showModal({
-          title: '再次确认',
-          content: '这是最后一次确认：注销后账号不可找回。',
-          confirmText: '确认注销',
-          confirmColor: '#ef4444',
-          success: (second) => {
-            if (second.confirm) {
-              void this.doDelete();
-            }
-          },
-        });
-      },
-    });
-  },
-
-  /** 真正执行注销。 */
-  async doDelete() {
-    wx.showLoading({ title: '处理中…', mask: true });
-    try {
-      await deleteAccount();
-      wx.hideLoading();
-      clearSession();
-      toastSuccess('账号已注销');
-      wx.reLaunch({ url: '/pages/login/login' });
-    } catch (error) {
-      wx.hideLoading();
-      showError(error, '注销失败，请稍后重试');
-    }
+    wx.navigateTo({ url: '/pages/account-delete/account-delete' });
   },
 
   /** 退出登录。 */

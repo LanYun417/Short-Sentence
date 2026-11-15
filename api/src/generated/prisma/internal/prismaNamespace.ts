@@ -402,6 +402,7 @@ export const ModelName = {
   ChainEntry: 'ChainEntry',
   ChainEntryLike: 'ChainEntryLike',
   ChainEntryReport: 'ChainEntryReport',
+  ClientAccountDeletion: 'ClientAccountDeletion',
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
@@ -464,7 +465,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "userSubmission" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientAccountDeletion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "userSubmission" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -795,6 +796,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ChainEntryReportCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ChainEntryReportCountAggregateOutputType> | number
+        }
+      }
+    }
+    ClientAccountDeletion: {
+      payload: Prisma.$ClientAccountDeletionPayload<ExtArgs>
+      fields: Prisma.ClientAccountDeletionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClientAccountDeletionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClientAccountDeletionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        findFirst: {
+          args: Prisma.ClientAccountDeletionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClientAccountDeletionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        findMany: {
+          args: Prisma.ClientAccountDeletionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>[]
+        }
+        create: {
+          args: Prisma.ClientAccountDeletionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        createMany: {
+          args: Prisma.ClientAccountDeletionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.ClientAccountDeletionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        update: {
+          args: Prisma.ClientAccountDeletionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClientAccountDeletionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClientAccountDeletionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.ClientAccountDeletionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClientAccountDeletionPayload>
+        }
+        aggregate: {
+          args: Prisma.ClientAccountDeletionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClientAccountDeletion>
+        }
+        groupBy: {
+          args: Prisma.ClientAccountDeletionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientAccountDeletionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClientAccountDeletionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClientAccountDeletionCountAggregateOutputType> | number
         }
       }
     }
@@ -4012,6 +4079,20 @@ export const ChainEntryReportScalarFieldEnum = {
 export type ChainEntryReportScalarFieldEnum = (typeof ChainEntryReportScalarFieldEnum)[keyof typeof ChainEntryReportScalarFieldEnum]
 
 
+export const ClientAccountDeletionScalarFieldEnum = {
+  id: 'id',
+  reasonType: 'reasonType',
+  reasonDetail: 'reasonDetail',
+  xp: 'xp',
+  checkinDays: 'checkinDays',
+  answerCount: 'answerCount',
+  registeredAt: 'registeredAt',
+  createdAt: 'createdAt'
+} as const
+
+export type ClientAccountDeletionScalarFieldEnum = (typeof ClientAccountDeletionScalarFieldEnum)[keyof typeof ClientAccountDeletionScalarFieldEnum]
+
+
 export const ClientFeedbackScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -4820,6 +4901,14 @@ export const ChainEntryReportOrderByRelevanceFieldEnum = {
 export type ChainEntryReportOrderByRelevanceFieldEnum = (typeof ChainEntryReportOrderByRelevanceFieldEnum)[keyof typeof ChainEntryReportOrderByRelevanceFieldEnum]
 
 
+export const ClientAccountDeletionOrderByRelevanceFieldEnum = {
+  reasonType: 'reasonType',
+  reasonDetail: 'reasonDetail'
+} as const
+
+export type ClientAccountDeletionOrderByRelevanceFieldEnum = (typeof ClientAccountDeletionOrderByRelevanceFieldEnum)[keyof typeof ClientAccountDeletionOrderByRelevanceFieldEnum]
+
+
 export const ClientFeedbackOrderByRelevanceFieldEnum = {
   type: 'type',
   content: 'content',
@@ -5467,6 +5556,7 @@ export type GlobalOmitConfig = {
   chainEntry?: Prisma.ChainEntryOmit
   chainEntryLike?: Prisma.ChainEntryLikeOmit
   chainEntryReport?: Prisma.ChainEntryReportOmit
+  clientAccountDeletion?: Prisma.ClientAccountDeletionOmit
   clientFeedback?: Prisma.ClientFeedbackOmit
   clientNotice?: Prisma.ClientNoticeOmit
   clientNoticeRead?: Prisma.ClientNoticeReadOmit
