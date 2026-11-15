@@ -126,6 +126,31 @@ client-miniapp/
 5. 微信登录需后端 `.env` 配置 `WECHAT_MINIAPP_APPID` / `WECHAT_MINIAPP_SECRET`；
    未配置时该接口返回不可用，前端会退回邮箱登录。
 
+### 可选的自动化截图验证（本机才跑，不进 CI）
+
+开发者工具自带 CLI，配合 `miniprogram-automator` 可以不开人工点、直接进页面截图，
+用来抓「样式没生效 / 图片不显示 / 页面空白」这类只有渲染后才暴露的问题：
+
+```bash
+# 1) 开发者工具：设置 → 安全设置 → 服务端口 开启（一次性）
+# 2) 以自动化模式打开工程（touristappid 即可，无需真实 AppID）
+cli.bat auto --project <client-miniapp 绝对路径> --auto-port 9421 --port <IDE 端口>
+# 3) 本机临时装驱动（不要写进项目依赖）
+npm i miniprogram-automator
+```
+
+```js
+const automator = require('miniprogram-automator');
+const mp = await automator.connect({ wsEndpoint: 'ws://127.0.0.1:9421' });
+const page = await mp.reLaunch('/pages/index/index');
+await page.waitFor(1500);
+await mp.screenshot({ path: 'shots/index.png' }); // 逐页跑一遍再人工看
+```
+
+注意：`miniprogram-automator` 只是本机验证工具，**不要加进任何 package.json**
+（`npm i` 在临时目录里会向上找到仓库根并写入根依赖，触发 `guard:deps` 失败）。
+建议放在 `.workbuddy/` 这类已被忽略的目录，并在里面先 `npm init -y` 再安装。
+
 ## 七、发布前检查
 
 - `npm run type-check` 通过；`npm run check` 通过（页面四件套 / 事件绑定 / WXML 闭合 / `wx:key` / tabBar 图标）；
