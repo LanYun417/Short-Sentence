@@ -74,29 +74,23 @@ const listen = computed(() => props.mode === 'listen');
  */
 const assembleMode = computed(() => props.mode === 'assemble' && (props.question.words?.length ?? 0) > 0);
 
-/** 浏览器是否支持语音合成（SSR / 老旧浏览器兜底 false，模板据此给降级文案）。 */
-const speechSupported = ref(false);
-onMounted(() => {
-  speechSupported.value = typeof window !== 'undefined' && 'speechSynthesis' in window;
-});
+/**
+ * 朗读统一走 useTts（全站同一套嗓音优选与云端静默失败兜底）：
+ * 盲听题面只有声音一条信息通道，点下去必须出声——自己 new SpeechSynthesisUtterance
+ * 会绕开本地嗓音优选，Chrome 云端嗓音在弱网下会「点了没声」。
+ */
+const tts = useTts();
+const speechSupported = tts.isSupported;
 
 /** 本朝向播放过至少一次（「再听一次」按钮在听过之后才出现）。 */
 const replayed = ref(false);
 
-/**
- * 朗读当前题的英文原句（盲听题面唯一信息源）。
- * 用浏览器原生 speechSynthesis：零依赖、无网络请求；失败时静默——
- * 盲听途中弹原生 alert 会直接把用户踢出作答状态。
- */
+/** 朗读当前题的英文原句（盲听题面唯一信息源）；失败静默，不打断作答。 */
 function speak(): void {
-  if (!speechSupported.value || !props.question.ttsText) {
+  if (!props.question.ttsText) {
     return;
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(props.question.ttsText);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.9;
-  window.speechSynthesis.speak(utterance);
+  tts.speak(props.question.ttsText, { lang: 'en-US', rate: 0.9 });
   replayed.value = true;
 }
 
