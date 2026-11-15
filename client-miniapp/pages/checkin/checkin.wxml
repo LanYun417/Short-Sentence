@@ -13,10 +13,10 @@
     <view class="poster-bar">
       <view class="poster-bar-fill" style="width: {{percent}}%"></view>
     </view>
-    <text class="poster-meta">今日 {{checkin.doneCount}} / {{checkin.goalCount}} 题</text>
+    <text class="poster-meta">今日 {{checkin.doneCount}} / {{goalText}} 题</text>
 
     <view class="poster-foot">
-      <text class="poster-tip">{{checkin.completed ? '今日目标已达成' : '还差 ' + remaining + ' 题'}}</text>
+      <text class="poster-tip">{{tip}}</text>
     </view>
   </view>
 

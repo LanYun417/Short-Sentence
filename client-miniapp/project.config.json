@@ -30,7 +30,7 @@
     "useCompilerPlugins": ["typescript"]
   },
   "compileType": "miniprogram",
-  "appid": "touristappid",
+  "appid": "wx2e804a86be410dd1",
   "projectname": "short-sentence-miniapp",
   "condition": {},
   "editorSetting": {

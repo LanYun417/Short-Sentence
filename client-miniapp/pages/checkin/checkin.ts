@@ -16,12 +16,14 @@ const EMPTY: TodayCheckin = { date: '', doneCount: 0, goalCount: 0, streak: 0, c
 interface CheckinData {
   checkin: TodayCheckin;
   percent: number;
-  remaining: number;
+  goalText: string;
+  tip: string;
   loading: boolean;
   submitting: boolean;
 }
 
 interface CheckinCustom {
+  applyCheckin(checkin: TodayCheckin): void;
   refresh(): Promise<void>;
   onCheckin(): Promise<void>;
   onGoPractice(): void;
@@ -31,7 +33,8 @@ Page<CheckinData, CheckinCustom>({
   data: {
     checkin: EMPTY,
     percent: 0,
-    remaining: 0,
+    goalText: '—',
+    tip: '今天还没开始，先答一题吧',
     loading: true,
     submitting: false,
   },
@@ -51,17 +54,24 @@ Page<CheckinData, CheckinCustom>({
     });
   },
 
+  /** 把进度铺到视图（goal=0 表示今天还没开始，别显示成 0/0）。 */
+  applyCheckin(checkin: TodayCheckin) {
+    const goal = checkin.goalCount || 0;
+    const remaining = Math.max(0, goal - checkin.doneCount);
+    this.setData({
+      checkin,
+      percent: goal > 0 ? Math.max(0, Math.min(100, Math.round((checkin.doneCount / goal) * 100))) : 0,
+      goalText: goal > 0 ? String(goal) : '—',
+      tip: goal === 0 ? '今天还没开始，先答一题吧' : checkin.completed ? '今日目标已达成' : `还差 ${remaining} 题`,
+    });
+  },
+
   /** 读今日进度。 */
   async refresh() {
     try {
       const checkin = await fetchTodayCheckin();
-      const goal = checkin.goalCount || 0;
-      this.setData({
-        checkin,
-        percent: goal > 0 ? Math.max(0, Math.min(100, Math.round((checkin.doneCount / goal) * 100))) : 0,
-        remaining: Math.max(0, goal - checkin.doneCount),
-        loading: false,
-      });
+      this.applyCheckin(checkin);
+      this.setData({ loading: false });
     } catch (error) {
       this.setData({ loading: false });
       showError(error);
@@ -76,13 +86,8 @@ Page<CheckinData, CheckinCustom>({
     this.setData({ submitting: true });
     try {
       const checkin = await submitCheckin();
-      const goal = checkin.goalCount || 0;
-      this.setData({
-        checkin,
-        percent: goal > 0 ? Math.max(0, Math.min(100, Math.round((checkin.doneCount / goal) * 100))) : 0,
-        remaining: Math.max(0, goal - checkin.doneCount),
-        submitting: false,
-      });
+      this.applyCheckin(checkin);
+      this.setData({ submitting: false });
       toastSuccess('打卡成功');
     } catch (error) {
       this.setData({ submitting: false });
