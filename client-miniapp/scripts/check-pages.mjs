@@ -144,6 +144,66 @@ function checkTags() {
   }
 }
 
+/** 4. 样式：WXSS 花括号配平 + WXML 里用到的静态 class 必须有定义 */
+function checkStyles() {
+  console.log('样式类');
+  const cssPath = path.join(ROOT, 'app.wxss');
+  const globalSelectors = new Set();
+  const collect = (css, into) => {
+    for (const match of css.matchAll(/\.([A-Za-z_][\w-]*)/g)) {
+      into.add(match[1]);
+    }
+  };
+  if (fs.existsSync(cssPath)) {
+    const css = fs.readFileSync(cssPath, 'utf8');
+    collect(css, globalSelectors);
+    const open = (css.match(/{/g) ?? []).length;
+    const close = (css.match(/}/g) ?? []).length;
+    if (open !== close) {
+      fail(`app.wxss 花括号不配平（{ ${open} / } ${close}）`);
+    }
+  }
+
+  for (const page of app.pages) {
+    const wxssPath = path.join(ROOT, `${page}.wxss`);
+    const wxmlPath = path.join(ROOT, `${page}.wxml`);
+    if (!fs.existsSync(wxssPath) || !fs.existsSync(wxmlPath)) {
+      continue;
+    }
+    const css = fs.readFileSync(wxssPath, 'utf8');
+    const open = (css.match(/{/g) ?? []).length;
+    const close = (css.match(/}/g) ?? []).length;
+    if (open !== close) {
+      fail(`${page}.wxss 花括号不配平（{ ${open} / } ${close}）`);
+      continue;
+    }
+
+    const defined = new Set(globalSelectors);
+    collect(css, defined);
+
+    const used = new Set();
+    const wxml = fs.readFileSync(wxmlPath, 'utf8');
+    for (const match of wxml.matchAll(/(?:^|\s)(?:class|hover-class)="([^"]*)"/g)) {
+      const raw = match[1];
+      // 含插值的类名无法静态判断（可能拼出 -active 等变体），跳过
+      if (raw.includes('{{')) {
+        continue;
+      }
+      raw
+        .split(/\s+/)
+        .filter(Boolean)
+        .forEach((name) => used.add(name));
+    }
+
+    const missing = [...used].filter((name) => !defined.has(name));
+    if (missing.length > 0) {
+      fail(`${page}: 样式类未定义 ${missing.join(', ')}`);
+      continue;
+    }
+    ok(`${page}.wxss（${used.size} 个静态类）`);
+  }
+}
+
 /** 5. tabBar 图标 */
 function checkTabBar() {
   console.log('tabBar 图标');
@@ -170,6 +230,7 @@ function checkTabBar() {
 checkPages();
 checkBindings();
 checkTags();
+checkStyles();
 checkTabBar();
 
 console.log(`\n${problems === 0 ? '全部通过' : `${problems} 个问题`}`);

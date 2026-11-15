@@ -11,7 +11,7 @@
 
   <view wx:if="{{loading}}" class="empty">加载中…</view>
 
-  <view wx:else class="groups">
+  <view wx:else class="group-list">
     <view wx:for="{{groups}}" wx:key="type" wx:for-item="group" wx:for-index="groupIndex" class="group">
       <view class="group-head">
         <text class="group-title">{{group.title}}</text>

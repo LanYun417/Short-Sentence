@@ -43,7 +43,7 @@
         </view>
       </view>
 
-      <view wx:if="{{sending}}" class="msg msg-npc">
+      <view wx:if="{{sending}}" class="msg">
         <view class="msg-avatar">💬</view>
         <view class="msg-body">
           <view class="bubble bubble-typing">

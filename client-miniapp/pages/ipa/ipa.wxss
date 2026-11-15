@@ -36,6 +36,10 @@
   margin-top: 32rpx;
 }
 
+.group-list {
+  padding-bottom: 8rpx;
+}
+
 .group-head {
   display: flex;
   gap: 12rpx;
