@@ -1,9 +1,8 @@
 /**
  * 情景闯关接口。
  *
- * 说明：翻译开关不用 `PATCH /:id/dialogue/translation`——
- * `wx.request` 不支持 PATCH，而 `POST /:id/dialogue/messages` 的 `showTranslation`
- * 已由服务端持久化（且 translationUsed 粘性），发消息时带上即可。
+ * 说明：翻译开关走 `POST /:id/dialogue/translation`（后端为小程序留的 PATCH 别名）——
+ * `wx.request` 不支持 PATCH；发消息时也会带 `showTranslation` 作为兜底。
  */
 import { request } from '../utils/request';
 import type {
@@ -49,6 +48,14 @@ export function sendStageMessage(stageId: number, content: string, showTranslati
 /** 主动结束对话。 */
 export function endDialogue(stageId: number): Promise<StageDialogueView> {
   return request<StageDialogueView>(`/client/stages/${stageId}/dialogue/end`, { method: 'POST' });
+}
+
+/** 切换翻译显示开关并持久化（POST 别名：wx.request 不支持 PATCH）。 */
+export function setStageTranslation(stageId: number, show: boolean): Promise<{ showTranslation: boolean }> {
+  return request<{ showTranslation: boolean }>(`/client/stages/${stageId}/dialogue/translation`, {
+    method: 'POST',
+    data: { show },
+  });
 }
 
 /** 领取通关奖励（幂等）。 */

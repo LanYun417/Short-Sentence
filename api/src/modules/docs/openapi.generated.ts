@@ -21627,6 +21627,70 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       }
     },
     "/api/client/stages/{id}/dialogue/translation": {
+      "post": {
+        "tags": [
+          "Stage"
+        ],
+        "summary": "切换翻译显示开关（POST 别名）。 `wx.request` 不支持 PATCH，小程序侧只能走这条；Web / Android 仍用 PATCH",
+        "operationId": "post__api_client_stages__id_dialogue_translation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "路径参数 id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageTranslationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StageTranslationDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "patch": {
         "tags": [
           "Stage"
@@ -22536,6 +22600,59 @@ export const OPENAPI_DOC: Record<string, unknown> = {
       }
     },
     "/api/client/team/name": {
+      "post": {
+        "tags": [
+          "Team"
+        ],
+        "summary": "修改小队名（POST 别名）。 微信小程序的 `wx.request` **不支持 PATCH**，只能 GET/POST/PUT/DELETE， 故为小程序留一条等价入口；Web / Android 继续用上面的 PATCH（语义更准确）",
+        "operationId": "post__api_client_team_name",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RenameTeamDto"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "patch": {
         "tags": [
           "Team"

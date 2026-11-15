@@ -78,6 +78,20 @@ export class StageController {
     return this.stages.setTranslation(user.userId, params.id, dto.show);
   }
 
+  /**
+   * 切换翻译显示开关（POST 别名）。
+   *
+   * `wx.request` 不支持 PATCH，小程序侧只能走这条；Web / Android 仍用 PATCH。
+   */
+  @Post(':id/dialogue/translation')
+  translationByPost(
+    @CurrentClientUser() user: ClientUserContext,
+    @Param() params: IdParamDto,
+    @Body() dto: StageTranslationDto,
+  ): Promise<{ showTranslation: boolean }> {
+    return this.stages.setTranslation(user.userId, params.id, dto.show);
+  }
+
   /** 主动结束对话。 */
   @Post(':id/dialogue/end')
   end(@CurrentClientUser() user: ClientUserContext, @Param() params: IdParamDto): Promise<StageDialogueView> {

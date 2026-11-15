@@ -12,6 +12,7 @@ import {
   leaveTeam,
   matchTeam,
   recallTeamMessage,
+  renameTeam,
   sendTeamMessage,
 } from '../../services/team';
 import type { TeamMessage, TeamView } from '../../services/types';
@@ -33,8 +34,18 @@ interface MessageView {
   recalled: boolean;
 }
 
+/** 队员视图模型（头像位只放首字，避免整段昵称挤进圆圈）。 */
+interface MemberView {
+  userId: number;
+  label: string;
+  initial: string;
+  checkedIn: boolean;
+  isMe: boolean;
+}
+
 interface TeamData {
   team: TeamView | null;
+  members: MemberView[];
   messages: MessageView[];
   input: string;
   nameInput: string;
@@ -53,6 +64,7 @@ interface TeamCustom {
   startPolling(): void;
   stopPolling(): void;
   toView(message: TeamMessage): MessageView;
+  toMembers(team: TeamView): MemberView[];
   onName(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
   onCode(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
   onInput(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
@@ -60,6 +72,7 @@ interface TeamCustom {
   onJoin(): Promise<void>;
   onMatch(): Promise<void>;
   onLeave(): void;
+  onRename(): void;
   onSend(): Promise<void>;
   onRecall(event: WechatMiniprogram.TouchEvent): void;
 }
@@ -67,6 +80,7 @@ interface TeamCustom {
 Page<TeamData, TeamCustom>({
   data: {
     team: null,
+    members: [],
     messages: [],
     input: '',
     nameInput: '',
@@ -98,11 +112,26 @@ Page<TeamData, TeamCustom>({
     this.stopPolling();
   },
 
+  /** 队员 → 视图模型。 */
+  toMembers(team: TeamView): MemberView[] {
+    return team.members.map((member) => ({
+      userId: member.userId,
+      label: member.isMe ? '我' : member.nickname,
+      initial: member.nickname ? member.nickname.charAt(0) : '?',
+      checkedIn: member.checkedIn,
+      isMe: member.isMe,
+    }));
+  },
+
   /** 拉我的小队，有队伍就拉一次消息。 */
   async refresh() {
     try {
       const team = await fetchMyTeam();
-      this.setData({ team, loading: false });
+      this.setData({
+        team,
+        members: team ? this.toMembers(team) : [],
+        loading: false,
+      });
       if (team) {
         await this.loadMessages();
       } else {
@@ -256,6 +285,38 @@ Page<TeamData, TeamCustom>({
             this.stopPolling();
             this.setData({ team: null, messages: [] });
             toastSuccess('已退出小队');
+          })
+          .catch((error: unknown) => {
+            showError(error);
+          });
+      },
+    });
+  },
+
+  /** 修改小队名（任意成员可改，改完全队可见）。 */
+  onRename() {
+    const team = this.data.team;
+    if (!team) {
+      return;
+    }
+    wx.showModal({
+      title: '修改小队名',
+      editable: true,
+      content: team.name,
+      placeholderText: '2~20 个字',
+      confirmText: '保存',
+      success: (res) => {
+        if (!res.confirm) {
+          return;
+        }
+        const name = (res.content ?? '').trim();
+        if (!name || name === team.name) {
+          return;
+        }
+        void renameTeam(name)
+          .then((view) => {
+            this.setData({ team: view, members: this.toMembers(view) });
+            toastSuccess('已改名');
           })
           .catch((error: unknown) => {
             showError(error);

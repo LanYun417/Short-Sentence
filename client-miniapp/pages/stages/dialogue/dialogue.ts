@@ -6,10 +6,10 @@
  * - 达到 maxTurns 仍未达成 → 本局结束但可重来；
  * - 翻译开关随每条消息上送（服务端 translationUsed 粘性），全程关翻译有额外加成。
  *
- * 注意：`PATCH /:id/dialogue/translation` 不在小程序里调用——wx.request 不支持 PATCH，
- * 而发消息接口的 showTranslation 已足够持久化该偏好。
+ * 注意：翻译开关走 `POST /:id/dialogue/translation`（后端为小程序留的 PATCH 别名），
+ * 因为 wx.request 不支持 PATCH；发消息时也会带 showTranslation 作兜底。
  */
-import { claimStage, endDialogue, sendStageMessage, startDialogue } from '../../../services/stage';
+import { claimStage, endDialogue, sendStageMessage, setStageTranslation, startDialogue } from '../../../services/stage';
 import type { StageDialogueHint, StageDialogueView } from '../../../services/types';
 import { isLoggedIn, sessionReady } from '../../../utils/auth';
 import { haptic, showError, toast, toastSuccess } from '../../../utils/feedback';
@@ -272,9 +272,13 @@ Page<DialogueData, DialogueCustom>({
     }
   },
 
-  /** 切换中文翻译显示。 */
+  /** 切换中文翻译显示，并持久化到会话（全程关翻译通关有加成）。 */
   onToggleTranslation() {
-    this.setData({ showTranslation: !this.data.showTranslation });
+    const show = !this.data.showTranslation;
+    this.setData({ showTranslation: show });
+    void setStageTranslation(this.stageId, show).catch(() => {
+      // 持久化失败不打断当前操作：下一条消息仍会再带一次 showTranslation
+    });
   },
 
   /** 主动结束对话。 */

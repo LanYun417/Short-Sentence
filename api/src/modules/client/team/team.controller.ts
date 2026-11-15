@@ -53,6 +53,17 @@ export class TeamController {
     return this.team.rename(user.userId, dto.name);
   }
 
+  /**
+   * 修改小队名（POST 别名）。
+   *
+   * 微信小程序的 `wx.request` **不支持 PATCH**，只能 GET/POST/PUT/DELETE，
+   * 故为小程序留一条等价入口；Web / Android 继续用上面的 PATCH（语义更准确）。
+   */
+  @Post('name')
+  renameByPost(@CurrentClientUser() user: ClientUserContext, @Body() dto: RenameTeamDto): Promise<TeamView> {
+    return this.team.rename(user.userId, dto.name);
+  }
+
   /** 群聊消息游标分页（最近 30 天）；before = 上一页最老消息 id。 */
   @Get('messages')
   messages(

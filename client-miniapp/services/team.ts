@@ -1,7 +1,8 @@
 /**
  * 弱连接组队（小分队）。
  *
- * 改名 `PATCH /client/team/name` 未接入：`wx.request` 不支持 PATCH。
+ * 改名走 `POST /client/team/name`（后端为小程序留的 PATCH 别名）：
+ * `wx.request` 不支持 PATCH，Web / Android 仍用 PATCH。
  */
 import { request } from '../utils/request';
 import type { TeamMessage, TeamView } from './types';
@@ -24,6 +25,11 @@ export function joinTeam(code: string): Promise<TeamView> {
 /** 退出小队。 */
 export function leaveTeam(): Promise<{ left: boolean }> {
   return request<{ left: boolean }>('/client/team/leave', { method: 'POST' });
+}
+
+/** 修改小队名（走 POST 别名：wx.request 不支持 PATCH）。 */
+export function renameTeam(name: string): Promise<TeamView> {
+  return request<TeamView>('/client/team/name', { method: 'POST', data: { name } });
 }
 
 /** 找队友（按近 7 天节奏随机匹配，或进等待池）。 */

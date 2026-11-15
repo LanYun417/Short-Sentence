@@ -40,7 +40,10 @@
   <block wx:else>
     <view class="head">
       <view class="row-between">
-        <text class="head-name">{{team.name}}</text>
+        <view class="head-name-row">
+          <text class="head-name">{{team.name}}</text>
+          <text class="head-edit" bindtap="onRename">改名</text>
+        </view>
         <text class="head-code">组队码 {{team.code}}</text>
       </view>
       <view class="head-meta">
@@ -48,9 +51,9 @@
       </view>
       <text class="hint hint-{{team.hintTone}}">{{team.hint}}</text>
       <view class="members">
-        <view wx:for="{{team.members}}" wx:key="userId" class="member">
-          <view class="member-avatar {{item.checkedIn ? 'member-done' : ''}}">{{item.nickname}}</view>
-          <text class="member-name ellipsis">{{item.isMe ? '我' : item.nickname}}</text>
+        <view wx:for="{{members}}" wx:key="userId" class="member">
+          <view class="member-avatar {{item.checkedIn ? 'member-done' : ''}}">{{item.initial}}</view>
+          <text class="member-name ellipsis">{{item.label}}</text>
         </view>
       </view>
     </view>

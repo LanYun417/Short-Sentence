@@ -11553,6 +11553,41 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "POST",
+        "path": "/api/client/stages/:id/dialogue/translation",
+        "summary": "切换翻译显示开关（POST 别名）。 `wx.request` 不支持 PATCH，小程序侧只能走这条；Web / Android 仍用 PATCH",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          },
+          {
+            "name": "show",
+            "in": "body",
+            "type": "boolean",
+            "required": true,
+            "description": "",
+            "example": true
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/stages/1/dialogue/translation\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"show\": true\n    }'",
+          "pathParams": {
+            "id": "1"
+          },
+          "requestBody": {
+            "show": true
+          }
+        }
+      },
+      {
         "method": "PATCH",
         "path": "/api/client/stages/:id/dialogue/translation",
         "summary": "切换翻译显示开关（持久化到会话，用于无翻译通关加成反作弊）",
@@ -11944,6 +11979,30 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X POST \"http://localhost:3000/api/client/team/messages/1/recall\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "pathParams": {
             "id": "1"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/team/name",
+        "summary": "修改小队名（POST 别名）。 微信小程序的 `wx.request` **不支持 PATCH**，只能 GET/POST/PUT/DELETE， 故为小程序留一条等价入口；Web / Android 继续用上面的 PATCH（语义更准确）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "name",
+            "in": "body",
+            "type": "string",
+            "required": true,
+            "description": "新小队名（service 会去空白、压缩连续空格，并按码点校验 2~20 字）",
+            "example": "log-archive"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/team/name\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"name\": \"log-archive\"\n    }'",
+          "requestBody": {
+            "name": "log-archive"
           }
         }
       },
