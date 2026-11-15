@@ -595,8 +595,8 @@ flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-re
 
 5. **PR**：说明背景与改动点，关联相关 Issue，并确保上述检查通过。
 6. **推送**：本仓库是**双远端**（`origin` = Gitee，主远端；`github` = GitHub 镜像），
-   用 `git pushall` 一次推两边；fetch / pull 只走 `origin`。细节见
-   [Git 提交规范/02-分支与发布](./knowledge/Git提交规范/02-分支与发布.md)。
+   用 `git pushall` 一次推两边；fetch / pull 只走 `origin`。`pushall` 是本地别名，
+   新克隆后按 [02-分支与发布 §2.3](./knowledge/Git提交规范/02-分支与发布.md) 配一次。
 
 > 新增后端业务模块请遵循 NestJS 分层（module → controller → service → dto），数据访问统一走 `PrismaService`；
 > 表结构变更改 `prisma/schema/` 下对应的模型文件（按域分文件，见 base.prisma 的「文件划分」）后，

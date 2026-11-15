@@ -70,9 +70,21 @@
 
 ## 6. 分支与推送
 
+- 主分支是 `main`（2026-11-15 由 `master` 更名，两端已同步）；
 - 分支从 `main` 切出：`feature/*` / `fix/*` / `hotfix/*`；
 - 仓库是**双远端**：`origin` = Gitee（主远端）、`github` = GitHub 镜像，用 `git pushall` 一次推两边；fetch/pull 只走 `origin`；
 - 禁止 `--no-verify` 绕过钩子。
+
+`pushall` 是**本地别名**（不随仓库分发），新克隆后补一次：
+
+```bash
+git remote add github https://github.com/LanYun417/Short-Sentence.git
+git config alias.pushall '!git push origin main && git push github main'
+```
+
+> 不要用 `git remote set-url --add --push` 给 `origin` 挂两个 pushurl 来"一次推两边"：
+> 它按顺序执行，第二个失败时第一个已经成功，退出码非 0 却分不清是哪边没成。
+> 设计取舍见 [knowledge/Git提交规范/02-分支与发布.md](../knowledge/Git提交规范/02-分支与发布.md)。
 
 ## 7. 提交前自检清单
 
