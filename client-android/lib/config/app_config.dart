@@ -37,4 +37,11 @@ class AppConfig {
   /// 请求超时。AI 流式接口首包可能较慢，连接超时给宽一些。
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 60);
+
+  /// 当前构建的 versionCode（整数部分），用于和服务端最新上架版本比较。
+  ///
+  /// 与 `pubspec.yaml` 的 `version: x.y.z+N` 里的 **N** 保持一致：
+  /// 发布时 `publish-apk.mjs --version-code N` 登记的也是这个值。
+  /// 也可用 `--dart-define=APP_VERSION_CODE=N` 在构建期覆盖。
+  static const int buildVersionCode = int.fromEnvironment('APP_VERSION_CODE', defaultValue: 1);
 }

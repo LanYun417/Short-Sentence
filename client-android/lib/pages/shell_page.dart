@@ -13,10 +13,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/app_version_api.dart';
+import '../config/app_config.dart';
 import '../state/shell_controller.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
 import '../widgets/app_tab_bar.dart';
+import '../widgets/update_dialog.dart';
 import 'ai_page.dart';
 import 'festival_bank_page.dart';
 import 'growth_page.dart';
@@ -36,6 +39,26 @@ class ShellPage extends ConsumerStatefulWidget {
 class _ShellPageState extends ConsumerState<ShellPage> {
   late int _index = widget.initialIndex;
   late final Set<int> _visited = <int>{_index};
+
+  @override
+  void initState() {
+    super.initState();
+    // 启动后查一次版本更新；失败静默——版本检查绝不能挡住进首页
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+  }
+
+  /// 拉最新上架版本，比当前构建新就弹更新窗（forceUpdate 时不可关闭）。
+  Future<void> _checkUpdate() async {
+    try {
+      final latest = await ref.read(latestAppVersionProvider.future);
+      if (!mounted || latest == null) return;
+      if (latest.versionCode > AppConfig.buildVersionCode) {
+        await showUpdateDialog(context, latest);
+      }
+    } catch (_) {
+      // 网络异常等一律吞掉
+    }
+  }
 
   static const List<AppTabItem> _tabs = <AppTabItem>[
     AppTabItem(

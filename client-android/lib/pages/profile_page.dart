@@ -9,10 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/app_version_api.dart';
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
 import '../api/notice_api.dart';
 import '../api/site_api.dart';
+import '../config/app_config.dart';
 import '../config/image_pick.dart';
 import '../state/auth_controller.dart';
 import '../state/growth_controller.dart';
@@ -23,6 +25,7 @@ import '../widgets/count_up.dart';
 import '../widgets/page_header.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/staggered.dart';
+import '../widgets/update_dialog.dart';
 import '../sheets/edit_profile_sheet.dart';
 import '../sheets/feedback_sheet.dart';
 import '../sheets/notice_sheet.dart';
@@ -130,6 +133,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+  /// 手动「检查更新」：拉最新上架版本，有新版本弹窗，已是最新则提示。
+  Future<void> _checkUpdate() async {
+    try {
+      final latest = await ref.read(latestAppVersionProvider.future);
+      if (!mounted) return;
+      if (latest == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暂无上架版本信息')));
+        return;
+      }
+      if (latest.versionCode > AppConfig.buildVersionCode) {
+        await showUpdateDialog(context, latest);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已是最新版本（v${latest.version}）')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('检查更新失败，请稍后重试')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).user;
@@ -205,6 +231,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     label: '音标学习',
                     hint: '48 个国际音标：跟读 + 标记掌握',
                     onTap: () => context.push('/ipa'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
+                    icon: Icons.system_update_alt_outlined,
+                    label: '检查更新',
+                    hint: '当前 v${AppConfig.buildVersionCode}',
+                    onTap: _checkUpdate,
                   ),
                   const _MenuDivider(),
                   _MenuRow(
