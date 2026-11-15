@@ -405,6 +405,7 @@ export const ModelName = {
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
+  UserSubmission: 'UserSubmission',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -463,7 +464,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "userSubmission" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -992,6 +993,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ClientNoticeReadCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ClientNoticeReadCountAggregateOutputType> | number
+        }
+      }
+    }
+    UserSubmission: {
+      payload: Prisma.$UserSubmissionPayload<ExtArgs>
+      fields: Prisma.UserSubmissionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserSubmissionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserSubmissionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        findFirst: {
+          args: Prisma.UserSubmissionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserSubmissionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        findMany: {
+          args: Prisma.UserSubmissionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>[]
+        }
+        create: {
+          args: Prisma.UserSubmissionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        createMany: {
+          args: Prisma.UserSubmissionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.UserSubmissionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        update: {
+          args: Prisma.UserSubmissionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserSubmissionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserSubmissionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.UserSubmissionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserSubmissionPayload>
+        }
+        aggregate: {
+          args: Prisma.UserSubmissionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserSubmission>
+        }
+        groupBy: {
+          args: Prisma.UserSubmissionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserSubmissionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserSubmissionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserSubmissionCountAggregateOutputType> | number
         }
       }
     }
@@ -3992,6 +4059,22 @@ export const ClientNoticeReadScalarFieldEnum = {
 export type ClientNoticeReadScalarFieldEnum = (typeof ClientNoticeReadScalarFieldEnum)[keyof typeof ClientNoticeReadScalarFieldEnum]
 
 
+export const UserSubmissionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  note: 'note',
+  platform: 'platform',
+  status: 'status',
+  reviewNote: 'reviewNote',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type UserSubmissionScalarFieldEnum = (typeof UserSubmissionScalarFieldEnum)[keyof typeof UserSubmissionScalarFieldEnum]
+
+
 export const DictTypeScalarFieldEnum = {
   id: 'id',
   dictName: 'dictName',
@@ -4758,6 +4841,18 @@ export const ClientNoticeOrderByRelevanceFieldEnum = {
 export type ClientNoticeOrderByRelevanceFieldEnum = (typeof ClientNoticeOrderByRelevanceFieldEnum)[keyof typeof ClientNoticeOrderByRelevanceFieldEnum]
 
 
+export const UserSubmissionOrderByRelevanceFieldEnum = {
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  note: 'note',
+  platform: 'platform',
+  status: 'status',
+  reviewNote: 'reviewNote'
+} as const
+
+export type UserSubmissionOrderByRelevanceFieldEnum = (typeof UserSubmissionOrderByRelevanceFieldEnum)[keyof typeof UserSubmissionOrderByRelevanceFieldEnum]
+
+
 export const DictTypeOrderByRelevanceFieldEnum = {
   dictName: 'dictName',
   dictType: 'dictType',
@@ -5370,6 +5465,7 @@ export type GlobalOmitConfig = {
   clientFeedback?: Prisma.ClientFeedbackOmit
   clientNotice?: Prisma.ClientNoticeOmit
   clientNoticeRead?: Prisma.ClientNoticeReadOmit
+  userSubmission?: Prisma.UserSubmissionOmit
   dictType?: Prisma.DictTypeOmit
   dictItem?: Prisma.DictItemOmit
   sysConfig?: Prisma.SysConfigOmit

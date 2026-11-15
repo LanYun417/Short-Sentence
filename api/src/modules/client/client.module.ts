@@ -21,6 +21,9 @@ import { CheckinService } from './checkin/checkin.service.js';
 import { ReportController } from './report/report.controller.js';
 import { ReportService } from './report/report.service.js';
 import { FeedbackController } from './feedback/feedback.controller.js';
+import { SubmissionController } from './submission/submission.controller.js';
+import { SubmissionAdminController } from './submission/submission-admin.controller.js';
+import { SubmissionService } from './submission/submission.service.js';
 import { FeedbackService } from './feedback/feedback.service.js';
 import { ClientAiController } from './ai/client-ai.controller.js';
 import { ClientAiService } from './ai/client-ai.service.js';
@@ -89,6 +92,9 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     ChainAdminController,
     // 学习小队后台管理控制器 /api/teams（客户端走 /api/client/team）
     TeamAdminController,
+    // 用户投稿（UGC）：提交 / 我的投稿 / 精选；后台审核 /api/submissions
+    SubmissionController,
+    SubmissionAdminController,
   ],
   // ChainService 导出给 TaskModule 挂「接龙主题周更」定时任务；
   // StageService 同理导出给「闯关章节封面补生成」；
@@ -114,6 +120,8 @@ import { TeamAdminController } from './team/team-admin.controller.js';
     ChainService,
     // 音标学习：判分/发奖走 GamifyModule 的 GamifyService（本模块已 import）
     IpaService,
+    // 用户投稿：客户端与后台审核共用一份服务（列表/审核同一套口径）
+    SubmissionService,
   ],
 })
 export class ClientModule {}

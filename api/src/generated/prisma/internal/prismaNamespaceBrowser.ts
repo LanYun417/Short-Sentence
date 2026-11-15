@@ -59,6 +59,7 @@ export const ModelName = {
   ClientFeedback: 'ClientFeedback',
   ClientNotice: 'ClientNotice',
   ClientNoticeRead: 'ClientNoticeRead',
+  UserSubmission: 'UserSubmission',
   DictType: 'DictType',
   DictItem: 'DictItem',
   SysConfig: 'SysConfig',
@@ -238,6 +239,22 @@ export const ClientNoticeReadScalarFieldEnum = {
 } as const
 
 export type ClientNoticeReadScalarFieldEnum = (typeof ClientNoticeReadScalarFieldEnum)[keyof typeof ClientNoticeReadScalarFieldEnum]
+
+
+export const UserSubmissionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  note: 'note',
+  platform: 'platform',
+  status: 'status',
+  reviewNote: 'reviewNote',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type UserSubmissionScalarFieldEnum = (typeof UserSubmissionScalarFieldEnum)[keyof typeof UserSubmissionScalarFieldEnum]
 
 
 export const DictTypeScalarFieldEnum = {
@@ -1004,6 +1021,18 @@ export const ClientNoticeOrderByRelevanceFieldEnum = {
 } as const
 
 export type ClientNoticeOrderByRelevanceFieldEnum = (typeof ClientNoticeOrderByRelevanceFieldEnum)[keyof typeof ClientNoticeOrderByRelevanceFieldEnum]
+
+
+export const UserSubmissionOrderByRelevanceFieldEnum = {
+  sentenceEn: 'sentenceEn',
+  translationZh: 'translationZh',
+  note: 'note',
+  platform: 'platform',
+  status: 'status',
+  reviewNote: 'reviewNote'
+} as const
+
+export type UserSubmissionOrderByRelevanceFieldEnum = (typeof UserSubmissionOrderByRelevanceFieldEnum)[keyof typeof UserSubmissionOrderByRelevanceFieldEnum]
 
 
 export const DictTypeOrderByRelevanceFieldEnum = {

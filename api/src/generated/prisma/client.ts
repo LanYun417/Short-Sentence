@@ -93,6 +93,15 @@ export type ClientNotice = Prisma.ClientNoticeModel
  */
 export type ClientNoticeRead = Prisma.ClientNoticeReadModel
 /**
+ * Model UserSubmission
+ * 用户投稿（UGC）：用户提交自己的句子与译法，运营审核通过后进「投稿精选」。
+ * 
+ * 为什么不进刷题池：刷题池的题必须过 AI 生成 + 配图审核（质量与安全双闸门），
+ * 口径与用户投稿完全不同；直接混入会稀释题目质量，也会让「图片缺失」这类
+ * 状态污染刷题体验。精选列表是展示位，与题库解耦。
+ */
+export type UserSubmission = Prisma.UserSubmissionModel
+/**
  * Model DictType
  * 字典类型表
  */

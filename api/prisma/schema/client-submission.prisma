@@ -1,0 +1,31 @@
+/// 用户投稿（UGC）：用户提交自己的句子与译法，运营审核通过后进「投稿精选」。
+///
+/// 为什么不进刷题池：刷题池的题必须过 AI 生成 + 配图审核（质量与安全双闸门），
+/// 口径与用户投稿完全不同；直接混入会稀释题目质量，也会让「图片缺失」这类
+/// 状态污染刷题体验。精选列表是展示位，与题库解耦。
+model UserSubmission {
+  /// 主键
+  id            BigInt    @id @default(autoincrement()) @db.BigInt
+  /// 提交人（client_user id；不建关系，按 userId 批量查昵称）
+  userId        BigInt    @map("user_id") @db.BigInt
+  /// 英文句子
+  sentenceEn    String    @map("sentence_en") @db.VarChar(300)
+  /// 中文译文
+  translationZh String    @map("translation_zh") @db.VarChar(300)
+  /// 投稿附言（可选：为什么喜欢这句 / 出处）
+  note          String?   @db.VarChar(300)
+  /// 来源端：web / android
+  platform      String    @default("web") @db.VarChar(20)
+  /// 状态：pending 待审核 / approved 已通过 / rejected 已驳回
+  status        String    @default("pending") @db.VarChar(20)
+  /// 审核备注（驳回原因，**下发用户端**，让投稿人知道为什么没过）
+  reviewNote    String?   @map("review_note") @db.VarChar(300)
+  /// 审核时间
+  reviewedAt    DateTime? @map("reviewed_at")
+  /// 提交时间
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("user_submission")
+}
