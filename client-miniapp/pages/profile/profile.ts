@@ -16,6 +16,44 @@ import { clearSession, getCachedUser } from '../../utils/storage';
 /** 微信登录自动建的占位邮箱后缀（不展示给用户）。 */
 const WECHAT_PLACEHOLDER_SUFFIX = '@wx.local';
 
+/** 功能入口（分三组渲染）。 */
+const MENUS = [
+  { key: 'banks', label: '题库', icon: '📚', group: 1 },
+  { key: 'library', label: '语句库', icon: '🗂', group: 1 },
+  { key: 'boss', label: '每日 Boss', icon: '⚡', group: 1 },
+  { key: 'ipa', label: '音标', icon: '🔤', group: 1 },
+  { key: 'wordRoot', label: '词根', icon: '🧩', group: 1 },
+  { key: 'coach', label: 'AI 私教', icon: '🎓', group: 1 },
+  { key: 'cards', label: '句签', icon: '✦', group: 2 },
+  { key: 'checkin', label: '打卡', icon: '🔥', group: 2 },
+  { key: 'weekly', label: '周报', icon: '📈', group: 2 },
+  { key: 'chains', label: '接龙', icon: '🔗', group: 2 },
+  { key: 'team', label: '小分队', icon: '👥', group: 2 },
+  { key: 'submissions', label: '投稿', icon: '✍️', group: 3 },
+  { key: 'notices', label: '通知', icon: '🔔', group: 3 },
+  { key: 'feedback', label: '反馈', icon: '💡', group: 3 },
+  { key: 'edit', label: '编辑资料', icon: '⚙️', group: 3 },
+];
+
+/** key → 页面路径。 */
+const ROUTES: Record<string, string> = {
+  banks: '/pages/banks/banks',
+  library: '/pages/library/library',
+  boss: '/pages/boss/boss',
+  ipa: '/pages/ipa/ipa',
+  wordRoot: '/pages/word-root/word-root',
+  coach: '/pages/coach/coach',
+  cards: '/pages/cards/cards',
+  checkin: '/pages/checkin/checkin',
+  weekly: '/pages/weekly/weekly',
+  chains: '/pages/chains/chains',
+  team: '/pages/team/team',
+  submissions: '/pages/submissions/submissions',
+  notices: '/pages/notices/notices',
+  feedback: '/pages/feedback/feedback',
+  edit: '/pages/profile-edit/profile-edit',
+};
+
 interface ProfileData {
   user: ClientUserProfile | null;
   avatarUrl: string;
@@ -25,12 +63,16 @@ interface ProfileData {
   streakText: string;
   achievementText: string;
   version: string;
+  group1: Array<{ key: string; label: string; icon: string }>;
+  group2: Array<{ key: string; label: string; icon: string }>;
+  group3: Array<{ key: string; label: string; icon: string }>;
 }
 
 interface ProfileCustom {
   applyUser(user: ClientUserProfile | null): void;
   refresh(): Promise<void>;
   shareFile(filePath: string): void;
+  onMenu(event: WechatMiniprogram.TouchEvent): void;
   onExport(): Promise<void>;
   onDelete(): void;
   doDelete(): Promise<void>;
@@ -47,6 +89,9 @@ Page<ProfileData, ProfileCustom>({
     streakText: '0',
     achievementText: '0',
     version: '1.0.0',
+    group1: MENUS.filter((item) => item.group === 1),
+    group2: MENUS.filter((item) => item.group === 2),
+    group3: MENUS.filter((item) => item.group === 3),
   },
 
   onLoad() {
@@ -105,6 +150,16 @@ Page<ProfileData, ProfileCustom>({
     } catch (error) {
       showError(error);
     }
+  },
+
+  /** 功能入口跳转。 */
+  onMenu(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key ?? '');
+    const url = ROUTES[key];
+    if (!url) {
+      return;
+    }
+    wx.navigateTo({ url });
   },
 
   /** 导出我的数据 → 生成 JSON → 调起「发送给朋友/保存」。 */

@@ -1,0 +1,95 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'today' ? 'tab-active' : ''}}" data-tab="today" bindtap="onSwitchTab">今日</view>
+    <view class="tab {{tab === 'mine' ? 'tab-active' : ''}}" data-tab="mine" bindtap="onSwitchTab">我的 {{mine.length}}</view>
+    <view class="tab {{tab === 'missing' ? 'tab-active' : ''}}" data-tab="missing" bindtap="onSwitchTab">未拥有</view>
+  </view>
+
+  <!-- 今日 -->
+  <block wx:if="{{tab === 'today'}}">
+    <view wx:if="{{today}}" class="card-big" data-tab="today" bindtap="onOpenCard">
+      <image wx:if="{{today.imageUrl}}" class="card-img" src="{{today.imageUrl}}" mode="aspectFill" lazy-load />
+      <view class="card-body">
+        <text class="card-date">{{today.bizDate}}</text>
+        <text class="card-title">{{today.title}}</text>
+        <text class="card-zh">{{today.titleZh}}</text>
+        <text class="card-en" selectable>{{today.en}}</text>
+        <text class="card-trans">{{today.zh}}</text>
+      </view>
+    </view>
+
+    <view wx:else class="claim-area">
+      <view class="claim-illust">✦</view>
+      <text class="claim-title">今日句签还没领取</text>
+      <text class="claim-desc">完成今日目标后即可领取一张专属闪卡</text>
+      <button class="btn btn-primary btn-block claim-btn {{claiming ? 'btn-disabled' : ''}}" bindtap="onClaim">
+        {{claiming ? '领取中…' : '领取今日句签'}}
+      </button>
+      <button class="btn btn-ghost btn-block mt-16" bindtap="onGoPractice">去完成目标</button>
+    </view>
+  </block>
+
+  <!-- 我的 -->
+  <block wx:elif="{{tab === 'mine'}}">
+    <view wx:if="{{mine.length === 0}}" class="empty">还没有句签，先完成一次每日目标</view>
+    <view wx:else class="card-list">
+      <view
+        wx:for="{{mine}}"
+        wx:key="id"
+        class="card-item"
+        hover-class="card-item-hover"
+        data-tab="mine"
+        data-index="{{index}}"
+        bindtap="onOpenCard"
+      >
+        <image wx:if="{{item.imageUrl}}" class="card-thumb" src="{{item.imageUrl}}" mode="aspectFill" lazy-load />
+        <view wx:else class="card-thumb card-thumb-alt">✦</view>
+        <view class="card-item-body">
+          <text class="card-item-title">{{item.title}}</text>
+          <text class="card-item-en ellipsis">{{item.en}}</text>
+          <text class="muted">{{item.bizDate}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 未拥有 -->
+  <block wx:else>
+    <view wx:if="{{missing.length === 0}}" class="empty">没有更多可解锁的句签</view>
+    <block wx:else>
+      <text class="missing-tip">还有 {{missingTotal}} 张未解锁</text>
+      <view class="card-list">
+        <view
+          wx:for="{{missing}}"
+          wx:key="id"
+          class="card-item card-item-locked"
+          data-tab="missing"
+          data-index="{{index}}"
+          bindtap="onOpenCard"
+        >
+          <view class="card-thumb card-thumb-alt">?</view>
+          <view class="card-item-body">
+            <text class="card-item-title">{{item.title || '未解锁句签'}}</text>
+            <text class="card-item-en ellipsis">{{item.bizDate}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+
+  <!-- 详情 -->
+  <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
+    <view class="sheet" catchtap="onTapSheet">
+      <image wx:if="{{detail.imageUrl}}" class="sheet-img" src="{{detail.imageUrl}}" mode="aspectFill" />
+      <text class="sheet-date">{{detail.bizDate}}</text>
+      <text class="sheet-title">{{detail.title}}</text>
+      <text class="sheet-zh">{{detail.titleZh}}</text>
+      <view class="divider"></view>
+      <text class="sheet-en" selectable>{{detail.en}}</text>
+      <text class="sheet-trans">{{detail.zh}}</text>
+      <text wx:if="{{detail.owned}}" class="sheet-blessing">{{detail.blessing}}</text>
+      <text wx:else class="sheet-blessing">完成对应日期的目标即可解锁</text>
+      <button class="btn btn-ghost btn-block mt-24" bindtap="onCloseDetail">关闭</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,57 @@
+.avatar-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 0 8rpx;
+}
+
+.avatar-xl {
+  width: 160rpx;
+  height: 160rpx;
+  font-size: 48rpx;
+}
+
+.avatar-tip {
+  margin-top: 16rpx;
+  font-size: 23rpx;
+  color: var(--ink-3);
+}
+
+.list-card {
+  margin-top: 24rpx;
+}
+
+.field-row {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+  padding: 26rpx 28rpx;
+  border-bottom: 2rpx solid #f4f7fb;
+}
+
+.field-row-last {
+  border-bottom: none;
+}
+
+.field-label {
+  flex-shrink: 0;
+  width: 96rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+
+.field-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  color: var(--ink);
+}
+
+.ph {
+  color: var(--ink-3);
+}
+
+.genders {
+  display: flex;
+  gap: 16rpx;
+}

@@ -1,0 +1,142 @@
+.boss-head {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.boss-badge {
+  padding: 6rpx 20rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 2rpx;
+  background: linear-gradient(135deg, #f43f5e, #fb7185);
+  border-radius: 8rpx;
+}
+
+.boss-date {
+  font-size: 24rpx;
+  color: var(--ink-2);
+}
+
+.boss-bonus {
+  margin-left: auto;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.boss-img {
+  display: block;
+  width: 100%;
+  margin-bottom: 20rpx;
+  border-radius: 20rpx;
+}
+
+.boss-zh {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.boss-input {
+  width: 100%;
+  height: 104rpx;
+  margin-top: 28rpx;
+  padding: 0 28rpx;
+  font-size: 30rpx;
+  color: var(--ink);
+  background: #f6f8fb;
+  border: 2rpx solid #e8eef6;
+  border-radius: 24rpx;
+}
+
+.boss-ph {
+  color: var(--ink-3);
+}
+
+.result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 28rpx;
+  border-radius: 22rpx;
+}
+
+.result-head.ok {
+  background: #ecfdf5;
+}
+
+.result-head.bad {
+  background: #fef2f2;
+}
+
+.result-title {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.result-head.ok .result-title {
+  color: #047857;
+}
+
+.result-head.bad .result-title {
+  color: #b91c1c;
+}
+
+.result-xp {
+  padding: 6rpx 18rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 999rpx;
+}
+
+.block {
+  margin-top: 28rpx;
+}
+
+.block-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 21rpx;
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 1rpx;
+}
+
+.answer-en {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.answer-ipa {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.answer-note {
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.boss-state {
+  display: block;
+  margin-top: 28rpx;
+  padding: 18rpx 24rpx;
+  font-size: 23rpx;
+  color: var(--ink-2);
+  background: #f6f8fb;
+  border-radius: 16rpx;
+}

@@ -5,6 +5,7 @@
  * 判分完全由后端裁决（normalizeAnswer 不收宽），前端只负责收集答案与展示。
  */
 import { fetchNextQuestion, submitAnswer, toggleFavorite } from '../../services/question';
+import type { NextQuestionParams } from '../../services/question';
 import type { AnswerResult, NextQuestion } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { haptic, showError, toast, toastSuccess } from '../../utils/feedback';
@@ -67,6 +68,10 @@ interface PracticeCustom {
   startedAt: number;
   /** 本次抽题的来源限定（复习入口带过来） */
   onlyReview: boolean;
+  /** 题库入口带过来的场景限定 */
+  categoryId: number;
+  /** 题库入口带过来的节日限定 */
+  festival: string;
   loadQuestion(): Promise<void>;
   currentAnswer(): string;
   parseOptions(options: Record<string, string | undefined>): void;
@@ -103,6 +108,8 @@ Page<PracticeData, PracticeCustom>({
 
   startedAt: 0,
   onlyReview: false,
+  categoryId: 0,
+  festival: '',
 
   async onLoad(options: Record<string, string | undefined>) {
     this.parseOptions(options);
@@ -114,9 +121,11 @@ Page<PracticeData, PracticeCustom>({
     await this.loadQuestion();
   },
 
-  /** 解析页面参数（仅支持 `source=review`）。 */
+  /** 解析页面参数（复习入口 / 题库限定）。 */
   parseOptions(options: Record<string, string | undefined>) {
     this.onlyReview = options.source === 'review';
+    this.categoryId = Number(options.categoryId ?? 0) || 0;
+    this.festival = options.festival ? decodeURIComponent(options.festival) : '';
   },
 
   /** 抽下一张卡。 */
@@ -124,7 +133,20 @@ Page<PracticeData, PracticeCustom>({
     this.setData({ loading: true, errorText: '' });
     try {
       const difficulty = getDifficulty();
-      const question = await fetchNextQuestion(this.onlyReview ? { source: 'review' } : { difficulty });
+      const params: NextQuestionParams = {};
+      if (this.onlyReview) {
+        // 纯复习不给难度：难度只作用于新题，复习题必须按间隔排期走
+        params.source = 'review';
+      } else {
+        params.difficulty = difficulty;
+        if (this.categoryId) {
+          params.categoryId = this.categoryId;
+        }
+        if (this.festival) {
+          params.festival = this.festival;
+        }
+      }
+      const question = await fetchNextQuestion(params);
       const goal = question.todayGoal || 0;
       const percent = goal > 0 ? Math.max(0, Math.min(100, Math.round((question.todayDone / goal) * 100))) : 0;
       // 拼词词块恒定下发；万一老题缺词块，退回默写模式，避免「无词可点」卡死

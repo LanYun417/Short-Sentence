@@ -68,6 +68,41 @@
   background: var(--line);
 }
 
+/* 功能入口 */
+.menu-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+  padding: 12rpx 0;
+  background: #ffffff;
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 30rpx rgba(15, 23, 42, 0.06);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 33.333%;
+  padding: 20rpx 0;
+  border-radius: 20rpx;
+}
+
+.menu-item-hover {
+  background: #f6f8fb;
+}
+
+.menu-icon {
+  font-size: 40rpx;
+  line-height: 1.2;
+}
+
+.menu-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-2);
+}
+
 /* 操作列表 */
 .actions {
   margin-top: 24rpx;

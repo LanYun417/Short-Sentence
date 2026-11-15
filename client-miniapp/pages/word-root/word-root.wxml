@@ -1,0 +1,100 @@
+<view class="page">
+  <view class="search">
+    <input
+      class="search-input"
+      value="{{query}}"
+      placeholder="输入英文单词，如 unsubscribe"
+      placeholder-class="search-ph"
+      confirm-type="search"
+      bindinput="onInput"
+      bindconfirm="onSearch"
+    />
+    <view class="search-btn" bindtap="onSearch">搜索</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:else>
+    <!-- 搜索结果 -->
+    <block wx:if="{{results.length > 0}}">
+      <text class="section-title">搜索结果</text>
+      <view class="list-card">
+        <view
+          wx:for="{{results}}"
+          wx:key="word"
+          class="list-row"
+          hover-class="list-row-hover"
+          data-source="results"
+          data-index="{{index}}"
+          bindtap="onOpenItem"
+        >
+          <view class="row-between">
+            <text class="word">{{item.word}}</text>
+            <text wx:if="{{item.phonetic}}" class="phonetic">{{item.phonetic}}</text>
+          </view>
+          <text wx:if="{{item.meaning}}" class="meaning">{{item.meaning}}</text>
+          <text wx:if="{{item.partText}}" class="parts">{{item.partText}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 搜不到 → AI -->
+    <view wx:elif="{{query && !searching}}" class="ai-hint">
+      <text class="ai-title">词典里没有「{{query}}」</text>
+      <text class="ai-desc">可以让 AI 现场拆解词根词缀（每次消耗 1 次 AI 额度）</text>
+      <button class="btn btn-primary btn-block mt-24" bindtap="onAiParse">AI 拆解这个词</button>
+    </view>
+
+    <!-- 热门 -->
+    <block wx:if="{{results.length === 0}}">
+      <text class="section-title">热门词</text>
+      <view wx:if="{{hot.length === 0}}" class="empty">暂无热门词</view>
+      <view wx:else class="list-card">
+        <view
+          wx:for="{{hot}}"
+          wx:key="word"
+          class="list-row"
+          hover-class="list-row-hover"
+          data-source="hot"
+          data-index="{{index}}"
+          bindtap="onOpenItem"
+        >
+          <view class="row-between">
+            <text class="word">{{item.word}}</text>
+            <text wx:if="{{item.phonetic}}" class="phonetic">{{item.phonetic}}</text>
+          </view>
+          <text wx:if="{{item.meaning}}" class="meaning">{{item.meaning}}</text>
+          <text wx:if="{{item.partText}}" class="parts">{{item.partText}}</text>
+        </view>
+      </view>
+    </block>
+  </block>
+
+  <!-- 详情 -->
+  <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
+    <view class="sheet" catchtap="onTapSheet">
+      <view class="sheet-head">
+        <text class="sheet-word">{{detail.word}}</text>
+        <text wx:if="{{detail.phonetic}}" class="sheet-phonetic">{{detail.phonetic}}</text>
+      </view>
+      <text wx:if="{{detail.meaning}}" class="sheet-meaning">{{detail.meaning}}</text>
+
+      <view wx:if="{{detailParts.length > 0}}" class="parts-box">
+        <view wx:for="{{detailParts}}" wx:key="text" class="part">
+          <text class="part-label">{{item.label}}</text>
+          <text class="part-text">{{item.text}}</text>
+          <text class="part-meaning">{{item.meaning}}</text>
+        </view>
+      </view>
+
+      <text wx:if="{{detail.explanation}}" class="sheet-explain" selectable>{{detail.explanation}}</text>
+
+      <view wx:if="{{detail.related.length > 0}}" class="related">
+        <text class="sheet-label">同根词</text>
+        <text class="related-text">{{detail.related}}</text>
+      </view>
+
+      <button class="btn btn-ghost btn-block mt-24" bindtap="onCloseDetail">关闭</button>
+    </view>
+  </view>
+</view>

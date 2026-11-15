@@ -11,3 +11,8 @@ import type { TodayCheckin } from './types';
 export function fetchTodayCheckin(): Promise<TodayCheckin> {
   return request<TodayCheckin>('/client/checkin/today');
 }
+
+/** 打卡（幂等；返回同样的今日进度）。 */
+export function submitCheckin(): Promise<TodayCheckin> {
+  return request<TodayCheckin>('/client/checkin', { method: 'POST' });
+}

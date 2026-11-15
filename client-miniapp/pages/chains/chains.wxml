@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="intro">
+    <text class="intro-title">一句话接下去</text>
+    <text class="intro-desc">看别人的续写，也写下你的；点赞最多的会被更多人看到</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+  <view wx:elif="{{topics.length === 0}}" class="empty">还没有接龙话题</view>
+
+  <view wx:else class="list-card">
+    <view
+      wx:for="{{topics}}"
+      wx:key="id"
+      class="topic"
+      hover-class="list-row-hover"
+      data-id="{{item.id}}"
+      bindtap="onOpen"
+    >
+      <view class="row-between">
+        <text class="topic-title">{{item.title}}</text>
+        <text wx:if="{{item.source === 'ai'}}" class="badge badge-amber">本周新</text>
+      </view>
+      <text class="topic-starter">{{item.starterEn}}</text>
+      <text class="topic-prompt">{{item.promptZh}}</text>
+      <view class="topic-meta">
+        <text class="muted">{{item.entryCount}} 条续写</text>
+        <text wx:if="{{item.myEntryCount > 0}}" class="mine">我已写 {{item.myEntryCount}} 条</text>
+      </view>
+    </view>
+  </view>
+
+  <text class="page-foot">每人每天最多 3 条，内容会经过审核</text>
+</view>

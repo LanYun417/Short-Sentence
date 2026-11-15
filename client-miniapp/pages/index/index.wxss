@@ -223,6 +223,33 @@
   color: #0d9488;
 }
 
+/* 每日 Boss 入口（玫红，和闯关的青绿区分） */
+.entry-boss {
+  background: linear-gradient(120deg, #fff1f2, #ffe4e6);
+  border-color: #fecdd3;
+}
+
+.entry-icon-boss {
+  box-shadow: 0 6rpx 16rpx rgba(244, 63, 94, 0.16);
+}
+
+.entry-title-boss {
+  color: #be123c;
+}
+
+.entry-desc-boss {
+  color: #e11d48;
+}
+
+.entry-arrow-boss {
+  color: #e11d48;
+}
+
+.link {
+  font-size: 24rpx;
+  color: #0284c7;
+}
+
 .foot {
   margin-top: 40rpx;
   text-align: center;

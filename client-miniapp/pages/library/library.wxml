@@ -1,0 +1,70 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'favorites' ? 'tab-active' : ''}}" data-tab="favorites" bindtap="onSwitchTab">收藏</view>
+    <view class="tab {{tab === 'history' ? 'tab-active' : ''}}" data-tab="history" bindtap="onSwitchTab">记录</view>
+    <view class="tab {{tab === 'review' ? 'tab-active' : ''}}" data-tab="review" bindtap="onSwitchTab">复习</view>
+  </view>
+
+  <view wx:if="{{tab === 'history'}}" class="kinds">
+    <view class="chip {{kind === 'all' ? 'chip-active' : ''}}" data-kind="all" bindtap="onPickKind">全部</view>
+    <view class="chip {{kind === 'wrong' ? 'chip-active' : ''}}" data-kind="wrong" bindtap="onPickKind">错题</view>
+    <view class="chip {{kind === 'right' ? 'chip-active' : ''}}" data-kind="right" bindtap="onPickKind">对题</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <view wx:elif="{{items.length === 0}}" class="empty">
+    <text>{{tab === 'favorites' ? '还没有收藏的句子' : tab === 'review' ? '暂无到期的复习题' : '还没有学习记录'}}</text>
+    <button class="btn btn-primary empty-btn" bindtap="onGoPractice">去刷几题</button>
+  </view>
+
+  <block wx:else>
+    <view class="list-card">
+      <view
+        wx:for="{{items}}"
+        wx:key="sentenceId"
+        class="list-row"
+        hover-class="list-row-hover"
+        data-index="{{index}}"
+        bindtap="onOpenItem"
+      >
+        <view class="row-between">
+          <text class="item-en">{{item.en}}</text>
+          <text wx:if="{{item.correct === true}}" class="tag-ok">对</text>
+          <text wx:elif="{{item.correct === false}}" class="tag-bad">错</text>
+        </view>
+        <text class="item-zh">{{item.zh}}</text>
+        <text wx:if="{{item.meta}}" class="item-meta">{{item.meta}}</text>
+      </view>
+    </view>
+    <text class="page-foot">{{hasMore ? '上拉加载更多' : '共 ' + total + ' 条'}}</text>
+  </block>
+
+  <!-- 详情弹层 -->
+  <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
+    <view class="sheet" catchtap="onTapSheet">
+      <view class="sheet-head">
+        <text class="sheet-title">句子详情</text>
+        <text class="sheet-close" bindtap="onCloseDetail">关闭</text>
+      </view>
+      <text class="sheet-en" selectable>{{detail.en}}</text>
+      <text wx:if="{{detail.ipa}}" class="sheet-ipa" selectable>{{detail.ipa}}</text>
+      <text class="sheet-zh">{{detail.zh}}</text>
+
+      <view wx:if="{{detail.userAnswer}}" class="sheet-block">
+        <text class="sheet-label">你的作答</text>
+        <text class="sheet-text">{{detail.userAnswer}}</text>
+      </view>
+
+      <view wx:if="{{detail.explanation}}" class="sheet-block">
+        <text class="sheet-label">解析</text>
+        <text class="sheet-text">{{detail.explanation}}</text>
+      </view>
+
+      <view wx:if="{{detail.nextReviewAt}}" class="sheet-block">
+        <text class="sheet-label">下次复习</text>
+        <text class="sheet-text">{{detail.nextReviewAt}}</text>
+      </view>
+    </view>
+  </view>
+</view>

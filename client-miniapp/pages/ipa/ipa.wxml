@@ -1,0 +1,52 @@
+<view class="page">
+  <view class="hero">
+    <view class="row-between">
+      <text class="hero-label">已学会音标</text>
+      <text class="hero-count mono">{{learnedCount}} / {{total}}</text>
+    </view>
+    <view class="hero-bar">
+      <view class="hero-bar-fill" style="width: {{percent}}%"></view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <view wx:else class="groups">
+    <view wx:for="{{groups}}" wx:key="type" wx:for-item="group" wx:for-index="groupIndex" class="group">
+      <view class="group-head">
+        <text class="group-title">{{group.title}}</text>
+        <text class="group-hint">{{group.hint}}</text>
+      </view>
+      <view class="symbol-grid">
+        <view
+          wx:for="{{group.items}}"
+          wx:key="symbol"
+          class="symbol {{learned[item.symbol] ? 'symbol-done' : ''}}"
+          data-group="{{groupIndex}}"
+          data-index="{{index}}"
+          bindtap="onOpenPhoneme"
+        >
+          <text class="symbol-text">/{{item.symbol}}/</text>
+          <text wx:if="{{learned[item.symbol]}}" class="symbol-check">✓</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 详情 -->
+  <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
+    <view class="sheet" catchtap="onTapSheet">
+      <text class="sheet-symbol">/{{detail.symbol}}/</text>
+      <text class="sheet-words">{{detail.exampleWords}}</text>
+      <view class="sheet-block">
+        <text class="sheet-label">发音要点</text>
+        <text class="sheet-text">{{detail.tips}}</text>
+      </view>
+      <button
+        class="btn btn-primary btn-block mt-24 {{detailLearned ? 'btn-disabled' : ''}}"
+        bindtap="onLearn"
+      >{{detailLearned ? '已学会' : '我学会了'}}</button>
+      <button class="btn btn-ghost btn-block mt-16" bindtap="onCloseDetail">关闭</button>
+    </view>
+  </view>
+</view>

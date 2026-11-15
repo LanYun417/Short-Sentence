@@ -1,0 +1,70 @@
+.intro {
+  margin-top: 8rpx;
+  padding: 28rpx;
+  background: linear-gradient(135deg, #6366f1, #a5b4fc);
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 36rpx rgba(99, 102, 241, 0.26);
+}
+
+.intro-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.intro-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.topic {
+  padding: 28rpx;
+  border-bottom: 2rpx solid #f4f7fb;
+}
+
+.topic:last-child {
+  border-bottom: none;
+}
+
+.topic-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-starter {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.topic-prompt {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: var(--ink-3);
+}
+
+.topic-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14rpx;
+}
+
+.mine {
+  font-size: 21rpx;
+  font-weight: 600;
+  color: #4338ca;
+}

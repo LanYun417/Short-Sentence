@@ -1,0 +1,50 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:elif="{{topic}}">
+    <!-- 主题 -->
+    <view class="topic">
+      <text class="topic-title">{{topic.title}}</text>
+      <text class="topic-starter">{{topic.starterEn}}</text>
+      <text class="topic-prompt">{{topic.promptZh}}</text>
+    </view>
+
+    <!-- 续写列表 -->
+    <view wx:if="{{entries.length === 0}}" class="empty">还没有人接，来做第一个</view>
+    <view wx:else class="list-card">
+      <view wx:for="{{entries}}" wx:key="id" class="entry">
+        <view class="row-between">
+          <text class="alias">{{item.alias}}</text>
+          <view class="entry-actions">
+            <text class="like {{item.liked ? 'like-on' : ''}}" data-index="{{index}}" bindtap="onLike">
+              {{item.liked ? '♥' : '♡'}} {{item.likeCount}}
+            </text>
+          </view>
+        </view>
+        <text class="entry-en" selectable>{{item.contentEn}}</text>
+        <text wx:if="{{item.contentZh}}" class="entry-zh">{{item.contentZh}}</text>
+        <view class="entry-foot">
+          <text wx:if="{{item.mine}}" class="badge badge-slate">我的</text>
+          <text class="report" data-index="{{index}}" bindtap="onReport">举报</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 提交 -->
+    <view class="composer">
+      <text class="composer-tip">今日剩余 {{remainingToday}} / {{dailyLimit}} 条</text>
+      <textarea
+        class="composer-input"
+        value="{{content}}"
+        placeholder="接着上一句往下写（英文）"
+        placeholder-class="ph"
+        maxlength="300"
+        bindinput="onInput"
+      />
+      <button
+        class="btn btn-primary btn-block mt-16 {{submitting ? 'btn-disabled' : ''}}"
+        bindtap="onSubmit"
+      >{{submitting ? '提交中…' : '接一句'}}</button>
+    </view>
+  </block>
+</view>

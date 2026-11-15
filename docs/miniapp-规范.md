@@ -29,10 +29,29 @@ client-miniapp/
 ├─ services/        # 按业务域封装的接口（types.ts 手写后端契约）
 ├─ pages/
 │  ├─ index / practice / growth / leaderboard / profile / login
-│  └─ stages/       # 情景闯关：index（地图）/ scene（剧本列表）/ script（关卡列表）/ dialogue（对话）
+│  ├─ stages/       # 情景闯关：index（地图）/ scene（剧本）/ script（关卡）/ dialogue（对话）
+│  ├─ banks / library / cards / checkin      # 题库 / 语句库 / 句签 / 打卡
+│  ├─ boss / ipa / word-root / coach / weekly # Boss / 音标 / 词根 / AI 私教 / 周报
+│  └─ notices / feedback / submissions / team / profile-edit / chains(+detail)
 ├─ scripts/         # check-pages.mjs：页面四件套、事件绑定、WXML 闭合、wx:key、tabBar 图标
 └─ assets/tabbar/   # tabBar 图标（sharp 由 SVG 渲染，双色各一套）
 ```
+
+## 二·补、功能覆盖与已知限制
+
+已接入（26 个页面）：登录、刷题（默写/拼词）、题库（场景/节日）、语句库（收藏/记录/复习）、
+成长、排行榜、句签、打卡、每日 Boss、音标、词根、AI 私教、周报、情景闯关（地图/剧本/关卡/对话）、
+接龙、小分队、投稿、通知、反馈、资料编辑、注销与数据导出。
+
+**刻意未接入**（附原因，别当成遗漏）：
+
+| 能力                                         | 原因                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `PATCH` 系接口（队伍改名、对话翻译开关）     | `wx.request` 不支持 PATCH 方法；翻译开关改由发消息时上送                    |
+| SSE 流式 AI（题目解析 / 场景造句 / 词根 AI） | 需 `enableChunked` 手工拼流，未在真机验证前不接入                           |
+| 反馈附图                                     | `wx.uploadFile` 一次只能带一个文件，后端要 5 张；小程序端只收纯文本         |
+| 修改密码                                     | 需要邮箱验证码三段式（发码 → 校验 → 改密），小程序内体验割裂，引导到 Web 端 |
+| 打卡长图海报                                 | 需要 canvas 2D + 相册授权；当前用原生分享卡片替代                           |
 
 ## 三、网络层约定
 

@@ -1,0 +1,151 @@
+.hero {
+  padding: 32rpx;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 36rpx rgba(14, 165, 233, 0.26);
+}
+
+.hero-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hero-count {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hero-bar {
+  height: 12rpx;
+  margin-top: 20rpx;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999rpx;
+}
+
+.hero-bar-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 999rpx;
+  transition: width 0.45s ease;
+}
+
+.group {
+  margin-top: 32rpx;
+}
+
+.group-head {
+  display: flex;
+  gap: 12rpx;
+  align-items: baseline;
+}
+
+.group-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.group-hint {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.symbol-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.symbol {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 148rpx;
+  height: 96rpx;
+  background: #ffffff;
+  border: 2rpx solid var(--line);
+  border-radius: 20rpx;
+  box-shadow: 0 6rpx 18rpx rgba(15, 23, 42, 0.05);
+}
+
+.symbol-done {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.symbol-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.symbol-done .symbol-text {
+  color: #047857;
+}
+
+.symbol-check {
+  position: absolute;
+  top: 6rpx;
+  right: 10rpx;
+  font-size: 20rpx;
+  color: var(--success);
+}
+
+/* 详情 */
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.sheet {
+  width: 100%;
+  padding: 40rpx 32rpx calc(40rpx + env(safe-area-inset-bottom));
+  text-align: center;
+  background: #ffffff;
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.sheet-symbol {
+  display: block;
+  font-size: 64rpx;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.sheet-words {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+
+.sheet-block {
+  margin-top: 28rpx;
+  text-align: left;
+}
+
+.sheet-label {
+  display: block;
+  margin-bottom: 6rpx;
+  font-size: 21rpx;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.sheet-text {
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--ink-2);
+}

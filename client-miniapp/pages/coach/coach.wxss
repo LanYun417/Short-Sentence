@@ -1,0 +1,129 @@
+.hero {
+  padding: 36rpx;
+  background: linear-gradient(140deg, #4338ca 0%, #6366f1 52%, #a5b4fc 100%);
+  border-radius: 32rpx;
+  box-shadow: 0 18rpx 40rpx rgba(79, 70, 229, 0.28);
+}
+
+.hero-label {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 1rpx;
+}
+
+.hero-text {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffffff;
+}
+
+.hero-stats {
+  display: flex;
+  margin-top: 28rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid rgba(255, 255, 255, 0.18);
+}
+
+.hero-stat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-num {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.hero-unit {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.section {
+  margin-top: 36rpx;
+}
+
+.list-card {
+  margin-top: 16rpx;
+}
+
+.plan-row {
+  display: flex;
+  gap: 18rpx;
+  align-items: flex-start;
+}
+
+.plan-index {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #4338ca;
+  background: #eef2ff;
+  border-radius: 50%;
+}
+
+.plan-text {
+  flex: 1;
+  font-size: 26rpx;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.weak-name {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.weak-acc {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #4338ca;
+}
+
+.weak-bar {
+  height: 10rpx;
+  margin: 12rpx 0 8rpx;
+  overflow: hidden;
+  background: #eef2f7;
+  border-radius: 999rpx;
+}
+
+.weak-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a5b4fc);
+  border-radius: 999rpx;
+}
+
+.tough-zh {
+  display: block;
+  font-size: 26rpx;
+  color: var(--ink-2);
+}
+
+.advice {
+  margin-top: 16rpx;
+  padding: 28rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 26rpx rgba(15, 23, 42, 0.06);
+}
+
+.advice-text {
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: var(--ink-2);
+}

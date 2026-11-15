@@ -31,7 +31,7 @@
   <view class="section">
     <view class="row-between">
       <text class="subtitle">练习难度</text>
-      <text class="muted">可随时切换</text>
+      <text class="link" bindtap="onOpenBanks">题库 ›</text>
     </view>
     <view class="seg">
       <view
@@ -59,6 +59,16 @@
       <text class="entry-desc">跟 AI 角色对话，把学过的句子用出来</text>
     </view>
     <text class="entry-arrow">›</text>
+  </view>
+
+  <!-- 每日 Boss 入口 -->
+  <view class="entry entry-boss" hover-class="entry-hover" bindtap="onOpenBoss">
+    <view class="entry-icon entry-icon-boss">⚡</view>
+    <view class="entry-body">
+      <text class="entry-title entry-title-boss">每日 Boss</text>
+      <text class="entry-desc entry-desc-boss">一天一道挑战题，答对额外加经验</text>
+    </view>
+    <text class="entry-arrow entry-arrow-boss">›</text>
   </view>
 
   <view class="foot">

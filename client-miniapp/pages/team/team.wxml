@@ -1,0 +1,94 @@
+<view class="team">
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <!-- 未组队 -->
+  <scroll-view wx:elif="{{!team}}" class="setup" scroll-y>
+    <view class="setup-head">
+      <text class="setup-title">找几个人一起坚持</text>
+      <text class="setup-desc">小队里有人掉队会被催，连续打卡还有全队加成</text>
+    </view>
+
+    <view class="card mt-24">
+      <text class="label">自建小队</text>
+      <input
+        class="field"
+        value="{{nameInput}}"
+        placeholder="小队名字，比如「每天十句」"
+        placeholder-class="ph"
+        bindinput="onName"
+      />
+      <button class="btn btn-primary btn-block mt-16 {{busy ? 'btn-disabled' : ''}}" bindtap="onCreate">创建小队</button>
+    </view>
+
+    <view class="card mt-24">
+      <text class="label">有组队码？</text>
+      <input
+        class="field"
+        value="{{codeInput}}"
+        placeholder="输入 6 位组队码"
+        placeholder-class="ph"
+        bindinput="onCode"
+      />
+      <button class="btn btn-ghost btn-block mt-16" bindtap="onJoin">加入小队</button>
+    </view>
+
+    <button class="btn btn-ghost btn-block mt-24" bindtap="onMatch">随机匹配队友</button>
+    <text class="page-foot">匹配按最近 7 天的练习节奏，水平相近的人更容易分到一起</text>
+  </scroll-view>
+
+  <!-- 已组队 -->
+  <block wx:else>
+    <view class="head">
+      <view class="row-between">
+        <text class="head-name">{{team.name}}</text>
+        <text class="head-code">组队码 {{team.code}}</text>
+      </view>
+      <view class="head-meta">
+        <text class="muted">连续 {{team.streak}} 天 · {{team.memberCount}}/{{team.maxMembers}} 人 · 今日 {{team.doneCount}} 人已打卡</text>
+      </view>
+      <text class="hint hint-{{team.hintTone}}">{{team.hint}}</text>
+      <view class="members">
+        <view wx:for="{{team.members}}" wx:key="userId" class="member">
+          <view class="member-avatar {{item.checkedIn ? 'member-done' : ''}}">{{item.nickname}}</view>
+          <text class="member-name ellipsis">{{item.isMe ? '我' : item.nickname}}</text>
+        </view>
+      </view>
+    </view>
+
+    <scroll-view class="chat" scroll-y scroll-into-view="{{anchor}}" scroll-with-animation>
+      <view wx:if="{{messages.length === 0}}" class="empty">还没有消息，打个招呼吧</view>
+      <view
+        wx:for="{{messages}}"
+        wx:key="id"
+        id="m{{index}}"
+        class="msg {{item.isMe ? 'msg-me' : ''}}"
+        data-index="{{index}}"
+        bindlongpress="onRecall"
+      >
+        <text wx:if="{{!item.isMe}}" class="msg-name">{{item.nickname}}</text>
+        <view class="bubble {{item.recalled ? 'bubble-recalled' : ''}}">
+          <text class="bubble-text">{{item.content}}</text>
+        </view>
+        <text class="msg-time">{{item.time}}</text>
+      </view>
+      <view class="chat-pad"></view>
+    </scroll-view>
+
+    <view class="composer">
+      <input
+        class="composer-input"
+        value="{{input}}"
+        placeholder="和队友说点什么"
+        placeholder-class="ph"
+        confirm-type="send"
+        bindinput="onInput"
+        bindconfirm="onSend"
+      />
+      <view class="composer-send {{sending ? 'composer-send-off' : ''}}" bindtap="onSend">发送</view>
+    </view>
+
+    <view class="danger-row">
+      <text class="danger" bindtap="onLeave">退出小队</text>
+    </view>
+  </block>
+</view>

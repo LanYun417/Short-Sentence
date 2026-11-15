@@ -29,6 +29,49 @@
     </view>
   </view>
 
+  <!-- 功能入口 -->
+  <view class="menu-grid">
+    <view
+      wx:for="{{group1}}"
+      wx:key="key"
+      class="menu-item"
+      hover-class="menu-item-hover"
+      data-key="{{item.key}}"
+      bindtap="onMenu"
+    >
+      <text class="menu-icon">{{item.icon}}</text>
+      <text class="menu-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="menu-grid">
+    <view
+      wx:for="{{group2}}"
+      wx:key="key"
+      class="menu-item"
+      hover-class="menu-item-hover"
+      data-key="{{item.key}}"
+      bindtap="onMenu"
+    >
+      <text class="menu-icon">{{item.icon}}</text>
+      <text class="menu-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="menu-grid">
+    <view
+      wx:for="{{group3}}"
+      wx:key="key"
+      class="menu-item"
+      hover-class="menu-item-hover"
+      data-key="{{item.key}}"
+      bindtap="onMenu"
+    >
+      <text class="menu-icon">{{item.icon}}</text>
+      <text class="menu-label">{{item.label}}</text>
+    </view>
+  </view>
+
   <!-- 操作 -->
   <view class="actions">
     <view class="action" hover-class="action-hover" bindtap="onExport">

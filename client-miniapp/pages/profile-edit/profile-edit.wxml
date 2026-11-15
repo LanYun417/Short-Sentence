@@ -1,0 +1,68 @@
+<view class="page">
+  <!-- 头像 -->
+  <view class="avatar-row">
+    <view class="avatar avatar-xl" bindtap="onPickAvatar">
+      <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+      <text wx:else>✎</text>
+    </view>
+    <text class="avatar-tip">{{uploading ? '上传中…' : '点击更换头像'}}</text>
+  </view>
+
+  <!-- 表单 -->
+  <view class="list-card">
+    <view class="field-row">
+      <text class="field-label">昵称</text>
+      <input
+        class="field-input"
+        value="{{nickname}}"
+        placeholder="给自己起个名字"
+        placeholder-class="ph"
+        maxlength="50"
+        bindinput="onNickname"
+      />
+    </view>
+
+    <view class="field-row">
+      <text class="field-label">签名</text>
+      <input
+        class="field-input"
+        value="{{signature}}"
+        placeholder="一句话介绍自己"
+        placeholder-class="ph"
+        maxlength="100"
+        bindinput="onSignature"
+      />
+    </view>
+
+    <view class="field-row">
+      <text class="field-label">生日</text>
+      <input
+        class="field-input"
+        value="{{birthday}}"
+        placeholder="YYYY-MM-DD（可选）"
+        placeholder-class="ph"
+        bindinput="onBirthday"
+      />
+    </view>
+
+    <view class="field-row field-row-last">
+      <text class="field-label">性别</text>
+      <view class="genders">
+        <view
+          wx:for="{{genders}}"
+          wx:key="value"
+          class="chip {{gender === item.value ? 'chip-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onPickGender"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button
+    class="btn btn-primary btn-block mt-32 {{saving ? 'btn-disabled' : ''}}"
+    bindtap="onSave"
+  >{{saving ? '保存中…' : '保存'}}</button>
+
+  <text class="page-foot">修改密码需要邮箱验证码，请在网页端操作</text>
+</view>

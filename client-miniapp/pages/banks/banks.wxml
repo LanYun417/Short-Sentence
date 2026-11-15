@@ -1,0 +1,54 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'scene' ? 'tab-active' : ''}}" data-tab="scene" bindtap="onSwitchTab">按场景</view>
+    <view class="tab {{tab === 'festival' ? 'tab-active' : ''}}" data-tab="festival" bindtap="onSwitchTab">按节日</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <!-- 场景 -->
+  <block wx:elif="{{tab === 'scene'}}">
+    <view wx:if="{{scenes.length === 0}}" class="empty">暂无可用场景</view>
+    <view wx:else class="grid">
+      <view
+        wx:for="{{scenes}}"
+        wx:key="id"
+        class="grid-item"
+        hover-class="grid-item-hover"
+        data-id="{{item.id}}"
+        bindtap="onPickScene"
+      >
+        <text class="grid-name">{{item.name}}</text>
+        <text class="grid-en ellipsis">{{item.nameEn || ' '}}</text>
+        <text class="grid-count">{{item.count}} 题</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 节日 -->
+  <block wx:else>
+    <view wx:if="{{festivals.length === 0}}" class="empty">暂无节日题库</view>
+    <view wx:else class="fest-list">
+      <view
+        wx:for="{{festivals}}"
+        wx:key="name"
+        class="fest"
+        hover-class="fest-hover"
+        data-name="{{item.name}}"
+        bindtap="onPickFestival"
+      >
+        <view class="fest-cover">
+          <image wx:if="{{festivalCover[item.name]}}" class="fest-img" src="{{festivalCover[item.name]}}" mode="aspectFill" lazy-load />
+          <text wx:else class="fest-initial">{{item.name}}</text>
+        </view>
+        <view class="fest-body">
+          <text class="fest-name">{{item.name}}</text>
+          <text class="muted">{{item.date || '常年可刷'}} · {{item.count}} 题</text>
+        </view>
+        <text class="fest-arrow">›</text>
+      </view>
+    </view>
+  </block>
+
+  <text class="page-foot">进入后按所选范围抽题</text>
+</view>

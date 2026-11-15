@@ -167,3 +167,51 @@ export async function tryRequest<T>(url: string, options: RequestOptions = {}): 
     return null;
   }
 }
+
+/**
+ * 上传单个文件（multipart）。
+ *
+ * `wx.uploadFile` 一次只能带一个文件，且不经过 `wx.request`，
+ * 因此这里单独做令牌注入与信封解包（头像等单文件场景足够）。
+ */
+export function uploadFile<T>(
+  url: string,
+  filePath: string,
+  options: { name?: string; formData?: Record<string, string> } = {},
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const header: Record<string, string> = {};
+    const token = getAccessToken();
+    if (token) {
+      header.Authorization = `Bearer ${token}`;
+    }
+    wx.uploadFile({
+      url: `${API_BASE_URL}${url}`,
+      filePath,
+      name: options.name ?? 'file',
+      formData: options.formData ?? {},
+      header,
+      timeout: 60000,
+      success: (res) => {
+        let body: unknown = res.data;
+        if (typeof res.data === 'string') {
+          try {
+            body = JSON.parse(res.data) as unknown;
+          } catch {
+            // 非 JSON（网关错误页等）：保留原文，下面按状态码判失败
+          }
+        }
+        if (isEnvelope(body)) {
+          if (body.code === 200) {
+            resolve(body.data as T);
+            return;
+          }
+          reject(new ApiError(body.message || '上传失败', body.code));
+          return;
+        }
+        reject(new ApiError(`上传失败（${res.statusCode}）`, res.statusCode));
+      },
+      fail: () => reject(new ApiError('上传失败，请检查网络后重试', -1)),
+    });
+  });
+}

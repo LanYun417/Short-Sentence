@@ -1,0 +1,85 @@
+.section {
+  margin-top: 32rpx;
+}
+
+.label {
+  display: block;
+  margin-bottom: 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.textarea {
+  width: 100%;
+  height: 220rpx;
+  padding: 24rpx;
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--ink);
+  background: #ffffff;
+  border: 2rpx solid var(--line);
+  border-radius: 24rpx;
+}
+
+.textarea-sm {
+  height: 160rpx;
+}
+
+.field {
+  height: 92rpx;
+  padding: 0 24rpx;
+  font-size: 27rpx;
+  color: var(--ink);
+  background: #ffffff;
+  border: 2rpx solid var(--line);
+  border-radius: 24rpx;
+}
+
+.ph {
+  color: var(--ink-3);
+}
+
+.en {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.zh {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 25rpx;
+  color: var(--ink-2);
+}
+
+.note {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.status {
+  padding: 2rpx 14rpx;
+  font-size: 20rpx;
+  border-radius: 999rpx;
+}
+
+.status-pending {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.status-approved {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.status-rejected {
+  color: #b91c1c;
+  background: #fef2f2;
+}

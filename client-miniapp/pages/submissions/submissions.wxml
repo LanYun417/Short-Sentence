@@ -1,0 +1,79 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'featured' ? 'tab-active' : ''}}" data-tab="featured" bindtap="onSwitchTab">精选</view>
+    <view class="tab {{tab === 'mine' ? 'tab-active' : ''}}" data-tab="mine" bindtap="onSwitchTab">我的</view>
+    <view class="tab {{tab === 'create' ? 'tab-active' : ''}}" data-tab="create" bindtap="onSwitchTab">投稿</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <!-- 精选 -->
+  <block wx:elif="{{tab === 'featured'}}">
+    <view wx:if="{{featured.length === 0}}" class="empty">还没有精选投稿</view>
+    <view wx:else class="list-card">
+      <view wx:for="{{featured}}" wx:key="id" class="list-row">
+        <text class="en" selectable>{{item.en}}</text>
+        <text class="zh">{{item.zh}}</text>
+        <text wx:if="{{item.note}}" class="note">{{item.note}}</text>
+        <text class="muted">by {{item.author}}</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 我的 -->
+  <block wx:elif="{{tab === 'mine'}}">
+    <view wx:if="{{mine.length === 0}}" class="empty">还没有投过稿</view>
+    <view wx:else class="list-card">
+      <view wx:for="{{mine}}" wx:key="id" class="list-row">
+        <view class="row-between">
+          <text class="status status-{{item.status}}">{{item.statusText}}</text>
+          <text class="muted">{{item.time}}</text>
+        </view>
+        <text class="en">{{item.en}}</text>
+        <text class="zh">{{item.zh}}</text>
+        <text wx:if="{{item.reviewNote}}" class="note">审核意见：{{item.reviewNote}}</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 投稿 -->
+  <block wx:else>
+    <view class="section">
+      <text class="label">英文句子</text>
+      <textarea
+        class="textarea"
+        value="{{sentenceEn}}"
+        placeholder="一句你喜欢的英文短句"
+        placeholder-class="ph"
+        maxlength="300"
+        bindinput="onEn"
+      />
+    </view>
+    <view class="section">
+      <text class="label">中文译文</text>
+      <textarea
+        class="textarea textarea-sm"
+        value="{{translationZh}}"
+        placeholder="这句话的中文意思"
+        placeholder-class="ph"
+        maxlength="300"
+        bindinput="onZh"
+      />
+    </view>
+    <view class="section">
+      <text class="label">附言（可选）</text>
+      <input
+        class="field"
+        value="{{note}}"
+        placeholder="出处、感受，或想对大家说的话"
+        placeholder-class="ph"
+        bindinput="onNote"
+      />
+    </view>
+    <button
+      class="btn btn-primary btn-block mt-32 {{submitting ? 'btn-disabled' : ''}}"
+      bindtap="onSubmit"
+    >{{submitting ? '提交中…' : '提交投稿'}}</button>
+    <text class="page-foot">审核通过后会出现在「精选」里，供其他学习者练习</text>
+  </block>
+</view>

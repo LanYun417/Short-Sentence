@@ -1,0 +1,84 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">分析中…</view>
+
+  <block wx:elif="{{profile}}">
+    <!-- 重点 -->
+    <view class="hero">
+      <text class="hero-label">今日重点</text>
+      <text class="hero-text">{{profile.focus}}</text>
+      <view class="hero-stats">
+        <view class="hero-stat">
+          <text class="hero-num mono">{{accuracyText}}</text>
+          <text class="hero-unit">总正确率</text>
+        </view>
+        <view class="hero-stat">
+          <text class="hero-num mono">{{profile.dueToday}}</text>
+          <text class="hero-unit">待复习</text>
+        </view>
+        <view class="hero-stat">
+          <text class="hero-num mono">{{profile.todayAnswers}}</text>
+          <text class="hero-unit">今日已答</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今日计划 -->
+    <view class="section">
+      <text class="subtitle">今日复习计划</text>
+      <view class="list-card">
+        <view wx:for="{{profile.plan}}" wx:key="*this" class="list-row plan-row">
+          <text class="plan-index">{{index + 1}}</text>
+          <text class="plan-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 弱项 -->
+    <view wx:if="{{weak.length > 0}}" class="section">
+      <text class="subtitle">薄弱场景</text>
+      <view class="list-card">
+        <view wx:for="{{weak}}" wx:key="name" class="list-row">
+          <view class="row-between">
+            <text class="weak-name">{{item.name}}</text>
+            <text class="weak-acc">{{item.accuracyText}}</text>
+          </view>
+          <view class="weak-bar">
+            <view class="weak-bar-fill" style="width: {{item.percent}}%"></view>
+          </view>
+          <text class="muted">已练 {{item.total}} 次</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 易错题 -->
+    <view wx:if="{{profile.toughSentences.length > 0}}" class="section">
+      <text class="subtitle">反复答错的题</text>
+      <view class="list-card">
+        <view wx:for="{{profile.toughSentences}}" wx:key="sentenceId" class="list-row">
+          <text class="tough-zh">{{item.translationZh}}</text>
+          <text class="muted">错了 {{item.wrongCount}} 次</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- AI 点评 -->
+    <view class="section">
+      <view class="row-between">
+        <text class="subtitle">私教点评</text>
+        <text wx:if="{{adviceSource}}" class="badge badge-slate">{{adviceSource}}</text>
+      </view>
+      <view wx:if="{{advice}}" class="advice">
+        <text class="advice-text" selectable>{{advice}}</text>
+      </view>
+      <button
+        wx:if="{{profile.aiAvailable}}"
+        class="btn btn-primary btn-block mt-16 {{advising ? 'btn-disabled' : ''}}"
+        bindtap="onAdvice"
+      >{{advising ? '生成中…' : advice ? '重新生成点评' : '让 AI 点评一下'}}</button>
+      <text wx:else class="muted mt-16">当前未开启 AI 能力，以上计划由规则生成</text>
+    </view>
+
+    <button class="btn btn-ghost btn-block mt-32" bindtap="onReviewWrong">复习错题</button>
+    <button class="btn btn-ghost btn-block mt-16" bindtap="onGoPractice">继续刷题</button>
+  </block>
+</view>

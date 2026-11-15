@@ -1,0 +1,65 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+
+  <block wx:elif="{{boss}}">
+    <!-- 头部 -->
+    <view class="boss-head">
+      <view class="boss-badge">BOSS</view>
+      <text class="boss-date">{{boss.date}}</text>
+      <text class="boss-bonus">答对额外 +{{boss.bonusXp}} XP</text>
+    </view>
+
+    <view wx:if="{{!boss.question}}" class="empty">今天的题目还没准备好，明天再来</view>
+
+    <block wx:else>
+      <!-- 题干 -->
+      <view class="card mt-24">
+        <image wx:if="{{imageUrl}}" class="boss-img" src="{{imageUrl}}" mode="widthFix" lazy-load />
+        <view class="row-between">
+          <text class="badge">难度 {{boss.question.difficulty}}</text>
+          <text wx:if="{{boss.question.categoryName}}" class="badge badge-slate">{{boss.question.categoryName}}</text>
+        </view>
+        <text class="boss-zh">{{boss.question.translationZh}}</text>
+
+        <block wx:if="{{!result}}">
+          <input
+            class="boss-input"
+            value="{{answer}}"
+            placeholder="用英文写出这句话"
+            placeholder-class="boss-ph"
+            confirm-type="done"
+            bindinput="onInput"
+            bindconfirm="onSubmit"
+          />
+          <button
+            class="btn btn-primary btn-block mt-24 {{submitting ? 'btn-disabled' : ''}}"
+            bindtap="onSubmit"
+          >{{submitting ? '判分中…' : '提交答案'}}</button>
+        </block>
+      </view>
+
+      <!-- 结果 -->
+      <view wx:if="{{result}}" class="card mt-24">
+        <view class="result-head {{result.isCorrect ? 'ok' : 'bad'}}">
+          <text class="result-title">{{result.isCorrect ? '答对了' : '差一点'}}</text>
+          <text wx:if="{{xpText}}" class="result-xp">{{xpText}}</text>
+        </view>
+
+        <view class="block">
+          <text class="block-label">标准答案</text>
+          <text class="answer-en" selectable>{{result.sentenceEn}}</text>
+          <text wx:if="{{result.ipa}}" class="answer-ipa" selectable>{{result.ipa}}</text>
+        </view>
+
+        <view wx:if="{{result.explanation}}" class="block">
+          <text class="block-label">解析</text>
+          <text class="answer-note" selectable>{{result.explanation}}</text>
+        </view>
+
+        <text class="boss-state">{{result.bossCleared ? '今日 Boss 已通关，明天再来' : '今日未通关，明天可以再战'}}</text>
+      </view>
+    </block>
+  </block>
+
+  <text class="page-foot">每天一道挑战题，答对额外加经验</text>
+</view>

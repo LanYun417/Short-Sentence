@@ -1,0 +1,263 @@
+.team {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* 未组队 */
+.setup {
+  flex: 1;
+  height: 0;
+  padding: 24rpx 32rpx calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.setup-head {
+  padding: 12rpx 8rpx 0;
+}
+
+.setup-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -1rpx;
+}
+
+.setup-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.label {
+  display: block;
+  margin-bottom: 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.field {
+  height: 88rpx;
+  padding: 0 24rpx;
+  font-size: 27rpx;
+  color: var(--ink);
+  background: #f6f8fb;
+  border: 2rpx solid var(--line);
+  border-radius: 20rpx;
+}
+
+.ph {
+  color: var(--ink-3);
+}
+
+/* 队伍头 */
+.head {
+  flex-shrink: 0;
+  padding: 24rpx 28rpx;
+  background: #ffffff;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.head-name {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.head-code {
+  padding: 4rpx 16rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: #0369a1;
+  background: var(--brand-soft);
+  border-radius: 999rpx;
+}
+
+.head-meta {
+  margin-top: 8rpx;
+}
+
+.hint {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.hint-info {
+  color: var(--ink-3);
+}
+
+.hint-urge {
+  color: #b45309;
+}
+
+.hint-success {
+  color: #047857;
+}
+
+.members {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 18rpx;
+  overflow-x: auto;
+}
+
+.member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 96rpx;
+}
+
+.member-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  overflow: hidden;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #0369a1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #e0f2fe;
+  border: 4rpx solid #ffffff;
+  border-radius: 50%;
+}
+
+.member-done {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.member-name {
+  width: 100%;
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* 聊天 */
+.chat {
+  flex: 1 1 0;
+  height: 0;
+  padding: 16rpx 24rpx 0;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 20rpx;
+}
+
+.msg-me {
+  align-items: flex-end;
+}
+
+.msg-name {
+  margin-bottom: 4rpx;
+  font-size: 19rpx;
+  color: var(--ink-3);
+}
+
+.bubble {
+  max-width: 76%;
+  padding: 18rpx 22rpx;
+  background: #ffffff;
+  border-radius: 4rpx 20rpx 20rpx;
+  box-shadow: 0 6rpx 18rpx rgba(15, 23, 42, 0.05);
+}
+
+.msg-me .bubble {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  border-radius: 20rpx 4rpx 20rpx 20rpx;
+}
+
+.bubble-recalled {
+  background: #f1f5f9;
+  box-shadow: none;
+}
+
+.bubble-text {
+  font-size: 27rpx;
+  line-height: 1.5;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.msg-me .bubble-text {
+  color: #ffffff;
+}
+
+.bubble-recalled .bubble-text {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.msg-time {
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  color: var(--ink-3);
+}
+
+.chat-pad {
+  height: 24rpx;
+}
+
+/* 输入 */
+.composer {
+  display: flex;
+  flex-shrink: 0;
+  gap: 16rpx;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  background: var(--bg);
+}
+
+.composer-input {
+  flex: 1;
+  height: 84rpx;
+  padding: 0 24rpx;
+  font-size: 27rpx;
+  color: var(--ink);
+  background: #ffffff;
+  border: 2rpx solid var(--line);
+  border-radius: 999rpx;
+}
+
+.composer-send {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  padding: 0 34rpx;
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  border-radius: 999rpx;
+}
+
+.composer-send-off {
+  background: #cbd5e1;
+}
+
+.danger-row {
+  flex-shrink: 0;
+  padding: 8rpx 0 calc(16rpx + env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.danger {
+  font-size: 22rpx;
+  color: var(--danger);
+}

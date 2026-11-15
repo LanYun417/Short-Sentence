@@ -57,6 +57,8 @@ interface IndexCustom {
   onStart(): void;
   onReview(): void;
   onOpenStages(): void;
+  onOpenBanks(): void;
+  onOpenBoss(): void;
   onTapProfile(): void;
 }
 
@@ -152,6 +154,16 @@ Page<IndexData, IndexCustom>({
   /** 进情景闯关。 */
   onOpenStages() {
     goStages();
+  },
+
+  /** 进题库（按场景 / 节日）。 */
+  onOpenBanks() {
+    wx.navigateTo({ url: '/pages/banks/banks' });
+  },
+
+  /** 进每日 Boss。 */
+  onOpenBoss() {
+    wx.navigateTo({ url: '/pages/boss/boss' });
   },
 
   /** 点头像去「我的」。 */

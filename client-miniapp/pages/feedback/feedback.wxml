@@ -1,0 +1,69 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'submit' ? 'tab-active' : ''}}" data-tab="submit" bindtap="onSwitchTab">我要反馈</view>
+    <view class="tab {{tab === 'mine' ? 'tab-active' : ''}}" data-tab="mine" bindtap="onSwitchTab">我的反馈</view>
+  </view>
+
+  <!-- 提交 -->
+  <block wx:if="{{tab === 'submit'}}">
+    <view class="section">
+      <text class="label">反馈类型</text>
+      <view class="chips">
+        <view
+          wx:for="{{types}}"
+          wx:key="value"
+          class="chip {{type === item.value ? 'chip-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onPickType"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="label">问题描述</text>
+      <textarea
+        class="textarea"
+        value="{{content}}"
+        placeholder="说清楚你遇到的情况，或希望增加什么功能（至少 5 个字）"
+        placeholder-class="ph"
+        maxlength="1000"
+        bindinput="onContent"
+      />
+      <text class="counter">{{content.length}} / 1000</text>
+    </view>
+
+    <view class="section">
+      <text class="label">联系方式（可选）</text>
+      <input
+        class="field"
+        value="{{contact}}"
+        placeholder="邮箱或微信号，方便回访"
+        placeholder-class="ph"
+        bindinput="onContact"
+      />
+    </view>
+
+    <button
+      class="btn btn-primary btn-block mt-32 {{submitting ? 'btn-disabled' : ''}}"
+      bindtap="onSubmit"
+    >{{submitting ? '提交中…' : '提交反馈'}}</button>
+    <text class="page-foot">小程序端暂不支持上传截图，可在 Web 端补充图片</text>
+  </block>
+
+  <!-- 我的 -->
+  <block wx:else>
+    <view wx:if="{{loading}}" class="empty">加载中…</view>
+    <view wx:elif="{{mine.length === 0}}" class="empty">还没有提交过反馈</view>
+    <view wx:else class="list-card">
+      <view wx:for="{{mine}}" wx:key="id" class="list-row">
+        <view class="row-between">
+          <text class="type">{{item.typeLabel}}</text>
+          <text class="status status-{{item.status}}">{{item.statusText}}</text>
+        </view>
+        <text class="content">{{item.content}}</text>
+        <text wx:if="{{item.reply}}" class="reply">回复：{{item.reply}}</text>
+        <text class="muted">{{item.time}}</text>
+      </view>
+    </view>
+  </block>
+</view>
