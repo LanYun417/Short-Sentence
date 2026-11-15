@@ -23,8 +23,8 @@
     <view class="progress-line-fill" style="width: {{percent}}%"></view>
   </view>
 
-  <!-- 加载中 -->
-  <view wx:if="{{loading}}" class="center-block">
+  <!-- 首屏加载（换题时保留旧卡，避免每答一题闪一次白屏） -->
+  <view wx:if="{{loading && !question}}" class="center-block">
     <view class="spinner"></view>
     <text class="muted mt-16">正在抽题…</text>
   </view>
