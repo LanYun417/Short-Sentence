@@ -79,6 +79,15 @@ export default [
     },
   },
 
+  // 后端测试替身：mock 桩件常只实现真实类型的一两个方法，写 `as any` 是刻意的，
+  // 逐个补全类型收益低、噪音大。生产代码（src/）仍然保持 no-explicit-any 告警。
+  {
+    files: ['api/test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
   // 前端浏览器环境（admin 中后台 + client Nuxt 用户端）
   {
     files: ['admin/**/*.{ts,vue,js,mjs}', 'client-web/**/*.{ts,vue,js,mjs}'],

@@ -77,13 +77,7 @@ describe('SentenceGenService.recoverStalePendingImages', () => {
 
   it('数据库异常时不阻断启动，且仍可安全重试', async () => {
     const { service } = buildService(0, new Error('db down'));
-    const warn = vi
-      .spyOn(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (service as any).logger,
-        'warn',
-      )
-      .mockImplementation(() => undefined);
+    const warn = vi.spyOn((service as any).logger, 'warn').mockImplementation(() => undefined);
 
     await expect(service.onModuleInit()).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('启动补偿失败'));
@@ -92,13 +86,7 @@ describe('SentenceGenService.recoverStalePendingImages', () => {
 
   it('恢复数量大于 0 时记录一条启动日志', async () => {
     const { service } = buildService(3);
-    const log = vi
-      .spyOn(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (service as any).logger,
-        'log',
-      )
-      .mockImplementation(() => undefined);
+    const log = vi.spyOn((service as any).logger, 'log').mockImplementation(() => undefined);
 
     await service.onModuleInit();
     expect(log).toHaveBeenCalledWith(expect.stringContaining('3 题已有配图'));
