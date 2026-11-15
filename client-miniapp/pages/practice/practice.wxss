@@ -149,9 +149,12 @@
 
 /* ---------------- 正面 ---------------- */
 
+/* 固定 16:9 视窗 + aspectFill：不依赖 widthFix 推算高度，
+   图片未加载完也不会让卡片跳动（widthFix 在部分环境里不绘制）。 */
 .q-image {
   display: block;
   width: 100%;
+  height: 348rpx;
   margin-bottom: 24rpx;
   border-radius: 24rpx;
 }

@@ -30,6 +30,7 @@
 .boss-img {
   display: block;
   width: 100%;
+  height: 336rpx;
   margin-bottom: 20rpx;
   border-radius: 20rpx;
 }

@@ -14,7 +14,7 @@
     <block wx:else>
       <!-- 题干 -->
       <view class="card mt-24">
-        <image wx:if="{{imageUrl}}" class="boss-img" src="{{imageUrl}}" mode="widthFix" lazy-load />
+        <image wx:if="{{imageUrl}}" class="boss-img" src="{{imageUrl}}" mode="aspectFill" lazy-load />
         <view class="row-between">
           <text class="badge">难度 {{boss.question.difficulty}}</text>
           <text wx:if="{{boss.question.categoryName}}" class="badge badge-slate">{{boss.question.categoryName}}</text>

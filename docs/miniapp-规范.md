@@ -88,6 +88,9 @@ client-miniapp/
 - WXML 里不要访问可能为 `null` 的对象的深层属性：用零值对象兜底
   （如 `EMPTY_CHECKIN`、`EMPTY_RESULT`），避免渲染层取值告警。
 - 滚动一律用页面滚动 / `scroll-view`；不手写 `overflow: auto` 的定高容器。
+- **图片一律「固定比例容器 + `mode="aspectFill"`」，不要用 `mode="widthFix"`**：
+  实测 `widthFix` 在开发者工具模拟器里不绘制（元素有尺寸但不出图），
+  且它依赖图片固有尺寸推算高度，图片慢加载时会把卡片顶得跳动。
 - 视觉令牌写在 `app.wxss` 的 `page {}` 里的 CSS 变量（`--brand` / `--ink` / `--line` …），
   与 Web 端语义一致：**primary = sky，neutral = slate**。
 
@@ -129,6 +132,9 @@ client-miniapp/
   根仓库 `npx eslint client-miniapp` 无告警。
 - 生产域名替换 `utils/env.ts` 的 `PROD_BASE_URL`，并在微信公众平台
   「开发管理 → 服务器域名」把它加入 **request 合法域名**（必须 HTTPS + 已备案）。
+- **后端 `UPLOAD_ALLOWED_REFERERS` 必须包含 `servicewechat.com`**：
+  小程序加载图片时 Referer 固定为 `https://servicewechat.com/<appid>/<ver>/page-frame.html`，
+  漏配会让所有 `<image>` / `getImageInfo` 直接 **403**（真机同样如此，不是模拟器问题）。
 - 后端 `CORS_ORIGIN` 加入小程序来源（小程序请求无 Origin，但 `web-view`/调试场景需要）。
 - 小程序后台配置隐私协议（收集的学习数据、微信 openid 用途），与
   `client-web` 的隐私政策口径保持一致。

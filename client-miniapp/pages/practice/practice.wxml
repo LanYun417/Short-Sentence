@@ -40,7 +40,7 @@
     <view class="flip-inner {{flipped ? 'is-flipped' : ''}}">
       <!-- 正面：题面 + 作答 -->
       <view class="face face-front">
-        <image wx:if="{{imageUrl}}" class="q-image" src="{{imageUrl}}" mode="widthFix" lazy-load />
+        <image wx:if="{{imageUrl}}" class="q-image" src="{{imageUrl}}" mode="aspectFill" lazy-load />
 
         <view class="q-meta">
           <text wx:if="{{question.source === 'review'}}" class="badge">复习</text>
@@ -89,8 +89,8 @@
         </button>
       </view>
 
-      <!-- 背面：判分结果 -->
-      <view class="face face-back">
+      <!-- 背面：判分结果（未翻转时不渲染，否则它会参与 grid 撑高正面卡片） -->
+      <view wx:if="{{flipped}}" class="face face-back">
         <view class="result-head {{result.isCorrect ? 'ok' : 'bad'}}">
           <text class="result-title">{{result.isCorrect ? '答对了' : '差一点'}}</text>
           <text wx:if="{{xpText}}" class="result-xp">{{xpText}}</text>

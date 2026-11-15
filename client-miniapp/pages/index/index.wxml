@@ -19,7 +19,7 @@
     </view>
     <view class="hero-value">
       <text class="hero-num mono">{{checkin.doneCount}}</text>
-      <text class="hero-goal">/ {{checkin.goalCount}} 题</text>
+      <text class="hero-goal">/ {{checkin.goalCount || '—'}} 题</text>
     </view>
     <view class="hero-bar">
       <view class="hero-bar-fill" style="width: {{percent}}%"></view>
