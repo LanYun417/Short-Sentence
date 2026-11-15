@@ -8,7 +8,7 @@ import { type ResponseEnvelope } from '../../../common/http/response.interceptor
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { QuestionsService } from './questions.service.js';
-import { AnswerSentenceDto, NextQuestionQueryDto } from './dto.js';
+import { AnswerBossDto, AnswerSentenceDto, NextQuestionQueryDto } from './dto.js';
 
 @Controller('client/questions')
 export class QuestionsController {
@@ -22,6 +22,22 @@ export class QuestionsController {
   @Get('next')
   next(@CurrentClientUser() user: ClientUserContext, @Query() query: NextQuestionQueryDto) {
     return this.questions.next(user.userId, query.difficulty, query.festival, query.categoryId, query.source);
+  }
+
+  /**
+   * 每日 Boss（当天固定一道挑战题，答对 +30 经验，一天一次）。
+   * ⚠️ 必须声明在 `@Post(':id/answer')` 之前语义才清晰；Nest 按方法+路径匹配，
+   * `boss` 与 `:id` 不会冲突（GET 无 :id 路由），这里仍放前面便于阅读。
+   */
+  @Get('boss')
+  boss(@CurrentClientUser() user: ClientUserContext) {
+    return this.questions.getBoss(user.userId);
+  }
+
+  /** 提交 Boss 答案（判分复用刷题口径，额外发通关经验）。 */
+  @Post('boss/answer')
+  answerBoss(@CurrentClientUser() user: ClientUserContext, @Body() dto: AnswerBossDto) {
+    return this.questions.answerBoss(user.userId, dto.sentenceId, dto);
   }
 
   /** 记忆健康概览（遗忘曲线 / 待复习分布可视化）。 */

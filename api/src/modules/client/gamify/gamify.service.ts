@@ -52,6 +52,8 @@ export const XP_RULES = {
   answer_correct_first: 10,
   /** 复习答对 */
   answer_correct_review: 5,
+  /** 每日 Boss 通关（按日期幂等，一天一次；与作答经验叠加） */
+  boss_clear: 30,
   /** 答错（仍给少量正反馈，不惩罚） */
   answer_wrong: 2,
   /**

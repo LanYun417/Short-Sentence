@@ -88,3 +88,22 @@ export class NextQuestionQueryDto {
   @IsIn(['review', 'new'], { message: 'source 只支持 review / new' })
   source?: 'review' | 'new';
 }
+
+/**
+ * 每日 Boss 作答。
+ *
+ * 只带 sentenceId + 用户答案：Boss 题的选取在服务端按日期确定性完成，
+ * 客户端传什么 id 都要校验是不是「今天这道」，防止拿旧题刷通关奖励。
+ */
+export class AnswerBossDto {
+  /** Boss 题 id（必须等于今天的 Boss 题） */
+  @Type(() => Number)
+  @IsInt({ message: '题目 id 必须为整数' })
+  @Min(1, { message: '题目 id 最小为 1' })
+  sentenceId!: number;
+
+  /** 用户输入的英文 */
+  @IsString({ message: '答案必须为字符串' })
+  @MaxLength(300, { message: '答案最长 300 个字符' })
+  userAnswer!: string;
+}

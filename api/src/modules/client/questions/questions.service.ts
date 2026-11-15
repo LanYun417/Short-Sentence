@@ -19,7 +19,7 @@ import type { PageResult } from '../../../common/types.js';
 import { CheckinService } from '../checkin/checkin.service.js';
 import { GamifyService, XP_RULES } from '../gamify/gamify.service.js';
 import { StageService } from '../stage/stage.service.js';
-import { AnswerSentenceDto, type AnswerMode } from './dto.js';
+import { AnswerBossDto, AnswerSentenceDto, type AnswerMode } from './dto.js';
 
 /**
  * 间隔重复梯度（天）：下标 = reviewLevel。
@@ -143,6 +143,33 @@ export interface AnswerResult {
   repeated?: boolean;
 }
 
+/** 每日 Boss：当天固定一道挑战题（难度 3 优先），答对给额外经验（一天一次）。 */
+export interface BossToday {
+  /** 东八区日期（Boss 按此日切题） */
+  date: string;
+  /** 今天是否已通关 */
+  cleared: boolean;
+  /** 通关额外经验（与作答经验叠加） */
+  bonusXp: number;
+  /** 题目（不含英文原句，与刷题同口径）；池子为空时为 null */
+  question: {
+    sentenceId: number;
+    translationZh: string;
+    ipa: string | null;
+    imageUrl: string | null;
+    difficulty: number;
+    categoryName: string | null;
+  } | null;
+}
+
+/** Boss 作答结果：在普通作答结果上叠加通关信息。 */
+export interface BossAnswerResult extends AnswerResult {
+  /** 本次是否首次通关（已通关后再答为 false） */
+  bossCleared: boolean;
+  /** 本次获得的 Boss 额外经验（0 = 未答对 / 今天已领过） */
+  bossBonus: number;
+}
+
 /** 收藏夹条目。 */
 export interface SentenceLibraryItem {
   sentenceId: number;
@@ -248,6 +275,14 @@ export function shuffleWords(sentenceEn: string): string[] {
  * 拼词模式的选项就在眼前，识别难度低于默写，因此经验按约六成发放（数值见 XP_RULES）。
  * 客户端只上报「用了哪种模式」，经验值恒由服务端决定。
  */
+/** 东八区偏移（Boss 按自然日切题、按日幂等，必须与服务端其它日期口径一致）。 */
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/** 东八区日期键（YYYY-MM-DD）。 */
+function shanghaiDateKey(): string {
+  return new Date(Date.now() + SHANGHAI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
 const XP_EVENT: Record<
   AnswerMode,
   { first: keyof typeof XP_RULES; review: keyof typeof XP_RULES; wrong: keyof typeof XP_RULES }
@@ -713,6 +748,102 @@ export class QuestionsService {
       goalBonus,
       newAchievements,
     };
+  }
+
+  /**
+   * 每日 Boss：按日期**确定性**选一道题（同一天所有人同一题，换天换题）。
+   *
+   * 为什么确定性而不是随机：Boss 要有仪式感，也便于分享「今天这道」；
+   * 随机抽会让同一天刷新出不同题，体验不一致。难度 3 优先，池空逐级回落。
+   */
+  async getBoss(userId: number): Promise<BossToday> {
+    const date = shanghaiDateKey();
+    const cleared = await this.isBossCleared(userId, date);
+    const boss = await this.pickBossSentence(date);
+    return {
+      date,
+      cleared,
+      bonusXp: XP_RULES.boss_clear,
+      question: boss
+        ? {
+            sentenceId: Number(boss.id),
+            translationZh: boss.translationZh,
+            ipa: boss.ipa,
+            imageUrl: boss.imageFileId > 0n ? await this.resolveImageUrl(Number(boss.imageFileId)) : null,
+            difficulty: boss.difficulty,
+            categoryName: boss.category?.name ?? null,
+          }
+        : null,
+    };
+  }
+
+  /** 今天的 Boss 是否已通关（与发经验同一条幂等键，避免两套口径漂移）。 */
+  private async isBossCleared(userId: number, date: string): Promise<boolean> {
+    const row = await this.prisma.clientXpLog.findUnique({
+      where: { eventKey: `boss:${userId}:${date}` },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
+  /** 按日期选 Boss 题：同一天恒定、换天换题；难度 3 → 2 → 1 逐级回落。 */
+  private async pickBossSentence(date: string) {
+    const dayNumber = Math.floor(Date.parse(`${date}T00:00:00+08:00`) / 86400000);
+    for (const difficulty of [3, 2, 1]) {
+      const where = { status: 'ready' as const, retiredAt: null, difficulty };
+      const count = await this.prisma.sentence.count({ where });
+      if (count === 0) {
+        continue;
+      }
+      const rows = await this.prisma.sentence.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        skip: dayNumber % count,
+        take: 1,
+        select: {
+          id: true,
+          translationZh: true,
+          ipa: true,
+          imageFileId: true,
+          difficulty: true,
+          category: { select: { name: true } },
+        },
+      });
+      if (rows[0]) {
+        return rows[0];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 提交 Boss 答案：判分/记录/间隔重复/成就**完全复用** `answer()`，
+   * 仅在此基础上补一份「通关」额外经验（按日期幂等，一天一次）。
+   * 这样 Boss 不会成为第二套判分逻辑——口径永远与刷题一致。
+   */
+  async answerBoss(userId: number, sentenceId: number, dto: AnswerBossDto): Promise<BossAnswerResult> {
+    const date = shanghaiDateKey();
+    const boss = await this.pickBossSentence(date);
+    if (!boss) {
+      throw AppException.notFound('今日暂无 Boss 题');
+    }
+    if (boss.id !== BigInt(sentenceId)) {
+      throw AppException.badRequest('这不是今天的 Boss 题');
+    }
+    const result = await this.answer(userId, sentenceId, {
+      userAnswer: dto.userAnswer,
+      mode: 'input',
+    });
+    let bossCleared = false;
+    let bossBonus = 0;
+    if (result.isCorrect) {
+      const awarded = await this.gamify.awardXp(userId, 'boss_clear', `boss:${userId}:${date}`, XP_RULES.boss_clear);
+      if (awarded) {
+        bossCleared = true;
+        bossBonus = XP_RULES.boss_clear;
+      }
+    }
+    return { ...result, xpEarned: result.xpEarned + bossBonus, bossCleared, bossBonus };
   }
 
   /** 收藏 / 取消收藏（返回最终状态）。 */
