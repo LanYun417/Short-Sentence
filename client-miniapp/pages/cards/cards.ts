@@ -137,7 +137,8 @@ Page<CardsData, CardsCustom>({
       const card = await claimTodayCard();
       this.setData({ claiming: false });
       if (!card) {
-        toast('完成今日目标后即可领取');
+        // 两种原因都会返回 null：目标没完成，或当日句签还没生成（00:30 定时任务）
+        toast('今日句签尚未就绪，稍后再来看看');
         return;
       }
       toastSuccess('句签已领取');
@@ -179,5 +180,21 @@ Page<CardsData, CardsCustom>({
   /** 去刷题达成目标。 */
   onGoPractice() {
     goPractice();
+  },
+
+  /** 分享今日句签。 */
+  onShareAppMessage() {
+    const card = this.data.today ?? this.data.mine[0];
+    if (!card) {
+      return { title: '每天一句，慢慢就记住了', path: '/pages/index/index' };
+    }
+    const share: { title: string; path: string; imageUrl?: string } = {
+      title: card.en ? `${card.en}` : card.title || '今日句签',
+      path: '/pages/index/index',
+    };
+    if (card.imageUrl) {
+      share.imageUrl = card.imageUrl;
+    }
+    return share;
   },
 });

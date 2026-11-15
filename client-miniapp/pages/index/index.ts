@@ -1,12 +1,14 @@
 /**
  * 首页（练习页）：今日进度 + 难度选择 + 进入刷题。
  */
+import { fetchTodayCardStatus } from '../../services/cards';
 import { fetchTodayCheckin } from '../../services/checkin';
 import type { ClientUserProfile, TodayCheckin } from '../../services/types';
 import { fetchProfile, isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError } from '../../utils/feedback';
 import { absoluteUrl, initialOf } from '../../utils/format';
 import { goLogin, goPractice, goStages, switchTab } from '../../utils/nav';
+import { syncNoticeBadge } from '../../utils/notice-badge';
 import { getCachedUser, getDifficulty, setDifficulty } from '../../utils/storage';
 
 /** 难度档位（与后端 Sentence.difficulty 对齐）。 */
@@ -47,6 +49,8 @@ interface IndexData {
   initial: string;
   percent: number;
   tip: string;
+  /** 今日目标已达成但句签还没领 */
+  cardReady: boolean;
   loading: boolean;
 }
 
@@ -59,6 +63,7 @@ interface IndexCustom {
   onOpenStages(): void;
   onOpenBanks(): void;
   onOpenBoss(): void;
+  onOpenCards(): void;
   onTapProfile(): void;
 }
 
@@ -73,6 +78,7 @@ Page<IndexData, IndexCustom>({
     initial: '',
     percent: 0,
     tip: '每天答几题，句子自然记住',
+    cardReady: false,
     loading: true,
   },
 
@@ -106,16 +112,22 @@ Page<IndexData, IndexCustom>({
     });
   },
 
-  /** 拉取今日进度与最新资料。 */
+  /** 拉取今日进度、最新资料、句签状态与未读红点。 */
   async refresh() {
     try {
-      const [checkin, user] = await Promise.all([fetchTodayCheckin(), fetchProfile().catch(() => null)]);
+      const [checkin, user, card] = await Promise.all([
+        fetchTodayCheckin(),
+        fetchProfile().catch(() => null),
+        fetchTodayCardStatus().catch(() => null),
+        syncNoticeBadge(),
+      ]);
       const goal = checkin.goalCount || 0;
       const percent = goal > 0 ? Math.max(0, Math.min(100, Math.round((checkin.doneCount / goal) * 100))) : 0;
       this.setData({
         checkin,
         percent,
         loading: false,
+        cardReady: Boolean(checkin.completed && card && !card.obtained),
         tip: checkin.completed
           ? '今日目标已达成，明天继续保持'
           : goal > 0
@@ -166,8 +178,22 @@ Page<IndexData, IndexCustom>({
     wx.navigateTo({ url: '/pages/boss/boss' });
   },
 
+  /** 进句签页领今日卡片。 */
+  onOpenCards() {
+    wx.navigateTo({ url: '/pages/cards/cards' });
+  },
+
   /** 点头像去「我的」。 */
   onTapProfile() {
     switchTab('/pages/profile/profile');
+  },
+
+  /** 分享（右上角菜单）。 */
+  onShareAppMessage() {
+    const { checkin } = this.data;
+    return {
+      title: checkin.streak > 0 ? `我已经连续 ${checkin.streak} 天每天说一句英语` : '看中文写英文，一天一句就够了',
+      path: '/pages/index/index',
+    };
   },
 });

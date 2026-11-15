@@ -79,4 +79,15 @@ Page<WeeklyData, WeeklyCustom>({
       showError(error);
     }
   },
+
+  /** 分享周报。 */
+  onShareAppMessage() {
+    const report = this.data.report;
+    return {
+      title: report
+        ? `本周答了 ${report.answered} 题，正确率 ${this.data.accuracyText}`
+        : '看中文写英文，一天一句就够了',
+      path: '/pages/index/index',
+    };
+  },
 });

@@ -6,6 +6,7 @@ import type { ClientNoticeItem } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError, toastSuccess } from '../../utils/feedback';
 import { goLogin } from '../../utils/nav';
+import { syncNoticeBadge } from '../../utils/notice-badge';
 
 const PAGE_SIZE = 20;
 
@@ -140,6 +141,7 @@ Page<NoticesData, NoticesCustom>({
       markNoticeRead(notice.id).catch(() => {
         // 标记失败不回滚 UI：下次刷新会以服务端为准
       });
+      void syncNoticeBadge();
     }
   },
 
@@ -149,6 +151,7 @@ Page<NoticesData, NoticesCustom>({
       await markAllNoticesRead();
       const items = this.data.items.map((item) => ({ ...item, unread: false }));
       this.setData({ items, unread: 0 });
+      void syncNoticeBadge();
       toastSuccess('已全部标记为已读');
     } catch (error) {
       showError(error);

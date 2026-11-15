@@ -114,6 +114,60 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* 今日句签可领取提示 */
+.card-tip {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+  margin-top: 24rpx;
+  padding: 24rpx 28rpx;
+  background: linear-gradient(120deg, #fffbeb, #fef3c7);
+  border: 2rpx solid #fde68a;
+  border-radius: 28rpx;
+}
+
+.card-tip-hover {
+  opacity: 0.85;
+}
+
+.card-tip-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  font-size: 34rpx;
+  color: #b45309;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 6rpx 16rpx rgba(180, 83, 9, 0.14);
+}
+
+.card-tip-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.card-tip-title {
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.card-tip-desc {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #b45309;
+}
+
+.card-tip-arrow {
+  font-size: 34rpx;
+  color: #b45309;
+}
+
 /* 难度分段 */
 .section {
   margin-top: 40rpx;

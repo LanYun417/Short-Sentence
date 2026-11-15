@@ -177,6 +177,30 @@ jobs:
         working-directory: client-web
         run: npm run build
 
+  miniapp:
+    name: 微信小程序（类型 / 静态自检）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client-miniapp/package-lock.json
+      # 只有 devDependencies（typescript + miniprogram-api-typings），无运行时依赖
+      - name: 安装类型依赖
+        working-directory: client-miniapp
+        run: npm ci --no-audit --no-fund
+      # 微信开发者工具内置的 TS 只是转译、**不做类型检查**，仓库侧必须单独守
+      - name: 类型检查
+        working-directory: client-miniapp
+        run: npm run type-check
+      # WXML/WXSS 不被 eslint/prettier 覆盖，靠这个脚本兜页面四件套、
+      # 事件绑定是否存在、标签闭合、wx:for 缺 key、样式类未定义
+      - name: 静态自检
+        working-directory: client-miniapp
+        run: npm run check
+
   android:
     name: Flutter 客户端（静态检查 / 单测）
     runs-on: ubuntu-latest

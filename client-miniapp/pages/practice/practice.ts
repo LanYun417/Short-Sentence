@@ -307,4 +307,17 @@ Page<PracticeData, PracticeCustom>({
   onRetry() {
     void this.loadQuestion();
   },
+
+  /** 分享：答过之后把这道题的英文分享出去（题面不泄题）。 */
+  onShareAppMessage() {
+    const english = this.data.result?.sentenceEn ?? '';
+    const share: { title: string; path: string; imageUrl?: string } = {
+      title: english ? `今天学到一句：${english}` : '看中文写英文，一天一句就够了',
+      path: '/pages/index/index',
+    };
+    if (english && this.data.imageUrl) {
+      share.imageUrl = this.data.imageUrl;
+    }
+    return share;
+  },
 });

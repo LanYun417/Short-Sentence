@@ -27,6 +27,16 @@
     <text class="hero-tip">{{tip}}</text>
   </view>
 
+  <!-- 今日句签可领取 -->
+  <view wx:if="{{cardReady}}" class="card-tip" hover-class="card-tip-hover" bindtap="onOpenCards">
+    <view class="card-tip-icon">✦</view>
+    <view class="card-tip-body">
+      <text class="card-tip-title">今日目标已达成</text>
+      <text class="card-tip-desc">去看看今天的句签</text>
+    </view>
+    <text class="card-tip-arrow">›</text>
+  </view>
+
   <!-- 难度 -->
   <view class="section">
     <view class="row-between">

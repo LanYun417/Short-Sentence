@@ -18,3 +18,8 @@ export function fetchMyCards(): Promise<SentenceCard[]> {
 export function fetchMissingCards(): Promise<MissingSentenceCards> {
   return request<MissingSentenceCards>('/client/sentence-card/missing');
 }
+
+/** 今日句签是否已领取（轻量查询，不返回卡片内容）。 */
+export function fetchTodayCardStatus(): Promise<{ obtained: boolean; bizDate: string }> {
+  return request<{ obtained: boolean; bizDate: string }>('/client/sentence-card/today');
+}

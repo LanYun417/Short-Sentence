@@ -11,6 +11,7 @@ import { fetchProfile, isLoggedIn, logout, sessionReady } from '../../utils/auth
 import { showError, toast, toastSuccess } from '../../utils/feedback';
 import { absoluteUrl, initialOf } from '../../utils/format';
 import { goLogin } from '../../utils/nav';
+import { syncNoticeBadge } from '../../utils/notice-badge';
 import { clearSession, getCachedUser } from '../../utils/storage';
 
 /** 微信登录自动建的占位邮箱后缀（不展示给用户）。 */
@@ -63,6 +64,8 @@ interface ProfileData {
   streakText: string;
   achievementText: string;
   version: string;
+  /** 未读公告数（通知入口上的小红点） */
+  noticeUnread: number;
   group1: Array<{ key: string; label: string; icon: string }>;
   group2: Array<{ key: string; label: string; icon: string }>;
   group3: Array<{ key: string; label: string; icon: string }>;
@@ -89,6 +92,7 @@ Page<ProfileData, ProfileCustom>({
     streakText: '0',
     achievementText: '0',
     version: '1.0.0',
+    noticeUnread: 0,
     group1: MENUS.filter((item) => item.group === 1),
     group2: MENUS.filter((item) => item.group === 2),
     group3: MENUS.filter((item) => item.group === 3),
@@ -131,13 +135,14 @@ Page<ProfileData, ProfileCustom>({
     });
   },
 
-  /** 并行拉取资料 / 成长 / 打卡摘要。 */
+  /** 并行拉取资料 / 成长 / 打卡摘要 / 未读数。 */
   async refresh() {
     try {
-      const [user, overview, checkin] = await Promise.all([
+      const [user, overview, checkin, unread] = await Promise.all([
         fetchProfile().catch(() => null),
         fetchGamifyOverview().catch(() => null),
         fetchTodayCheckin().catch(() => null),
+        syncNoticeBadge().catch(() => 0),
       ]);
       if (user) {
         this.applyUser(user);
@@ -146,6 +151,7 @@ Page<ProfileData, ProfileCustom>({
         xpText: overview ? String(overview.xp) : '0',
         streakText: checkin ? String(checkin.streak) : '0',
         achievementText: overview ? `${overview.unlockedAchievements}/${overview.totalAchievements}` : '0',
+        noticeUnread: unread,
       });
     } catch (error) {
       showError(error);

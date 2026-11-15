@@ -69,6 +69,7 @@
     >
       <text class="menu-icon">{{item.icon}}</text>
       <text class="menu-label">{{item.label}}</text>
+      <text wx:if="{{item.key === 'notices' && noticeUnread > 0}}" class="menu-dot">{{noticeUnread}}</text>
     </view>
   </view>
 
