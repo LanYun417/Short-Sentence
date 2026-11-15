@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:client_android/api/models/growth.dart';
 import 'package:client_android/sheets/sentence_card_sheet.dart';
@@ -39,22 +40,28 @@ double _faceOpacity(WidgetTester tester, String text) {
   return tester.widget<Opacity>(finder.first).opacity;
 }
 
-Future<void> _open(WidgetTester tester, {bool reduceMotion = false, double textScale = 1}) async {
+Future<void> _open(
+  WidgetTester tester, {
+  bool reduceMotion = false,
+  double textScale = 1,
+}) async {
   await tester.pumpWidget(
-    MaterialApp(
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          disableAnimations: reduceMotion,
-          textScaler: TextScaler.linear(textScale),
+    ProviderScope(
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            disableAnimations: reduceMotion,
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: child!,
         ),
-        child: child!,
-      ),
-      home: Scaffold(
-        body: Builder(
-          builder: (context) => Center(
-            child: TextButton(
-              onPressed: () => showSentenceCard(context, _card()),
-              child: const Text('打开句签'),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () => showSentenceCard(context, _card()),
+                child: const Text('打开句签'),
+              ),
             ),
           ),
         ),
@@ -85,26 +92,28 @@ void main() {
 
   testWidgets('没有寄语的旧卡片用兜底文案', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => Center(
-              child: TextButton(
-                onPressed: () => showSentenceCard(
-                  context,
-                  SentenceCard.fromJson(const <String, dynamic>{
-                    'id': 8,
-                    'bizDate': '2026-10-24',
-                    'title': 'Old',
-                    'titleZh': '旧卡',
-                    'sentenceEn': 'Old sentence.',
-                    'translationZh': '旧句子。',
-                    'blessing': '',
-                    'imageUrl': null,
-                    'obtainedAt': '2026-10-24T07:00:00.000Z',
-                  }),
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => Center(
+                child: TextButton(
+                  onPressed: () => showSentenceCard(
+                    context,
+                    SentenceCard.fromJson(const <String, dynamic>{
+                      'id': 8,
+                      'bizDate': '2026-10-24',
+                      'title': 'Old',
+                      'titleZh': '旧卡',
+                      'sentenceEn': 'Old sentence.',
+                      'translationZh': '旧句子。',
+                      'blessing': '',
+                      'imageUrl': null,
+                      'obtainedAt': '2026-10-24T07:00:00.000Z',
+                    }),
+                  ),
+                  child: const Text('打开句签'),
                 ),
-                child: const Text('打开句签'),
               ),
             ),
           ),
