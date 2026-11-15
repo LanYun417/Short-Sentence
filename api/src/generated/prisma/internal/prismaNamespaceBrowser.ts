@@ -512,7 +512,10 @@ export const ClientUserScalarFieldEnum = {
   lastLoginAt: 'lastLoginAt',
   passwordChangedAt: 'passwordChangedAt',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  wechatOpenid: 'wechatOpenid',
+  wechatUnionid: 'wechatUnionid',
+  deletedAt: 'deletedAt'
 } as const
 
 export type ClientUserScalarFieldEnum = (typeof ClientUserScalarFieldEnum)[keyof typeof ClientUserScalarFieldEnum]
@@ -1213,7 +1216,9 @@ export const ClientUserOrderByRelevanceFieldEnum = {
   password: 'password',
   nickname: 'nickname',
   gender: 'gender',
-  signature: 'signature'
+  signature: 'signature',
+  wechatOpenid: 'wechatOpenid',
+  wechatUnionid: 'wechatUnionid'
 } as const
 
 export type ClientUserOrderByRelevanceFieldEnum = (typeof ClientUserOrderByRelevanceFieldEnum)[keyof typeof ClientUserOrderByRelevanceFieldEnum]

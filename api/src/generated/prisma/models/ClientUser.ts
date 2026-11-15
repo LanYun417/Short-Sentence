@@ -61,6 +61,9 @@ export type ClientUserMinAggregateOutputType = {
   passwordChangedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  wechatOpenid: string | null
+  wechatUnionid: string | null
+  deletedAt: Date | null
 }
 
 export type ClientUserMaxAggregateOutputType = {
@@ -80,6 +83,9 @@ export type ClientUserMaxAggregateOutputType = {
   passwordChangedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
+  wechatOpenid: string | null
+  wechatUnionid: string | null
+  deletedAt: Date | null
 }
 
 export type ClientUserCountAggregateOutputType = {
@@ -99,6 +105,9 @@ export type ClientUserCountAggregateOutputType = {
   passwordChangedAt: number
   createdAt: number
   updatedAt: number
+  wechatOpenid: number
+  wechatUnionid: number
+  deletedAt: number
   _all: number
 }
 
@@ -138,6 +147,9 @@ export type ClientUserMinAggregateInputType = {
   passwordChangedAt?: true
   createdAt?: true
   updatedAt?: true
+  wechatOpenid?: true
+  wechatUnionid?: true
+  deletedAt?: true
 }
 
 export type ClientUserMaxAggregateInputType = {
@@ -157,6 +169,9 @@ export type ClientUserMaxAggregateInputType = {
   passwordChangedAt?: true
   createdAt?: true
   updatedAt?: true
+  wechatOpenid?: true
+  wechatUnionid?: true
+  deletedAt?: true
 }
 
 export type ClientUserCountAggregateInputType = {
@@ -176,6 +191,9 @@ export type ClientUserCountAggregateInputType = {
   passwordChangedAt?: true
   createdAt?: true
   updatedAt?: true
+  wechatOpenid?: true
+  wechatUnionid?: true
+  deletedAt?: true
   _all?: true
 }
 
@@ -282,6 +300,9 @@ export type ClientUserGroupByOutputType = {
   passwordChangedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  wechatOpenid: string | null
+  wechatUnionid: string | null
+  deletedAt: Date | null
   _count: ClientUserCountAggregateOutputType | null
   _avg: ClientUserAvgAggregateOutputType | null
   _sum: ClientUserSumAggregateOutputType | null
@@ -324,6 +345,9 @@ export type ClientUserWhereInput = {
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
+  wechatOpenid?: Prisma.StringNullableFilter<"ClientUser"> | string | null
+  wechatUnionid?: Prisma.StringNullableFilter<"ClientUser"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
 }
 
 export type ClientUserOrderByWithRelationInput = {
@@ -343,12 +367,16 @@ export type ClientUserOrderByWithRelationInput = {
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  wechatOpenid?: Prisma.SortOrderInput | Prisma.SortOrder
+  wechatUnionid?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _relevance?: Prisma.ClientUserOrderByRelevanceInput
 }
 
 export type ClientUserWhereUniqueInput = Prisma.AtLeast<{
   id?: bigint | number
   email?: string
+  wechatOpenid?: string
   AND?: Prisma.ClientUserWhereInput | Prisma.ClientUserWhereInput[]
   OR?: Prisma.ClientUserWhereInput[]
   NOT?: Prisma.ClientUserWhereInput | Prisma.ClientUserWhereInput[]
@@ -366,7 +394,9 @@ export type ClientUserWhereUniqueInput = Prisma.AtLeast<{
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
-}, "id" | "email">
+  wechatUnionid?: Prisma.StringNullableFilter<"ClientUser"> | string | null
+  deletedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
+}, "id" | "email" | "wechatOpenid">
 
 export type ClientUserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -385,6 +415,9 @@ export type ClientUserOrderByWithAggregationInput = {
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  wechatOpenid?: Prisma.SortOrderInput | Prisma.SortOrder
+  wechatUnionid?: Prisma.SortOrderInput | Prisma.SortOrder
+  deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.ClientUserCountOrderByAggregateInput
   _avg?: Prisma.ClientUserAvgOrderByAggregateInput
   _max?: Prisma.ClientUserMaxOrderByAggregateInput
@@ -412,6 +445,9 @@ export type ClientUserScalarWhereWithAggregatesInput = {
   passwordChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ClientUser"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ClientUser"> | Date | string
+  wechatOpenid?: Prisma.StringNullableWithAggregatesFilter<"ClientUser"> | string | null
+  wechatUnionid?: Prisma.StringNullableWithAggregatesFilter<"ClientUser"> | string | null
+  deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
 }
 
 export type ClientUserCreateInput = {
@@ -431,6 +467,9 @@ export type ClientUserCreateInput = {
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  wechatOpenid?: string | null
+  wechatUnionid?: string | null
+  deletedAt?: Date | string | null
 }
 
 export type ClientUserUncheckedCreateInput = {
@@ -450,6 +489,9 @@ export type ClientUserUncheckedCreateInput = {
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  wechatOpenid?: string | null
+  wechatUnionid?: string | null
+  deletedAt?: Date | string | null
 }
 
 export type ClientUserUpdateInput = {
@@ -469,6 +511,9 @@ export type ClientUserUpdateInput = {
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wechatOpenid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  wechatUnionid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUserUncheckedUpdateInput = {
@@ -488,6 +533,9 @@ export type ClientUserUncheckedUpdateInput = {
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wechatOpenid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  wechatUnionid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUserCreateManyInput = {
@@ -507,6 +555,9 @@ export type ClientUserCreateManyInput = {
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  wechatOpenid?: string | null
+  wechatUnionid?: string | null
+  deletedAt?: Date | string | null
 }
 
 export type ClientUserUpdateManyMutationInput = {
@@ -526,6 +577,9 @@ export type ClientUserUpdateManyMutationInput = {
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wechatOpenid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  wechatUnionid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUserUncheckedUpdateManyInput = {
@@ -545,6 +599,9 @@ export type ClientUserUncheckedUpdateManyInput = {
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wechatOpenid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  wechatUnionid?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type ClientUserOrderByRelevanceInput = {
@@ -570,6 +627,9 @@ export type ClientUserCountOrderByAggregateInput = {
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  wechatOpenid?: Prisma.SortOrder
+  wechatUnionid?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientUserAvgOrderByAggregateInput = {
@@ -598,6 +658,9 @@ export type ClientUserMaxOrderByAggregateInput = {
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  wechatOpenid?: Prisma.SortOrder
+  wechatUnionid?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientUserMinOrderByAggregateInput = {
@@ -617,6 +680,9 @@ export type ClientUserMinOrderByAggregateInput = {
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  wechatOpenid?: Prisma.SortOrder
+  wechatUnionid?: Prisma.SortOrder
+  deletedAt?: Prisma.SortOrder
 }
 
 export type ClientUserSumOrderByAggregateInput = {
@@ -647,6 +713,9 @@ export type ClientUserSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   passwordChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  wechatOpenid?: boolean
+  wechatUnionid?: boolean
+  deletedAt?: boolean
 }, ExtArgs["result"]["clientUser"]>
 
 
@@ -668,9 +737,12 @@ export type ClientUserSelectScalar = {
   passwordChangedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  wechatOpenid?: boolean
+  wechatUnionid?: boolean
+  deletedAt?: boolean
 }
 
-export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "bgCardId" | "xp" | "status" | "emailReminder" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clientUser"]>
+export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "bgCardId" | "xp" | "status" | "emailReminder" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt" | "wechatOpenid" | "wechatUnionid" | "deletedAt", ExtArgs["result"]["clientUser"]>
 
 export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ClientUser"
@@ -740,6 +812,18 @@ export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * 更新时间
      */
     updatedAt: Date
+    /**
+     * 微信小程序 openid（唯一；用于微信一键登录；注销/解绑后置空）
+     */
+    wechatOpenid: string | null
+    /**
+     * 微信 unionid（同主体跨应用统一；可选）
+     */
+    wechatUnionid: string | null
+    /**
+     * 注销时间（软删；非空表示已注销，令牌与微信登录均失效）
+     */
+    deletedAt: Date | null
   }, ExtArgs["result"]["clientUser"]>
   composites: {}
 }
@@ -1125,6 +1209,9 @@ export interface ClientUserFieldRefs {
   readonly passwordChangedAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
+  readonly wechatOpenid: Prisma.FieldRef<"ClientUser", 'String'>
+  readonly wechatUnionid: Prisma.FieldRef<"ClientUser", 'String'>
+  readonly deletedAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
 }
     
 

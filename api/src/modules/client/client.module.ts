@@ -7,6 +7,7 @@
 import { Module } from '@nestjs/common';
 import { FilesModule } from '../files/files.module.js';
 import { ConfigModule } from '../config/config.module.js';
+import { WechatService } from '../../common/auth/wechat.service.js';
 import { WordRootModule } from './word-root/word-root.module.js';
 import { SentenceCardModule } from './sentence-card/sentence-card.module.js';
 import { GamifyModule } from './gamify/gamify.module.js';
@@ -102,6 +103,8 @@ import { TeamAdminController } from './team/team-admin.controller.js';
   exports: [ChainService, StageService, TeamService],
   providers: [
     ClientAuthUserService,
+    // 微信小程序登录（code2session；无外部依赖，纯函数式调用）
+    WechatService,
     // 邮箱验证码（注册/登录/重置密码；依赖 Redis + 全局 MailService）
     EmailCodeService,
     QuestionsService,

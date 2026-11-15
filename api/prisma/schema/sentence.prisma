@@ -40,6 +40,12 @@ model ClientUser {
   createdAt         DateTime  @default(now()) @map("created_at")
   /// 更新时间
   updatedAt         DateTime  @updatedAt @map("updated_at")
+  /// 微信小程序 openid（唯一；用于微信一键登录；注销/解绑后置空）
+  wechatOpenid      String?   @unique @map("wechat_openid") @db.VarChar(64)
+  /// 微信 unionid（同主体跨应用统一；可选）
+  wechatUnionid     String?   @map("wechat_unionid") @db.VarChar(64)
+  /// 注销时间（软删；非空表示已注销，令牌与微信登录均失效）
+  deletedAt         DateTime? @map("deleted_at")
 
   // 答题记录 / 收藏 / 打卡不声明 Prisma 关系：与 sys_user.dept_id 的哨兵约定一致，
   // 一律按 userId 显式查询（见 base.prisma「哨兵值约定」），删除用户时由业务层清理。

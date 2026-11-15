@@ -489,6 +489,19 @@ export const config = {
     coverMaxWidth: imageGenConfig.stageCoverMaxWidth,
     coverQuality: imageGenConfig.stageCoverQuality,
   },
+  /**
+   * 微信相关配置（小程序登录等）。
+   * 密钥缺失时对应功能整体禁用（接口返回明确错误），**不阻断服务启动**——
+   * 与 JWT 的 fail-fast 区别：JWT 缺失等于鉴权体系不可用，微信缺失只是「微信登录」这一入口不可用。
+   */
+  wechat: {
+    miniProgram: {
+      /** 小程序 AppID（WECHAT_MINIAPP_APPID） */
+      appId: process.env.WECHAT_MINIAPP_APPID ?? '',
+      /** 小程序 AppSecret（WECHAT_MINIAPP_SECRET） */
+      appSecret: process.env.WECHAT_MINIAPP_SECRET ?? '',
+    },
+  },
 } as const;
 
 export type AppConfig = typeof config;

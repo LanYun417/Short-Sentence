@@ -7,9 +7,11 @@
  * - 不接图形验证码与 RBAC（客户端凭邮箱+密码，数据按 userId 天然隔离）。
  */
 import { Injectable, Logger } from '@nestjs/common';
+import crypto from 'node:crypto';
 import { JwtService } from '../../../common/auth/jwt.service.js';
 import { TokenBlacklistService } from '../../../common/auth/token-blacklist.service.js';
 import { ClientAuthService } from '../../../common/auth/client-auth.service.js';
+import { WechatService } from '../../../common/auth/wechat.service.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { Status } from '../../../common/config/constants.js';
 import { config } from '../../../common/config/config.js';
@@ -55,6 +57,35 @@ export interface ClientTokenPair {
   refreshToken: string;
 }
 
+/** 个人数据导出结构（账号注销合规 / 商店审核用，一键下载 JSON）。 */
+export interface ClientExportData {
+  exportedAt: string;
+  schemaVersion: number;
+  profile: {
+    id: number;
+    email: string;
+    nickname: string;
+    gender: string;
+    birthday: string | null;
+    signature: string | null;
+    xp: number;
+    emailReminder: number;
+    createdAt: string;
+  };
+  checkins: { date: string; doneCount: number; goalCount: number; streak: number }[];
+  achievements: { code: string; unlockedAt: string }[];
+  studyRecords: {
+    sentenceId: number;
+    userAnswer: string;
+    isCorrect: boolean;
+    elapsedMs: number;
+    reviewLevel: number;
+    createdAt: string;
+  }[];
+  collectedCards: { sentenceCardId: number; obtainedAt: string }[];
+  chainEntries: { id: number; contentEn: string; contentZh: string | null; status: string; createdAt: string }[];
+}
+
 @Injectable()
 export class ClientAuthUserService {
   private readonly logger = new Logger(ClientAuthUserService.name);
@@ -69,6 +100,7 @@ export class ClientAuthUserService {
     private readonly accountLock: AccountLockService,
     private readonly ipBan: IpBanService,
     private readonly emailCode: EmailCodeService,
+    private readonly wechat: WechatService,
   ) {}
 
   /** 图形验证码（登录/注册用；服务端关闭验证码时 enabled=false，前端不渲染输入框）。 */
@@ -174,6 +206,158 @@ export class ClientAuthUserService {
   /** 登出（写入 scope=client 黑名单，令旧令牌立即失效）。 */
   async logout(userId: number): Promise<void> {
     await this.blacklist.recordLogout(userId, 'client');
+  }
+
+  /**
+   * 微信小程序登录（code → openid → 我们自己的 JWT 双 token）。
+   * - 已有 openid 的用户：直接签发令牌（status≠启用仍判禁用）；
+   * - 新用户：用 openid 派生唯一占位邮箱（无密码，纯微信登录），自动建号。
+   * 复用与邮箱登录同一套令牌体系（tokenType='client'），后续所有 /api/client/* 通用。
+   */
+  async loginWithWechat(code: string): Promise<ClientTokenPair> {
+    const session = await this.wechat.code2Session(code);
+    const existing = await this.clientAuth.findByWechatOpenid(session.openid);
+    if (existing) {
+      if (existing.status !== Status.ENABLED) {
+        throw AppException.unauthorized('账号已被禁用');
+      }
+      await this.blacklist.clearLogout(Number(existing.id), 'client');
+      await this.prisma.clientUser.update({
+        where: { id: existing.id },
+        data: { lastLoginAt: new Date() },
+      });
+      return this.issueTokens(Number(existing.id), existing.email);
+    }
+
+    // 新用户：openid 作为唯一凭据派生邮箱占位；口令随机不可登录，仅微信通道可用
+    const email = `${session.openid}@wx.local`;
+    const created = await this.prisma.clientUser.create({
+      data: {
+        email,
+        password: await hashPassword(crypto.randomBytes(24).toString('hex')),
+        nickname: '微信用户',
+        wechatOpenid: session.openid,
+        wechatUnionid: session.unionid ?? null,
+        // 新用户默认开启每日学习提醒邮件（与邮箱注册一致）
+        emailReminder: 1,
+      },
+      select: { id: true, email: true },
+    });
+    this.logger.log(`[ClientAuth] 微信新用户注册: ${session.openid}`);
+    return this.issueTokens(Number(created.id), created.email);
+  }
+
+  /**
+   * 注销账号（软删）。
+   * - 令所有令牌立即失效（scope=client 黑名单）；
+   * - 匿名化身份字段（昵称/邮箱/签名/头像/背景），清空微信绑定，使旧微信无法再登录原账号；
+   * - 删除学习历史（sentence_record，含用户输入的个人数据）；打卡/成就/句签/接龙等保留——
+   *   其作者身份已随账号匿名化（显示「已注销用户」），符合「投稿/接龙保留匿名」的隐私政策口径。
+   */
+  async deleteAccount(userId: number): Promise<void> {
+    const uid = BigInt(userId);
+    // 先令所有旧令牌失效，避免注销后仍能凭旧 token 操作
+    await this.blacklist.recordLogout(userId, 'client');
+    const random = crypto.randomBytes(6).toString('hex');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.clientUser.update({
+        where: { id: uid },
+        data: {
+          deletedAt: new Date(),
+          nickname: '已注销用户',
+          // 释放原邮箱：占位邮箱唯一，允许后续用原邮箱重新注册
+          email: `deleted_${userId}_${random}@deleted.local`,
+          password: await hashPassword(crypto.randomBytes(24).toString('hex')),
+          signature: null,
+          birthday: null,
+          gender: 'secret',
+          avatarFileId: 0n,
+          bgCardId: 0n,
+          wechatOpenid: null,
+          wechatUnionid: null,
+          emailReminder: 0,
+        },
+      });
+      // 学习历史属个人数据，随注销清除
+      await tx.sentenceRecord.deleteMany({ where: { userId: uid } });
+    });
+    this.logger.log(`[ClientAuth] 用户注销: ${userId}`);
+  }
+
+  /**
+   * 导出本人全部个人数据（JSON，供下载）。
+   * 仅聚合本用户维度的数据：资料 / 打卡 / 成就 / 学习记录 / 收藏句签 / 接龙投稿。
+   */
+  async exportData(userId: number): Promise<ClientExportData> {
+    const uid = BigInt(userId);
+    const [profile, checkins, achievements, records, cards, chains] = await Promise.all([
+      this.prisma.clientUser.findUnique({
+        where: { id: uid },
+        select: {
+          id: true,
+          email: true,
+          nickname: true,
+          gender: true,
+          birthday: true,
+          signature: true,
+          xp: true,
+          emailReminder: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.userCheckin.findMany({ where: { userId: uid }, orderBy: { checkinDate: 'asc' } }),
+      this.prisma.userAchievement.findMany({ where: { userId: uid }, orderBy: { unlockedAt: 'asc' } }),
+      this.prisma.sentenceRecord.findMany({ where: { userId: uid }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.userSentenceCard.findMany({ where: { userId: uid }, orderBy: { obtainedAt: 'asc' } }),
+      this.prisma.chainEntry.findMany({ where: { userId: uid }, orderBy: { createdAt: 'asc' } }),
+    ]);
+    if (!profile) {
+      throw AppException.unauthorized('用户不存在');
+    }
+    return {
+      exportedAt: new Date().toISOString(),
+      schemaVersion: 1,
+      profile: {
+        id: Number(profile.id),
+        email: profile.email,
+        nickname: profile.nickname,
+        gender: profile.gender,
+        birthday: profile.birthday ? profile.birthday.toISOString().slice(0, 10) : null,
+        signature: profile.signature,
+        xp: profile.xp,
+        emailReminder: profile.emailReminder,
+        createdAt: profile.createdAt.toISOString(),
+      },
+      checkins: checkins.map((c) => ({
+        date: c.checkinDate,
+        doneCount: c.doneCount,
+        goalCount: c.goalCount,
+        streak: c.streak,
+      })),
+      achievements: achievements.map((a) => ({
+        code: a.achievementCode,
+        unlockedAt: a.unlockedAt.toISOString(),
+      })),
+      studyRecords: records.map((r) => ({
+        sentenceId: Number(r.sentenceId),
+        userAnswer: r.userAnswer,
+        isCorrect: r.isCorrect === 1,
+        elapsedMs: r.elapsedMs,
+        reviewLevel: r.reviewLevel,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      collectedCards: cards.map((c) => ({
+        sentenceCardId: Number(c.sentenceCardId),
+        obtainedAt: c.obtainedAt.toISOString(),
+      })),
+      chainEntries: chains.map((c) => ({
+        id: Number(c.id),
+        contentEn: c.contentEn,
+        contentZh: c.contentZh,
+        status: c.status,
+        createdAt: c.createdAt.toISOString(),
+      })),
+    };
   }
 
   /** 我的资料。 */

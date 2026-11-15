@@ -5826,6 +5826,18 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "GET",
+        "path": "/api/client/auth/me/export",
+        "summary": "导出本人全部个人数据（JSON 附件下载；账号注销合规 / 商店审核用）。 通过 @RawResponse 跳过统一响应体包装，直接以附件形式下发 JSON",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/auth/me/export\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client/auth/avatar",
         "summary": "上传头像（单文件；自动替换旧头像并清理原文件）",
@@ -5892,6 +5904,17 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "POST",
+        "path": "/api/client/auth/wechat",
+        "summary": "微信小程序登录（wx.login 的 code → 我们自己的 JWT 双 token）。 复用与邮箱登录完全相同的令牌体系，小程序后续所有 /api/client/* 接口通用",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/wechat\""
+        }
+      },
+      {
         "method": "PUT",
         "path": "/api/client/auth/me",
         "summary": "更新资料",
@@ -5922,6 +5945,17 @@ export const API_DOCS: ApiDocGroup[] = [
         "action": "",
         "examples": {
           "curl": "curl -X PUT \"http://localhost:3000/api/client/auth/password\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/client/auth/me",
+        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X DELETE \"http://localhost:3000/api/client/auth/me\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]

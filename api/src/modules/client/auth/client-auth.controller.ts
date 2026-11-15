@@ -3,13 +3,13 @@
  * 权限口径：全部接口或公开（登录/注册/刷新）或「登录即可」（资料/密码/登出），
  * 不使用后台 RBAC 权限码——客户端数据按 userId 天然隔离。
  */
-import { Body, Controller, Get, Post, Put, Req, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put, Req, Res, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import type { Express, Request } from 'express';
+import type { Express, Request, Response } from 'express';
 import { CurrentClientUser } from '../../../common/auth/auth.guard.js';
 import { getClientIp } from '../../../common/log/operation-log.interceptor.js';
 import { Public } from '../../../common/auth/auth.guard.js';
-import { type ResponseEnvelope } from '../../../common/http/response.interceptor.js';
+import { type ResponseEnvelope, RawResponse } from '../../../common/http/response.interceptor.js';
 import { AppException } from '../../../common/exception/app.exception.js';
 import { UPLOAD_MULTER_OPTIONS } from '../../../common/file/upload.config.js';
 import type { CaptchaResult } from '../../../common/types.js';
@@ -24,6 +24,7 @@ import {
   SendEmailCodeDto,
   SetClientBackgroundDto,
   UpdateClientProfileDto,
+  WechatLoginDto,
 } from './dto.js';
 
 /** 登录/注册响应。 */
@@ -89,10 +90,40 @@ export class ClientAuthController {
     return { __raw: true, data: tokens, message: '刷新成功' };
   }
 
+  /**
+   * 微信小程序登录（wx.login 的 code → 我们自己的 JWT 双 token）。
+   * 复用与邮箱登录完全相同的令牌体系，小程序后续所有 /api/client/* 接口通用。
+   */
+  @Public()
+  @Post('wechat')
+  async wechatLogin(@Body() dto: WechatLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
+    const tokens = await this.clientAuth.loginWithWechat(dto.code);
+    const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
+    return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
+  }
+
   /** 我的资料。 */
   @Get('me')
   me(@CurrentClientUser() user: ClientUserContext): Promise<ClientUserProfile> {
     return this.clientAuth.getProfile(user.userId);
+  }
+
+  /**
+   * 导出本人全部个人数据（JSON 附件下载；账号注销合规 / 商店审核用）。
+   * 通过 @RawResponse 跳过统一响应体包装，直接以附件形式下发 JSON。
+   */
+  @Get('me/export')
+  @RawResponse()
+  async exportData(
+    @CurrentClientUser() user: ClientUserContext,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<string> {
+    const data = await this.clientAuth.exportData(user.userId);
+    const filename = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    return JSON.stringify(data, null, 2);
   }
 
   /** 更新资料。 */
@@ -145,6 +176,16 @@ export class ClientAuthController {
   async logout(@CurrentClientUser() user: ClientUserContext): Promise<ResponseEnvelope<null>> {
     await this.clientAuth.logout(user.userId);
     return { __raw: true, data: null, message: '已退出登录' };
+  }
+
+  /**
+   * 注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。
+   * 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号。
+   */
+  @Delete('me')
+  async deleteAccount(@CurrentClientUser() user: ClientUserContext): Promise<ResponseEnvelope<null>> {
+    await this.clientAuth.deleteAccount(user.userId);
+    return { __raw: true, data: null, message: '账号已注销' };
   }
 
   /**

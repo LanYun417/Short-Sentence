@@ -213,6 +213,10 @@ export class AuthGuard implements CanActivate {
     if (!clientUser) {
       throw AppException.unauthorized('用户不存在');
     }
+    // 已注销账号：令牌与微信登录均失效
+    if (clientUser.deletedAt) {
+      throw AppException.unauthorized('账号已注销');
+    }
     // 账号禁用即失效
     if (clientUser.status !== Status.ENABLED) {
       throw AppException.unauthorized(ERROR_MESSAGE.ACCOUNT_DISABLED);

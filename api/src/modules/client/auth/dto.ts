@@ -7,6 +7,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   Max,
   IsString,
@@ -150,4 +151,11 @@ export class ChangeClientPasswordDto {
   @IsString({ message: '邮箱验证码必须为字符串' })
   @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
   emailCode!: string;
+}
+
+/** 微信小程序登录（wx.login 拿到的 code）。 */
+export class WechatLoginDto {
+  @IsString({ message: 'code 必须为字符串' })
+  @IsNotEmpty({ message: 'code 不能为空' })
+  code!: string;
 }

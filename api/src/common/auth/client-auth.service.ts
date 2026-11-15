@@ -14,6 +14,8 @@ export interface ClientAuthSummary {
   status: number;
   /** 密码最后修改时间（改密后旧 Token 失效判定） */
   passwordChangedAt: Date | null;
+  /** 注销时间（非空表示已注销，令牌与微信登录均失效） */
+  deletedAt: Date | null;
 }
 
 @Injectable()
@@ -30,6 +32,7 @@ export class ClientAuthService {
         nickname: true,
         status: true,
         passwordChangedAt: true,
+        deletedAt: true,
       },
     });
     if (!row) {
@@ -41,6 +44,7 @@ export class ClientAuthService {
       nickname: row.nickname,
       status: row.status,
       passwordChangedAt: row.passwordChangedAt,
+      deletedAt: row.deletedAt,
     };
   }
 
@@ -51,6 +55,16 @@ export class ClientAuthService {
     return this.prisma.clientUser.findUnique({
       where: { email },
       select: { id: true, email: true, password: true, nickname: true, status: true },
+    });
+  }
+
+  /** 按微信 openid 查客户端用户（小程序登录命中已有账号用）。 */
+  async findByWechatOpenid(
+    openid: string,
+  ): Promise<{ id: bigint; email: string; nickname: string; status: number } | null> {
+    return this.prisma.clientUser.findUnique({
+      where: { wechatOpenid: openid },
+      select: { id: true, email: true, nickname: true, status: true },
     });
   }
 }

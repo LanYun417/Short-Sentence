@@ -10560,6 +10560,74 @@ export const OPENAPI_DOC: Record<string, unknown> = {
             "bearerAuth": []
           }
         ]
+      },
+      "delete": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "注销账号（软删：令牌失效 + 身份匿名化 + 清空微信绑定 + 清除学习历史）。 注销后原邮箱可重新注册；原微信因 openid 已解绑，再登录将生成全新账号",
+        "operationId": "delete__api_client_auth_me",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/auth/me/export": {
+      "get": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "导出本人全部个人数据（JSON 附件下载；账号注销合规 / 商店审核用）。 通过 @RawResponse 跳过统一响应体包装，直接以附件形式下发 JSON",
+        "operationId": "get__api_client_auth_me_export",
+        "responses": {
+          "200": {
+            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/client/auth/avatar": {
@@ -10769,6 +10837,44 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ],
         "summary": "注册",
         "operationId": "post__api_client_auth_register",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/client/auth/wechat": {
+      "post": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "微信小程序登录（wx.login 的 code → 我们自己的 JWT 双 token）。 复用与邮箱登录完全相同的令牌体系，小程序后续所有 /api/client/* 接口通用",
+        "operationId": "post__api_client_auth_wechat",
         "responses": {
           "200": {
             "description": "成功（统一信封 { code, message, data }）",
