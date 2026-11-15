@@ -322,13 +322,13 @@ class _QuizPageState extends ConsumerState<QuizPage>
   }
 
   /// 抽题失败时按错误类型给副文案（与 ApiException.network 的分级口径一致）。
-String _networkHint(String error) {
-  if (error.contains('超时')) return '网络似乎有点慢，稍等一下再试';
-  if (error.contains('安全连接')) return '可能是系统时间不准，或代理干扰了连接';
-  return '检查一下网络，或者稍后再试';
-}
+  String _networkHint(String error) {
+    if (error.contains('超时')) return '网络似乎有点慢，稍等一下再试';
+    if (error.contains('安全连接')) return '可能是系统时间不准，或代理干扰了连接';
+    return '检查一下网络，或者稍后再试';
+  }
 
-Widget _buildBody(
+  Widget _buildBody(
     QuizState state,
     CardState cards,
     CheckinToday? checkin,
@@ -368,7 +368,10 @@ Widget _buildBody(
         if (state.festival == null)
           StaggeredEntrance(
             index: 2,
-            child: _DifficultyBar(difficulty: state.difficulty, onTap: _pickDifficulty),
+            child: _DifficultyBar(
+              difficulty: state.difficulty,
+              onTap: _pickDifficulty,
+            ),
           )
         else
           StaggeredEntrance(
@@ -378,7 +381,8 @@ Widget _buildBody(
                   ? '正在刷「${state.festival}」节日题库'
                   : '正在刷「${state.question?.categoryName ?? '该场景'}」场景题库',
               onChange: () => ref.read(shellControllerProvider.notifier).go(1),
-              onExit: () => ref.read(quizControllerProvider.notifier).exitBank(),
+              onExit: () =>
+                  ref.read(quizControllerProvider.notifier).exitBank(),
             ),
           ),
         const SizedBox(height: 14),
@@ -462,33 +466,37 @@ Widget _buildBody(
               ),
             ),
             const SizedBox(width: 8),
-            SizedBox(
-              width: 232,
-              height: 40,
-              child: SegmentedControl<AnswerMode>(
-                value: state.mode,
-                onChanged: (mode) {
-                  _scrollToTop();
-                  ref.read(quizControllerProvider.notifier).setMode(mode);
-                },
+            // 三档（默写/拼词/盲听）后固定宽会在窄屏把这一行撑爆：
+            // 用 Flexible 让它在剩余宽度内收缩（SizedBox 受父级 maxWidth 约束）。
+            Flexible(
+              child: SizedBox(
+                width: 232,
                 height: 40,
-                segments: const <Segment<AnswerMode>>[
-                  Segment<AnswerMode>(
-                    value: AnswerMode.input,
-                    label: '默写',
-                    icon: Icons.keyboard_alt_outlined,
-                  ),
-                  Segment<AnswerMode>(
-                    value: AnswerMode.assemble,
-                    label: '拼词',
-                    icon: Icons.extension_outlined,
-                  ),
-                  Segment<AnswerMode>(
-                    value: AnswerMode.listen,
-                    label: '盲听',
-                    icon: Icons.headphones_outlined,
-                  ),
-                ],
+                child: SegmentedControl<AnswerMode>(
+                  value: state.mode,
+                  onChanged: (mode) {
+                    _scrollToTop();
+                    ref.read(quizControllerProvider.notifier).setMode(mode);
+                  },
+                  height: 40,
+                  segments: const <Segment<AnswerMode>>[
+                    Segment<AnswerMode>(
+                      value: AnswerMode.input,
+                      label: '默写',
+                      icon: Icons.keyboard_alt_outlined,
+                    ),
+                    Segment<AnswerMode>(
+                      value: AnswerMode.assemble,
+                      label: '拼词',
+                      icon: Icons.extension_outlined,
+                    ),
+                    Segment<AnswerMode>(
+                      value: AnswerMode.listen,
+                      label: '盲听',
+                      icon: Icons.headphones_outlined,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -994,7 +1002,11 @@ class _BankModeBar extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.ink),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.ink,
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -1030,7 +1042,11 @@ class _FestivalModeAction extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkSoft),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: colors.inkSoft,
+          ),
         ),
       ),
     );
@@ -1466,7 +1482,8 @@ class _FrontFace extends StatelessWidget {
                   background: const Color(0xFFDC2626).withValues(alpha: 0.12),
                 ),
               ],
-              if (question.categoryName != null && question.festivalName == null) ...<Widget>[
+              if (question.categoryName != null &&
+                  question.festivalName == null) ...<Widget>[
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
@@ -1500,7 +1517,9 @@ class _FrontFace extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   '实在想不出？切回「默写」即可看题干',
-                  style: theme.textTheme.labelSmall?.copyWith(color: colors.inkFaint),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.inkFaint,
+                  ),
                 ),
               ],
             )
@@ -1738,43 +1757,52 @@ class _AssembleAreaState extends State<_AssembleArea> {
     final pos = _pickedScroll.position;
     final delta = (pos.viewportDimension * 0.8).clamp(120.0, 320.0) * dir;
     final target = (pos.pixels + delta).clamp(0.0, pos.maxScrollExtent);
-    _pickedScroll.animateTo(target, duration: Motion.normal, curve: Motion.standard);
+    _pickedScroll.animateTo(
+      target,
+      duration: Motion.normal,
+      curve: Motion.standard,
+    );
   }
 
   /// 边缘渐隐遮罩（从卡片底色渐变到透明），提示还有内容可滑。
   Widget _fadeMask(AxisDirection side, Color color) => Positioned(
-        top: 0,
-        bottom: 0,
-        left: side == AxisDirection.left ? 0 : null,
-        right: side == AxisDirection.right ? 0 : null,
-        width: 24,
-        child: IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: side == AxisDirection.left ? Alignment.centerLeft : Alignment.centerRight,
-                end: side == AxisDirection.left ? Alignment.centerRight : Alignment.centerLeft,
-                colors: <Color>[color, Colors.transparent],
-              ),
-            ),
+    top: 0,
+    bottom: 0,
+    left: side == AxisDirection.left ? 0 : null,
+    right: side == AxisDirection.right ? 0 : null,
+    width: 24,
+    child: IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: side == AxisDirection.left
+                ? Alignment.centerLeft
+                : Alignment.centerRight,
+            end: side == AxisDirection.left
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            colors: <Color>[color, Colors.transparent],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   /// 左右翻页圆形按钮（滚到头的一侧自动隐藏，由 _canScroll* 控制是否渲染）。
   Widget _scrollArrow(AxisDirection side, VoidCallback onTap) => Positioned(
-        top: 0,
-        bottom: 0,
-        left: side == AxisDirection.left ? 3 : null,
-        right: side == AxisDirection.right ? 3 : null,
-        child: Center(
-          child: _CarouselButton(
-            icon: side == AxisDirection.left ? Icons.chevron_left : Icons.chevron_right,
-            onTap: onTap,
-          ),
-        ),
-      );
-
+    top: 0,
+    bottom: 0,
+    left: side == AxisDirection.left ? 3 : null,
+    right: side == AxisDirection.right ? 3 : null,
+    child: Center(
+      child: _CarouselButton(
+        icon: side == AxisDirection.left
+            ? Icons.chevron_left
+            : Icons.chevron_right,
+        onTap: onTap,
+      ),
+    ),
+  );
 
   @override
   void didUpdateWidget(covariant _AssembleArea oldWidget) {
@@ -1923,13 +1951,25 @@ class _AssembleAreaState extends State<_AssembleArea> {
                       ),
                       // 走马灯：滚到头的一侧隐藏其渐隐与按钮（对齐 Web 端）
                       if (_canScrollLeft)
-                        _fadeMask(AxisDirection.left, colors.cardMuted.withValues(alpha: 0.6)),
+                        _fadeMask(
+                          AxisDirection.left,
+                          colors.cardMuted.withValues(alpha: 0.6),
+                        ),
                       if (_canScrollRight)
-                        _fadeMask(AxisDirection.right, colors.cardMuted.withValues(alpha: 0.6)),
+                        _fadeMask(
+                          AxisDirection.right,
+                          colors.cardMuted.withValues(alpha: 0.6),
+                        ),
                       if (_canScrollLeft)
-                        _scrollArrow(AxisDirection.left, () => _scrollByPage(-1)),
+                        _scrollArrow(
+                          AxisDirection.left,
+                          () => _scrollByPage(-1),
+                        ),
                       if (_canScrollRight)
-                        _scrollArrow(AxisDirection.right, () => _scrollByPage(1)),
+                        _scrollArrow(
+                          AxisDirection.right,
+                          () => _scrollByPage(1),
+                        ),
                     ],
                   ),
                 ),
@@ -2062,15 +2102,15 @@ class _WordChip extends StatelessWidget {
         color: used
             ? colors.cardMuted.withValues(alpha: 0.5)
             : picked
-                ? colors.brand.withValues(alpha: 0.1)
-                : colors.card,
+            ? colors.brand.withValues(alpha: 0.1)
+            : colors.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: used
               ? colors.line.withValues(alpha: 0.45)
               : picked
-                  ? colors.brand.withValues(alpha: 0.45)
-                  : colors.line,
+              ? colors.brand.withValues(alpha: 0.45)
+              : colors.line,
           width: 1.2,
         ),
         boxShadow: (picked || used)
@@ -2094,8 +2134,8 @@ class _WordChip extends StatelessWidget {
               color: used
                   ? colors.inkFaint
                   : picked
-                      ? colors.brand
-                      : colors.ink,
+                  ? colors.brand
+                  : colors.ink,
               height: 1.2,
             ),
           ),
@@ -2397,7 +2437,8 @@ class _BackFace extends StatelessWidget {
           ],
 
           // 题目解析：无论对错都展示（生题时生成，随答案下发；老题未回填则不占位）
-          if (result.explanation != null && result.explanation!.trim().isNotEmpty) ...<Widget>[
+          if (result.explanation != null &&
+              result.explanation!.trim().isNotEmpty) ...<Widget>[
             const SizedBox(height: 14),
             StaggeredEntrance(
               index: 4,
@@ -2407,14 +2448,20 @@ class _BackFace extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colors.brand.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colors.brand.withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: colors.brand.withValues(alpha: 0.12),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Icon(Icons.auto_awesome_outlined, size: 13, color: colors.brand),
+                        Icon(
+                          Icons.auto_awesome_outlined,
+                          size: 13,
+                          color: colors.brand,
+                        ),
                         const SizedBox(width: 5),
                         Text(
                           '题目解析',
@@ -2429,7 +2476,11 @@ class _BackFace extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       result.explanation!.trim(),
-                      style: TextStyle(fontSize: 13, height: 1.6, color: colors.ink),
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.6,
+                        color: colors.ink,
+                      ),
                     ),
                   ],
                 ),
