@@ -32,6 +32,7 @@ import '../widgets/shimmer.dart';
 import '../widgets/staggered.dart';
 import '../sheets/claim_card.dart';
 import '../sheets/sentence_card_sheet.dart';
+import '../sheets/weekly_poster_sheet.dart';
 import '../api/models/memory_stats.dart';
 import '../api/gamify_api.dart';
 import '../api/models/weekly_report.dart';
@@ -731,6 +732,21 @@ class _WeeklyReportCard extends StatelessWidget {
               const Spacer(),
               Text('周一 00:00 至今',
                   style: theme.textTheme.labelSmall?.copyWith(color: hint)),
+              // 有数据才给入口：空报告没有可分享的内容
+              if (!report.isEmpty) ...<Widget>[
+                const SizedBox(width: 8),
+                PressScale(
+                  onTap: () => showWeeklyPoster(context, report),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.ios_share_outlined,
+                      size: 16,
+                      color: theme.textTheme.labelSmall?.color,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
