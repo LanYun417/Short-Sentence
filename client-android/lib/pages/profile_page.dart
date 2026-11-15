@@ -217,6 +217,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.draw_outlined,
+                    label: '句子投稿',
+                    hint: '投一句你喜欢的句子，进「投稿精选」',
+                    onTap: () => context.push('/submissions'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.chat_bubble_outline_rounded,
                     label: '意见反馈',
                     hint: '想法、问题、建议',
