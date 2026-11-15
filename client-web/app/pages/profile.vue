@@ -574,6 +574,17 @@ async function onChangePassword(): Promise<void> {
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
+    <!-- 句子投稿：投一句你喜欢的句子，审核通过后进「投稿精选」 -->
+    <NuxtLink
+      to="/submissions"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 115ms"
+    >
+      <UIcon name="i-lucide-pen-line" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">句子投稿</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
     <!-- 下载 App 入口：点击后取最新上架版本并提供安装包下载 -->
     <AppDownloadEntry />
 
