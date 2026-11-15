@@ -119,7 +119,8 @@ watch(
   groupedAchievements,
   (groups) => {
     if (expanded.value.size === 0 && groups.length > 0) {
-      expanded.value = new Set([groups[0].label]);
+      const first = groups[0];
+      if (first) expanded.value = new Set([first.label]);
     }
   },
   { immediate: true },

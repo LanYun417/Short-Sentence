@@ -51,6 +51,16 @@ defineProps<{
       <div class="anim-in mt-6 text-center" :style="{ animationDelay: '180ms' }">
         <AppDownloadEntry variant="link" />
       </div>
+
+      <!-- 法务链接：登录/注册即视为同意协议，入口必须在认证页可见 -->
+      <div
+        class="anim-in mt-3 flex items-center justify-center gap-3 text-[11px] text-slate-400 dark:text-slate-500"
+        :style="{ animationDelay: '220ms' }"
+      >
+        <NuxtLink to="/terms" class="transition hover:text-sky-600 dark:hover:text-sky-300">用户协议</NuxtLink>
+        <span aria-hidden="true">·</span>
+        <NuxtLink to="/privacy" class="transition hover:text-sky-600 dark:hover:text-sky-300">隐私政策</NuxtLink>
+      </div>
     </div>
   </div>
 </template>

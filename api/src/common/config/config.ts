@@ -8,6 +8,7 @@ import path from 'node:path';
 import { ROOT_DIR, toBoolean, toNumber } from './env-parse.js';
 import { dbConfig } from './db-config.js';
 import { imageGenConfig } from './image-gen-config.js';
+import { resolveCspPolicy } from '../http/csp-default.js';
 
 /**
  * 项目根目录（定义在 `env-parse.ts`，本文件仅转发导出以保持对外 API 稳定）。
@@ -246,12 +247,14 @@ export const config = {
   /** 安全响应头（零依赖实现，见 common/http/security-headers.ts） */
   security: {
     /**
-     * Content-Security-Policy。默认空 = **不下发**：本项目前端是 Vue SPA，
-     * Element Plus / Tailwind / ECharts 会注入内联样式与 canvas，
-     * 过严的 CSP 会直接白屏，必须按实际部署显式配置（如
-     * `default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'`）。
+     * Content-Security-Policy。
+     * - 显式配置 `CSP_POLICY` 时优先采用（可整体替换默认值）；
+     * - 未配置时，**生产环境（NODE_ENV=production）下发一套保守默认策略**，
+     *   开发环境保持空（Vite 的 HMR 依赖 eval/内联脚本，下发 CSP 会直接白屏）；
+     * - 默认策略只禁第三方来源（script/style/img/connect 都收敛到 'self' + 少量例外），
+     *   不搞 nonce 体系，避免误伤 SPA；`object-src 'none'` + `base-uri 'self'` + `frame-ancestors 'self'` 保留实效。
      */
-    csp: process.env.CSP_POLICY ?? '',
+    csp: resolveCspPolicy(process.env.CSP_POLICY, process.env.NODE_ENV),
     /**
      * 是否下发 HSTS。仅在部署于 HTTPS 反向代理之后才有意义，
      * 故默认跟随 NODE_ENV=production，可由 SECURITY_HSTS 覆盖。

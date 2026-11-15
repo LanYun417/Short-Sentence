@@ -805,15 +805,15 @@ export interface ChangePasswordParams {
 
 /* ------------------------------- 定时任务 ------------------------------- */
 
-/** 定时任务执行状态（与后端 TaskRunStatus 对齐） */
-export type TaskRunStatusValue = 0 | 1 | 2;
+/** 定时任务执行状态（与后端 TaskRunStatus 对齐；3 = 已跳过，其他实例持锁） */
+export type TaskRunStatusValue = 0 | 1 | 2 | 3;
 
 /** 定时任务触发方式（与后端 TaskTrigger 对齐） */
 export type TaskTriggerValue = 1 | 2;
 
 /** 单次任务执行摘要 */
 export interface TaskRunSummary {
-  /** 0 执行中 / 1 成功 / 2 失败 */
+  /** 0 执行中 / 1 成功 / 2 失败 / 3 已跳过（其他实例持锁） */
   status: TaskRunStatusValue;
   /** 1 自动（cron）/ 2 手动 */
   trigger: TaskTriggerValue;

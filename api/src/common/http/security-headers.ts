@@ -14,8 +14,11 @@
  * - `Permissions-Policy`：明确关闭地理位置 / 麦克风 / 摄像头 / 支付等本项目用不到的浏览器能力；
  * - `Strict-Transport-Security`：仅在 `SECURITY_HSTS` / production 时下发
  *   （HTTP 部署下浏览器本就忽略，但避免误导运维）；
- * - `Content-Security-Policy`：**默认不下发**，需用 `CSP_POLICY` 显式配置。原因是前端为 SPA，
- *   Element Plus 与 Tailwind 会写内联样式，ECharts 用 canvas，过严策略会白屏。
+ * - `Content-Security-Policy`：`CSP_POLICY` 显式配置时优先；未配置时生产环境
+ *   （NODE_ENV=production）下发 config.ts 里的保守默认策略，开发环境不下发。
+ *   前端为 SPA，Element Plus 与 Tailwind 会写内联样式、ECharts 用 canvas，
+ *   所以默认策略保留 'unsafe-inline'，只把第三方来源收敛到 'self'，
+ *   真正挡外部脚本注入的是 `object-src 'none'` / `base-uri 'self'` / `frame-ancestors 'self'`。
  *
  * 不下发 `Cross-Origin-Resource-Policy`：它会影响 `/static` 资源的跨站引用，
  * 而静态资源是否可访问已由静态鉴权 + 防盗链决定，不在这里叠加一层易误伤的策略。

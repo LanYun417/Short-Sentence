@@ -148,7 +148,7 @@ short-sentence/
 ├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
 ├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
 ├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
-├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（相对导入可解析）/ check-locale-keys（语言包 key 一致）/ check-native-scrollbar（禁用原生滚动条）
+├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（导入可解析）/ check-locale-keys（语言包）/ check-native-scrollbar（禁滚动条）/ check-wrapped-components（封装组件）/ db-backup（数据库备份）
 ├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
 ├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client-web）
 ├─ .prettierrc.json           # Prettier 规则
@@ -270,12 +270,16 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ```bash
 cd api
-npm run prisma:push       # 建表 / 同步表结构（首次必执行；Prisma 7 启动时不自动建表）
+npm run migrate:deploy    # 应用 prisma/migrations 下的全部迁移（首次必执行；改表必须同步补 migration）
+npm run prisma:migrations:check  # 门禁：全新影子库重放迁移后与 schema diff 必须为空（pre-push 也会跑）
 npm run prisma:comments   # 把 schema 里的 /// 文档注释同步为表/字段 COMMENT（幂等）
 npm run seed              # 写入默认数据（可选：服务启动时也会自动幂等执行）
 ```
 
-> Prisma 不会把 schema 的 `///` 注释写进数据库（`db push` 不写、`db pull` 也读不回），
+> 改表**必须同步补 migration**（`prisma migrate dev` 或手写 migration.sql），不要只 `db push`：
+> 影子库只重放 migrations，push 出来的表在全新服务器上不存在，服务会因缺表直接起不来。
+> `guard:migrations` 会在本地 push 前拦截这种遗漏。
+> Prisma 不会把 schema 的 `///` 注释写进数据库，
 > 表/字段 COMMENT 由 `npm run prisma:comments` 负责落库——它从 `prisma/schema/` 下各文件的 `///` 生成 DDL，
 > 幂等可重复执行，改完注释或同步完表结构跑一次即可。用 `npm run prisma:comments:check` 可检查
 > 库内注释是否漂移（有差异时退出码 1，可用于 CI）。这些注释是运维与代码生成器的数据源。
@@ -286,7 +290,7 @@ npm run seed              # 写入默认数据（可选：服务启动时也会�
 # 根目录：有序启动后端与 admin 中后台（后端 :3000，admin :5173）
 npm run dev
 
-# 需要一并启动「短句」用户端时（client :3001）
+# 需要一并启动「短句」用户端时（client-web :3001）
 npm run dev -- --client
 ```
 
@@ -345,7 +349,7 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | 命令                        | 说明                                                             |
 | --------------------------- | ---------------------------------------------------------------- |
 | `npm run dev`               | 有序启动后端与 admin（后端就绪后才起前端，见 `scripts/dev.mjs`） |
-| `npm run dev -- --client`   | 同上，并额外启动「短句」用户端 client（:3001）                   |
+| `npm run dev -- --client`   | 同上，并额外启动「短句」用户端 client-web（:3001）               |
 | `npm run dev:api`           | 仅启动后端                                                       |
 | `npm run dev:web`           | 仅启动 admin 中后台                                              |
 | `npm run dev:client`        | 仅启动「短句」用户端                                             |
@@ -355,11 +359,13 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `npm run format:check`      | 全仓 Prettier 格式校验（不写文件）                               |
 | `npm run stylelint`         | 全仓 Stylelint 检查                                              |
 | `npm run stylelint:fix`     | 全仓 Stylelint 自动修复                                          |
-| `npm run guard:deps`        | 校验三处 `package.json` 的运行时依赖与基线一致                   |
+| `npm run guard:deps`        | 校验各端 `package.json` 的运行时依赖与基线一致                   |
 | `npm run guard:deps:update` | 依赖基线有变更时，先生成新基线再提交                             |
 | `npm run guard:imports`     | 校验已入库文件的相对导入可解析（干净克隆可构建）                 |
 | `npm run guard:locale`      | 校验 zh-CN / en-US 语言包 key 与占位符一致                       |
 | `npm run guard:scrollbar`   | 校验 `admin/src` 未手写原生滚动条（滚动统一走 `el-scrollbar`）   |
+| `npm run guard:components`  | 校验弹窗/分页统一走封装组件（BasicDialog / Pagination）          |
+| `npm run guard:migrations`  | 影子库重放迁移后与 schema diff 必须为空（防「改表没写迁移」）    |
 | `npm run commit`            | cz-git 交互式生成规范提交                                        |
 | `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                      |
 
@@ -449,7 +455,7 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `UPLOAD_USER_QUOTA_MB`              | `512`                                         | 单用户累计上传配额（MB），`0` = 不限                                                                                                 |
 | `UPLOAD_CACHE_DIR`                  | `cache/images`                                | 图片缩放缓存目录（须位于 `UPLOAD_DIR` 之外）                                                                                         |
 | `UPLOAD_ALLOWED_REFERERS`           | `http://localhost:5173,http://localhost:3001` | 防盗链 Referer 白名单（逗号分隔；同源部署无需配置）                                                                                  |
-| `CORS_ORIGIN`                       | `http://localhost:5173,http://localhost:3001` | 允许的跨域来源（开发期含 admin :5173 与 client :3001）                                                                               |
+| `CORS_ORIGIN`                       | `http://localhost:5173,http://localhost:3001` | 允许的跨域来源（开发期含 admin :5173 与 client-web :3001）                                                                           |
 | `LOG_DIR`                           | `logs`                                        | 日志目录                                                                                                                             |
 | `LOG_ARCHIVE_DIR`                   | `logs/archive`                                | 归档根目录（默认 `<LOG_DIR>/archive`）                                                                                               |
 | `LOG_ARCHIVE_HOUR/MINUTE`           | `0` / `5`                                     | 日志归档时刻（本地时间）                                                                                                             |
@@ -566,9 +572,11 @@ flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-re
    npm run guard:deps        # 依赖基线
    npm run guard:locale      # 语言包 key / 占位符一致
    npm run guard:scrollbar   # 没有手写原生滚动条
+   npm run guard:components  # 弹窗 / 分页封装
+   npm run guard:migrations  # migrations 与 schema 一致（也会在 pre-push 自动跑）
    (cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
    (cd admin && npm run type-check && npm run test)
-   (cd client && npm run type-check && npm run test)   # 注意：nuxt build 不做类型检查
+   (cd client-web && npm run type-check && npm run test)   # 注意：nuxt build 不做类型检查
    (cd client-android && flutter analyze && flutter test)
    ```
 

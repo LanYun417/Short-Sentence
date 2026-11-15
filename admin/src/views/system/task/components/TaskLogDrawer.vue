@@ -42,10 +42,11 @@ const { loading, list, total, query, search, reset, getList, changePage, changeP
 );
 
 /** 执行状态 → 标签样式与短名 */
-const STATUS_TAG: Record<number, { type: 'primary' | 'success' | 'danger' | 'warning'; label: string }> = {
+const STATUS_TAG: Record<number, { type: 'primary' | 'success' | 'danger' | 'warning' | 'info'; label: string }> = {
   0: { type: 'warning', label: '执行中' },
   1: { type: 'success', label: '成功' },
   2: { type: 'danger', label: '失败' },
+  3: { type: 'info', label: '已跳过(其他实例执行)' },
 };
 
 /** 触发方式 → 短名 */

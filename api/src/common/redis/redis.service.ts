@@ -89,6 +89,22 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * SET NX + PX：键不存在时才写入并设过期（分布式锁用）。
+   * @returns 是否拿到锁（true = 写入成功）
+   */
+  async setNx(key: string, value: string, ttlMs: number): Promise<boolean> {
+    if (!this.isReady()) {
+      return false;
+    }
+    try {
+      const reply = await this.client!.set(key, value, { NX: true, PX: ttlMs });
+      return reply === 'OK';
+    } catch {
+      return false;
+    }
+  }
+
   /** 读取键值。 */
   async get(key: string): Promise<string | null> {
     if (!this.isReady()) {

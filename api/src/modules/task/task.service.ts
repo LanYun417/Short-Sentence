@@ -12,11 +12,13 @@
  * 若「该任务本调度周期内尚无成功执行记录」，则立即执行一次。
  */
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { TaskRunStatus, TaskTrigger } from '../../common/config/constants.js';
 import { AppException } from '../../common/exception/app.exception.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { RedisService } from '../../common/redis/redis.service.js';
 import { FileLoggerService } from '../../common/log/file-logger.service.js';
 import { ImageScaleService } from '../../common/file/file-guards.js';
 import { SentenceGenService } from '../sentence/sentence-gen.service.js';
@@ -133,6 +135,9 @@ function readFilterNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** 任务分布式锁的 TTL：30 分钟。只作崩溃兜底（进程被杀拿不到锁也会自动过期），正常执行完即释放。 */
+const TASK_LOCK_TTL_MS = 30 * 60 * 1000;
+
 /** 任务执行体的依赖（由本服务注入真实实现后传给注册表工厂）。 */
 @Injectable()
 export class TaskService implements OnModuleInit, OnModuleDestroy {
@@ -163,6 +168,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly team: TeamService,
     private readonly configService: ConfigService,
     private readonly aiSettings: AiSettingsService,
+    private readonly redis: RedisService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -427,6 +433,46 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       throw AppException.conflict('该任务正在执行中，请稍后再试');
     }
 
+    // 多副本部署时，同一 cron 会在每个实例上触发：用 Redis 分布式锁保证只有一个实例真正执行，
+    // 避免重复生题 / 重复发邮件 / 重复烧 AI 配额。Redis 未配置（单实例）时退化为本实例直接执行。
+    const lockKey = `task:lock:${name}`;
+    const instanceId = randomUUID();
+    let lockAcquired = true;
+    if (this.redis.isReady()) {
+      lockAcquired = await this.redis.setNx(lockKey, instanceId, TASK_LOCK_TTL_MS);
+      if (!lockAcquired) {
+        const message = `任务「${definition.title}」正在其他实例上执行（锁 ${lockKey}），本实例跳过`;
+        this.logger.warn(`[Task] ${message}`);
+        const skippedAt = new Date();
+        await this.prisma.taskLog
+          .create({
+            data: {
+              taskName: definition.name,
+              taskTitle: definition.title,
+              triggerType: trigger,
+              status: TaskRunStatus.SKIPPED,
+              startedAt: skippedAt,
+              finishedAt: skippedAt,
+              duration: 0,
+              operator,
+            },
+          })
+          .catch(() => undefined);
+        if (trigger === TaskTrigger.MANUAL) {
+          throw AppException.conflict('该任务正在其他实例上执行');
+        }
+        return {
+          name: definition.name,
+          title: definition.title,
+          status: TaskRunStatus.SKIPPED,
+          durationMs: 0,
+          errorMessage: message,
+          startedAt: skippedAt,
+          finishedAt: skippedAt,
+        };
+      }
+    }
+
     this.running.add(name);
     const startedAt = new Date();
     const ctx: TaskContext = { name: definition.name, title: definition.title };
@@ -480,6 +526,13 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       };
     } finally {
       this.running.delete(name);
+      // 只释放自己持有的锁（值比对防误删别人的锁；TTL 兜底崩溃场景）
+      if (lockAcquired && this.redis.isReady()) {
+        const current = await this.redis.get(lockKey);
+        if (current === instanceId) {
+          await this.redis.del(lockKey);
+        }
+      }
     }
   }
 

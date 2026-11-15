@@ -14,6 +14,7 @@ import { PrismaService } from '../../../prisma/prisma.service.js';
 import { buildPageResult, parsePagination, readString } from '../../../common/utils/utils.js';
 import type { PageResult } from '../../../common/types.js';
 import { CreateSubmissionDto, ReviewSubmissionDto } from './dto.js';
+import { checkFreeText, validateEntry } from '../ugc-content.js';
 
 /** 同一用户最多同时挂起的待审核投稿数（防刷屏，也避免运营被灌爆）。 */
 const MAX_PENDING_PER_USER = 5;
@@ -60,12 +61,22 @@ export class SubmissionService {
     if (pending >= MAX_PENDING_PER_USER) {
       throw AppException.badRequest(`你有 ${pending} 条投稿还在排队，先等运营看完再投新的吧`);
     }
+    // UGC 入库前闸门（与接龙共用同一套规则）：英文句子 + 中文译文 + 附言都要过。
+    // 投稿审核通过后会公开展示，安全口径不能比接龙松。
+    const body = validateEntry(dto.sentenceEn, dto.translationZh, { maxEn: 300, maxZh: 300 });
+    if (!body.ok) {
+      throw AppException.badRequest(body.message ?? '内容不符合要求');
+    }
+    const note = checkFreeText(dto.note, 300, '附言');
+    if (!note.ok) {
+      throw AppException.badRequest(note.message ?? '附言不符合要求');
+    }
     const row = await this.prisma.userSubmission.create({
       data: {
         userId: BigInt(userId),
-        sentenceEn: dto.sentenceEn.trim(),
-        translationZh: dto.translationZh.trim(),
-        note: dto.note?.trim() || null,
+        sentenceEn: body.contentEn,
+        translationZh: body.contentZh,
+        note: note.value.length > 0 ? note.value : null,
         platform: dto.platform ?? 'web',
       },
       select: { id: true },

@@ -4534,6 +4534,183 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "成长管理",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/gamify/achievements",
+        "summary": "成就列表（全部，含解锁人数）",
+        "permission": [
+          "sentence:gamify"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/gamify/achievements?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/gamify/stats",
+        "summary": "成长统计总览",
+        "permission": [
+          "sentence:gamify"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/gamify/stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/gamify/xp-logs",
+        "summary": "XP 账本分页审计（关键字匹配用户邮箱/昵称；可按事件类型、日期范围筛选）",
+        "permission": [
+          "sentence:gamify"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "eventType",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/gamify/xp-logs?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/gamify/xp/grant",
+        "summary": "手动补偿 XP（只加不减：amount 恒为正；绕过每日上限但走唯一 event_key 幂等）",
+        "permission": [
+          "sentence:gamify:handle"
+        ],
+        "isPublic": false,
+        "action": "成长管理 · 手动补偿XP",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/gamify/xp/grant\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/gamify/achievements/:code",
+        "summary": "编辑成就展示字段（name/description/icon/category/rewardXp/sort；code 不可改）",
+        "permission": [
+          "sentence:gamify:edit"
+        ],
+        "isPublic": false,
+        "action": "成长管理 · 编辑成就",
+        "params": [
+          {
+            "name": "code",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/gamify/achievements/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "code": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "成长激励",
     "endpoints": [
       {
@@ -4563,6 +4740,39 @@ export const API_DOCS: ApiDocGroup[] = [
         ],
         "examples": {
           "curl": "curl -X GET \"http://localhost:3000/api/client/gamify/overview?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/gamify/weekly-report",
+        "summary": "周学习报告（本周答题/正确率/活跃天数/经验/成就/连续打卡 + 每日明细 + 上周对比）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/gamify/weekly-report?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "page": 1,
             "pageSize": 10
@@ -4827,6 +5037,135 @@ export const API_DOCS: ApiDocGroup[] = [
           "pathParams": {
             "id": "1"
           }
+        }
+      }
+    ]
+  },
+  {
+    "group": "打卡管理",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/checkins/records",
+        "summary": "打卡记录分页审计（关键字 / 日期范围 / 是否完成）",
+        "permission": [
+          "sentence:checkin"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "dateFrom",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "dateTo",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/checkins/records?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/checkins/stats",
+        "summary": "近 N 天打卡日历统计（热力图）+ 今日汇总 + 启用用户总数",
+        "permission": [
+          "sentence:checkin"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/checkins/stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/checkins/backfill",
+        "summary": "补签：把某天 doneCount 补到目标值并重算连续天数（幂等）",
+        "permission": [
+          "sentence:checkin:handle"
+        ],
+        "isPublic": false,
+        "action": "打卡管理 · 补签",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/checkins/backfill\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/checkins/revoke",
+        "summary": "撤销某天打卡（幂等；删行后重算连续天数）",
+        "permission": [
+          "sentence:checkin:handle"
+        ],
+        "isPublic": false,
+        "action": "打卡管理 · 撤销打卡",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/checkins/revoke\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       }
     ]
@@ -7571,6 +7910,39 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/client/questions/boss",
+        "summary": "每日 Boss（当天固定一道挑战题，答对 +30 经验，一天一次）。 ⚠️ 必须声明在 `@Post(':id/answer')` 之前语义才清晰；Nest 按方法+路径匹配， `boss` 与 `:id` 不会冲突（GET 无 :id 路由），这里仍放前面便于阅读",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/boss?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client/questions/festivals",
         "summary": "可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）",
         "permission": [],
@@ -7714,6 +8086,17 @@ export const API_DOCS: ApiDocGroup[] = [
           "pathParams": {
             "id": "1"
           }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/questions/boss/answer",
+        "summary": "提交 Boss 答案（判分复用刷题口径，额外发通关经验）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/questions/boss/answer\" \\\n  -H \"Authorization: Bearer <accessToken>\""
         }
       },
       {
@@ -9306,6 +9689,176 @@ export const API_DOCS: ApiDocGroup[] = [
     ]
   },
   {
+    "group": "音标管理",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/ipa/phonemes",
+        "summary": "音标分页列表（带学会人数；支持关键字 / 类型筛选）",
+        "permission": [
+          "sentence:ipa"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "type",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/ipa/phonemes?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/ipa/records",
+        "summary": "学习记录分页审计（关键字匹配音标或用户）",
+        "permission": [
+          "sentence:ipa"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/ipa/records?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/ipa/stats",
+        "summary": "学习统计总览（totals + 近 7 天趋势 + 学会人数 Top5）",
+        "permission": [
+          "sentence:ipa"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/ipa/stats?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/ipa/phonemes/reset-seeds",
+        "summary": "按内置种子重置全部音标内容（覆盖手动修改；必须声明在 :id 之前——同为 phonemes 前缀但方法不同，仍显式前置）",
+        "permission": [
+          "sentence:ipa:handle"
+        ],
+        "isPublic": false,
+        "action": "音标管理 · 重置音标种子",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/ipa/phonemes/reset-seeds\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/ipa/phonemes/:id",
+        "summary": "编辑音标内容字段（symbol 不可改，见 DTO 注释）",
+        "permission": [
+          "sentence:ipa:edit"
+        ],
+        "isPublic": false,
+        "action": "音标管理 · 编辑音标",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X PUT \"http://localhost:3000/api/ipa/phonemes/1\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
+          }
+        }
+      }
+    ]
+  },
+  {
     "group": "用户反馈",
     "endpoints": [
       {
@@ -9593,6 +10146,13 @@ export const API_DOCS: ApiDocGroup[] = [
         "isPublic": false,
         "action": "",
         "params": [
+          {
+            "name": "kind",
+            "in": "query",
+            "type": "unknown",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
           {
             "name": "page",
             "in": "query",
@@ -10470,7 +11030,7 @@ export const API_DOCS: ApiDocGroup[] = [
       {
         "method": "GET",
         "path": "/api/client/ipa/phonemes",
-        "summary": "音标库（分组分发，公开参考数据，无需登录态也可读）",
+        "summary": "音标库（分组分发；与进度同源，统一走 client 令牌鉴权）",
         "permission": [],
         "isPublic": false,
         "action": "",
@@ -10570,6 +11130,154 @@ export const API_DOCS: ApiDocGroup[] = [
           "curl": "curl -X GET \"http://localhost:3000/api/client/leaderboard?type=%E7%A4%BA%E4%BE%8B%E5%80%BC\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
           "query": {
             "type": "示例值"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "LeaderboardAdmin",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/leaderboards/board",
+        "summary": "实时榜单：type 必填，topN 可选（1~500，默认 100）",
+        "permission": [
+          "sentence:leaderboard"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/leaderboards/board?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/leaderboards/types",
+        "summary": "榜单类型枚举（前端下拉用）",
+        "permission": [
+          "sentence:leaderboard"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/leaderboards/types?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/leaderboards/user",
+        "summary": "按邮箱/昵称查用户在全部榜上的名次",
+        "permission": [
+          "sentence:leaderboard"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/leaderboards/user?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "Site",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/site",
+        "summary": "读取站点公开配置（备案号）。每次实时读库，改完参数立即生效",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/site?page=1&pageSize=10\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
           }
         }
       }
@@ -10842,6 +11550,168 @@ export const API_DOCS: ApiDocGroup[] = [
           },
           "requestBody": {
             "show": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "group": "Submission",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/client/submissions/featured",
+        "summary": "投稿精选（只含审核通过的；登录可见）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/submissions/featured?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/submissions/mine",
+        "summary": "我的投稿（含审核状态与驳回原因）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/submissions/mine?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/client/submissions",
+        "summary": "提交一条投稿（英文句子 + 中文译文 + 可选附言）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/submissions\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      }
+    ]
+  },
+  {
+    "group": "SubmissionAdmin",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/submissions",
+        "summary": "投稿列表（按状态 / 关键词筛选）",
+        "permission": [
+          "client:submission:list"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "type": "string",
+            "required": false,
+            "description": "动态查询条件（运行时从 query 对象读取，类型依实现）"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/submissions?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/submissions/:id/review",
+        "summary": "审核：approve 进精选 / reject 驳回（可带原因，下发给投稿人）",
+        "permission": [
+          "client:submission:review"
+        ],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "",
+            "example": "1"
+          }
+        ],
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/submissions/1/review\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "pathParams": {
+            "id": "1"
           }
         }
       }

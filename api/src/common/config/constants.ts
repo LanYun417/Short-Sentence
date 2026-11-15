@@ -90,6 +90,8 @@ export enum TaskRunStatus {
   SUCCESS = 1,
   /** 执行失败（错误信息见 error_message） */
   FAILED = 2,
+  /** 跳过：多副本部署时，分布式锁被其他实例持有，本实例未执行 */
+  SKIPPED = 3,
 }
 
 /** 超级管理员角色编码（不受权限裁剪）。 */

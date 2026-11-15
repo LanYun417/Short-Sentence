@@ -288,7 +288,8 @@ async function loadOlder(): Promise<void> {
   if (loadingMessages.value || messages.value.length === 0) return;
   loadingMessages.value = true;
   try {
-    const before = messages.value[0].id;
+    const before = messages.value[0]?.id;
+    if (before === undefined) return;
     const page = await apiFetch<{ list: TeamMessage[]; hasMore: boolean }>(
       `/client/team/messages?limit=30&before=${before}`,
     );

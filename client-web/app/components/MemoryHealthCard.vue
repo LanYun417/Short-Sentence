@@ -64,6 +64,7 @@ useEchart(barRef, () => {
       formatter: (params: unknown) => {
         const list = (Array.isArray(params) ? params : [params]) as AxisTipItem[];
         const f = list[0];
+        if (!f) return '';
         return `第 ${f.dataIndex + 1} 天：<b>${String(f.data)}</b> 题待复习`;
       },
     },
@@ -93,6 +94,7 @@ useEchart(curveRef, () => {
       formatter: (params: unknown) => {
         const list = (Array.isArray(params) ? params : [params]) as AxisTipItem[];
         const f = list[0];
+        if (!f) return '';
         const retention = typeof f.data === 'number' ? f.data : 0;
         return `第 ${String(f.axisValue ?? f.dataIndex + 1)} 天：保留 <b>${(retention * 100).toFixed(0)}%</b>`;
       },
