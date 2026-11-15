@@ -27,7 +27,10 @@ client-miniapp/
 │  ├─ format.ts     # 资源绝对地址、千分位、耗时格式化
 │  └─ feedback.ts   # Toast / 震动 / 错误文案
 ├─ services/        # 按业务域封装的接口（types.ts 手写后端契约）
-├─ pages/           # index / practice / growth / leaderboard / profile / login
+├─ pages/
+│  ├─ index / practice / growth / leaderboard / profile / login
+│  └─ stages/       # 情景闯关：index（地图）/ scene（剧本列表）/ script（关卡列表）/ dialogue（对话）
+├─ scripts/         # check-pages.mjs：页面四件套、事件绑定、WXML 闭合、wx:key、tabBar 图标
 └─ assets/tabbar/   # tabBar 图标（sharp 由 SVG 渲染，双色各一套）
 ```
 
@@ -78,6 +81,19 @@ client-miniapp/
   `words` 为空时自动退回 `input`，避免「无词可点」卡死。
 - 判分完全由后端裁决，前端**不做** normalize 放宽。
 
+### 情景闯关（pages/stages/*）
+
+- 三层结构：**场景 → 剧本 → 关卡**，对应 `GET /client/stages`、`/stages/scenes/:id`、`/stages/scripts/:id`。
+- 关卡解锁由后端判定（每剧本首关默认解锁、关内顺序解锁）；前端只用 `unlocked` 决定是否可点。
+- 对话页路由参数只有 `id`（= `stage_story.id`）：
+  - 进入调 `POST /client/stages/:id/dialogue`（有 active 会话则续聊，`restart=true` 重开一局）；
+  - 发消息 `POST /:id/dialogue/messages`，返回 1~3 条角色回应 + 新候选短句，可能 `ended/cleared`；
+  - 通关 = 聊够 `minTurns` 轮 **且** 模型判定目标达成；达到 `maxTurns` 结束但可重来。
+- **翻译开关不要调 `PATCH /:id/dialogue/translation`**：`wx.request` 不支持 PATCH，
+  而发消息接口的 `showTranslation` 已由服务端持久化（`translationUsed` 粘性，全程关翻译有加成）。
+- 发消息先乐观追加用户气泡；**失败要回滚这条气泡并还原输入**，否则本地记录与服务端历史不一致。
+- 消息只保留 `contentEn` 主文本，中文按 `showTranslation` 显隐；不复述情绪/动作旁白。
+
 ## 六、开发与联调
 
 1. `cd api && npm run start:dev`（`:3000`）。
@@ -90,7 +106,8 @@ client-miniapp/
 
 ## 七、发布前检查
 
-- `npm run type-check` 通过；根仓库 `npx eslint client-miniapp` 无告警。
+- `npm run type-check` 通过；`npm run check` 通过（页面四件套 / 事件绑定 / WXML 闭合 / `wx:key` / tabBar 图标）；
+  根仓库 `npx eslint client-miniapp` 无告警。
 - 生产域名替换 `utils/env.ts` 的 `PROD_BASE_URL`，并在微信公众平台
   「开发管理 → 服务器域名」把它加入 **request 合法域名**（必须 HTTPS + 已备案）。
 - 后端 `CORS_ORIGIN` 加入小程序来源（小程序请求无 Origin，但 `web-view`/调试场景需要）。

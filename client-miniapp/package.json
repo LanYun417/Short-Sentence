@@ -4,7 +4,8 @@
   "private": true,
   "description": "每日一句 · 微信小程序（原生 WXML + TypeScript，复用同一套 NestJS 后端）",
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "check": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^4.0.8",

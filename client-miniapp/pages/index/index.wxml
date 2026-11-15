@@ -51,6 +51,16 @@
   <button class="btn btn-primary btn-block start" bindtap="onStart">开始练习</button>
   <button class="btn btn-ghost btn-block review" bindtap="onReview">复习错题</button>
 
+  <!-- 情景闯关入口 -->
+  <view class="entry" hover-class="entry-hover" bindtap="onOpenStages">
+    <view class="entry-icon">💬</view>
+    <view class="entry-body">
+      <text class="entry-title">情景闯关</text>
+      <text class="entry-desc">跟 AI 角色对话，把学过的句子用出来</text>
+    </view>
+    <text class="entry-arrow">›</text>
+  </view>
+
   <view class="foot">
     <text class="muted">看中文 · 写英文 · 翻卡即答</text>
   </view>

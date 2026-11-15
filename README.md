@@ -406,6 +406,7 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | -------------------- | -------------------------------------------------------------- |
 | `npm install`        | 仅装开发期类型依赖（`typescript` + `miniprogram-api-typings`） |
 | `npm run type-check` | 类型检查（`tsc --noEmit`，CI 门禁）                            |
+| `npm run check`      | 静态自检：页面四件套 / 事件绑定 / WXML 闭合 / `wx:key` / 图标  |
 
 用微信开发者工具「导入项目」选择 `client-miniapp/` 目录即可预览；
 开发期需在「详情 → 本地设置」勾选**不校验合法域名**，并保证后端 `:3000` 已启动。

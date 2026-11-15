@@ -1,0 +1,54 @@
+<view class="page">
+  <!-- 剧本头 -->
+  <view class="head">
+    <text class="head-scene muted">{{sceneName}}</text>
+    <text class="head-name">{{scriptName}}</text>
+    <text wx:if="{{blurb}}" class="head-blurb">{{blurb}}</text>
+    <view class="head-bar">
+      <view class="head-bar-fill" style="width: {{percent}}%"></view>
+    </view>
+    <text class="muted">已通关 {{clearedCount}} / {{total}} 关</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="placeholder">
+    <text class="muted">加载中…</text>
+  </view>
+
+  <view wx:elif="{{empty}}" class="placeholder">
+    <text class="muted">这个剧本还没有关卡</text>
+  </view>
+
+  <view wx:else class="stage-list">
+    <view
+      wx:for="{{stages}}"
+      wx:key="id"
+      class="stage {{item.unlocked ? '' : 'stage-locked'}}"
+      hover-class="{{item.unlocked ? 'stage-hover' : ''}}"
+      data-id="{{item.id}}"
+      data-unlocked="{{item.unlocked}}"
+      bindtap="onOpenStage"
+    >
+      <view class="stage-no {{item.cleared ? 'stage-no-done' : ''}}">
+        <text wx:if="{{item.cleared}}">✓</text>
+        <text wx:else>{{item.index}}</text>
+      </view>
+
+      <view class="stage-body">
+        <view class="stage-title-row">
+          <text class="stage-title">{{item.title}}</text>
+          <text wx:if="{{item.active}}" class="badge">进行中</text>
+          <text wx:elif="{{item.cleared && !item.claimed}}" class="badge badge-amber">待领奖</text>
+        </view>
+        <text class="stage-goal">{{item.goal}}</text>
+        <view class="stage-meta">
+          <text class="muted">{{item.rolesText}} · 至少 {{item.minTurns}} 轮 · +{{item.rewardXp}} XP</text>
+        </view>
+        <view wx:if="{{item.progress > 0 && !item.cleared}}" class="stage-bar">
+          <view class="stage-bar-fill" style="width: {{item.progress}}%"></view>
+        </view>
+      </view>
+
+      <text class="stage-state">{{item.unlocked ? '›' : '锁'}}</text>
+    </view>
+  </view>
+</view>

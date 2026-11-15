@@ -6,7 +6,7 @@ import type { ClientUserProfile, TodayCheckin } from '../../services/types';
 import { fetchProfile, isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError } from '../../utils/feedback';
 import { absoluteUrl, initialOf } from '../../utils/format';
-import { goLogin, goPractice, switchTab } from '../../utils/nav';
+import { goLogin, goPractice, goStages, switchTab } from '../../utils/nav';
 import { getCachedUser, getDifficulty, setDifficulty } from '../../utils/storage';
 
 /** 难度档位（与后端 Sentence.difficulty 对齐）。 */
@@ -56,6 +56,7 @@ interface IndexCustom {
   onPickDifficulty(event: WechatMiniprogram.TouchEvent): void;
   onStart(): void;
   onReview(): void;
+  onOpenStages(): void;
   onTapProfile(): void;
 }
 
@@ -146,6 +147,11 @@ Page<IndexData, IndexCustom>({
   /** 只刷错题/到期的复习题。 */
   onReview() {
     goPractice('?source=review');
+  },
+
+  /** 进情景闯关。 */
+  onOpenStages() {
+    goStages();
   },
 
   /** 点头像去「我的」。 */

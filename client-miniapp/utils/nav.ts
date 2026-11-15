@@ -25,6 +25,11 @@ export function goPractice(query = ''): void {
   wx.navigateTo({ url: `/pages/practice/practice${query}` });
 }
 
+/** 去情景闯关地图。 */
+export function goStages(): void {
+  wx.navigateTo({ url: '/pages/stages/index/index' });
+}
+
 /** 切到某个 tab 页（tabBar 页面必须用 switchTab）。 */
 export function switchTab(url: string): void {
   wx.switchTab({ url });

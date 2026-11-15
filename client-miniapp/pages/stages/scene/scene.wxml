@@ -1,0 +1,42 @@
+<view class="page">
+  <!-- 场景头 -->
+  <view class="head">
+    <text class="head-name">{{sceneName}}</text>
+    <text class="head-en">{{sceneEn}}</text>
+    <text class="head-meta muted">已通关 {{clearedCount}} / {{stageCount}} 关</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="placeholder">
+    <text class="muted">加载中…</text>
+  </view>
+
+  <view wx:elif="{{empty}}" class="placeholder">
+    <text class="muted">这个场景还没有开放剧本</text>
+  </view>
+
+  <view wx:else class="script-list">
+    <view
+      wx:for="{{scripts}}"
+      wx:key="id"
+      class="script"
+      hover-class="script-hover"
+      data-id="{{item.id}}"
+      bindtap="onOpenScript"
+    >
+      <view class="cover">
+        <image wx:if="{{item.coverUrl}}" class="cover-img" src="{{item.coverUrl}}" mode="aspectFill" lazy-load />
+        <text wx:else class="cover-text">{{item.initial}}</text>
+        <view wx:if="{{item.completed}}" class="cover-flag">通关</view>
+      </view>
+
+      <view class="script-body">
+        <text class="script-name">{{item.name}}</text>
+        <text class="script-blurb">{{item.blurb || '一个还没写简介的剧本'}}</text>
+        <view class="script-bar">
+          <view class="script-bar-fill" style="width: {{item.percent}}%"></view>
+        </view>
+        <text class="muted">{{item.clearedCount}} / {{item.stageCount}} 关</text>
+      </view>
+    </view>
+  </view>
+</view>

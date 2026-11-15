@@ -167,6 +167,62 @@
   margin-top: 20rpx;
 }
 
+/* 情景闯关入口 */
+.entry {
+  display: flex;
+  gap: 22rpx;
+  align-items: center;
+  margin-top: 24rpx;
+  padding: 26rpx 28rpx;
+  background: linear-gradient(120deg, #ecfdf5, #f0fdfa);
+  border: 2rpx solid #ccfbf1;
+  border-radius: 28rpx;
+}
+
+.entry-hover {
+  opacity: 0.85;
+}
+
+.entry-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 76rpx;
+  height: 76rpx;
+  font-size: 36rpx;
+  background: #ffffff;
+  border-radius: 22rpx;
+  box-shadow: 0 6rpx 16rpx rgba(13, 148, 136, 0.14);
+}
+
+.entry-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.entry-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.entry-desc {
+  margin-top: 4rpx;
+  overflow: hidden;
+  font-size: 22rpx;
+  color: #0d9488;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-arrow {
+  font-size: 36rpx;
+  color: #0d9488;
+}
+
 .foot {
   margin-top: 40rpx;
   text-align: center;

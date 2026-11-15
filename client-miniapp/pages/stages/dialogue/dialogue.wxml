@@ -1,0 +1,119 @@
+<view class="dialogue">
+  <!-- 关卡头：目标 / 轮数 / 翻译 / 结束 -->
+  <view class="bar">
+    <view class="bar-goal">
+      <text class="bar-label">目标</text>
+      <text class="bar-text ellipsis">{{goal}}</text>
+    </view>
+    <view class="bar-side">
+      <view class="turn mono">{{turnCount}}/{{minTurns}}</view>
+      <view class="tr-toggle {{showTranslation ? 'tr-on' : ''}}" bindtap="onToggleTranslation">
+        {{showTranslation ? '译' : 'A'}}
+      </view>
+      <view wx:if="{{!ended}}" class="end" bindtap="onEnd">结束</view>
+    </view>
+  </view>
+
+  <!-- 进入失败 -->
+  <view wx:if="{{errorText}}" class="center">
+    <text class="subtitle">{{errorText}}</text>
+    <button class="btn btn-primary btn-block mt-24" bindtap="onRetry">重试</button>
+  </view>
+
+  <block wx:else>
+    <!-- 对话流 -->
+    <scroll-view class="chat" scroll-y scroll-into-view="{{anchor}}" scroll-with-animation>
+      <view wx:if="{{intro}}" class="intro">
+        <text class="intro-label">场景</text>
+        <text class="intro-text">{{intro}}</text>
+      </view>
+
+      <view wx:if="{{loading}}" class="center">
+        <text class="muted">正在进入场景…</text>
+      </view>
+
+      <view wx:for="{{messages}}" wx:key="key" id="m{{index}}" class="msg msg-{{item.role}}">
+        <view class="msg-avatar">{{item.emoji}}</view>
+        <view class="msg-body">
+          <text wx:if="{{item.speaker}}" class="msg-speaker">{{item.speaker}}</text>
+          <view class="bubble">
+            <text class="bubble-en" selectable>{{item.en}}</text>
+            <text wx:if="{{showTranslation && item.zh}}" class="bubble-zh">{{item.zh}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{sending}}" class="msg msg-npc">
+        <view class="msg-avatar">💬</view>
+        <view class="msg-body">
+          <view class="bubble bubble-typing">
+            <text class="typing">正在回应…</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="chat-pad"></view>
+    </scroll-view>
+
+    <!-- 已结束：复盘 -->
+    <view wx:if="{{ended}}" class="panel">
+      <scroll-view class="panel-scroll" scroll-y>
+        <view class="panel-head">
+          <text class="panel-title">{{cleared ? '通关成功' : '本局结束'}}</text>
+          <text wx:if="{{claimTip}}" class="panel-xp">{{claimTip}}</text>
+        </view>
+        <text wx:if="{{summary}}" class="panel-summary">{{summary}}</text>
+
+        <view wx:if="{{highlights.length > 0}}" class="panel-block">
+          <text class="panel-label">亮点</text>
+          <text wx:for="{{highlights}}" wx:key="*this" class="panel-item">· {{item}}</text>
+        </view>
+
+        <view wx:if="{{improvements.length > 0}}" class="panel-block">
+          <text class="panel-label">可以更好</text>
+          <text wx:for="{{improvements}}" wx:key="*this" class="panel-item">· {{item}}</text>
+        </view>
+
+        <text wx:if="{{!cleared}}" class="panel-hint">再聊几轮就能达成目标，试试换个说法。</text>
+      </scroll-view>
+
+      <button
+        wx:if="{{cleared}}"
+        class="btn btn-primary btn-block panel-btn {{claimed ? 'btn-disabled' : ''}}"
+        bindtap="onClaim"
+      >{{claimed ? '已领取奖励' : '领取通关奖励'}}</button>
+      <button class="btn btn-ghost btn-block mt-16" bindtap="onRestart">再来一局</button>
+      <button class="btn btn-ghost btn-block mt-16" bindtap="onBack">返回</button>
+    </view>
+
+    <!-- 进行中：候选短句 + 输入 -->
+    <block wx:else>
+      <scroll-view wx:if="{{hints.length > 0}}" class="hints" scroll-x>
+        <view
+          wx:for="{{hints}}"
+          wx:key="en"
+          class="hint"
+          hover-class="hint-hover"
+          data-en="{{item.en}}"
+          bindtap="onPickHint"
+        >
+          <text class="hint-en">{{item.en}}</text>
+          <text wx:if="{{showTranslation && item.zh}}" class="hint-zh">{{item.zh}}</text>
+        </view>
+      </scroll-view>
+
+      <view class="composer">
+        <input
+          class="composer-input"
+          value="{{input}}"
+          placeholder="用英语说一句"
+          placeholder-class="composer-ph"
+          confirm-type="send"
+          bindinput="onInput"
+          bindconfirm="onSend"
+        />
+        <view class="composer-send {{sending ? 'composer-send-off' : ''}}" bindtap="onSend">发送</view>
+      </view>
+    </block>
+  </block>
+</view>

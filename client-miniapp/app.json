@@ -5,7 +5,11 @@
     "pages/growth/growth",
     "pages/leaderboard/leaderboard",
     "pages/profile/profile",
-    "pages/login/login"
+    "pages/login/login",
+    "pages/stages/index/index",
+    "pages/stages/scene/scene",
+    "pages/stages/script/script",
+    "pages/stages/dialogue/dialogue"
   ],
   "window": {
     "backgroundTextStyle": "dark",

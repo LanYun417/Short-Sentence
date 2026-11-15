@@ -162,3 +162,162 @@ export interface LeaderboardResult {
   /** 我的名次；未上榜为 null */
   me: { rank: number; count: number } | null;
 }
+
+/* ------------------------------ 情景闯关 ------------------------------ */
+
+/** 场景里的一个 AI 角色。 */
+export interface StageRole {
+  nameEn: string;
+  name: string;
+  emoji: string;
+}
+
+/** 一个关卡（id = stage_story.id，对话/领奖接口都用它）。 */
+export interface StageView {
+  id: number;
+  scriptId: number;
+  categoryId: number;
+  name: string;
+  nameEn: string | null;
+  title: string;
+  intro: string;
+  outro: string;
+  /** 本关对话目标 */
+  goal: string;
+  /** 通关所需最少用户轮数 */
+  minTurns: number;
+  /** 硬上限轮数 */
+  maxTurns: number;
+  roles: StageRole[];
+  rewardXp: number;
+  /** 进度百分比（通关 100，进行中按轮数估算） */
+  progress: number;
+  /** 最近一次通关对话轮数 */
+  turns: number;
+  cleared: boolean;
+  unlocked: boolean;
+  claimed: boolean;
+  /** 进行中的会话 id */
+  activeSessionId: number | null;
+}
+
+/** 一个剧本（挂在场景下，包含若干关卡）。 */
+export interface StageScript {
+  id: number;
+  categoryId: number;
+  name: string;
+  blurb: string;
+  coverUrl: string | null;
+  stageCount: number;
+  clearedCount: number;
+  completed: boolean;
+}
+
+/** 一个场景（顶层）。 */
+export interface StageScene {
+  id: number;
+  name: string;
+  nameEn: string | null;
+  scriptCount: number;
+  stageCount: number;
+  clearedCount: number;
+  coverUrl: string | null;
+}
+
+/** 闯关总览。 */
+export interface StageOverview {
+  scenes: StageScene[];
+  clearedStages: number;
+  totalStages: number;
+  activeStages: number;
+  claimable: number;
+  /** 推荐关卡 id（第一个已解锁未通关的关卡） */
+  recommendedId: number | null;
+}
+
+/** 场景详情（场景 → 剧本列表）。 */
+export interface StageSceneDetail {
+  scene: StageScene;
+  scripts: StageScript[];
+}
+
+/** 剧本详情（剧本 → 关卡列表）。 */
+export interface StageScriptDetail {
+  script: StageScript;
+  scene: { id: number; name: string; nameEn: string | null };
+  stages: StageView[];
+  clearedCount: number;
+  total: number;
+}
+
+/** 领取通关奖励结果。 */
+export interface StageClaimResult {
+  awarded: boolean;
+  alreadyClaimed: boolean;
+  rewardXp: number;
+  /** 全程未用翻译的额外加成 */
+  bonusXp: number;
+  xp: number;
+}
+
+/** 一条对话消息。 */
+export interface StageDialogueMessage {
+  id: number;
+  role: 'npc' | 'user';
+  speaker: string | null;
+  contentEn: string;
+  contentZh: string | null;
+  createdAt: string;
+}
+
+/** 一条候选英文短句。 */
+export interface StageDialogueHint {
+  en: string;
+  zh: string;
+}
+
+/** 一轮里某个角色的回应。 */
+export interface StageDialogueReply {
+  speaker: string;
+  contentEn: string;
+  contentZh: string;
+}
+
+/** 通关复盘。 */
+export interface StageDialogueSummary {
+  summary: string;
+  highlights: string[];
+  improvements: string[];
+}
+
+/** 对话会话视图（进入关卡时返回）。 */
+export interface StageDialogueView {
+  sessionId: number;
+  status: string;
+  turnCount: number;
+  goalReached: boolean;
+  cleared: boolean;
+  showTranslation: boolean;
+  hints: StageDialogueHint[];
+  title: string;
+  intro: string;
+  goal: string;
+  minTurns: number;
+  maxTurns: number;
+  roles: StageRole[];
+  messages: StageDialogueMessage[];
+  summary: string | null;
+  feedback: StageDialogueSummary | null;
+}
+
+/** 一轮对话的结果。 */
+export interface StageTurnResult {
+  replies: StageDialogueReply[];
+  turnCount: number;
+  goalReached: boolean;
+  ended: boolean;
+  cleared: boolean;
+  hints: StageDialogueHint[];
+  summary: string | null;
+  feedback: StageDialogueSummary | null;
+}
