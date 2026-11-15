@@ -61,6 +61,8 @@ interface PracticeData {
   xpText: string;
   achievementText: string;
   favorited: boolean;
+  /** 输入框是否聚焦（只驱动描边，不参与判分） */
+  inputFocused: boolean;
 }
 
 interface PracticeCustom {
@@ -76,6 +78,8 @@ interface PracticeCustom {
   currentAnswer(): string;
   parseOptions(options: Record<string, string | undefined>): void;
   onInput(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
+  onInputFocus(): void;
+  onInputBlur(): void;
   onPickChip(event: WechatMiniprogram.TouchEvent): void;
   onUnpickWord(event: WechatMiniprogram.TouchEvent): void;
   onSubmit(): Promise<void>;
@@ -104,6 +108,7 @@ Page<PracticeData, PracticeCustom>({
     xpText: '',
     achievementText: '',
     favorited: false,
+    inputFocused: false,
   },
 
   startedAt: 0,
@@ -185,6 +190,15 @@ Page<PracticeData, PracticeCustom>({
   },
 
   /** 输入框输入。 */
+  /** 输入框聚焦态（只影响描边，不影响取值）。 */
+  onInputFocus() {
+    this.setData({ inputFocused: true });
+  },
+
+  onInputBlur() {
+    this.setData({ inputFocused: false });
+  },
+
   onInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ answer: event.detail.value });
   },

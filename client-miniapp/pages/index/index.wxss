@@ -1,3 +1,5 @@
+/* 首页：问候 / 今日目标 / 难度 / 入口 */
+
 .head {
   display: flex;
   align-items: center;
@@ -13,39 +15,62 @@
 .head-greeting {
   font-size: 24rpx;
   color: var(--ink-3);
+  letter-spacing: 1rpx;
 }
 
 .head-name {
-  margin-top: 4rpx;
   max-width: 420rpx;
+  margin-top: 4rpx;
   overflow: hidden;
-  font-size: 44rpx;
-  font-weight: 700;
+  font-size: 46rpx;
+  font-weight: 800;
   letter-spacing: -1rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 今日进度主卡：品牌渐变，数字放大做视觉锚点 */
-.hero {
-  position: relative;
-  margin-top: 32rpx;
-  padding: 40rpx;
-  overflow: hidden;
-  background: linear-gradient(140deg, #0ea5e9 0%, #38bdf8 52%, #7dd3fc 100%);
-  border-radius: 36rpx;
-  box-shadow: 0 20rpx 44rpx rgba(14, 165, 233, 0.3);
+/* 头像外圈：白环 + 品牌色描边，比裸头像多一层"被装裱"的质感 */
+.avatar-ring {
+  padding: 6rpx;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2rpx rgba(14, 165, 233, 0.16),
+    0 10rpx 24rpx rgba(14, 165, 233, 0.16);
 }
 
-.hero::after {
+/* ---------------- 今日目标 ---------------- */
+
+.hero {
+  position: relative;
+  padding: 36rpx 36rpx 32rpx;
+  margin-top: 32rpx;
+  overflow: hidden;
+  background: linear-gradient(140deg, #0284c7 0%, #0ea5e9 46%, #38bdf8 100%);
+  border-radius: 36rpx;
+  box-shadow: 0 22rpx 48rpx rgba(14, 165, 233, 0.32);
+}
+
+/* 两团光斑：一静一动，让大色块不呆板 */
+.hero-blob {
   position: absolute;
-  top: -120rpx;
-  right: -80rpx;
-  width: 320rpx;
-  height: 320rpx;
-  content: '';
-  background: rgba(255, 255, 255, 0.16);
+  top: -140rpx;
+  right: -90rpx;
+  width: 340rpx;
+  height: 340rpx;
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 50%;
+}
+
+.hero-blob-2 {
+  top: auto;
+  right: auto;
+  bottom: -180rpx;
+  left: -110rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: rgba(255, 255, 255, 0.12);
+  animation: ss-breathe 6.5s ease-in-out infinite;
 }
 
 .hero-head {
@@ -59,29 +84,44 @@
   font-size: 26rpx;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 1rpx;
 }
 
 .hero-streak {
+  display: flex;
+  gap: 6rpx;
+  align-items: center;
   padding: 6rpx 20rpx;
   font-size: 22rpx;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 999rpx;
 }
 
-.hero-value {
+.hero-flame {
+  font-size: 22rpx;
+}
+
+.hero-main {
   position: relative;
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 10rpx;
+}
+
+.hero-value {
+  display: flex;
   align-items: baseline;
-  margin-top: 16rpx;
 }
 
 .hero-num {
-  font-size: 96rpx;
+  font-size: 104rpx;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.05;
   color: #ffffff;
-  letter-spacing: -2rpx;
+  letter-spacing: -3rpx;
+  text-shadow: 0 6rpx 20rpx rgba(3, 105, 161, 0.28);
 }
 
 .hero-goal {
@@ -90,44 +130,78 @@
   color: rgba(255, 255, 255, 0.86);
 }
 
+.hero-pct {
+  display: flex;
+  align-items: baseline;
+  padding-bottom: 10rpx;
+}
+
+.hero-pct-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.hero-pct-sign {
+  margin-left: 2rpx;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .hero-bar {
   position: relative;
-  height: 14rpx;
-  margin-top: 24rpx;
+  height: 16rpx;
+  margin-top: 22rpx;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.24);
   border-radius: 999rpx;
 }
 
 .hero-bar-fill {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
   height: 100%;
-  background: #ffffff;
+  overflow: hidden;
+  background: linear-gradient(90deg, #ffffff, #e0f2fe);
   border-radius: 999rpx;
-  transition: width 0.45s ease;
+  box-shadow: 0 0 16rpx rgba(255, 255, 255, 0.65);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 进度条上的高光：慢慢扫，制造"活着"的感觉 */
+.hero-bar-sheen {
+  width: 60rpx;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  animation: ss-sheen 3.4s ease-in-out infinite;
 }
 
 .hero-tip {
   position: relative;
   display: block;
-  margin-top: 20rpx;
+  margin-top: 18rpx;
   font-size: 24rpx;
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* 今日句签可领取提示 */
+/* ---------------- 今日句签提示 ---------------- */
+
 .card-tip {
   display: flex;
   gap: 20rpx;
   align-items: center;
-  margin-top: 24rpx;
   padding: 24rpx 28rpx;
+  margin-top: 24rpx;
   background: linear-gradient(120deg, #fffbeb, #fef3c7);
   border: 2rpx solid #fde68a;
   border-radius: 28rpx;
+  box-shadow: 0 10rpx 26rpx rgba(180, 83, 9, 0.1);
 }
 
+/* 这里只改背景不改 transform：该节点挂着 anim-up，动画的 fill-mode 会盖掉 transform */
 .card-tip-hover {
-  opacity: 0.85;
+  background: #fef3c7;
 }
 
 .card-tip-icon {
@@ -168,9 +242,16 @@
   color: #b45309;
 }
 
-/* 难度分段 */
+/* ---------------- 难度 ---------------- */
+
 .section {
   margin-top: 40rpx;
+}
+
+.link {
+  padding: 4rpx 0 4rpx 12rpx;
+  font-size: 24rpx;
+  color: #0284c7;
 }
 
 .seg {
@@ -180,27 +261,45 @@
 }
 
 .seg-item {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
-  padding: 24rpx 12rpx;
-  background: #ffffff;
+  padding: 26rpx 12rpx 22rpx;
+  overflow: hidden;
+  background: var(--surface);
   border: 2rpx solid var(--line);
   border-radius: 24rpx;
-  transition: all 0.2s ease;
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 顶部小色条：选中时拉长并染色，是最省笔墨的"选中"信号 */
+.seg-dot {
+  width: 32rpx;
+  height: 6rpx;
+  margin-bottom: 14rpx;
+  background: var(--line);
+  border-radius: 999rpx;
+  transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .seg-item-active {
   background: var(--brand-soft);
   border-color: var(--brand);
-  box-shadow: 0 8rpx 20rpx rgba(14, 165, 233, 0.16);
+  box-shadow: 0 14rpx 28rpx rgba(14, 165, 233, 0.18);
+}
+
+.seg-item-active .seg-dot {
+  width: 56rpx;
+  background: var(--brand);
 }
 
 .seg-label {
   font-size: 30rpx;
   font-weight: 600;
   color: var(--ink);
+  transition: color 0.2s ease;
 }
 
 .seg-item-active .seg-label {
@@ -213,28 +312,54 @@
   color: var(--ink-3);
 }
 
-.start {
+/* ---------------- 主按钮 ---------------- */
+
+.cta {
   margin-top: 48rpx;
+}
+
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+/* 按钮上的高光扫过：只在主 CTA 上，克制使用 */
+.btn-sheen {
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 90rpx;
+  height: 140%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  animation: ss-sheen 4.2s ease-in-out infinite;
+}
+
+.start {
+  position: relative;
 }
 
 .review {
   margin-top: 20rpx;
 }
 
-/* 情景闯关入口 */
+/* ---------------- 功能入口 ---------------- */
+
 .entry {
   display: flex;
   gap: 22rpx;
   align-items: center;
-  margin-top: 24rpx;
   padding: 26rpx 28rpx;
+  margin-top: 24rpx;
   background: linear-gradient(120deg, #ecfdf5, #f0fdfa);
   border: 2rpx solid #ccfbf1;
   border-radius: 28rpx;
+  box-shadow: 0 10rpx 26rpx rgba(13, 148, 136, 0.08);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .entry-hover {
-  opacity: 0.85;
+  transform: scale(0.978);
+  opacity: 0.96;
 }
 
 .entry-icon {
@@ -242,12 +367,12 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 76rpx;
-  height: 76rpx;
-  font-size: 36rpx;
+  width: 80rpx;
+  height: 80rpx;
+  font-size: 38rpx;
   background: #ffffff;
-  border-radius: 22rpx;
-  box-shadow: 0 6rpx 16rpx rgba(13, 148, 136, 0.14);
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(13, 148, 136, 0.16);
 }
 
 .entry-body {
@@ -258,7 +383,7 @@
 }
 
 .entry-title {
-  font-size: 28rpx;
+  font-size: 29rpx;
   font-weight: 700;
   color: #0f766e;
 }
@@ -272,19 +397,29 @@
   white-space: nowrap;
 }
 
-.entry-arrow {
-  font-size: 36rpx;
+/* 右侧箭头做成浅色圆底，比裸「›」更像个可点的东西 */
+.entry-go {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44rpx;
+  height: 44rpx;
+  font-size: 30rpx;
   color: #0d9488;
+  background: rgba(13, 148, 136, 0.1);
+  border-radius: 50%;
 }
 
-/* 每日 Boss 入口（玫红，和闯关的青绿区分） */
+/* 每日 Boss：玫红，和闯关的青绿区分 */
 .entry-boss {
   background: linear-gradient(120deg, #fff1f2, #ffe4e6);
   border-color: #fecdd3;
+  box-shadow: 0 10rpx 26rpx rgba(244, 63, 94, 0.08);
 }
 
 .entry-icon-boss {
-  box-shadow: 0 6rpx 16rpx rgba(244, 63, 94, 0.16);
+  box-shadow: 0 8rpx 20rpx rgba(244, 63, 94, 0.16);
 }
 
 .entry-title-boss {
@@ -295,13 +430,9 @@
   color: #e11d48;
 }
 
-.entry-arrow-boss {
+.entry-go-boss {
   color: #e11d48;
-}
-
-.link {
-  font-size: 24rpx;
-  color: #0284c7;
+  background: rgba(225, 29, 72, 0.1);
 }
 
 .foot {

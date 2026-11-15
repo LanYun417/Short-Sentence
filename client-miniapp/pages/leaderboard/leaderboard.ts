@@ -36,7 +36,10 @@ interface LeaderboardData {
   periods: typeof PERIODS;
   period: string;
   metric: 'answered' | 'correct';
-  rows: RowView[];
+  /** 前三名（按 2/1/3 排列，配合领奖台左右高度） */
+  podium: RowView[];
+  /** 第 4 名起 */
+  rest: RowView[];
   unit: string;
   isCheckin: boolean;
   meText: string;
@@ -57,7 +60,8 @@ Page<LeaderboardData, LeaderboardCustom>({
     periods: PERIODS,
     period: 'today',
     metric: 'answered',
-    rows: [],
+    podium: [],
+    rest: [],
     unit: '题',
     isCheckin: false,
     meText: '暂未上榜',
@@ -107,8 +111,13 @@ Page<LeaderboardData, LeaderboardCustom>({
         isMe: Boolean(me && me.id === row.userId),
         medal: row.rank === 1 ? 'medal-1' : row.rank === 2 ? 'medal-2' : row.rank === 3 ? 'medal-3' : '',
       }));
+      // 领奖台按 2 / 1 / 3 排列：冠军居中且更高，左右两侧矮一档
+      const byRank = (rank: number) => rows.find((row) => row.rank === rank);
+      const podium = [byRank(2), byRank(1), byRank(3)].filter((row): row is RowView => Boolean(row));
+
       this.setData({
-        rows,
+        podium,
+        rest: rows.filter((row) => row.rank > 3),
         unit: result.unit,
         isCheckin: type === 'checkin_total',
         meRank: result.me ? result.me.rank : 0,

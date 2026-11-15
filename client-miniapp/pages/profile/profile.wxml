@@ -1,9 +1,12 @@
 <view class="page">
   <!-- 用户卡 -->
-  <view class="card user-card">
-    <view class="avatar avatar-lg">
-      <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
-      <text wx:else>{{initial || 'S'}}</text>
+  <view class="card user-card anim-up">
+    <view class="user-blob"></view>
+    <view class="avatar-ring">
+      <view class="avatar avatar-lg">
+        <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+        <text wx:else>{{initial || 'S'}}</text>
+      </view>
     </view>
     <view class="user-info">
       <text class="user-name">{{user.nickname || '学习者'}}</text>
@@ -12,7 +15,7 @@
   </view>
 
   <!-- 成长摘要 -->
-  <view class="card stats">
+  <view class="card stats anim-up d1">
     <view class="stat">
       <text class="stat-num mono">{{xpText}}</text>
       <text class="stat-label">经验</text>
@@ -30,7 +33,7 @@
   </view>
 
   <!-- 功能入口 -->
-  <view class="menu-grid">
+  <view class="menu-grid anim-up d2">
     <view
       wx:for="{{group1}}"
       wx:key="key"
@@ -39,12 +42,12 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <text class="menu-icon">{{item.icon}}</text>
+      <view class="menu-icon">{{item.icon}}</view>
       <text class="menu-label">{{item.label}}</text>
     </view>
   </view>
 
-  <view class="menu-grid">
+  <view class="menu-grid anim-up d3">
     <view
       wx:for="{{group2}}"
       wx:key="key"
@@ -53,12 +56,12 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <text class="menu-icon">{{item.icon}}</text>
+      <view class="menu-icon">{{item.icon}}</view>
       <text class="menu-label">{{item.label}}</text>
     </view>
   </view>
 
-  <view class="menu-grid">
+  <view class="menu-grid anim-up d4">
     <view
       wx:for="{{group3}}"
       wx:key="key"
@@ -67,14 +70,14 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <text class="menu-icon">{{item.icon}}</text>
+      <view class="menu-icon">{{item.icon}}</view>
       <text class="menu-label">{{item.label}}</text>
       <text wx:if="{{item.key === 'notices' && noticeUnread > 0}}" class="menu-dot">{{noticeUnread}}</text>
     </view>
   </view>
 
   <!-- 操作 -->
-  <view class="actions">
+  <view class="actions anim-up d5">
     <view class="action" hover-class="action-hover" bindtap="onExport">
       <text class="action-label">导出我的数据</text>
       <text class="action-arrow">›</text>
@@ -85,9 +88,11 @@
     </view>
   </view>
 
-  <button class="btn btn-ghost btn-block logout" bindtap="onLogout">退出登录</button>
+  <view class="anim-up d6">
+    <button class="btn btn-ghost btn-block logout" hover-class="press-hover" bindtap="onLogout">退出登录</button>
+  </view>
 
-  <view class="foot">
+  <view class="foot anim-fade d6">
     <text class="muted">每日一句 · v{{version}}</text>
   </view>
 </view>

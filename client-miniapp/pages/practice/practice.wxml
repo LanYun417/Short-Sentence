@@ -52,13 +52,15 @@
 
         <block wx:if="{{mode === 'input'}}">
           <input
-            class="q-input"
+            class="q-input {{inputFocused ? 'q-input-focus' : ''}}"
             value="{{answer}}"
             placeholder="用英文写出这句话"
             placeholder-class="q-input-ph"
             confirm-type="done"
             bindinput="onInput"
             bindconfirm="onSubmit"
+            bindfocus="onInputFocus"
+            bindblur="onInputBlur"
           />
         </block>
 
@@ -127,5 +129,10 @@
         <button class="btn btn-primary btn-block next" bindtap="onNext">下一题</button>
       </view>
     </view>
+  </view>
+
+  <!-- 底部提示：卡片下方留白不再空着，顺带说明两个隐藏操作 -->
+  <view wx:if="{{question && !flipped}}" class="foot-hint anim-fade d3">
+    <text class="muted">答完自动翻面 · 可切换默写 / 拼词</text>
   </view>
 </view>

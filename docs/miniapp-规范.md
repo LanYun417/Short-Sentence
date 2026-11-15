@@ -99,6 +99,27 @@ client-miniapp/
 - 视觉令牌写在 `app.wxss` 的 `page {}` 里的 CSS 变量（`--brand` / `--ink` / `--line` …），
   与 Web 端语义一致：**primary = sky，neutral = slate**。
 
+### 动效（app.wxss 里的 `ss-*` 令牌）
+
+小程序不能引第三方动画库，全部用 CSS keyframes 手写，工具类在 `app.wxss` 末尾：
+
+| 类            | 用途                                        |
+| ------------- | ------------------------------------------- |
+| `anim-up`     | 入场：淡入 + 上移 28rpx（页面区块默认用它） |
+| `anim-fade`   | 只淡入（不需要位移的次要区块）              |
+| `anim-pop`    | 强调：带一点回弹的缩放（徽章、角标）        |
+| `d1` ~ `d6`   | 错峰延迟 60~360ms，**必须与 `anim-*` 同用** |
+| `press-hover` | 按压反馈（`hover-class`），缩放 0.965       |
+
+**两条硬规则**（都踩过）：
+
+1. **同一节点不要既挂 `anim-*` 又挂带 `transform` / `opacity` 的 `hover-class`**。
+   动画用了 `animation-fill-mode: both`，结束后最后一帧仍生效，会把 hover 的 transform 盖掉——
+   表现为"点了没反应"。两个都要就**包一层**：外层 `anim-up`，内层挂 `hover-class`
+   （见 `pages/index/index.wxml` 的两个 `.entry`）。
+2. 列表错峰只给首屏可见项加延迟，`wx:for` 里用 `style="animation-delay: {{index < 8 ? index * 45 : 0}}ms"`，
+   否则第 30 项要等 1 秒多才出现，翻页时会觉得卡。
+
 ### 刷题卡（3D 翻转）
 
 - 两面用 **grid 叠在同一格**（`.flip-inner { display: grid }` + `.face { grid-area: 1 / 1 }`），

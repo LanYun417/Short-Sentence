@@ -104,7 +104,7 @@ export interface GamifyLevel {
   next: number | null;
   nextName?: string | null;
   toNext: number;
-  /** 0~1 */
+  /** 0~100 的百分比（与后端一致，展示时不要再乘 100） */
   progress: number;
 }
 

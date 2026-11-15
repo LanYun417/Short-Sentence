@@ -1,34 +1,52 @@
 <view class="page">
   <!-- 问候 + 头像 -->
-  <view class="head">
+  <view class="head anim-up">
     <view class="head-text">
       <text class="head-greeting">{{greeting}}</text>
       <text class="head-name">{{user.nickname || '学习者'}}</text>
     </view>
-    <view class="avatar" bindtap="onTapProfile">
-      <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
-      <text wx:else>{{initial || 'S'}}</text>
+    <view class="avatar-ring" hover-class="press-hover" bindtap="onTapProfile">
+      <view class="avatar">
+        <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+        <text wx:else>{{initial || 'S'}}</text>
+      </view>
     </view>
   </view>
 
   <!-- 今日进度 -->
-  <view class="hero">
+  <view class="hero anim-up d1">
+    <view class="hero-blob"></view>
+    <view class="hero-blob hero-blob-2"></view>
+
     <view class="hero-head">
       <text class="hero-label">今日目标</text>
-      <view class="hero-streak">连续 {{checkin.streak}} 天</view>
+      <view class="hero-streak">
+        <text class="hero-flame">🔥</text>
+        <text>连续 {{checkin.streak}} 天</text>
+      </view>
     </view>
-    <view class="hero-value">
-      <text class="hero-num mono">{{checkin.doneCount}}</text>
-      <text class="hero-goal">/ {{checkin.goalCount || '—'}} 题</text>
+
+    <view class="hero-main">
+      <view class="hero-value">
+        <text class="hero-num mono">{{checkin.doneCount}}</text>
+        <text class="hero-goal">/ {{checkin.goalCount || '—'}} 题</text>
+      </view>
+      <view class="hero-pct">
+        <text class="hero-pct-num mono">{{percent}}</text>
+        <text class="hero-pct-sign">%</text>
+      </view>
     </view>
+
     <view class="hero-bar">
-      <view class="hero-bar-fill" style="width: {{percent}}%"></view>
+      <view class="hero-bar-fill" style="width: {{percent}}%">
+        <view class="hero-bar-sheen"></view>
+      </view>
     </view>
     <text class="hero-tip">{{tip}}</text>
   </view>
 
   <!-- 今日句签可领取 -->
-  <view wx:if="{{cardReady}}" class="card-tip" hover-class="card-tip-hover" bindtap="onOpenCards">
+  <view wx:if="{{cardReady}}" class="card-tip anim-up d2" hover-class="card-tip-hover" bindtap="onOpenCards">
     <view class="card-tip-icon">✦</view>
     <view class="card-tip-body">
       <text class="card-tip-title">今日目标已达成</text>
@@ -38,19 +56,21 @@
   </view>
 
   <!-- 难度 -->
-  <view class="section">
+  <view class="section anim-up d2">
     <view class="row-between">
       <text class="subtitle">练习难度</text>
-      <text class="link" bindtap="onOpenBanks">题库 ›</text>
+      <view class="link" hover-class="press-hover" bindtap="onOpenBanks">题库 ›</view>
     </view>
     <view class="seg">
       <view
         wx:for="{{difficulties}}"
         wx:key="value"
         class="seg-item {{item.value === difficulty ? 'seg-item-active' : ''}}"
+        hover-class="press-hover"
         data-value="{{item.value}}"
         bindtap="onPickDifficulty"
       >
+        <view class="seg-dot"></view>
         <text class="seg-label">{{item.label}}</text>
         <text class="seg-desc">{{item.desc}}</text>
       </view>
@@ -58,30 +78,39 @@
   </view>
 
   <!-- 入口 -->
-  <button class="btn btn-primary btn-block start" bindtap="onStart">开始练习</button>
-  <button class="btn btn-ghost btn-block review" bindtap="onReview">复习错题</button>
+  <view class="cta anim-up d3">
+    <button class="btn btn-primary btn-block start" bindtap="onStart">
+      <text>开始练习</text>
+      <view class="btn-sheen"></view>
+    </button>
+    <button class="btn btn-ghost btn-block review" hover-class="press-hover" bindtap="onReview">复习错题</button>
+  </view>
 
-  <!-- 情景闯关入口 -->
-  <view class="entry" hover-class="entry-hover" bindtap="onOpenStages">
-    <view class="entry-icon">💬</view>
-    <view class="entry-body">
-      <text class="entry-title">情景闯关</text>
-      <text class="entry-desc">跟 AI 角色对话，把学过的句子用出来</text>
+  <!-- 情景闯关入口（外层挂入场动画，内层挂按压反馈：动画的 fill-mode 会锁住 transform） -->
+  <view class="anim-up d4">
+    <view class="entry" hover-class="entry-hover" bindtap="onOpenStages">
+      <view class="entry-icon">💬</view>
+      <view class="entry-body">
+        <text class="entry-title">情景闯关</text>
+        <text class="entry-desc">跟 AI 角色对话，把学过的句子用出来</text>
+      </view>
+      <view class="entry-go">›</view>
     </view>
-    <text class="entry-arrow">›</text>
   </view>
 
   <!-- 每日 Boss 入口 -->
-  <view class="entry entry-boss" hover-class="entry-hover" bindtap="onOpenBoss">
-    <view class="entry-icon entry-icon-boss">⚡</view>
-    <view class="entry-body">
-      <text class="entry-title entry-title-boss">每日 Boss</text>
-      <text class="entry-desc entry-desc-boss">一天一道挑战题，答对额外加经验</text>
+  <view class="anim-up d5">
+    <view class="entry entry-boss" hover-class="entry-hover" bindtap="onOpenBoss">
+      <view class="entry-icon entry-icon-boss">⚡</view>
+      <view class="entry-body">
+        <text class="entry-title entry-title-boss">每日 Boss</text>
+        <text class="entry-desc entry-desc-boss">一天一道挑战题，答对额外加经验</text>
+      </view>
+      <view class="entry-go entry-go-boss">›</view>
     </view>
-    <text class="entry-arrow entry-arrow-boss">›</text>
   </view>
 
-  <view class="foot">
+  <view class="foot anim-fade d6">
     <text class="muted">看中文 · 写英文 · 翻卡即答</text>
   </view>
 </view>

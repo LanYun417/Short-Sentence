@@ -1,7 +1,31 @@
 .user-card {
+  position: relative;
   display: flex;
   gap: 24rpx;
   align-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8 58%, #7dd3fc);
+  box-shadow: 0 18rpx 40rpx rgba(14, 165, 233, 0.28);
+}
+
+/* 装饰光斑：让大面积渐变不显得空 */
+.user-blob {
+  position: absolute;
+  top: -120rpx;
+  right: -80rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  animation: ss-breathe 6.5s ease-in-out infinite;
+}
+
+/* 头像外圈：白环，在渐变底上把头像"抠"出来 */
+.avatar-ring {
+  position: relative;
+  padding: 5rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
 }
 
 .avatar-lg {
@@ -20,8 +44,8 @@
 .user-name {
   overflow: hidden;
   font-size: 38rpx;
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: 800;
+  color: #ffffff;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -30,7 +54,7 @@
   margin-top: 6rpx;
   overflow: hidden;
   font-size: 24rpx;
-  color: var(--ink-3);
+  color: rgba(255, 255, 255, 0.82);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -105,13 +129,24 @@
   border-radius: 999rpx;
 }
 
+/* 按压：父级 .menu-grid 挂的是入场动画，子元素做 transform 不会被打架 */
 .menu-item-hover {
   background: #f6f8fb;
+  transform: scale(0.94);
 }
 
+/* 图标做成圆角色块，比裸 emoji 更有"入口"的形状感 */
 .menu-icon {
-  font-size: 40rpx;
-  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  font-size: 34rpx;
+  line-height: 1;
+  background: linear-gradient(160deg, #f0f9ff, #e0f2fe);
+  border-radius: 22rpx;
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .menu-label {
