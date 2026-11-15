@@ -382,3 +382,146 @@
 .next {
   margin-top: 24rpx;
 }
+
+/* ===== 举报弹层 ===== */
+.report-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.45);
+  animation: ss-mask-in 0.2s ease both;
+}
+
+@keyframes ss-mask-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.report-sheet {
+  max-height: 74vh;
+  overflow: hidden auto;
+  padding: 28rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-radius: 28rpx 28rpx 0 0;
+  box-shadow: 0 -8rpx 40rpx rgba(15, 23, 42, 0.18);
+  box-sizing: border-box;
+}
+
+.sheet-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  margin-bottom: 20rpx;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--ink-1);
+}
+
+.sheet-sub {
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.reason-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.reason {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  margin-bottom: 14rpx;
+  background: #f6f8fb;
+  border: 2rpx solid transparent;
+  border-radius: 18rpx;
+}
+
+.reason-on {
+  background: #eef8ff;
+  border-color: var(--brand);
+}
+
+.reason-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.reason-label {
+  font-size: 27rpx;
+  color: var(--ink-1);
+}
+
+.reason-hint {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.reason-dot {
+  width: 36rpx;
+  font-size: 26rpx;
+  color: var(--brand);
+  text-align: center;
+}
+
+.note {
+  width: 100%;
+  height: 148rpx;
+  padding: 18rpx 20rpx;
+  margin-top: 4rpx;
+  font-size: 25rpx;
+  color: var(--ink-1);
+  background: #f6f8fb;
+  border-radius: 16rpx;
+  box-sizing: border-box;
+}
+
+.note-ph {
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.sheet-foot {
+  display: flex;
+  gap: 18rpx;
+  margin-top: 22rpx;
+}
+
+.sheet-btn {
+  flex: 1;
+  height: 82rpx;
+  font-size: 28rpx;
+  line-height: 82rpx;
+  color: var(--ink-2);
+  text-align: center;
+  background: #eef1f6;
+  border-radius: 999rpx;
+}
+
+.sheet-btn-hover {
+  opacity: 0.85;
+}
+
+.sheet-btn-primary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  box-shadow: 0 8rpx 20rpx rgba(37, 99, 235, 0.28);
+}
+
+.sheet-btn-disabled {
+  color: #9aa6b8;
+  background: #e6e9ef;
+  box-shadow: none;
+}

@@ -44,8 +44,10 @@
 
         <view class="q-meta">
           <text wx:if="{{question.source === 'review'}}" class="badge">复习</text>
+          <!-- 节日名与分类名常常相同（元宵节题的分类就叫元宵节）：只保留节日标签，避免重复两枚 -->
+          <text wx:if="{{question.festivalName && question.festivalName !== question.categoryName && question.categoryName}}" class="badge badge-slate">{{question.categoryName}}</text>
           <text wx:if="{{question.festivalName}}" class="badge badge-amber">{{question.festivalName}}</text>
-          <text wx:if="{{question.categoryName}}" class="badge badge-slate">{{question.categoryName}}</text>
+          <text wx:elif="{{question.categoryName}}" class="badge badge-slate">{{question.categoryName}}</text>
         </view>
 
         <text class="q-translation">{{question.translationZh}}</text>
@@ -137,5 +139,46 @@
   <!-- 底部提示：卡片下方留白不再空着，顺带说明两个隐藏操作 -->
   <view wx:if="{{question && !flipped}}" class="foot-hint anim-fade d3">
     <text class="muted">答完自动翻面 · 可切换默写 / 拼词</text>
+  </view>
+
+  <!-- 举报弹层：一步完成（原因四选一 + 选填补充说明），遮罩不可点关，防误触丢内容 -->
+  <view wx:if="{{reportVisible}}" class="report-mask" catchtap="onReportMask">
+    <view class="report-sheet anim-up">
+      <view class="sheet-head">
+        <text class="sheet-title">反馈这道题</text>
+        <text class="sheet-sub">问题会转给运营同学核实，谢谢</text>
+      </view>
+      <view class="reason-list">
+        <view
+          wx:for="{{reasons}}"
+          wx:key="value"
+          class="reason {{reportReason === item.value ? 'reason-on' : ''}}"
+          data-reason="{{item.value}}"
+          bindtap="onPickReason"
+        >
+          <view class="reason-main">
+            <text class="reason-label">{{item.label}}</text>
+            <text class="reason-hint">{{item.hint}}</text>
+          </view>
+          <text class="reason-dot">{{reportReason === item.value ? '✓' : ''}}</text>
+        </view>
+      </view>
+      <textarea
+        class="note"
+        value="{{reportNote}}"
+        maxlength="500"
+        cursor-spacing="420"
+        show-confirm-bar
+        placeholder="补充说明（选填）：哪里错了、错在哪"
+        placeholder-class="note-ph"
+        bindinput="onReportNote"
+      />
+      <view class="sheet-foot">
+        <view class="sheet-btn" hover-class="sheet-btn-hover" bindtap="onReportCancel">取消</view>
+        <view class="sheet-btn sheet-btn-primary {{reportReason && !reporting ? '' : 'sheet-btn-disabled'}}" hover-class="sheet-btn-hover" bindtap="onReportSubmit">
+          {{reporting ? '提交中…' : '提交反馈'}}
+        </view>
+      </view>
+    </view>
   </view>
 </view>

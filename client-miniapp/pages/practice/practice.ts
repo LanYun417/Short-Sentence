@@ -63,6 +63,14 @@ interface PracticeData {
   favorited: boolean;
   /** 反馈提交中（防连点） */
   reporting: boolean;
+  /** 举报原因候选项（与后端四选一一致） */
+  reasons: ReportReasonItem[];
+  /** 举报弹层是否展开 */
+  reportVisible: boolean;
+  /** 已选举报原因（空表示未选） */
+  reportReason: ReportReason | '';
+  /** 补充说明（选填） */
+  reportNote: string;
   /** 输入框是否聚焦（只驱动描边，不参与判分） */
   inputFocused: boolean;
 }
@@ -88,10 +96,29 @@ interface PracticeCustom {
   onNext(): void;
   onSwitchMode(event: WechatMiniprogram.TouchEvent): void;
   onToggleFavorite(): Promise<void>;
-  onReport(): Promise<void>;
+  onReport(): void;
+  onReportCancel(): void;
+  onReportMask(): void;
+  onPickReason(event: WechatMiniprogram.TouchEvent): void;
+  onReportNote(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
+  onReportSubmit(): void;
   onBack(): void;
   onRetry(): void;
 }
+
+/** 举报原因（严格四选一，与后端 @IsIn 校验一一对应）。 */
+interface ReportReasonItem {
+  label: string;
+  value: ReportReason;
+  hint: string;
+}
+
+const REPORT_REASONS: ReportReasonItem[] = [
+  { label: '翻译或英文有误', value: 'wrong', hint: '中文对不上、英文有语法问题' },
+  { label: '配图与句子不符', value: 'image', hint: '图和内容不匹配、画错' },
+  { label: '内容不适当', value: 'inappropriate', hint: '敏感、不适或误导' },
+  { label: '其他问题', value: 'other', hint: '音标、解析、其他' },
+];
 
 Page<PracticeData, PracticeCustom>({
   data: {
@@ -113,6 +140,10 @@ Page<PracticeData, PracticeCustom>({
     favorited: false,
     reporting: false,
     inputFocused: false,
+    reportVisible: false,
+    reportReason: '',
+    reportNote: '',
+    reasons: REPORT_REASONS,
   },
 
   startedAt: 0,
@@ -312,65 +343,61 @@ Page<PracticeData, PracticeCustom>({
   },
 
   /**
-   * 反馈这道题：先选原因（后端四选一），再可选填补充说明。
-   * 用回调式 API 而非 Promise 化，兼容较低基础库；用户任一步取消都直接结束。
+   * 反馈这道题：打开底部弹层，原因四选一（后端 @IsIn 只认这四个值）
+   * + 可补充说明，一步提交。不用 wx.showActionSheet/showModal：
+   * 两步原生弹窗在各端样式割裂，而且模拟器里 action sheet 只剩遮罩不渲染面板，
+   * 自定义弹层风格统一、键盘遮挡自适应。
    */
-  onReport(): Promise<void> {
+  onReport(): void {
     const sentenceId = this.data.result.sentenceId;
     if (this.data.reporting || sentenceId <= 0) {
-      return Promise.resolve();
+      return;
     }
-    const reasons: Array<{ label: string; value: ReportReason }> = [
-      { label: '翻译或英文有误', value: 'wrong' },
-      { label: '配图与句子不符', value: 'image' },
-      { label: '内容不适当', value: 'inappropriate' },
-      { label: '其他问题', value: 'other' },
-    ];
-    return new Promise<void>((resolve) => {
-      wx.showActionSheet({
-        itemList: reasons.map((item) => item.label),
-        success: (picked) => {
-          const reason = reasons[picked.tapIndex]?.value;
-          if (!reason) {
-            resolve();
-            return;
-          }
-          wx.showModal({
-            title: '补充说明（选填）',
-            editable: true,
-            placeholderText: '写下具体问题，最多 500 字',
-            confirmText: '提交',
-            success: (extra) => {
-              if (!extra.confirm) {
-                resolve();
-                return;
-              }
-              const description = (extra.content ?? '').trim().slice(0, 500) || undefined;
-              this.setData({ reporting: true });
-              const finish = (): void => {
-                this.setData({ reporting: false });
-                resolve();
-              };
-              void reportSentence({ sentenceId, reason, description })
-                .then(() => {
-                  toastSuccess('已收到，感谢你的反馈');
-                  finish();
-                })
-                .catch((error: unknown) => {
-                  showError(error);
-                  finish();
-                });
-            },
-            fail: () => resolve(),
-          });
-        },
-        fail: () => resolve(),
-      });
-    });
+    this.setData({ reportVisible: true, reportReason: '', reportNote: '' });
   },
 
-  /** 关闭：有返回栈就回上一页，否则回首页。 */
+  onReportCancel(): void {
+    if (this.data.reporting) {
+      return;
+    }
+    this.setData({ reportVisible: false });
+  },
+
+  /** 阻止点击遮罩关闭弹层（须显式取消，防止误触丢填写内容）。 */
+  onReportMask(): void {},
+
+  onPickReason(event: WechatMiniprogram.TouchEvent): void {
+    this.setData({ reportReason: event.currentTarget.dataset.reason as ReportReason });
+  },
+
+  onReportNote(event: WechatMiniprogram.CustomEvent<{ value: string }>): void {
+    this.setData({ reportNote: event.detail.value });
+  },
+
+  onReportSubmit(): void {
+    const reason = this.data.reportReason as ReportReason;
+    if (this.data.reporting || !reason) {
+      return;
+    }
+    this.setData({ reporting: true });
+    const description = this.data.reportNote.trim().slice(0, 500) || undefined;
+    void reportSentence({ sentenceId: this.data.result.sentenceId, reason, description })
+      .then(() => {
+        this.setData({ reporting: false, reportVisible: false });
+        toastSuccess('已收到，感谢你的反馈');
+      })
+      .catch((error: unknown) => {
+        this.setData({ reporting: false });
+        showError(error);
+      });
+  },
+
+  /** 关闭：举报弹层开着先只关它，否则回上一页 / 回首页。 */
   onBack() {
+    if (this.data.reportVisible) {
+      this.onReportCancel();
+      return;
+    }
     const pages = getCurrentPages();
     if (pages.length > 1) {
       wx.navigateBack();
