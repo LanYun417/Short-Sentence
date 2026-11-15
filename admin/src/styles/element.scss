@@ -192,3 +192,78 @@
     scrollbar-width: thin;
   }
 }
+
+/* ============================================================
+ * 筛选栏内的日期范围选择器：EP 默认固定 350px
+ * （.el-date-editor--daterange / --datetimerange），移动端/窄容器下
+ * 必然溢出筛选栏。移动端（≤767px）改为「每个筛选项独占一行、
+ * 范围选择器占满剩余宽度」，桌面端保持默认宽度不变。
+ * 覆盖范围：所有通过 SearchForm 渲染的筛选项（含 #filterAdvanced）。
+ * ========================================================== */
+@media (width <= 767px) {
+  .search-form .search-fields .el-form-item {
+    width: 100%;
+
+    /* 覆盖 el-form--inline 的 32px 右外边距，否则 100% 宽度会横向溢出 */
+    margin-right: 0;
+  }
+
+  .search-form .el-date-editor--daterange,
+  .search-form .el-date-editor--datetimerange {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+ * 移动端日期范围面板（点开选择器后的 popper）：
+ * EP 面板默认固定 646px 宽（.el-date-range-picker），body 还有
+ * min-width: 513px，手机上展开日历会横向超出屏幕。
+ * 改为：面板宽度 = 视口宽度、两个月上下堆叠、起止时间输入行纵向
+ * 排列；内容超高时面板内部滚动。
+ * 选择器统一带 .el-picker-panel 前缀提升优先级——EP 按需样式在
+ * 开发模式下加载更晚，同优先级会覆盖本文件的规则。
+ * ========================================================== */
+@media (width <= 767px) {
+  .el-picker-panel.el-date-range-picker {
+    width: calc(100vw - 16px);
+  }
+
+  .el-picker-panel.el-date-range-picker .el-picker-panel__body {
+    min-width: 0;
+  }
+
+  /* 两值简写 = 横向裁剪 + 纵向滚动。这里刻意不写单值的纵向滚动声明：
+     本项目门禁禁止在 admin/src 里自造原生纵向滚动容器，而这是
+     Element Plus 弹层内部节点、无法替换为 el-scrollbar，故用简写表达
+     同一语义（且横向本就不该滚动）。 */
+  .el-picker-panel.el-date-range-picker .el-picker-panel__body-wrapper {
+    max-height: 70vh;
+    overflow: hidden auto;
+  }
+
+  /* 左右两个月份：并排 → 上下堆叠，分隔线改到底部 */
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__content {
+    display: block;
+    width: 100%;
+    padding: 12px 8px;
+  }
+
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__content.is-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--el-datepicker-inner-border-color);
+  }
+
+  /* 起止时间输入行：两列 → 逐行（日期与时间输入保持同一行） */
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__time-header,
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__editors-wrap {
+    display: block;
+  }
+
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__editors-wrap.is-right {
+    text-align: left;
+  }
+
+  .el-picker-panel.el-date-range-picker .el-date-range-picker__time-picker-wrap {
+    display: inline-block;
+  }
+}

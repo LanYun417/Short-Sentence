@@ -83,6 +83,54 @@ function handleCloseAll(): void {
   closeContextMenu();
 }
 
+/** 关闭左侧标签 */
+function handleCloseLeft(): void {
+  const view = contextMenu.view;
+  if (!view) {
+    return;
+  }
+  const activePath = route.path;
+  tagsViewStore.delLeftViews(view);
+  // 仅当激活标签被顺带关闭（位于左侧）时，跳转到右键目标标签
+  if (!tagsViewStore.visitedViews.some((v) => v.path === activePath)) {
+    void router.push(view.fullPath);
+  }
+  closeContextMenu();
+}
+
+/** 关闭右侧标签 */
+function handleCloseRight(): void {
+  const view = contextMenu.view;
+  if (!view) {
+    return;
+  }
+  const activePath = route.path;
+  tagsViewStore.delRightViews(view);
+  // 仅当激活标签被顺带关闭（位于右侧）时，跳转到右键目标标签
+  if (!tagsViewStore.visitedViews.some((v) => v.path === activePath)) {
+    void router.push(view.fullPath);
+  }
+  closeContextMenu();
+}
+
+/** 右键目标标签左侧是否还有可关闭（非固定）标签 */
+const hasLeft = computed(() => {
+  if (!contextMenu.view) {
+    return false;
+  }
+  const index = visitedViews.value.findIndex((v) => v.path === contextMenu.view!.path);
+  return visitedViews.value.some((v, i) => i < index && !v.affix);
+});
+
+/** 右键目标标签右侧是否还有可关闭（非固定）标签 */
+const hasRight = computed(() => {
+  if (!contextMenu.view) {
+    return false;
+  }
+  const index = visitedViews.value.findIndex((v) => v.path === contextMenu.view!.path);
+  return visitedViews.value.some((v, i) => i > index && !v.affix);
+});
+
 /** 关闭当前标签 */
 function handleCloseCurrent(): void {
   if (contextMenu.view) {
@@ -140,9 +188,16 @@ onBeforeUnmount(() => {
       class="tags-context-menu"
       :style="{ left: `${contextMenu.left}px`, top: `${contextMenu.top}px` }"
     >
-      <div class="context-item" @click="handleCloseCurrent">关闭当前</div>
-      <div class="context-item" @click="handleCloseOthers">关闭其他</div>
-      <div class="context-item" @click="handleCloseAll">关闭全部</div>
+      <div class="context-item" @click="handleCloseCurrent"><i class="bi bi-x-lg" aria-hidden="true" />关闭当前</div>
+      <div class="context-item" @click="handleCloseOthers"><i class="bi bi-x-square" aria-hidden="true" />关闭其他</div>
+      <div class="context-item" @click="handleCloseAll"><i class="bi bi-x-octagon" aria-hidden="true" />关闭全部</div>
+      <div v-show="hasLeft || hasRight" class="context-divider" />
+      <div v-show="hasLeft" class="context-item" @click="handleCloseLeft">
+        <i class="bi bi-arrow-bar-left" aria-hidden="true" />关闭左侧
+      </div>
+      <div v-show="hasRight" class="context-item" @click="handleCloseRight">
+        <i class="bi bi-arrow-bar-right" aria-hidden="true" />关闭右侧
+      </div>
     </div>
   </div>
 </template>
@@ -218,14 +273,33 @@ onBeforeUnmount(() => {
   box-shadow: var(--el-box-shadow-light);
 }
 
+.context-divider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: var(--el-border-color-light);
+}
+
 .context-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   padding: 6px 16px;
   font-size: 13px;
   cursor: pointer;
 }
 
+/* 图标弱化一档：不抢文字，hover 时跟随主色 */
+.context-item .bi {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
 .context-item:hover {
   color: var(--el-color-primary);
   background-color: var(--el-fill-color-light);
+}
+
+.context-item:hover .bi {
+  color: inherit;
 }
 </style>
