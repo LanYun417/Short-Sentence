@@ -1,0 +1,173 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 8rpx 0;
+}
+
+.head-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.head-greeting {
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.head-name {
+  margin-top: 4rpx;
+  max-width: 420rpx;
+  overflow: hidden;
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: -1rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 今日进度主卡：品牌渐变，数字放大做视觉锚点 */
+.hero {
+  position: relative;
+  margin-top: 32rpx;
+  padding: 40rpx;
+  overflow: hidden;
+  background: linear-gradient(140deg, #0ea5e9 0%, #38bdf8 52%, #7dd3fc 100%);
+  border-radius: 36rpx;
+  box-shadow: 0 20rpx 44rpx rgba(14, 165, 233, 0.3);
+}
+
+.hero::after {
+  position: absolute;
+  top: -120rpx;
+  right: -80rpx;
+  width: 320rpx;
+  height: 320rpx;
+  content: '';
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+}
+
+.hero-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hero-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.hero-streak {
+  padding: 6rpx 20rpx;
+  font-size: 22rpx;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999rpx;
+}
+
+.hero-value {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  margin-top: 16rpx;
+}
+
+.hero-num {
+  font-size: 96rpx;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+  letter-spacing: -2rpx;
+}
+
+.hero-goal {
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.hero-bar {
+  position: relative;
+  height: 14rpx;
+  margin-top: 24rpx;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999rpx;
+}
+
+.hero-bar-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 999rpx;
+  transition: width 0.45s ease;
+}
+
+.hero-tip {
+  position: relative;
+  display: block;
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 难度分段 */
+.section {
+  margin-top: 40rpx;
+}
+
+.seg {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.seg-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 12rpx;
+  background: #ffffff;
+  border: 2rpx solid var(--line);
+  border-radius: 24rpx;
+  transition: all 0.2s ease;
+}
+
+.seg-item-active {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  box-shadow: 0 8rpx 20rpx rgba(14, 165, 233, 0.16);
+}
+
+.seg-label {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.seg-item-active .seg-label {
+  color: #0284c7;
+}
+
+.seg-desc {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: var(--ink-3);
+}
+
+.start {
+  margin-top: 48rpx;
+}
+
+.review {
+  margin-top: 20rpx;
+}
+
+.foot {
+  margin-top: 40rpx;
+  text-align: center;
+}

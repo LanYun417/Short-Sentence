@@ -1,0 +1,79 @@
+.login {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 200rpx 56rpx calc(64rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 46%);
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 132rpx;
+  height: 132rpx;
+  font-size: 64rpx;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(140deg, #0ea5e9, #7dd3fc);
+  border-radius: 36rpx;
+  box-shadow: 0 20rpx 40rpx rgba(14, 165, 233, 0.3);
+}
+
+.brand-name {
+  margin-top: 28rpx;
+  font-size: 48rpx;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -1rpx;
+}
+
+.brand-slogan {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: var(--ink-3);
+}
+
+.panel {
+  margin-top: 96rpx;
+}
+
+.field {
+  height: 104rpx;
+  margin-bottom: 24rpx;
+  padding: 0 32rpx;
+  font-size: 30rpx;
+  color: var(--ink);
+  background: #f6f8fb;
+  border: 2rpx solid #e8eef6;
+  border-radius: 24rpx;
+}
+
+.field-ph {
+  color: var(--ink-3);
+}
+
+.login-btn {
+  margin-top: 8rpx;
+}
+
+.switch {
+  margin-top: 32rpx;
+  font-size: 26rpx;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.tip {
+  margin-top: auto;
+  padding-top: 64rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+  text-align: center;
+}

@@ -1,0 +1,43 @@
+<view class="login">
+  <view class="brand">
+    <view class="logo">S</view>
+    <text class="brand-name">每日一句</text>
+    <text class="brand-slogan">看中文 · 写英文 · 一天一句</text>
+  </view>
+
+  <view class="panel">
+    <block wx:if="{{mode === 'wechat'}}">
+      <button
+        class="btn btn-primary btn-block {{loading ? 'btn-disabled' : ''}}"
+        bindtap="onWechatLogin"
+      >{{loading ? '登录中…' : '微信一键登录'}}</button>
+      <view class="switch" bindtap="onSwitchMode">已有邮箱账号？用密码登录</view>
+    </block>
+
+    <block wx:else>
+      <input
+        class="field"
+        type="text"
+        value="{{email}}"
+        placeholder="邮箱"
+        placeholder-class="field-ph"
+        bindinput="onEmailInput"
+      />
+      <input
+        class="field"
+        password
+        value="{{password}}"
+        placeholder="密码"
+        placeholder-class="field-ph"
+        bindinput="onPasswordInput"
+      />
+      <button
+        class="btn btn-primary btn-block login-btn {{loading ? 'btn-disabled' : ''}}"
+        bindtap="onEmailLogin"
+      >{{loading ? '登录中…' : '登录'}}</button>
+      <view class="switch" bindtap="onSwitchMode">返回微信登录</view>
+    </block>
+  </view>
+
+  <text class="tip">登录即表示同意《用户协议》与《隐私政策》</text>
+</view>

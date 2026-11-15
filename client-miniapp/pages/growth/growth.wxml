@@ -1,0 +1,78 @@
+<view class="page">
+  <!-- 等级卡 -->
+  <view class="hero">
+    <view class="hero-head">
+      <view class="hero-level">
+        <text class="hero-level-name">{{levelName}}</text>
+        <text class="hero-level-tag">Lv.</text>
+      </view>
+      <text class="hero-xp mono">{{xpText}} XP</text>
+    </view>
+    <view class="hero-bar">
+      <view class="hero-bar-fill" style="width: {{levelPercent}}%"></view>
+    </view>
+    <text class="hero-tip">{{levelTip}}</text>
+  </view>
+
+  <!-- 三个统计 -->
+  <view class="card stats">
+    <view class="stat">
+      <text class="stat-num mono">{{unlockedAchievements}}</text>
+      <text class="stat-label">已解锁成就</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat">
+      <text class="stat-num mono">{{unlockedScenes}}</text>
+      <text class="stat-label">已探索场景</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat">
+      <text class="stat-num mono">{{totalAchievements}}</text>
+      <text class="stat-label">成就总数</text>
+    </view>
+  </view>
+
+  <!-- 成就 -->
+  <view class="section">
+    <view class="row-between">
+      <text class="subtitle">成就</text>
+      <text class="muted">{{unlockedAchievements}} / {{totalAchievements}}</text>
+    </view>
+
+    <view wx:if="{{loading}}" class="placeholder">
+      <text class="muted">加载中…</text>
+    </view>
+
+    <view wx:elif="{{achievements.length === 0}}" class="placeholder">
+      <text class="muted">还没有成就，去刷几题吧</text>
+    </view>
+
+    <view wx:else class="ach-list">
+      <view wx:for="{{achievements}}" wx:key="code" class="ach {{item.unlocked ? '' : 'ach-locked'}}">
+        <view class="ach-icon">{{item.initial}}</view>
+        <view class="ach-body">
+          <view class="ach-title-row">
+            <text class="ach-name">{{item.name}}</text>
+            <text class="ach-xp">+{{item.rewardXp}} XP</text>
+          </view>
+          <text class="ach-desc">{{item.description}}</text>
+        </view>
+        <text wx:if="{{item.unlocked}}" class="ach-check">✓</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 场景 -->
+  <view wx:if="{{scenes.length > 0}}" class="section">
+    <view class="row-between">
+      <text class="subtitle">场景</text>
+      <text class="muted">{{unlockedScenes}} / {{totalScenes}}</text>
+    </view>
+    <view class="scene-list mt-16">
+      <view wx:for="{{scenes}}" wx:key="id" class="scene">
+        <text class="scene-name {{item.unlocked ? '' : 'scene-locked'}}">{{item.name}}</text>
+        <text class="muted">{{item.practicedCount}} 题</text>
+      </view>
+    </view>
+  </view>
+</view>

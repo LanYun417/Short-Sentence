@@ -1,0 +1,49 @@
+<view class="page">
+  <!-- 用户卡 -->
+  <view class="card user-card">
+    <view class="avatar avatar-lg">
+      <image wx:if="{{avatarUrl}}" class="avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+      <text wx:else>{{initial || 'S'}}</text>
+    </view>
+    <view class="user-info">
+      <text class="user-name">{{user.nickname || '学习者'}}</text>
+      <text class="user-sub">{{accountLabel}}</text>
+    </view>
+  </view>
+
+  <!-- 成长摘要 -->
+  <view class="card stats">
+    <view class="stat">
+      <text class="stat-num mono">{{xpText}}</text>
+      <text class="stat-label">经验</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat">
+      <text class="stat-num mono">{{streakText}}</text>
+      <text class="stat-label">连续打卡</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat">
+      <text class="stat-num mono">{{achievementText}}</text>
+      <text class="stat-label">成就</text>
+    </view>
+  </view>
+
+  <!-- 操作 -->
+  <view class="actions">
+    <view class="action" hover-class="action-hover" bindtap="onExport">
+      <text class="action-label">导出我的数据</text>
+      <text class="action-arrow">›</text>
+    </view>
+    <view class="action action-danger" hover-class="action-hover" bindtap="onDelete">
+      <text class="action-label">注销账号</text>
+      <text class="action-arrow">›</text>
+    </view>
+  </view>
+
+  <button class="btn btn-ghost btn-block logout" bindtap="onLogout">退出登录</button>
+
+  <view class="foot">
+    <text class="muted">每日一句 · v{{version}}</text>
+  </view>
+</view>

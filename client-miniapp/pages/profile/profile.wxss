@@ -1,0 +1,117 @@
+.user-card {
+  display: flex;
+  gap: 24rpx;
+  align-items: center;
+}
+
+.avatar-lg {
+  width: 120rpx;
+  height: 120rpx;
+  font-size: 44rpx;
+}
+
+.user-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.user-name {
+  overflow: hidden;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-sub {
+  margin-top: 6rpx;
+  overflow: hidden;
+  font-size: 24rpx;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 统计 */
+.stats {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+  padding: 32rpx 16rpx;
+}
+
+.stat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.stat-label {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.stat-divider {
+  width: 2rpx;
+  height: 52rpx;
+  background: var(--line);
+}
+
+/* 操作列表 */
+.actions {
+  margin-top: 24rpx;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 30rpx rgba(15, 23, 42, 0.06);
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 32rpx;
+  border-bottom: 2rpx solid #f4f7fb;
+}
+
+.action:last-child {
+  border-bottom: none;
+}
+
+.action-hover {
+  background: #f8fafc;
+}
+
+.action-label {
+  font-size: 28rpx;
+  color: var(--ink);
+}
+
+.action-danger .action-label {
+  color: var(--danger);
+}
+
+.action-arrow {
+  font-size: 36rpx;
+  color: var(--ink-3);
+}
+
+.logout {
+  margin-top: 40rpx;
+}
+
+.foot {
+  margin-top: 48rpx;
+  text-align: center;
+}

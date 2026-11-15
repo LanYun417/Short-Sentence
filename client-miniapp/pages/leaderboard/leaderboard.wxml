@@ -1,0 +1,57 @@
+<view class="page">
+  <!-- 周期 -->
+  <view class="seg">
+    <view
+      wx:for="{{periods}}"
+      wx:key="key"
+      class="seg-item {{item.key === period ? 'seg-active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onPickPeriod"
+    >{{item.label}}</view>
+  </view>
+
+  <!-- 指标（打卡榜没有指标维度） -->
+  <view wx:if="{{!isCheckin}}" class="metrics">
+    <view
+      class="metric {{metric === 'answered' ? 'metric-active' : ''}}"
+      data-metric="answered"
+      bindtap="onPickMetric"
+    >答题数</view>
+    <view
+      class="metric {{metric === 'correct' ? 'metric-active' : ''}}"
+      data-metric="correct"
+      bindtap="onPickMetric"
+    >答对数</view>
+  </view>
+
+  <!-- 我的名次 -->
+  <view class="me">
+    <view class="me-left">
+      <text class="me-label">我的名次</text>
+      <text class="me-value">{{meText}}</text>
+    </view>
+  </view>
+
+  <!-- 榜单 -->
+  <view wx:if="{{loading}}" class="placeholder">
+    <view class="spinner"></view>
+  </view>
+
+  <view wx:elif="{{empty}}" class="placeholder">
+    <text class="muted">这个榜还没有人上榜，去刷题抢第一</text>
+  </view>
+
+  <view wx:else class="list">
+    <view wx:for="{{rows}}" wx:key="userId" class="row {{item.isMe ? 'row-me' : ''}}">
+      <view class="rank {{item.medal}}">{{item.rank}}</view>
+      <view class="avatar avatar-sm">
+        <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <text wx:else>{{item.initial}}</text>
+      </view>
+      <text class="name ellipsis">{{item.nickname}}</text>
+      <text class="count mono">{{item.countText}}</text>
+    </view>
+  </view>
+
+  <text class="foot muted">{{isCheckin ? '累计打卡天数，长期有效' : '榜单每分钟刷新一次'}}</text>
+</view>

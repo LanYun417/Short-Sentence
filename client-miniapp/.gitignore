@@ -1,0 +1,4 @@
+# 小程序侧本地文件（微信开发者工具私有配置含本机路径，不入库）
+node_modules/
+project.private.config.json
+*.local

@@ -7,8 +7,8 @@
 > 一套开箱即用的通用后台管理基座：JWT 双 Token 鉴权、RBAC + 数据权限、系统管理（用户 / 角色 / 菜单 / 部门 / 字典 / 参数）、三类日志、文件管理、通知中心、在线用户与系统监控（CPU / 内存 / 磁盘 / 网络吞吐）、代码生成器、ECharts 仪表盘与中英双语。前后端 TypeScript 全覆盖，遵循严格分层与统一工程规范。
 >
 > 本仓库同时是**「短句」**（视觉场景英语闪卡）的完整落地：同一个后端（`api/`）之上，
-> 运营后台（`admin/`）、用户端 Web（`client-web/`，Nuxt 4）与 Android App（`client-android/`，Flutter）
-> **三端同源同契约**。产品能力见[「短句」业务功能](#短句业务功能)。
+> 运营后台（`admin/`）、用户端 Web（`client-web/`，Nuxt 4）、Android App（`client-android/`，Flutter）
+> 与微信小程序（`client-miniapp/`，原生 TS）**四端同源同契约**。产品能力见[「短句」业务功能](#短句业务功能)。
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-42b883" alt="Vue" height="20">
@@ -144,13 +144,14 @@ short-sentence/
 ├─ admin/                    # 中后台前端（Vue3 + Vite + Element Plus，即 ly-admin-web）
 ├─ client-web/               # 「短句」用户端 Web（Nuxt 4 + @nuxt/ui + Tailwind，规范见 docs/client-nuxt-规范.md）
 ├─ client-android/           # 「短句」App（Flutter，主要功能已完成；详见 client-android/README.md）
+├─ client-miniapp/           # 「短句」微信小程序（原生 WXML + TypeScript，共享同一套 /api/client/*；规范见 docs/miniapp-规范.md）
 ├─ deploy/                   # Docker 部署（compose / Dockerfile / nginx 示例）
 ├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
 ├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
 ├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
 ├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（导入可解析）/ check-locale-keys（语言包）/ check-native-scrollbar（禁滚动条）/ check-wrapped-components（封装组件）/ db-backup（数据库备份）
 ├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
-├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client-web）
+├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client-web + client-miniapp）
 ├─ .prettierrc.json           # Prettier 规则
 ├─ .stylelintrc.json          # Stylelint 规则
 ├─ commitlint.config.cjs      # 约定式提交校验规则
@@ -398,6 +399,17 @@ npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd 
 | `flutter analyze`   | 静态检查（CI 门禁）                           |
 | `flutter test`      | Widget / 单元测试（CI 门禁）                  |
 | `flutter build apk` | 打包 Android 安装包                           |
+
+### 微信小程序 `client-miniapp/`
+
+| 命令                 | 说明                                                           |
+| -------------------- | -------------------------------------------------------------- |
+| `npm install`        | 仅装开发期类型依赖（`typescript` + `miniprogram-api-typings`） |
+| `npm run type-check` | 类型检查（`tsc --noEmit`，CI 门禁）                            |
+
+用微信开发者工具「导入项目」选择 `client-miniapp/` 目录即可预览；
+开发期需在「详情 → 本地设置」勾选**不校验合法域名**，并保证后端 `:3000` 已启动。
+接口基地址见 `client-miniapp/utils/env.ts`（真机预览请改为电脑局域网 IP）。
 
 ### 后端 `api/`
 

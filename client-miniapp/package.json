@@ -1,0 +1,13 @@
+{
+  "name": "short-sentence-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "每日一句 · 微信小程序（原生 WXML + TypeScript，复用同一套 NestJS 后端）",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "miniprogram-api-typings": "^4.0.8",
+    "typescript": "^5.9.3"
+  }
+}

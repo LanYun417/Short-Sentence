@@ -1,0 +1,258 @@
+/**
+ * 全局样式与设计令牌。
+ *
+ * 与 Web 端（client-web）保持同一套语义：sky 为主色、slate 为中性色；
+ * 小程序不引入 Tailwind，令牌以 CSS 变量 + 原子类的方式手写，避免构建期依赖。
+ */
+page {
+  --brand: #0ea5e9;
+  --brand-light: #38bdf8;
+  --brand-soft: #e0f2fe;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #94a3b8;
+  --line: #e8eef6;
+  --surface: #ffffff;
+  --bg: #f5f7fb;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Helvetica, sans-serif;
+  font-size: 28rpx;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+view,
+text,
+input,
+textarea,
+button,
+image,
+scroll-view {
+  box-sizing: border-box;
+}
+
+/* ---------------- 布局 ---------------- */
+
+.page {
+  min-height: 100vh;
+  padding: 24rpx 32rpx calc(56rpx + env(safe-area-inset-bottom));
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.gap-8 {
+  gap: 8rpx;
+}
+
+.gap-16 {
+  gap: 16rpx;
+}
+
+.gap-24 {
+  gap: 24rpx;
+}
+
+.mt-8 {
+  margin-top: 8rpx;
+}
+
+.mt-16 {
+  margin-top: 16rpx;
+}
+
+.mt-24 {
+  margin-top: 24rpx;
+}
+
+.mt-32 {
+  margin-top: 32rpx;
+}
+
+/* ---------------- 卡片 ---------------- */
+
+.card {
+  background: var(--surface);
+  border-radius: 28rpx;
+  padding: 32rpx;
+  box-shadow: 0 8rpx 30rpx rgba(15, 23, 42, 0.06);
+}
+
+.card-flat {
+  background: var(--surface);
+  border-radius: 28rpx;
+  padding: 32rpx;
+  border: 2rpx solid var(--line);
+}
+
+/* ---------------- 文字 ---------------- */
+
+.title {
+  font-size: 40rpx;
+  font-weight: 700;
+  letter-spacing: -0.5rpx;
+}
+
+.subtitle {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.body {
+  font-size: 28rpx;
+  color: var(--ink-2);
+}
+
+.muted {
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  padding: 0 40rpx;
+  border: none;
+  border-radius: 999rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-light));
+  color: #ffffff;
+  box-shadow: 0 12rpx 28rpx rgba(14, 165, 233, 0.28);
+}
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border: 2rpx solid var(--line);
+}
+
+.btn-disabled {
+  background: #cbd5e1;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---------------- 徽标 / 标签 ---------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--brand-soft);
+  color: #0284c7;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.badge-amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge-slate {
+  background: #f1f5f9;
+  color: var(--ink-2);
+}
+
+/* ---------------- 进度条 ---------------- */
+
+.bar {
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, var(--brand), var(--brand-light));
+  transition: width 0.4s ease;
+}
+
+/* ---------------- 头像 ---------------- */
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #bae6fd, #7dd3fc);
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------- 分隔 ---------------- */
+
+.divider {
+  height: 2rpx;
+  background: var(--line);
+  margin: 24rpx 0;
+}
+
+/* ---------------- 安全区 ---------------- */
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

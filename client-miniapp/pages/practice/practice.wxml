@@ -1,0 +1,131 @@
+<view class="practice">
+  <!-- 顶部：返回 / 模式切换 / 今日进度 -->
+  <view class="topbar">
+    <view class="back" bindtap="onBack" hover-class="back-hover">‹</view>
+    <view class="modes">
+      <view
+        class="mode {{mode === 'input' ? 'mode-active' : ''}}"
+        data-mode="input"
+        bindtap="onSwitchMode"
+      >默写</view>
+      <view
+        class="mode {{mode === 'assemble' ? 'mode-active' : ''}}"
+        data-mode="assemble"
+        bindtap="onSwitchMode"
+      >拼词</view>
+    </view>
+    <view class="progress" wx:if="{{progressText}}">{{progressText}}</view>
+    <view class="progress-placeholder" wx:else></view>
+  </view>
+
+  <!-- 今日目标进度细条 -->
+  <view class="progress-line">
+    <view class="progress-line-fill" style="width: {{percent}}%"></view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="center-block">
+    <view class="spinner"></view>
+    <text class="muted mt-16">正在抽题…</text>
+  </view>
+
+  <!-- 抽题失败 -->
+  <view wx:elif="{{errorText}}" class="card center-block">
+    <text class="subtitle">{{errorText}}</text>
+    <button class="btn btn-primary btn-block mt-24" bindtap="onRetry">重新抽题</button>
+  </view>
+
+  <!-- 题目卡（3D 翻转） -->
+  <view wx:elif="{{question}}" class="flip">
+    <view class="flip-inner {{flipped ? 'is-flipped' : ''}}">
+      <!-- 正面：题面 + 作答 -->
+      <view class="face face-front">
+        <image wx:if="{{imageUrl}}" class="q-image" src="{{imageUrl}}" mode="widthFix" lazy-load />
+
+        <view class="q-meta">
+          <text wx:if="{{question.source === 'review'}}" class="badge">复习</text>
+          <text wx:if="{{question.festivalName}}" class="badge badge-amber">{{question.festivalName}}</text>
+          <text wx:if="{{question.categoryName}}" class="badge badge-slate">{{question.categoryName}}</text>
+        </view>
+
+        <text class="q-translation">{{question.translationZh}}</text>
+
+        <block wx:if="{{mode === 'input'}}">
+          <input
+            class="q-input"
+            value="{{answer}}"
+            placeholder="用英文写出这句话"
+            placeholder-class="q-input-ph"
+            confirm-type="done"
+            bindinput="onInput"
+            bindconfirm="onSubmit"
+          />
+        </block>
+
+        <block wx:else>
+          <view class="picked">
+            <view
+              wx:for="{{picked}}"
+              wx:key="key"
+              class="picked-word"
+              data-index="{{index}}"
+              bindtap="onUnpickWord"
+            >{{item.text}}</view>
+            <text wx:if="{{picked.length === 0}}" class="picked-hint">点下方词块拼出这句话</text>
+          </view>
+          <view class="chips">
+            <view
+              wx:for="{{chips}}"
+              wx:key="key"
+              class="chip {{item.used ? 'chip-used' : ''}}"
+              data-index="{{index}}"
+              bindtap="onPickChip"
+            >{{item.text}}</view>
+          </view>
+        </block>
+
+        <button class="btn btn-primary btn-block submit" bindtap="onSubmit">
+          {{submitting ? '判分中…' : '确定'}}
+        </button>
+      </view>
+
+      <!-- 背面：判分结果 -->
+      <view class="face face-back">
+        <view class="result-head {{result.isCorrect ? 'ok' : 'bad'}}">
+          <text class="result-title">{{result.isCorrect ? '答对了' : '差一点'}}</text>
+          <text wx:if="{{xpText}}" class="result-xp">{{xpText}}</text>
+        </view>
+
+        <view class="block">
+          <text class="block-label">标准答案</text>
+          <text class="answer-en" selectable>{{result.sentenceEn}}</text>
+          <text wx:if="{{result.ipa}}" class="answer-ipa" selectable>{{result.ipa}}</text>
+        </view>
+
+        <view wx:if="{{result.validAnswers.length > 0}}" class="block">
+          <text class="block-label">其他可接受表达</text>
+          <text wx:for="{{result.validAnswers}}" wx:key="*this" class="answer-alt" selectable>{{item}}</text>
+        </view>
+
+        <view wx:if="{{result.explanation}}" class="block">
+          <text class="block-label">解析</text>
+          <text class="answer-note" selectable>{{result.explanation}}</text>
+        </view>
+
+        <view class="block">
+          <text class="block-label">中文</text>
+          <text class="answer-note">{{result.translationZh}}</text>
+        </view>
+
+        <text wx:if="{{achievementText}}" class="achievement">{{achievementText}}</text>
+
+        <view class="result-foot">
+          <view class="fav" bindtap="onToggleFavorite">{{favorited ? '★ 已收藏' : '☆ 收藏'}}</view>
+          <text class="muted">{{progressText}}</text>
+        </view>
+
+        <button class="btn btn-primary btn-block next" bindtap="onNext">下一题</button>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,100 @@
+# 微信小程序开发规范（client-miniapp）
+
+> 适用目录：`client-miniapp/`
+> 定位：「短句」的微信渠道客户端。**不新建后端**，与 `client-web`、`client-android` 共用同一个
+> NestJS 服务（`api/`）与同一套 `/api/client/*` 接口、同一套 JWT 双令牌。
+
+## 一、技术选型
+
+- **原生小程序（WXML / WXSS / TypeScript）**，不引入 uni-app、Taro 等跨端框架。
+  理由：只出微信这一个渠道，跨端框架的收益为零，却会带来运行时依赖与构建链负担。
+- **零运行时依赖**：`package.json` 只有 `devDependencies`（`typescript`、`miniprogram-api-typings`），
+  业务代码不依赖任何 npm 包；图标用 sharp 预渲染成 PNG（`assets/tabbar/`），不在运行时生成。
+- TypeScript 由微信开发者工具内置的 `useCompilerPlugins: ["typescript"]` 转译；
+  类型检查在仓库侧单独跑 `npm run type-check`（`tsc --noEmit`），**不要依赖开发者工具报类型错**。
+
+## 二、目录结构
+
+```
+client-miniapp/
+├─ app.ts / app.json / app.wxss   # 启动、全局路由与 tabBar、全局样式令牌
+├─ utils/
+│  ├─ env.ts        # 接口基地址（开发/生产）+ 静态资源 origin
+│  ├─ request.ts    # wx.request 封装：信封解包 + 令牌注入 + 401 单飞刷新
+│  ├─ auth.ts       # 微信/邮箱登录、登出、启动期静默登录（sessionReady）
+│  ├─ storage.ts    # 令牌 / 用户缓存 / 难度与作答模式偏好
+│  ├─ nav.ts        # 登录跳转、刷题跳转、tab 切换
+│  ├─ format.ts     # 资源绝对地址、千分位、耗时格式化
+│  └─ feedback.ts   # Toast / 震动 / 错误文案
+├─ services/        # 按业务域封装的接口（types.ts 手写后端契约）
+├─ pages/           # index / practice / growth / leaderboard / profile / login
+└─ assets/tabbar/   # tabBar 图标（sharp 由 SVG 渲染，双色各一套）
+```
+
+## 三、网络层约定
+
+与 Web 端 `client-web/app/composables/useApi.ts` 保持同一语义，便于两端排查同一个问题：
+
+1. 后端成功响应恒为 `{ code: 200, message, data }`，`request<T>()` 直接返回 `data`。
+2. 业务错误（`code !== 200`）抛 `ApiError`，携带服务端 `message`。
+3. HTTP 401 或信封 `code === 401`：先**单飞**刷新一次令牌并重放原请求；
+   刷新失败 → 清会话 + `reLaunch` 到登录页。
+4. 请求头带 `X-Timezone-Offset`（后端据此格式化时间）。
+5. `HttpMethod` 不含 `PATCH`（`wx.request` 不支持）。
+
+> 契约以 `api/` 的 docs=代码门禁（`docs:gen` 产出的 OpenAPI）为准；
+> 接口变更后手动同步 `services/types.ts`。
+
+## 四、登录与会话
+
+- **主路径：微信一键登录** `POST /client/auth/wechat`
+  （`wx.login` 的 code → 服务端 `code2Session` → 自建 JWT 双 token）。
+- **兜底：邮箱密码登录** `POST /client/auth/login`（给 Web 端注册过的老用户）。
+- **启动期静默登录**：`app.onLaunch` 调 `sessionReady()`；本地无令牌且未主动登出时自动微信登录。
+- **页面必须先 `await sessionReady()` 再判断 `isLoggedIn()`**：
+  页面 `onShow` 可能早于静默登录完成，直接判断会把用户误踢到登录页。
+- 主动登出后写 `ss_logged_out` 标记，后续启动不再自动登录。
+- 令牌存 `wx.setStorageSync`（键 `ss_*`）。**不做** `wx.getUserProfile` 之类的头像昵称授权，
+  昵称/头像走个人中心后续迭代，避免无谓的授权弹窗。
+
+## 五、页面约定
+
+- tabBar 四页：练习 `index` / 成长 `growth` / 排行 `leaderboard` / 我的 `profile`；
+  刷题 `practice` 与登录 `login` 为非 tab 页。
+- **页面方法必须声明在 `Page<TData, TCustom>` 的 `TCustom` 里**，
+  否则 `Page.Options` 的 excess property 检查会报错（类型即文档）。
+- WXML 里不要访问可能为 `null` 的对象的深层属性：用零值对象兜底
+  （如 `EMPTY_CHECKIN`、`EMPTY_RESULT`），避免渲染层取值告警。
+- 滚动一律用页面滚动 / `scroll-view`；不手写 `overflow: auto` 的定高容器。
+- 视觉令牌写在 `app.wxss` 的 `page {}` 里的 CSS 变量（`--brand` / `--ink` / `--line` …），
+  与 Web 端语义一致：**primary = sky，neutral = slate**。
+
+### 刷题卡（3D 翻转）
+
+- 两面用 **grid 叠在同一格**（`.flip-inner { display: grid }` + `.face { grid-area: 1 / 1 }`），
+  容器高度自动取两面较高者，不要用 `position: absolute` + 固定高度（背面内容会被裁）。
+- 翻转态加 `pointer-events: none` 到正面，避免隐藏面仍可点击。
+- 作答模式：`input`（默写）/ `assemble`（拼词）。**切模式按产品约定重抽一张**；
+  `words` 为空时自动退回 `input`，避免「无词可点」卡死。
+- 判分完全由后端裁决，前端**不做** normalize 放宽。
+
+## 六、开发与联调
+
+1. `cd api && npm run start:dev`（`:3000`）。
+2. 微信开发者工具「导入项目」选择 `client-miniapp/`，填入自己的 AppID。
+3. 「详情 → 本地设置」勾选**不校验合法域名、web-view 域名、TLS 版本以及 HTTPS 证书**。
+4. 真机预览：把 `utils/env.ts` 的 `DEV_BASE_URL` 或 Storage 里的 `ss_api_base`
+   改成电脑局域网 IP（如 `http://192.168.1.8:3000/api`），手机与电脑同一网段。
+5. 微信登录需后端 `.env` 配置 `WECHAT_MINIAPP_APPID` / `WECHAT_MINIAPP_SECRET`；
+   未配置时该接口返回不可用，前端会退回邮箱登录。
+
+## 七、发布前检查
+
+- `npm run type-check` 通过；根仓库 `npx eslint client-miniapp` 无告警。
+- 生产域名替换 `utils/env.ts` 的 `PROD_BASE_URL`，并在微信公众平台
+  「开发管理 → 服务器域名」把它加入 **request 合法域名**（必须 HTTPS + 已备案）。
+- 后端 `CORS_ORIGIN` 加入小程序来源（小程序请求无 Origin，但 `web-view`/调试场景需要）。
+- 小程序后台配置隐私协议（收集的学习数据、微信 openid 用途），与
+  `client-web` 的隐私政策口径保持一致。
+- 包体积：当前主包为纯代码 + 8 张 tabBar 图标，远低于 2MB；
+  后续加「情景闯关」对话等模块时再考虑分包。
