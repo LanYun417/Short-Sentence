@@ -31,6 +31,8 @@ import '../widgets/press_scale.dart';
 import '../widgets/shimmer.dart';
 import '../widgets/staggered.dart';
 import '../sheets/claim_card.dart';
+import '../api/models/boss.dart';
+import 'boss_page.dart' show bossProvider;
 import '../sheets/sentence_card_sheet.dart';
 import '../sheets/weekly_poster_sheet.dart';
 import '../api/models/memory_stats.dart';
@@ -157,6 +159,13 @@ class _GrowthPageState extends ConsumerState<GrowthPage> {
                           // 情景闯关：给「下一步练什么」一个带剧情的答案（关卡 = 场景）
                           ref.watch(stageOverviewProvider).when(
                             data: (overview) => _StageCard(overview: overview),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                          const SizedBox(height: 14),
+                          // 每日 Boss：一天一道挑战题（入口卡自带状态）
+                          ref.watch(bossProvider).when(
+                            data: (boss) => _BossEntryCard(boss: boss),
                             loading: () => const SizedBox.shrink(),
                             error: (_, _) => const SizedBox.shrink(),
                           ),
@@ -710,6 +719,81 @@ final weeklyReportProvider = FutureProvider<WeeklyReport>((ref) async {
 /// 每日柱状 / 经验 / 连续打卡 / 最常练 / 与上周对比）。
 ///
 /// 数字全部来自服务端聚合，客户端不自己算「本周」——否则与分享文案、Web 端口径会漂移。
+/// 每日 Boss 入口卡：橙金渐变 + 今日状态，点进 /boss 挑战。
+class _BossEntryCard extends StatelessWidget {
+  const _BossEntryCard({required this.boss});
+
+  final BossToday boss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hint = boss.cleared
+        ? '今天已通关，明天再来'
+        : boss.question == null
+            ? '今天的题还在准备中'
+            : '一道挑战句 · 答对额外 +${boss.bonusXp} 经验';
+
+    return PressScale(
+      onTap: () => context.push('/boss'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[Color(0xFFF59E0B), Color(0xFFF97316), Color(0xFFF43F5E)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.sports_kabaddi_outlined, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('每日 Boss',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      )),
+                  const SizedBox(height: 2),
+                  Text(hint,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(boss.cleared ? '已通关' : '去挑战',
+                  style: const TextStyle(
+                    color: Color(0xFFEA580C),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _WeeklyReportCard extends StatelessWidget {
   const _WeeklyReportCard({required this.report});
   final WeeklyReport report;

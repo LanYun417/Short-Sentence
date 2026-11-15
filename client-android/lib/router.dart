@@ -12,6 +12,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/achievements_page.dart';
+import 'pages/boss_page.dart';
+import 'pages/submissions_page.dart';
 import 'pages/chain_page.dart';
 import 'pages/dialogue_page.dart';
 import 'pages/ipa_page.dart';
@@ -52,6 +54,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
       GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
+      GoRoute(path: '/boss', builder: (context, state) => const BossPage()),
+      GoRoute(path: '/submissions', builder: (context, state) => const SubmissionsPage()),
       GoRoute(path: '/stages', builder: (context, state) => const StageListPage()),
       GoRoute(
         path: '/stages/scene/:id',

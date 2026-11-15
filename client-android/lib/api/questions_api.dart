@@ -15,6 +15,7 @@ import 'api_exception.dart';
 import 'dio_client.dart';
 import 'models/question.dart';
 import 'models/memory_stats.dart';
+import 'models/boss.dart';
 
 /// 抽题查询参数。
 ///
@@ -126,6 +127,29 @@ class QuestionsApi {
         },
       );
       return AnswerResult.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 今日 Boss：当天固定一道挑战题 + 是否已通关（服务端按日期确定性选取）。
+  Future<BossToday> boss() async {
+    try {
+      final response = await _dio.get<dynamic>('/client/questions/boss');
+      return BossToday.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 提交 Boss 答案（判分复用刷题口径，服务端额外发通关经验，按日期幂等）。
+  Future<BossAnswerResult> answerBoss(int sentenceId, String userAnswer) async {
+    try {
+      final response = await _dio.post<dynamic>(
+        '/client/questions/boss/answer',
+        data: <String, dynamic>{'sentenceId': sentenceId, 'userAnswer': userAnswer},
+      );
+      return BossAnswerResult.fromJson(_data(response));
     } on DioException catch (error) {
       throw _wrap(error);
     }
