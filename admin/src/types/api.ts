@@ -2088,3 +2088,39 @@ export interface CheckinBackfillResult {
   goalCount: number;
   streak: number;
 }
+
+/* ------------------------------ 用户投稿（UGC） ------------------------------ */
+
+/** 投稿状态 */
+export type ClientSubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+/** 后台投稿列表条目（GET /submissions） */
+export interface ClientSubmissionItem {
+  id: number;
+  userId: number;
+  nickname: string;
+  sentenceEn: string;
+  translationZh: string;
+  note: string | null;
+  /** 来源端：web / android */
+  platform: string;
+  status: ClientSubmissionStatus;
+  /** 审核备注（驳回原因，会下发用户端） */
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+/** 投稿列表查询 */
+export interface ClientSubmissionQuery {
+  page: number;
+  pageSize: number;
+  status?: ClientSubmissionStatus;
+  keyword?: string;
+}
+
+/** 审核投稿入参 */
+export interface ReviewSubmissionPayload {
+  action: 'approve' | 'reject';
+  note?: string;
+}
