@@ -9,6 +9,9 @@
 /// （「验证码错误或已过期」）。调用方需先 [fetchCaptcha] 拿图。
 library;
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -138,6 +141,23 @@ class AuthApi {
     try {
       final response = await _dio.get<dynamic>('/client/auth/me');
       return UserProfile.fromJson(_unwrap(response));
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
+  /// 导出本人全部数据（返回 JSON 文件的 UTF-8 字节，交给系统分享保存）。
+  ///
+  /// `GET /client/auth/me/export` 是 `@RawResponse` 的**裸 JSON 附件**，没有
+  /// `{code,message,data}` 信封，所以这里绝不能走 [_unwrap]。用
+  /// `ResponseType.plain` 让 Dio 不做 JSON 解码，直接拿原始字符串。
+  Future<Uint8List> exportMyData() async {
+    try {
+      final response = await _dio.get<String>(
+        '/client/auth/me/export',
+        options: Options(responseType: ResponseType.plain),
+      );
+      return Uint8List.fromList(utf8.encode(response.data ?? ''));
     } on DioException catch (error) {
       throw _toApiException(error);
     }

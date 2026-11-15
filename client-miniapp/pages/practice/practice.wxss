@@ -364,12 +364,19 @@
   margin-top: 32rpx;
 }
 
-.fav {
+.fav,
+.report {
   padding: 10rpx 24rpx;
   font-size: 24rpx;
   color: var(--ink-2);
   background: #f6f8fb;
   border-radius: 999rpx;
+}
+
+.foot-right {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
 }
 
 .next {

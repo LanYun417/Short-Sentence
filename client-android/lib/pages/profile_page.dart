@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/api_exception.dart';
 import '../api/app_version_api.dart';
 import '../api/auth_api.dart';
 import '../api/models/user.dart';
@@ -16,6 +17,8 @@ import '../api/notice_api.dart';
 import '../api/site_api.dart';
 import '../config/app_config.dart';
 import '../config/image_pick.dart';
+import '../services/export_share.dart';
+import '../services/url_launcher.dart';
 import '../state/auth_controller.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
@@ -39,6 +42,9 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
+  /// 导出中（防连点；导出会拉全量数据，重复发起没有意义）。
+  bool _exporting = false;
+
   @override
   void initState() {
     super.initState();
@@ -136,6 +142,47 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context: context,
       builder: (sheetContext) => _AboutSheet(sheetContext: sheetContext),
     );
+  }
+
+  /// 导出我的数据：裸 JSON → 系统分享（可保存到文件或发送给他人）。
+  Future<void> _exportData() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final bytes = await ref.read(authApiProvider).exportMyData();
+      if (!mounted) return;
+      if (bytes.isEmpty) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('导出数据为空，请稍后重试')));
+        return;
+      }
+      final fileName =
+          'my-data-${DateTime.now().toIso8601String().substring(0, 10)}.json';
+      final ok = await ExportShare.shareJson(bytes, fileName);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok ? '已调起系统分享，可保存为文件或发送给他人' : '未找到可保存文件的应用',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is ApiException ? error.message : '导出失败，请稍后重试';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  /// 打开法务页（隐私政策 / 用户协议），走系统浏览器。
+  Future<void> _openLegal(String path) async {
+    final ok = await UrlLauncher.open(AppConfig.legalUrl(path));
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('无法打开浏览器，请稍后重试')));
+    }
   }
 
   /// 手动「检查更新」：拉最新上架版本，有新版本弹窗，已是最新则提示。
@@ -285,6 +332,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.download_outlined,
+                    label: '导出我的数据',
+                    hint: _exporting ? '导出中…' : 'JSON 文件，可保存或发送',
+                    onTap: _exportData,
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.person_off_outlined,
                     label: '注销账号',
                     hint: '不可逆；需邮箱验证码',
@@ -297,6 +351,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     label: '关于短句',
                     hint: 'v1.0.0',
                     onTap: _showAbout,
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
+                    icon: Icons.description_outlined,
+                    label: '用户协议',
+                    hint: '在浏览器中打开',
+                    onTap: () => _openLegal('/terms'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
+                    icon: Icons.privacy_tip_outlined,
+                    label: '隐私政策',
+                    hint: '在浏览器中打开',
+                    onTap: () => _openLegal('/privacy'),
                   ),
                 ],
               ),

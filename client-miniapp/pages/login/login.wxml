@@ -39,5 +39,10 @@
     </block>
   </view>
 
-  <text class="tip">登录即表示同意《用户协议》与《隐私政策》</text>
+  <view class="tip">
+    <text>登录即表示同意</text>
+    <text class="link" bindtap="onOpenTerms">《用户协议》</text>
+    <text>与</text>
+    <text class="link" bindtap="onOpenPrivacy">《隐私政策》</text>
+  </view>
 </view>

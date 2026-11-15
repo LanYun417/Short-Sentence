@@ -1,0 +1,67 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state anim-fade">
+    <text class="muted">正在计算记忆曲线…</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="state anim-fade">
+    <text class="muted">{{errorText}}</text>
+    <button class="btn btn-primary retry" bindtap="onRetry">重试</button>
+  </view>
+
+  <block wx:elif="{{stats}}">
+    <view class="hero anim-up d1">
+      <text class="hero-label">今日待复习</text>
+      <text class="hero-num">{{stats.dueToday}}</text>
+      <text class="hero-hint">按遗忘曲线排期，及时复习记得更牢</text>
+      <button class="btn btn-primary hero-btn" bindtap="onGoReview">开始复习</button>
+    </view>
+
+    <view class="grid anim-up d2">
+      <view class="cell">
+        <text class="cell-num">{{stats.dueIn7}}</text>
+        <text class="cell-label">7 天内到期</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{stats.dueIn30}}</text>
+        <text class="cell-label">30 天内到期</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{stats.reviewed}}</text>
+        <text class="cell-label">已复习题数</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{stats.graduated}}</text>
+        <text class="cell-label">已毕业题数</text>
+      </view>
+    </view>
+
+    <view class="card anim-up d3">
+      <text class="card-title">未来 30 天复习分布</text>
+      <text class="card-sub">柱高表示该天到期的题目数（相对最高值）</text>
+      <view class="bars">
+        <view wx:for="{{bars}}" wx:key="day" class="bar-col">
+          <view class="bar" style="height: {{item.height}}%"></view>
+        </view>
+      </view>
+      <view class="axis">
+        <text>第 1 天</text>
+        <text>第 15 天</text>
+        <text>第 30 天</text>
+      </view>
+    </view>
+
+    <view class="card anim-up d4">
+      <text class="card-title">理论遗忘曲线</text>
+      <text class="card-sub">不复习时的记忆保持率示意，按时复习可把曲线拉平</text>
+      <view class="curve">
+        <view wx:for="{{curve}}" wx:key="day" class="curve-row">
+          <text class="curve-day">第 {{item.day}} 天</text>
+          <view class="curve-track">
+            <view class="curve-fill" style="width: {{item.percent}}%"></view>
+          </view>
+          <text class="curve-val">{{item.percent}}%</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

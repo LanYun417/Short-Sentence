@@ -198,6 +198,24 @@
   margin-top: 40rpx;
 }
 
+.legal-links {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+}
+
+.legal-link {
+  font-size: 24rpx;
+  color: var(--brand);
+}
+
+.legal-sep {
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
 .foot {
   margin-top: 48rpx;
   text-align: center;

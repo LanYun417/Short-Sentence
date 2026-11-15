@@ -3,7 +3,7 @@
  */
 import type { AnswerMode } from '../utils/storage';
 import { request } from '../utils/request';
-import type { AnswerResult, NextQuestion } from './types';
+import type { AnswerResult, MemoryStats, NextQuestion } from './types';
 
 /** 抽题范围参数（undefined 项会被剔除，避免序列化成 "undefined"）。 */
 export interface NextQuestionParams {
@@ -49,4 +49,30 @@ export function submitAnswer(
 /** 收藏 / 取消收藏（同一入口，幂等）。 */
 export function toggleFavorite(sentenceId: number): Promise<{ favorited: boolean }> {
   return request<{ favorited: boolean }>(`/client/questions/${sentenceId}/favorite`, { method: 'POST' });
+}
+
+/**
+ * 题目反馈类型。与后端 `CreateReportDto` 的 `@IsIn` 一一对应，
+ * **不要自造第五个值**：多一个会被 400 拒掉。
+ */
+export type ReportReason = 'wrong' | 'inappropriate' | 'image' | 'other';
+
+/** 举报/反馈入参。用 type 而非 interface：才有隐式索引签名，能直接传给 request 的 data。 */
+export type ReportSentencePayload = {
+  sentenceId: number;
+  reason: ReportReason;
+  description?: string;
+};
+
+/**
+ * 反馈某句（题目/翻译/配图有问题）。
+ * 注意：这是 `sentence_report`，与 UGC 接龙的举报（`reportChainEntry`）是两套接口。
+ */
+export function reportSentence(payload: ReportSentencePayload): Promise<{ id: number }> {
+  return request<{ id: number }>('/client/report', { method: 'POST', data: payload });
+}
+
+/** 记忆巩固统计：未来 30 天复习分布 + 理论遗忘曲线。 */
+export function fetchMemoryStats(): Promise<MemoryStats> {
+  return request<MemoryStats>('/client/questions/memory-stats');
 }

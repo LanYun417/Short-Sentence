@@ -74,6 +74,29 @@ class ShareBridge(private val activity: Activity) : MethodChannel.MethodCallHand
                     result.error("save_failed", e.message ?: "unknown", null)
                 }
             }
+            // 导出本人数据：JSON 字节写进 cacheDir，经同一个 FileProvider 交给系统分享。
+            // 不落公共目录、不申请存储权限（cache-path 已在 file_paths.xml 开放整个 cacheDir）。
+            "shareFile" -> {
+                val bytes = call.argument<ByteArray>("bytes")
+                val fileName = call.argument<String>("fileName") ?: "short-sentence.json"
+                val mime = call.argument<String>("mimeType") ?: "application/json"
+                if (bytes == null) {
+                    result.error("bad_args", "bytes 缺失", null)
+                    return
+                }
+                try {
+                    val uri = writeCacheFile(bytes, fileName)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = mime
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    activity.startActivity(Intent.createChooser(intent, "导出我的数据"))
+                    result.success(null)
+                } catch (e: Exception) {
+                    result.error("share_failed", e.message ?: "unknown", null)
+                }
+            }
             else -> result.notImplemented()
         }
     }

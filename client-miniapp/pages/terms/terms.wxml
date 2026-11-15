@@ -1,0 +1,21 @@
+<view class="legal">
+  <view class="legal-head anim-up d1">
+    <text class="legal-title">{{title}}</text>
+    <text class="legal-date">更新日期：{{updatedAt}}</text>
+  </view>
+
+  <view wx:for="{{sections}}" wx:key="title" class="legal-section anim-up">
+    <text class="legal-h2">{{item.title}}</text>
+    <text wx:for="{{item.paragraphs}}" wx:for-item="para" wx:key="*this" class="legal-p">{{para}}</text>
+    <view wx:if="{{item.bullets.length > 0}}" class="legal-list">
+      <view wx:for="{{item.bullets}}" wx:for-item="bullet" wx:key="*this" class="legal-li">
+        <text class="legal-dot">·</text>
+        <text class="legal-li-text">{{bullet}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="legal-foot anim-fade">
+    <text>完整版本可在官网查看；如有疑问可通过「反馈」入口联系我们。</text>
+  </view>
+</view>

@@ -4,8 +4,8 @@
  * 状态流转：loadQuestion → answering → onSubmit → flipped → onNext → loadQuestion …
  * 判分完全由后端裁决（normalizeAnswer 不收宽），前端只负责收集答案与展示。
  */
-import { fetchNextQuestion, submitAnswer, toggleFavorite } from '../../services/question';
-import type { NextQuestionParams } from '../../services/question';
+import { fetchNextQuestion, reportSentence, submitAnswer, toggleFavorite } from '../../services/question';
+import type { NextQuestionParams, ReportReason } from '../../services/question';
 import type { AnswerResult, NextQuestion } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { haptic, showError, toast, toastSuccess } from '../../utils/feedback';
@@ -61,6 +61,8 @@ interface PracticeData {
   xpText: string;
   achievementText: string;
   favorited: boolean;
+  /** 反馈提交中（防连点） */
+  reporting: boolean;
   /** 输入框是否聚焦（只驱动描边，不参与判分） */
   inputFocused: boolean;
 }
@@ -86,6 +88,7 @@ interface PracticeCustom {
   onNext(): void;
   onSwitchMode(event: WechatMiniprogram.TouchEvent): void;
   onToggleFavorite(): Promise<void>;
+  onReport(): Promise<void>;
   onBack(): void;
   onRetry(): void;
 }
@@ -108,6 +111,7 @@ Page<PracticeData, PracticeCustom>({
     xpText: '',
     achievementText: '',
     favorited: false,
+    reporting: false,
     inputFocused: false,
   },
 
@@ -305,6 +309,64 @@ Page<PracticeData, PracticeCustom>({
     } catch (error) {
       showError(error);
     }
+  },
+
+  /**
+   * 反馈这道题：先选原因（后端四选一），再可选填补充说明。
+   * 用回调式 API 而非 Promise 化，兼容较低基础库；用户任一步取消都直接结束。
+   */
+  onReport(): Promise<void> {
+    const sentenceId = this.data.result.sentenceId;
+    if (this.data.reporting || sentenceId <= 0) {
+      return Promise.resolve();
+    }
+    const reasons: Array<{ label: string; value: ReportReason }> = [
+      { label: '翻译或英文有误', value: 'wrong' },
+      { label: '配图与句子不符', value: 'image' },
+      { label: '内容不适当', value: 'inappropriate' },
+      { label: '其他问题', value: 'other' },
+    ];
+    return new Promise<void>((resolve) => {
+      wx.showActionSheet({
+        itemList: reasons.map((item) => item.label),
+        success: (picked) => {
+          const reason = reasons[picked.tapIndex]?.value;
+          if (!reason) {
+            resolve();
+            return;
+          }
+          wx.showModal({
+            title: '补充说明（选填）',
+            editable: true,
+            placeholderText: '写下具体问题，最多 500 字',
+            confirmText: '提交',
+            success: (extra) => {
+              if (!extra.confirm) {
+                resolve();
+                return;
+              }
+              const description = (extra.content ?? '').trim().slice(0, 500) || undefined;
+              this.setData({ reporting: true });
+              const finish = (): void => {
+                this.setData({ reporting: false });
+                resolve();
+              };
+              void reportSentence({ sentenceId, reason, description })
+                .then(() => {
+                  toastSuccess('已收到，感谢你的反馈');
+                  finish();
+                })
+                .catch((error: unknown) => {
+                  showError(error);
+                  finish();
+                });
+            },
+            fail: () => resolve(),
+          });
+        },
+        fail: () => resolve(),
+      });
+    });
   },
 
   /** 关闭：有返回栈就回上一页，否则回首页。 */

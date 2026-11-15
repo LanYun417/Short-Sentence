@@ -20,6 +20,8 @@ interface LoginCustom {
   onPasswordInput(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
   onWechatLogin(): Promise<void>;
   onEmailLogin(): Promise<void>;
+  onOpenTerms(): void;
+  onOpenPrivacy(): void;
 }
 
 Page<LoginData, LoginCustom>({
@@ -94,5 +96,14 @@ Page<LoginData, LoginCustom>({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 打开用户协议 / 隐私政策（与「我的」页同一组页面）。 */
+  onOpenTerms() {
+    wx.navigateTo({ url: '/pages/terms/terms' });
+  },
+
+  onOpenPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
 });

@@ -34,6 +34,24 @@ class AppConfig {
   static String get staticBaseUrl =>
       apiBaseUrl.endsWith('/api') ? apiBaseUrl.substring(0, apiBaseUrl.length - 4) : apiBaseUrl;
 
+  /// 法务页（隐私政策 / 用户协议）所在站点基址。
+  ///
+  /// 默认与接口同源：同源部署时后端托管的 Web 直接提供 `/privacy`、`/terms`。
+  /// 前后端分域部署时用 `--dart-define=LEGAL_BASE_URL=https://<站点域名>` 覆盖，
+  /// 否则打开的是 API 域名下的地址（可能并没有前端页面）。
+  static const String _legalBaseOverride = String.fromEnvironment('LEGAL_BASE_URL');
+
+  static String get legalBaseUrl =>
+      _legalBaseOverride.isNotEmpty ? _legalBaseOverride : staticBaseUrl;
+
+  /** 拼出法务页完整地址（自动去掉基址尾部多余的斜杠）。 */
+  static String legalUrl(String path) {
+    final base = legalBaseUrl.endsWith('/')
+        ? legalBaseUrl.substring(0, legalBaseUrl.length - 1)
+        : legalBaseUrl;
+    return '$base$path';
+  }
+
   /// 请求超时。AI 流式接口首包可能较慢，连接超时给宽一些。
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 60);

@@ -25,6 +25,7 @@ const MENUS = [
   { key: 'ipa', label: '音标', icon: '🔤', group: 1 },
   { key: 'wordRoot', label: '词根', icon: '🧩', group: 1 },
   { key: 'coach', label: 'AI 私教', icon: '🎓', group: 1 },
+  { key: 'memory', label: '记忆健康', icon: '🧠', group: 1 },
   { key: 'cards', label: '句签', icon: '✦', group: 2 },
   { key: 'checkin', label: '打卡', icon: '🔥', group: 2 },
   { key: 'weekly', label: '周报', icon: '📈', group: 2 },
@@ -44,6 +45,7 @@ const ROUTES: Record<string, string> = {
   ipa: '/pages/ipa/ipa',
   wordRoot: '/pages/word-root/word-root',
   coach: '/pages/coach/coach',
+  memory: '/pages/memory/memory',
   cards: '/pages/cards/cards',
   checkin: '/pages/checkin/checkin',
   weekly: '/pages/weekly/weekly',
@@ -79,6 +81,8 @@ interface ProfileCustom {
   onExport(): Promise<void>;
   onDelete(): void;
   onLogout(): void;
+  onOpenTerms(): void;
+  onOpenPrivacy(): void;
 }
 
 Page<ProfileData, ProfileCustom>({
@@ -221,5 +225,14 @@ Page<ProfileData, ProfileCustom>({
         }
       },
     });
+  },
+
+  /** 法务页入口：登录页之外也要随时可查（隐私政策承诺的知情权）。 */
+  onOpenTerms() {
+    wx.navigateTo({ url: '/pages/terms/terms' });
+  },
+
+  onOpenPrivacy() {
+    wx.navigateTo({ url: '/pages/privacy/privacy' });
   },
 });

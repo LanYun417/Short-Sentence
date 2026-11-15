@@ -123,7 +123,10 @@
 
         <view class="result-foot">
           <view class="fav" bindtap="onToggleFavorite">{{favorited ? '★ 已收藏' : '☆ 收藏'}}</view>
-          <text class="muted">{{progressText}}</text>
+          <view class="foot-right">
+            <view class="report" bindtap="onReport">{{reporting ? '提交中…' : '反馈'}}</view>
+            <text class="muted">{{progressText}}</text>
+          </view>
         </view>
 
         <button class="btn btn-primary btn-block next" bindtap="onNext">下一题</button>

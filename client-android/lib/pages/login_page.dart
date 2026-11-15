@@ -16,7 +16,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_config.dart';
 import '../config/password_policy.dart';
+import '../services/url_launcher.dart';
 import '../state/auth_controller.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
@@ -441,6 +443,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: <Widget>[
+                              Text(
+                                '登录即表示同意',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: colors.inkFaint,
+                                ),
+                              ),
+                              const _LegalLink(label: '《用户协议》', path: '/terms'),
+                              Text(
+                                '与',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: colors.inkFaint,
+                                ),
+                              ),
+                              const _LegalLink(label: '《隐私政策》', path: '/privacy'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -522,6 +547,31 @@ class _Glow extends StatelessWidget {
           gradient: RadialGradient(
             colors: <Color>[color, color.withValues(alpha: 0)],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 登录页法务链接：走系统浏览器打开站点上的协议页（与「我的」页同一套地址）。
+///
+/// 只用 GestureDetector + Text，不引入 TextButton 的默认内边距，才能和前面的
+/// 说明文字排在同一行而不撑高。
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.path});
+
+  final String label;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => UrlLauncher.open(AppConfig.legalUrl(path)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.5,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );

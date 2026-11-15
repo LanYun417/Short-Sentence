@@ -1,0 +1,167 @@
+.page {
+  padding: 32rpx 28rpx 64rpx;
+}
+
+.state {
+  padding: 120rpx 0;
+  text-align: center;
+}
+
+.retry {
+  margin-top: 32rpx;
+}
+
+.hero {
+  padding: 40rpx 32rpx;
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  border-radius: 32rpx;
+  box-shadow: 0 16rpx 40rpx rgba(14, 165, 233, 0.24);
+}
+
+.hero-label,
+.hero-hint {
+  display: block;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.hero-label {
+  font-size: 26rpx;
+}
+
+.hero-hint {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+}
+
+.hero-num {
+  display: block;
+  margin: 8rpx 0;
+  font-size: 88rpx;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.hero-btn {
+  margin-top: 28rpx;
+  background: #ffffff;
+  color: #0284c7;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.cell {
+  width: calc(50% - 8rpx);
+  padding: 24rpx;
+  background: var(--surface);
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 30rpx rgba(15, 23, 42, 0.05);
+}
+
+.cell-num {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cell-label {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.card {
+  margin-top: 24rpx;
+  padding: 28rpx;
+  background: var(--surface);
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 30rpx rgba(15, 23, 42, 0.05);
+}
+
+.card-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.card-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.bars {
+  display: flex;
+  gap: 4rpx;
+  align-items: flex-end;
+  height: 180rpx;
+  margin-top: 32rpx;
+}
+
+.bar-col {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.bar {
+  width: 100%;
+  min-height: 2rpx;
+  background: linear-gradient(180deg, var(--brand-light), var(--brand));
+  border-radius: 4rpx 4rpx 0 0;
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12rpx;
+  font-size: 20rpx;
+  color: var(--ink-3);
+}
+
+.curve {
+  margin-top: 24rpx;
+}
+
+.curve-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.curve-day,
+.curve-val {
+  width: 110rpx;
+  font-size: 22rpx;
+  color: var(--ink-2);
+}
+
+.curve-val {
+  text-align: right;
+  color: var(--ink-3);
+}
+
+.curve-track {
+  flex: 1;
+  height: 16rpx;
+  overflow: hidden;
+  background: #eef3f9;
+  border-radius: 999rpx;
+}
+
+.curve-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), #6366f1);
+  border-radius: 999rpx;
+}

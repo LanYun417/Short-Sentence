@@ -664,3 +664,23 @@ export interface WeeklyReport {
   prevAnswered: number;
   deltaAnswered: number;
 }
+
+/* ------------------------------ 记忆健康 ------------------------------ */
+
+/** 记忆巩固统计（对应 /client/questions/memory-stats）。 */
+export interface MemoryStats {
+  /** 累计复习过的题目数 */
+  reviewed: number;
+  /** 已达到毕业标准的题目数 */
+  graduated: number;
+  /** 今日待复习 */
+  dueToday: number;
+  /** 7 天内待复习 */
+  dueIn7: number;
+  /** 30 天内待复习 */
+  dueIn30: number;
+  /** 未来 30 天每天的待复习题数 */
+  distribution: number[];
+  /** 理论遗忘曲线（day 0..30，retention 0..1，仅作示意） */
+  retentionCurve: Array<{ day: number; retention: number }>;
+}
