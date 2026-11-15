@@ -17,11 +17,24 @@ const copyFailed = ref(false);
 
 const model = computed(() => buildPosterModel(props.report));
 
-async function render(): Promise<void> {
+/**
+ * 绘制海报。
+ *
+ * UModal 的内容是「打开时才挂载」的：直接打开（open 初始为 true）时
+ * watch 不会触发，onMounted 那一刻 canvas 也还不在树里——
+ * 所以这里带重试，等弹窗内容真正落到 DOM 再画。
+ */
+async function render(attempt = 0): Promise<void> {
   await nextTick();
   const el = canvas.value;
-  const ctx = el?.getContext('2d');
-  if (!el || !ctx) {
+  if (!el) {
+    if (attempt < 5) {
+      window.setTimeout(() => void render(attempt + 1), 80);
+    }
+    return;
+  }
+  const ctx = el.getContext('2d');
+  if (!ctx) {
     return;
   }
   el.width = POSTER_WIDTH;
@@ -31,6 +44,13 @@ async function render(): Promise<void> {
 
 watch(open, (value) => {
   if (value) {
+    void render();
+  }
+});
+
+// 初始即打开（预览页 / 深链）也要画：watch 不监听初始值
+onMounted(() => {
+  if (open.value) {
     void render();
   }
 });
