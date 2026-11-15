@@ -191,6 +191,7 @@ export default defineNuxtConfig({
       '/team',
       '/achievements',
       '/scenes',
+      '/account-delete',
     ],
   },
 
@@ -211,6 +212,7 @@ export default defineNuxtConfig({
       '/team',
       '/achievements',
       '/scenes',
+      '/account-delete',
     ],
     urls: () => [
       { loc: '/', changefreq: 'daily', priority: 1 },

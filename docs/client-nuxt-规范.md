@@ -85,6 +85,15 @@ answering ──提交(确定/回车)──▶ flipped ──下一题(回车/�
 - 401：先尝试一次 refresh，失败清态跳 `/login?redirect=当前路径`；
 - 个人中心字段：头像、昵称、邮箱、出生年月日、性别（male/female/**secret 保密**）、个性签名；头像走后端文件接口上传；
 - 游客态：未登录可浏览首页示例题，**答题/收藏/复习必须登录**（接口层 401 即拦截跳登录）。
+- **注销账号**（`/account-delete`，入口在「个人中心 → 账号安全」）与**数据导出**：
+  - 注销为**不可逆**操作，服务端要求二次身份校验：先 `POST /client/auth/deletion-code`
+    把验证码发到**本人**邮箱，再 `DELETE /client/auth/me` 带 `emailCode`（`reasonType`
+    可选，选不选都能注销）；注销成功后令牌立即失效，前端只需清本地态回登录页。
+  - 导出走 `GET /client/auth/me/export`，它是 `@RawResponse` **裸响应**（不套统一信封），
+    **不能用 `apiFetch`**（它按 `{code,message,data}` 解包）——用 `$fetch` + `responseType: 'blob'`
+    再 `createObjectURL` 触发下载。
+  - 该页是私有页：除 `middleware: ['auth']` 外，必须同时加进 `nuxt.config.ts` 的
+    `robots.disallow` 与 `sitemap.exclude`。
 
 ## 5. SSE 流式（AI 造句 / 词根拆解）
 
@@ -103,7 +112,8 @@ answering ──提交(确定/回车)──▶ flipped ──下一题(回车/�
 
 ```bash
 cd client
-npm run build     # nuxt build（内含类型检查）
+npm run type-check   # nuxt typecheck（必须单独跑：build 只是 nuxt build，不做类型检查）
+npm run build        # nuxt build（产物构建）
 ```
 
 提交前另跑根目录 `format:check` / `lint`（见 `docs/git-提交规范.md` 第 7 节）；路由、交互、SSE 三处必须有可复现的手工验证步骤记录在 PR 描述里。

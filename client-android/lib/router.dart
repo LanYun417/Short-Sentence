@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/achievements_page.dart';
+import 'pages/account_delete_page.dart';
 import 'pages/boss_page.dart';
 import 'pages/submissions_page.dart';
 import 'pages/chain_page.dart';
@@ -53,10 +54,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/', builder: (context, state) => const ShellPage()),
-      GoRoute(path: '/leaderboard', builder: (context, state) => const LeaderboardPage()),
+      GoRoute(
+        path: '/leaderboard',
+        builder: (context, state) => const LeaderboardPage(),
+      ),
       GoRoute(path: '/boss', builder: (context, state) => const BossPage()),
-      GoRoute(path: '/submissions', builder: (context, state) => const SubmissionsPage()),
-      GoRoute(path: '/stages', builder: (context, state) => const StageListPage()),
+      GoRoute(
+        path: '/submissions',
+        builder: (context, state) => const SubmissionsPage(),
+      ),
+      GoRoute(
+        path: '/stages',
+        builder: (context, state) => const StageListPage(),
+      ),
       GoRoute(
         path: '/stages/scene/:id',
         builder: (context, state) =>
@@ -77,8 +87,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
       GoRoute(path: '/team', builder: (context, state) => const TeamPage()),
       GoRoute(path: '/ipa', builder: (context, state) => const IpaPage()),
-      GoRoute(path: '/achievements', builder: (context, state) => const AchievementsPage()),
+      GoRoute(
+        path: '/achievements',
+        builder: (context, state) => const AchievementsPage(),
+      ),
       GoRoute(path: '/scenes', builder: (context, state) => const ScenesPage()),
+      GoRoute(
+        path: '/account-delete',
+        builder: (context, state) => const AccountDeletePage(),
+      ),
     ],
   );
 });

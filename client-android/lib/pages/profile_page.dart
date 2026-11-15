@@ -54,8 +54,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (images.isEmpty || !mounted) {
       return;
     }
-    final error =
-        await ref.read(authControllerProvider.notifier).uploadAvatar(images.first);
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .uploadAvatar(images.first);
     if (!mounted) {
       return;
     }
@@ -75,7 +76,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        icon: Icon(Icons.check_circle_rounded, color: dialogContext.colors.success, size: 34),
+        icon: Icon(
+          Icons.check_circle_rounded,
+          color: dialogContext.colors.success,
+          size: 34,
+        ),
         title: const Text('密码已修改'),
         content: const Text('为了账号安全，请用新密码重新登录。'),
         actions: <Widget>[
@@ -139,19 +144,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final latest = await ref.read(latestAppVersionProvider.future);
       if (!mounted) return;
       if (latest == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('暂无上架版本信息')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('暂无上架版本信息')));
         return;
       }
       if (latest.versionCode > AppConfig.buildVersionCode) {
         await showUpdateDialog(context, latest);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已是最新版本（v${latest.version}）')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('已是最新版本（v${latest.version}）')));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('检查更新失败，请稍后重试')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('检查更新失败，请稍后重试')));
       }
     }
   }
@@ -278,6 +285,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.person_off_outlined,
+                    label: '注销账号',
+                    hint: '不可逆；需邮箱验证码',
+                    danger: true,
+                    onTap: () => context.push('/account-delete'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.info_outline_rounded,
                     label: '关于短句',
                     hint: 'v1.0.0',
@@ -297,7 +312,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Icon(Icons.logout_rounded, size: 18, color: context.colors.danger),
+                    Icon(
+                      Icons.logout_rounded,
+                      size: 18,
+                      color: context.colors.danger,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '退出登录',
@@ -316,9 +335,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           Center(
             child: Text(
               '短句 · 每天一句，慢慢变好',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: context.colors.inkFaint,
-                  ),
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: context.colors.inkFaint),
             ),
           ),
         ],
@@ -361,30 +379,27 @@ class _AboutSheet extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'v1.0.0',
-            style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
-                  color: colors.inkFaint,
-                ),
+            style: Theme.of(sheetContext).textTheme.labelSmall
+                ?.copyWith(color: colors.inkFaint),
           ),
           const SizedBox(height: 14),
           Text(
             '看中文，写英文。每天 20 句，间隔重复帮你记得更久。\n'
             '题目与配图由后台夜间预生成，学习时不再等待。',
             textAlign: TextAlign.center,
-            style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                  color: colors.inkSoft,
-                  height: 1.7,
-                ),
+            style: Theme.of(sheetContext).textTheme.bodySmall
+                ?.copyWith(color: colors.inkSoft, height: 1.7),
           ),
           if (icp.isNotEmpty || policeIcp.isNotEmpty) ...<Widget>[
             const SizedBox(height: 16),
             if (icp.isNotEmpty)
               Text(
                 icp,
-                style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
-                      color: colors.inkFaint,
-                    ),
+                style: Theme.of(sheetContext).textTheme.labelSmall
+                    ?.copyWith(color: colors.inkFaint),
               ),
-            if (icp.isNotEmpty && policeIcp.isNotEmpty) const SizedBox(height: 4),
+            if (icp.isNotEmpty && policeIcp.isNotEmpty)
+              const SizedBox(height: 4),
             if (policeIcp.isNotEmpty)
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -393,9 +408,8 @@ class _AboutSheet extends ConsumerWidget {
                   const SizedBox(width: 4),
                   Text(
                     policeIcp,
-                    style: Theme.of(sheetContext).textTheme.labelSmall?.copyWith(
-                          color: colors.inkFaint,
-                        ),
+                    style: Theme.of(sheetContext).textTheme.labelSmall
+                        ?.copyWith(color: colors.inkFaint),
                   ),
                 ],
               ),
@@ -448,7 +462,11 @@ class _IdentityCard extends StatelessWidget {
             Positioned.fill(
               child: AuroraBackground(
                 gradient: const LinearGradient(
-                  colors: <Color>[Color(0xFF0284C7), Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                  colors: <Color>[
+                    Color(0xFF0284C7),
+                    Color(0xFF4F46E5),
+                    Color(0xFF7C3AED),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -480,24 +498,25 @@ class _IdentityCard extends StatelessWidget {
                             ),
                             alignment: Alignment.center,
                             child:
-                                (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                                    ? ClipOval(
-                                        child: CachedNetworkImage(
-                                          imageUrl: staticUrl(user!.avatarUrl),
-                                          width: 62,
-                                          height: 62,
-                                          fit: BoxFit.cover,
-                                          memCacheWidth: 186,
-                                        ),
-                                      )
-                                    : Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                (user?.avatarUrl != null &&
+                                    user!.avatarUrl!.isNotEmpty)
+                                ? ClipOval(
+                                    child: CachedNetworkImage(
+                                      imageUrl: staticUrl(user!.avatarUrl),
+                                      width: 62,
+                                      height: 62,
+                                      fit: BoxFit.cover,
+                                      memCacheWidth: 186,
+                                    ),
+                                  )
+                                : Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                           ),
                           Positioned(
                             right: 0,
@@ -547,7 +566,9 @@ class _IdentityCard extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: signature == null ? 0.5 : 0.75),
+                              color: Colors.white.withValues(
+                                alpha: signature == null ? 0.5 : 0.75,
+                              ),
                               fontSize: 12,
                               height: 1.45,
                             ),
@@ -650,13 +671,19 @@ class _StatsRow extends StatelessWidget {
           _divider(colors),
           _Stat(label: '连续打卡', value: streak, unit: '天', color: colors.gold),
           _divider(colors),
-          _Stat(label: '累计经验', value: xp, unit: 'XP', color: const Color(0xFF8B5CF6)),
+          _Stat(
+            label: '累计经验',
+            value: xp,
+            unit: 'XP',
+            color: const Color(0xFF8B5CF6),
+          ),
         ],
       ),
     );
   }
 
-  Widget _divider(AppColors colors) => Container(width: 1, height: 30, color: colors.line);
+  Widget _divider(AppColors colors) =>
+      Container(width: 1, height: 30, color: colors.line);
 }
 
 class _Stat extends StatelessWidget {
@@ -701,10 +728,7 @@ class _Stat extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: colors.inkSoft),
-          ),
+          Text(label, style: TextStyle(fontSize: 11, color: colors.inkSoft)),
         ],
       ),
     );
@@ -720,6 +744,7 @@ class _MenuRow extends StatelessWidget {
     required this.hint,
     required this.onTap,
     this.badgeCount = 0,
+    this.danger = false,
   });
 
   final IconData icon;
@@ -729,6 +754,9 @@ class _MenuRow extends StatelessWidget {
 
   /// 右侧未读红点数值（0 = 不显示）。
   final int badgeCount;
+
+  /// 危险操作（注销等）：图标与标题走 danger 色，和普通条目区分开。
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -744,10 +772,16 @@ class _MenuRow extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: colors.brand.withValues(alpha: 0.09),
+                color: (danger ? colors.danger : colors.brand).withValues(
+                  alpha: 0.09,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 18, color: colors.brand),
+              child: Icon(
+                icon,
+                size: 18,
+                color: danger ? colors.danger : colors.brand,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -756,7 +790,10 @@ class _MenuRow extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     label,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 14.5),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontSize: 14.5,
+                      color: danger ? colors.danger : null,
+                    ),
                   ),
                   const SizedBox(height: 1),
                   Text(
@@ -801,7 +838,10 @@ class _MenuDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 64),
-      child: Divider(color: context.colors.line.withValues(alpha: 0.7), height: 1),
+      child: Divider(
+        color: context.colors.line.withValues(alpha: 0.7),
+        height: 1,
+      ),
     );
   }
 }

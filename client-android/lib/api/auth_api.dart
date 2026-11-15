@@ -91,13 +91,17 @@ class AuthApi {
     return _postAuth('/client/auth/register', <String, dynamic>{
       'email': email.trim(),
       'password': password,
-      if (nickname != null && nickname.trim().isNotEmpty) 'nickname': nickname.trim(),
+      if (nickname != null && nickname.trim().isNotEmpty)
+        'nickname': nickname.trim(),
       'emailCode': emailCode.trim(),
     });
   }
 
   /// 发送邮箱验证码（注册 purpose=register / 改密 purpose=reset；同邮箱 60 秒一封）。
-  Future<void> sendEmailCode({required String email, required String purpose}) async {
+  Future<void> sendEmailCode({
+    required String email,
+    required String purpose,
+  }) async {
     try {
       await _dio.post<dynamic>(
         '/client/auth/email-code',
@@ -187,6 +191,41 @@ class AuthApi {
     }
   }
 
+  /// 发送注销验证码（服务端只发给**本人**邮箱，与公开的 email-code 分开）。
+  Future<void> sendDeletionCode() async {
+    try {
+      await _dio.post<dynamic>('/client/auth/deletion-code');
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
+  /// 注销账号（不可逆）。
+  ///
+  /// 后端要求**二次身份校验**：邮箱账号传 [emailCode]；微信建号的账号传 wechatCode。
+  /// Android 端的用户都是邮箱注册（微信账号只能在微信里登录），所以这里只走验证码。
+  /// 原因可选——不选也能注销，不能拿问卷卡住用户的注销权利。
+  Future<void> deleteAccount({
+    required String emailCode,
+    String? reasonType,
+    String? reasonDetail,
+  }) async {
+    try {
+      await _dio.delete<dynamic>(
+        '/client/auth/me',
+        data: <String, dynamic>{
+          'emailCode': emailCode.trim(),
+          if (reasonType != null && reasonType.isNotEmpty)
+            'reasonType': reasonType,
+          if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+            'reasonDetail': reasonDetail.trim(),
+        },
+      );
+    } on DioException catch (error) {
+      throw _toApiException(error);
+    }
+  }
+
   /// 上传头像（multipart 字段 `file`）。
   ///
   /// 返回更新后的完整资料（含新的 avatarUrl）；调用方据此回写本地缓存。
@@ -199,7 +238,10 @@ class AuthApi {
           contentType: DioMediaType.parse(image.mimeType),
         ),
       });
-      final response = await _dio.post<dynamic>('/client/auth/avatar', data: form);
+      final response = await _dio.post<dynamic>(
+        '/client/auth/avatar',
+        data: form,
+      );
       return UserProfile.fromJson(_unwrap(response));
     } on DioException catch (error) {
       throw _toApiException(error);

@@ -6,7 +6,7 @@
  * 两个表单收进 Tabs 减少堆卡感；移动端单列，桌面端 max-w-2xl 居中。
  */
 import { useAuthStore } from '~/stores/auth';
-import { apiFetch } from '~/composables/useApi';
+import { apiFetch, getToken } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
 import { PASSWORD_HINT } from '~/utils/password';
 import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
@@ -32,6 +32,9 @@ const saveMessage = ref('');
 const oldPassword = ref('');
 const newPassword = ref('');
 const passwordMessage = ref('');
+/** 数据导出：进行中标记 + 结果提示（下载目录由浏览器决定，只提示「已开始下载」） */
+const exporting = ref(false);
+const exportMessage = ref('');
 /** 改密邮箱验证码（发到账号邮箱；5 分钟有效、一次性） */
 const {
   code: passwordEmailCode,
@@ -359,6 +362,38 @@ async function onChangePassword(): Promise<void> {
     passwordMessage.value = '密码已修改，请重新登录';
   } catch (error) {
     passwordMessage.value = error instanceof Error ? error.message : '修改失败';
+  }
+}
+
+/**
+ * 导出我的数据。
+ *
+ * 走后端 `@RawResponse` 的裸响应（不套统一信封），所以不能走 apiFetch——
+ * 它按 `{code,message,data}` 解包。这里直接用 `$fetch` 取 Blob 再触发下载。
+ */
+async function onExportData(): Promise<void> {
+  if (exporting.value) {
+    return;
+  }
+  exporting.value = true;
+  exportMessage.value = '';
+  try {
+    const config = useRuntimeConfig();
+    const blob = await $fetch<Blob>(`${config.public.apiBaseUrl}/client/auth/me/export`, {
+      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    exportMessage.value = '已开始下载';
+  } catch (error) {
+    exportMessage.value = error instanceof Error ? error.message : '导出失败，请稍后重试';
+  } finally {
+    exporting.value = false;
   }
 }
 </script>
@@ -704,6 +739,24 @@ async function onChangePassword(): Promise<void> {
               </UButton>
               <span v-if="passwordMessage" class="text-sm text-slate-400">{{ passwordMessage }}</span>
             </div>
+
+            <!-- 账号数据：导出 / 注销。注销不可逆，单独一页并要求邮箱验证码 -->
+            <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <UButton
+                color="neutral"
+                variant="outline"
+                icon="i-lucide-download"
+                :loading="exporting"
+                @click="onExportData"
+              >
+                导出我的数据
+              </UButton>
+              <UButton color="error" variant="outline" icon="i-lucide-user-x" to="/account-delete"> 注销账号 </UButton>
+              <span v-if="exportMessage" class="text-sm text-slate-400">{{ exportMessage }}</span>
+            </div>
+            <p class="mt-2 text-xs leading-relaxed text-slate-400">
+              导出为 JSON 文件（资料、打卡、成就、学习记录与收藏）；注销后数据不可恢复。
+            </p>
           </div>
         </template>
 
