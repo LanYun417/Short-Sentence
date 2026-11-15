@@ -38,6 +38,9 @@ const shareText = computed(() => {
   return `${parts.join('，')}。`;
 });
 
+/** 海报弹窗开关（海报内容由 useWeeklyPoster 手绘，零依赖）。 */
+const posterOpen = ref(false);
+
 const copied = ref(false);
 async function copyShare(): Promise<void> {
   try {
@@ -65,16 +68,20 @@ async function copyShare(): Promise<void> {
             <p class="text-xs text-slate-400">周一 00:00 至今</p>
           </div>
         </div>
-        <UButton
-          v-if="!isEmpty"
-          size="xs"
-          color="neutral"
-          variant="soft"
-          :icon="copied ? 'i-lucide-check' : 'i-lucide-share-2'"
-          @click="copyShare"
-        >
-          {{ copied ? '已复制' : '分享' }}
-        </UButton>
+        <div v-if="!isEmpty" class="flex items-center gap-1.5">
+          <UButton size="xs" color="neutral" variant="soft" icon="i-lucide-image" @click="posterOpen = true">
+            海报
+          </UButton>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="soft"
+            :icon="copied ? 'i-lucide-check' : 'i-lucide-share-2'"
+            @click="copyShare"
+          >
+            {{ copied ? '已复制' : '分享' }}
+          </UButton>
+        </div>
       </div>
     </template>
 
@@ -146,4 +153,6 @@ async function copyShare(): Promise<void> {
       </div>
     </template>
   </UCard>
+
+  <WeeklyPosterModal v-if="data" v-model:open="posterOpen" :report="data" />
 </template>
