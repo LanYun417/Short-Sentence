@@ -1,1 +1,2 @@
 npm run guard:deps
+npm run guard:migrations

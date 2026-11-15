@@ -19,6 +19,7 @@
     "guard:locale": "node scripts/check-locale-keys.mjs",
     "guard:scrollbar": "node scripts/check-native-scrollbar.mjs",
     "guard:components": "node scripts/check-wrapped-components.mjs",
+    "guard:migrations": "npm --prefix api run prisma:migrations:check",
     "db:backup": "node scripts/db-backup.mjs",
     "db:drill": "node scripts/db-restore.mjs",
     "commit": "cz",

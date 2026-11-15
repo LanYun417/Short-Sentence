@@ -28,6 +28,7 @@
     "prisma:comments": "tsx scripts/prisma-comments.ts",
     "prisma:comments:check": "tsx scripts/prisma-comments.ts --check",
     "prisma:diff:check": "prisma migrate diff --from-config-datasource --to-schema prisma/schema --exit-code",
+    "prisma:migrations:check": "node scripts/check-migrations.mjs",
     "prisma:studio": "prisma studio",
     "docs:gen": "node scripts/gen-api-docs.mjs",
     "seed": "tsx prisma/seed.ts",
