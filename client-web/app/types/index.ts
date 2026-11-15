@@ -79,6 +79,31 @@ export interface CategoryBank {
 }
 
 /** 提交答案结果（含正确答案）。 */
+/** 每日 Boss（/client/questions/boss）：当天固定一道挑战题。 */
+export interface BossToday {
+  /** 东八区日期（YYYY-MM-DD） */
+  date: string;
+  /** 今天是否已通关 */
+  cleared: boolean;
+  /** 通关额外经验 */
+  bonusXp: number;
+  /** 题目（不含英文原句，防偷看）；池子为空为 null */
+  question: {
+    sentenceId: number;
+    translationZh: string;
+    ipa: string | null;
+    imageUrl: string | null;
+    difficulty: number;
+    categoryName: string | null;
+  } | null;
+}
+
+/** Boss 作答结果：普通作答结果 + 通关信息。 */
+export interface BossAnswerResult extends AnswerResult {
+  bossCleared: boolean;
+  bossBonus: number;
+}
+
 export interface AnswerResult {
   sentenceId: number;
   isCorrect: boolean;
