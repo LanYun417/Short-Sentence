@@ -12,6 +12,11 @@
   业务代码不依赖任何 npm 包；图标用 sharp 预渲染成 PNG（`assets/tabbar/`），不在运行时生成。
 - TypeScript 由微信开发者工具内置的 `useCompilerPlugins: ["typescript"]` 转译；
   类型检查在仓库侧单独跑 `npm run type-check`（`tsc --noEmit`），**不要依赖开发者工具报类型错**。
+- `tsconfig.json` 用 `module` + `moduleResolution` = **`Node16`/`Node16`** 这一对：
+  `moduleResolution: "node"`（即 node10）自 TS 5.x 起弃用、7.0 移除，会在编辑器里持续报错。
+  本包没有 `"type": "module"`，.ts 按 CommonJS 解析，相对导入仍可省略扩展名；
+  开发者工具实际仍把 TS 编成 CommonJS 产物（模拟器已验证可运行）。
+  不要改成 `bundler`（与 `module: CommonJS` 不兼容），也不要图省事用 `ignoreDeprecations` 压警告。
 
 ## 二、目录结构
 

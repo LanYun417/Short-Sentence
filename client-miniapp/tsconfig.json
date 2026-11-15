@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    // 小程序运行时不支持 ESM：源码里虽然有 import/export 语法，但必须编译成 CommonJS。
+    // module 与 moduleResolution 用 Node16 这一对现代取值（不再用已弃用的 "node"/node10）：
+    // 本包没有 "type": "module"，.ts 按 CJS 解析，相对导入仍可省略扩展名。
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "lib": ["ES2020"],
     "types": ["miniprogram-api-typings"],
     "strict": true,
