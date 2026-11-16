@@ -39,6 +39,8 @@ model Achievement {
   description String @db.VarChar(200)
   /// 图标（lucide 图标名，前端直接拼 i-lucide-*）
   icon        String @db.VarChar(100)
+  /// AI 卡通大图 URL（详情大图优先显示；空值回落 lucide icon）。约定 /static/achievements/<code>.png
+  artUrl      String? @map("art_url") @db.VarChar(500)
   /// 分组：persist 坚持 / behavior 行为 / luck 运气
   category    String @db.VarChar(20)
   /// 解锁奖励经验值

@@ -463,7 +463,7 @@ export type $ClientXpLogPayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     amount: number
     /**
-     * 备注（仅 manual 事件：后台补偿原因；其余事件为空串）
+     * 备注（事件中文说明，如「首次答对」「成就达成：初出茅庐」；manual 事件为后台填写的补偿原因）
      */
     remark: string
     /**

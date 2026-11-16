@@ -4234,6 +4234,7 @@ export const AchievementScalarFieldEnum = {
   name: 'name',
   description: 'description',
   icon: 'icon',
+  artUrl: 'artUrl',
   category: 'category',
   rewardXp: 'rewardXp',
   sort: 'sort'
@@ -5001,6 +5002,7 @@ export const AchievementOrderByRelevanceFieldEnum = {
   name: 'name',
   description: 'description',
   icon: 'icon',
+  artUrl: 'artUrl',
   category: 'category'
 } as const
 

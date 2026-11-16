@@ -2004,6 +2004,8 @@ export const ACHIEVEMENT_SEEDS: Array<{
   name: string;
   description: string;
   icon: string;
+  /** AI 卡通大图 URL（约定 /static/achievements/<code>.png）；仅高光成就填，其余留空回落 lucide */
+  artUrl?: string;
   category: string;
   rewardXp: number;
   sort: number;
@@ -2013,6 +2015,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '初次落笔',
     description: '完成第一次作答',
     icon: 'footprints',
+    artUrl: '/static/achievements/first_step.png',
     category: 'behavior',
     rewardXp: 10,
     sort: 1,
@@ -2033,6 +2036,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     // 原来是 'fire'——lucide 里没有这个名字（只有 flame / flame-kindling），
     // 客户端拼 `i-lucide-fire` 拿不到图标，勋章墙上这一枚是空白（2026-10-26 修）。
     icon: 'flame-kindling',
+    artUrl: '/static/achievements/streak_7.png',
     category: 'persist',
     rewardXp: 50,
     sort: 3,
@@ -2042,6 +2046,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '月满',
     description: '连续打卡 30 天',
     icon: 'trophy',
+    artUrl: '/static/achievements/streak_30.png',
     category: 'persist',
     rewardXp: 200,
     sort: 4,
@@ -2087,6 +2092,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '环游',
     description: '解锁全部场景',
     icon: 'globe',
+    artUrl: '/static/achievements/explorer_all.png',
     category: 'behavior',
     rewardXp: 150,
     sort: 9,
@@ -2124,6 +2130,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '炉火纯青',
     description: '累计答对 500 题',
     icon: 'medal',
+    artUrl: '/static/achievements/correct_500.png',
     category: 'behavior',
     rewardXp: 200,
     sort: 13,
@@ -2133,6 +2140,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '藏句成癖',
     description: '收藏 50 句',
     icon: 'gem',
+    artUrl: '/static/achievements/favorite_50.png',
     category: 'behavior',
     rewardXp: 60,
     sort: 14,
@@ -2260,6 +2268,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '榜首加冕',
     description: '登顶任一排行榜第 1 名',
     icon: 'crown',
+    artUrl: '/static/achievements/rank_first.png',
     category: 'persist',
     rewardXp: 200,
     sort: 28,
@@ -2305,6 +2314,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
     name: '全境通关',
     description: '通关全部情景关卡',
     icon: 'route',
+    artUrl: '/static/achievements/stage_all.png',
     category: 'persist',
     rewardXp: 300,
     sort: 33,
@@ -2325,6 +2335,15 @@ async function seedAchievements(prisma: PrismaService): Promise<void> {
         rewardXp: seed.rewardXp,
         sort: seed.sort,
       },
+    });
+  }
+  // 高光成就的默认大图 URL 只补空值：upsert 的 update 刻意不含 artUrl，
+  // 这样后台手动填过的自定义 URL 不会被种子覆盖。
+  for (const seed of ACHIEVEMENT_SEEDS) {
+    if (!seed.artUrl) continue;
+    await prisma.achievement.updateMany({
+      where: { code: seed.code, artUrl: null },
+      data: { artUrl: seed.artUrl },
     });
   }
   logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个`);

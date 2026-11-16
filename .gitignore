@@ -54,6 +54,10 @@ pnpm-debug.log*
 # Uploads (keep directory, ignore content)
 api/uploads/*
 !api/uploads/.gitkeep
+# 成就 AI 大图目录：保留占位（图片本身仍被上面的规则忽略），保证同源部署时目录存在
+!api/uploads/achievements/
+api/uploads/achievements/*
+!api/uploads/achievements/.gitkeep
 
 # 后端运行时产物：图片处理缓存（缩略图等）与前端构建产物映射目录（同源部署时由后端托管）
 api/cache/

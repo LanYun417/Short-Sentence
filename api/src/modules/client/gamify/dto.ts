@@ -32,6 +32,12 @@ export class UpdateAchievementDto {
   @MaxLength(100, { message: '图标名最长 100 字符' })
   icon?: string;
 
+  /** AI 卡通大图 URL（详情大图优先显示；空字符串 = 清空并回落 lucide icon） */
+  @IsOptional()
+  @IsString({ message: '大图 URL 必须是字符串' })
+  @MaxLength(500, { message: '大图 URL 最长 500 字符' })
+  artUrl?: string;
+
   /** 分组：persist 坚持 / behavior 行为 / luck 运气 */
   @IsOptional()
   @IsIn(ACHIEVEMENT_CATEGORIES, { message: '分组不合法' })

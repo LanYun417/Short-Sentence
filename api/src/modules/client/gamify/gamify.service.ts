@@ -134,6 +134,8 @@ export interface AchievementView {
   description: string;
   /** lucide 图标名（前端拼 i-lucide-*） */
   icon: string;
+  /** AI 卡通大图 URL（详情大图优先显示；空值回落 lucide icon） */
+  artUrl: string | null;
   /** 分组：persist 坚持 / behavior 行为 / luck 运气 */
   category: string;
   rewardXp: number;
@@ -194,6 +196,8 @@ export interface AchievementAdminItem {
   name: string;
   description: string;
   icon: string;
+  /** AI 卡通大图 URL（空值回落 lucide icon） */
+  artUrl: string | null;
   category: string;
   rewardXp: number;
   sort: number;
@@ -547,6 +551,7 @@ export class GamifyService {
         name: item.name,
         description: item.description,
         icon: item.icon,
+        artUrl: item.artUrl,
         category: item.category,
         rewardXp: item.rewardXp,
         unlocked: unlockedMap.has(item.code),
@@ -662,6 +667,7 @@ export class GamifyService {
       name: a.name,
       description: a.description,
       icon: a.icon,
+      artUrl: a.artUrl,
       category: a.category,
       rewardXp: a.rewardXp,
       sort: a.sort,
@@ -682,6 +688,7 @@ export class GamifyService {
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.icon !== undefined) data.icon = dto.icon;
+    if (dto.artUrl !== undefined) data.artUrl = dto.artUrl || null;
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.rewardXp !== undefined) data.rewardXp = dto.rewardXp;
     if (dto.sort !== undefined) data.sort = dto.sort;

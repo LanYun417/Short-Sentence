@@ -41,6 +41,7 @@ export type AchievementMinAggregateOutputType = {
   name: string | null
   description: string | null
   icon: string | null
+  artUrl: string | null
   category: string | null
   rewardXp: number | null
   sort: number | null
@@ -51,6 +52,7 @@ export type AchievementMaxAggregateOutputType = {
   name: string | null
   description: string | null
   icon: string | null
+  artUrl: string | null
   category: string | null
   rewardXp: number | null
   sort: number | null
@@ -61,6 +63,7 @@ export type AchievementCountAggregateOutputType = {
   name: number
   description: number
   icon: number
+  artUrl: number
   category: number
   rewardXp: number
   sort: number
@@ -83,6 +86,7 @@ export type AchievementMinAggregateInputType = {
   name?: true
   description?: true
   icon?: true
+  artUrl?: true
   category?: true
   rewardXp?: true
   sort?: true
@@ -93,6 +97,7 @@ export type AchievementMaxAggregateInputType = {
   name?: true
   description?: true
   icon?: true
+  artUrl?: true
   category?: true
   rewardXp?: true
   sort?: true
@@ -103,6 +108,7 @@ export type AchievementCountAggregateInputType = {
   name?: true
   description?: true
   icon?: true
+  artUrl?: true
   category?: true
   rewardXp?: true
   sort?: true
@@ -200,6 +206,7 @@ export type AchievementGroupByOutputType = {
   name: string
   description: string
   icon: string
+  artUrl: string | null
   category: string
   rewardXp: number
   sort: number
@@ -233,6 +240,7 @@ export type AchievementWhereInput = {
   name?: Prisma.StringFilter<"Achievement"> | string
   description?: Prisma.StringFilter<"Achievement"> | string
   icon?: Prisma.StringFilter<"Achievement"> | string
+  artUrl?: Prisma.StringNullableFilter<"Achievement"> | string | null
   category?: Prisma.StringFilter<"Achievement"> | string
   rewardXp?: Prisma.IntFilter<"Achievement"> | number
   sort?: Prisma.IntFilter<"Achievement"> | number
@@ -243,6 +251,7 @@ export type AchievementOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  artUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   category?: Prisma.SortOrder
   rewardXp?: Prisma.SortOrder
   sort?: Prisma.SortOrder
@@ -257,6 +266,7 @@ export type AchievementWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Achievement"> | string
   description?: Prisma.StringFilter<"Achievement"> | string
   icon?: Prisma.StringFilter<"Achievement"> | string
+  artUrl?: Prisma.StringNullableFilter<"Achievement"> | string | null
   category?: Prisma.StringFilter<"Achievement"> | string
   rewardXp?: Prisma.IntFilter<"Achievement"> | number
   sort?: Prisma.IntFilter<"Achievement"> | number
@@ -267,6 +277,7 @@ export type AchievementOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  artUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   category?: Prisma.SortOrder
   rewardXp?: Prisma.SortOrder
   sort?: Prisma.SortOrder
@@ -285,6 +296,7 @@ export type AchievementScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Achievement"> | string
   description?: Prisma.StringWithAggregatesFilter<"Achievement"> | string
   icon?: Prisma.StringWithAggregatesFilter<"Achievement"> | string
+  artUrl?: Prisma.StringNullableWithAggregatesFilter<"Achievement"> | string | null
   category?: Prisma.StringWithAggregatesFilter<"Achievement"> | string
   rewardXp?: Prisma.IntWithAggregatesFilter<"Achievement"> | number
   sort?: Prisma.IntWithAggregatesFilter<"Achievement"> | number
@@ -295,6 +307,7 @@ export type AchievementCreateInput = {
   name: string
   description: string
   icon: string
+  artUrl?: string | null
   category: string
   rewardXp?: number
   sort?: number
@@ -305,6 +318,7 @@ export type AchievementUncheckedCreateInput = {
   name: string
   description: string
   icon: string
+  artUrl?: string | null
   category: string
   rewardXp?: number
   sort?: number
@@ -315,6 +329,7 @@ export type AchievementUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.StringFieldUpdateOperationsInput | string
+  artUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.StringFieldUpdateOperationsInput | string
   rewardXp?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
@@ -325,6 +340,7 @@ export type AchievementUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.StringFieldUpdateOperationsInput | string
+  artUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.StringFieldUpdateOperationsInput | string
   rewardXp?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
@@ -335,6 +351,7 @@ export type AchievementCreateManyInput = {
   name: string
   description: string
   icon: string
+  artUrl?: string | null
   category: string
   rewardXp?: number
   sort?: number
@@ -345,6 +362,7 @@ export type AchievementUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.StringFieldUpdateOperationsInput | string
+  artUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.StringFieldUpdateOperationsInput | string
   rewardXp?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
@@ -355,6 +373,7 @@ export type AchievementUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   icon?: Prisma.StringFieldUpdateOperationsInput | string
+  artUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.StringFieldUpdateOperationsInput | string
   rewardXp?: Prisma.IntFieldUpdateOperationsInput | number
   sort?: Prisma.IntFieldUpdateOperationsInput | number
@@ -371,6 +390,7 @@ export type AchievementCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  artUrl?: Prisma.SortOrder
   category?: Prisma.SortOrder
   rewardXp?: Prisma.SortOrder
   sort?: Prisma.SortOrder
@@ -386,6 +406,7 @@ export type AchievementMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  artUrl?: Prisma.SortOrder
   category?: Prisma.SortOrder
   rewardXp?: Prisma.SortOrder
   sort?: Prisma.SortOrder
@@ -396,6 +417,7 @@ export type AchievementMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   description?: Prisma.SortOrder
   icon?: Prisma.SortOrder
+  artUrl?: Prisma.SortOrder
   category?: Prisma.SortOrder
   rewardXp?: Prisma.SortOrder
   sort?: Prisma.SortOrder
@@ -413,6 +435,7 @@ export type AchievementSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   name?: boolean
   description?: boolean
   icon?: boolean
+  artUrl?: boolean
   category?: boolean
   rewardXp?: boolean
   sort?: boolean
@@ -425,12 +448,13 @@ export type AchievementSelectScalar = {
   name?: boolean
   description?: boolean
   icon?: boolean
+  artUrl?: boolean
   category?: boolean
   rewardXp?: boolean
   sort?: boolean
 }
 
-export type AchievementOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"code" | "name" | "description" | "icon" | "category" | "rewardXp" | "sort", ExtArgs["result"]["achievement"]>
+export type AchievementOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"code" | "name" | "description" | "icon" | "artUrl" | "category" | "rewardXp" | "sort", ExtArgs["result"]["achievement"]>
 
 export type $AchievementPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Achievement"
@@ -452,6 +476,10 @@ export type $AchievementPayload<ExtArgs extends runtime.Types.Extensions.Interna
      * 图标（lucide 图标名，前端直接拼 i-lucide-*）
      */
     icon: string
+    /**
+     * AI 卡通大图 URL（详情大图优先显示；空值回落 lucide icon）。约定 /static/achievements/<code>.png
+     */
+    artUrl: string | null
     /**
      * 分组：persist 坚持 / behavior 行为 / luck 运气
      */
@@ -837,6 +865,7 @@ export interface AchievementFieldRefs {
   readonly name: Prisma.FieldRef<"Achievement", 'String'>
   readonly description: Prisma.FieldRef<"Achievement", 'String'>
   readonly icon: Prisma.FieldRef<"Achievement", 'String'>
+  readonly artUrl: Prisma.FieldRef<"Achievement", 'String'>
   readonly category: Prisma.FieldRef<"Achievement", 'String'>
   readonly rewardXp: Prisma.FieldRef<"Achievement", 'Int'>
   readonly sort: Prisma.FieldRef<"Achievement", 'Int'>

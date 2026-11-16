@@ -135,4 +135,15 @@ describe('成就目录', () => {
       expect(item.rewardXp, `${item.code} 奖励经验应为正数`).toBeGreaterThan(0);
     }
   });
+
+  it('AI 卡通大图只给高光成就，且路径遵循 /static/achievements/<code>.png 约定', () => {
+    const withArt = ACHIEVEMENT_SEEDS.filter((item) => item.artUrl);
+    // 分层方案：只有高光成就配大图，其余回落 lucide；数量变化要明确同步出图清单。
+    expect(withArt.length, '高光成就大图数量变化需同步 tmp-achievement-art/出图清单.md').toBe(8);
+    const codes = new Set(ACHIEVEMENT_SEEDS.map((item) => item.code));
+    for (const item of withArt) {
+      expect(item.artUrl, `${item.code} 大图路径约定不符`).toBe(`/static/achievements/${item.code}.png`);
+      expect(codes.has(item.code)).toBe(true);
+    }
+  });
 });
