@@ -63,9 +63,13 @@ describe('排行榜 / 打卡后台 (e2e)', () => {
 
   async function loginClient(): Promise<string> {
     await redis.set(`client:email-code:register:${CLIENT_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
-    const reg = await request(app.getHttpServer())
-      .post(`${API}/client/auth/register`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 榜单打卡账号', emailCode: '123456' });
+    const reg = await request(app.getHttpServer()).post(`${API}/client/auth/register`).send({
+      email: CLIENT_EMAIL,
+      password: CLIENT_PASSWORD,
+      nickname: 'E2E 榜单打卡账号',
+      emailCode: '123456',
+      agreed: true,
+    });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }

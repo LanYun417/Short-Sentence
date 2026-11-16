@@ -71,9 +71,13 @@ describe('客户端公告（后台发布 → 用户端消费）(e2e)', () => {
   async function loginClient(): Promise<string> {
     // 注册必须邮箱验证码：e2e 不配 SES，直接把码写进 Redis（与 EmailCodeService 同 key 格式）
     await redis.set(`client:email-code:register:${CLIENT_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
-    const reg = await request(app.getHttpServer())
-      .post(`${API}/client/auth/register`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 公告账号', emailCode: '123456' });
+    const reg = await request(app.getHttpServer()).post(`${API}/client/auth/register`).send({
+      email: CLIENT_EMAIL,
+      password: CLIENT_PASSWORD,
+      nickname: 'E2E 公告账号',
+      emailCode: '123456',
+      agreed: true,
+    });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }

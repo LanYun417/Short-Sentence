@@ -7,6 +7,10 @@
 
   <view class="panel">
     <block wx:if="{{mode === 'wechat'}}">
+      <view class="agree-row" bindtap="onToggleAgreed">
+        <checkbox checked="{{agreed}}" color="#0ea5e9" />
+        <text class="agree-text">已仔细阅读并同意《用户协议》与《隐私政策》</text>
+      </view>
       <button
         class="btn btn-primary btn-block {{loading ? 'btn-disabled' : ''}}"
         bindtap="onWechatLogin"

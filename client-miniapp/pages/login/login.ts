@@ -11,6 +11,8 @@ interface LoginData {
   email: string;
   password: string;
   loading: boolean;
+  /** 是否已勾选同意用户协议与隐私政策（微信登录=新用户注册，必须勾选） */
+  agreed: boolean;
 }
 
 interface LoginCustom {
@@ -18,6 +20,7 @@ interface LoginCustom {
   onSwitchMode(): void;
   onEmailInput(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
   onPasswordInput(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
+  onToggleAgreed(): void;
   onWechatLogin(): Promise<void>;
   onEmailLogin(): Promise<void>;
 }
@@ -28,6 +31,7 @@ Page<LoginData, LoginCustom>({
     email: '',
     password: '',
     loading: false,
+    agreed: false,
   },
 
   async onShow() {
@@ -58,14 +62,23 @@ Page<LoginData, LoginCustom>({
     this.setData({ password: event.detail.value });
   },
 
-  /** 微信一键登录。 */
+  /** 切换协议勾选。 */
+  onToggleAgreed() {
+    this.setData({ agreed: !this.data.agreed });
+  },
+
+  /** 微信一键登录（新用户自动建号 = 注册，必须先勾选协议）。 */
   async onWechatLogin() {
     if (this.data.loading) {
       return;
     }
+    if (!this.data.agreed) {
+      toast('请先阅读并同意用户协议与隐私政策');
+      return;
+    }
     this.setData({ loading: true });
     try {
-      await loginWithWechat();
+      await loginWithWechat(true);
       this.gotoHome();
     } catch (error) {
       showError(error, '微信登录失败，请重试');

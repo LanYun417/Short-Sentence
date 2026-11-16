@@ -67,6 +67,7 @@ export class ClientAuthController {
       dto.nickname,
       dto.emailCode,
       getClientIp(req),
+      dto.agreed,
     );
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
@@ -98,7 +99,7 @@ export class ClientAuthController {
   @Public()
   @Post('wechat')
   async wechatLogin(@Body() dto: WechatLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.loginWithWechat(dto.code);
+    const tokens = await this.clientAuth.loginWithWechat(dto.code, dto.agreed);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }

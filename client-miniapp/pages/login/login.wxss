@@ -44,6 +44,27 @@
   margin-top: 96rpx;
 }
 
+/* 协议勾选行：checkbox 缩放一点与文字对齐 */
+.agree-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 28rpx;
+  padding: 0 8rpx;
+}
+
+.agree-row checkbox {
+  margin-right: 12rpx;
+  transform: scale(0.82);
+  transform-origin: left center;
+  flex-shrink: 0;
+}
+
+.agree-text {
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 .field {
   height: 104rpx;
   margin-bottom: 24rpx;

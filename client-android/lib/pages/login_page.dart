@@ -11,12 +11,15 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_config.dart';
 import '../config/password_policy.dart';
+import '../services/url_launcher.dart';
 import '../state/auth_controller.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
@@ -49,6 +52,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Timer? _codeTimer;
   /// 验证码相关的行内提示（发送成功 / 失败原因）
   String? _codeMessage;
+  /// 是否已勾选同意用户协议与隐私政策（注册前置）
+  bool _agreed = false;
+  /// 未勾选协议的行内报错（点注册时才出现，不提前红脸）
+  String? _agreedError;
 
   /// 切换登录/注册时收起上一次的错误：换了模式还挂着旧报错会让人以为新表单也有问题。
   bool _showError = true;
@@ -125,6 +132,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    // 注册必须勾选协议（服务端 also 强校验，这里先挡一步给明确行内提示）
+    if (_isRegister && !_agreed) {
+      setState(() => _agreedError = '请先阅读并同意用户协议与隐私政策');
+      return;
+    }
     _submitting = true;
     setState(() => _showError = true);
     try {
@@ -134,6 +146,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _emailController.text,
               _passwordController.text,
               emailCode: _emailCodeController.text.trim(),
+              agreed: _agreed,
             )
           : await auth.login(_emailController.text, _passwordController.text);
       if (ok) {
@@ -155,8 +168,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _showError = false;
       _formKey = GlobalKey<FormState>();
       _codeMessage = null;
+      // 回登录模式时清掉勾选态：下次注册要重新确认
+      if (!_isRegister) {
+        _agreed = false;
+        _agreedError = null;
+      }
     });
     _emailCodeController.clear();
+  }
+
+  /// 法务链接段（《用户协议》/《隐私政策》）：点击走原生桥开系统浏览器，
+  /// 零新增运行时依赖。地址由 apiBaseUrl 去掉 /api 推导（同源部署即站点根）。
+  TextSpan _legalLinkSpan(String text, String url) {
+    return TextSpan(
+      text: text,
+      style: TextStyle(
+        color: context.colors.brand,
+        fontWeight: FontWeight.w600,
+      ),
+      recognizer: TapGestureRecognizer()..onTap = () => UrlLauncher.open(url),
+    );
   }
 
   @override
@@ -385,6 +416,65 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: colors.inkSoft,
+                                        ),
+                                      ),
+                                    ],
+                                    // 协议勾选：注册即同意时点，不勾不给提交
+                                    const SizedBox(height: 14),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        SizedBox(
+                                          width: 26,
+                                          height: 26,
+                                          child: Checkbox(
+                                            value: _agreed,
+                                            onChanged: (value) => setState(() {
+                                              _agreed = value ?? false;
+                                              if (_agreed) {
+                                                _agreedError = null;
+                                              }
+                                            }),
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Expanded(
+                                          child: Text.rich(
+                                            TextSpan(
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                height: 1.5,
+                                                color: colors.inkSoft,
+                                              ),
+                                              children: <InlineSpan>[
+                                                const TextSpan(
+                                                  text: '已仔细阅读并同意',
+                                                ),
+                                                _legalLinkSpan(
+                                                  '《用户协议》',
+                                                  '${AppConfig.staticBaseUrl}/terms',
+                                                ),
+                                                const TextSpan(text: '与'),
+                                                _legalLinkSpan(
+                                                  '《隐私政策》',
+                                                  '${AppConfig.staticBaseUrl}/privacy',
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (_agreedError != null) ...<Widget>[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _agreedError!,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.danger,
                                         ),
                                       ),
                                     ],

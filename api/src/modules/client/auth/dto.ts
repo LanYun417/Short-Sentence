@@ -16,6 +16,8 @@ import {
   MaxLength,
   Min,
   MinLength,
+  IsBoolean,
+  Equals,
 } from 'class-validator';
 import {
   PASSWORD_COMPLEXITY_MESSAGE,
@@ -61,6 +63,15 @@ export class ClientRegisterDto {
   @IsString({ message: '邮箱验证码必须为字符串' })
   @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
   emailCode!: string;
+
+  /**
+   * 已阅读并同意《用户协议》《隐私政策》（**必填且必须为 true**）。
+   * 注册即法律意义上的同意时点，UI 勾选框只是体验——这里做服务端兜底，
+   * 绕过客户端直调注册接口同样要拦。
+   */
+  @IsBoolean({ message: '请先阅读并同意用户协议与隐私政策' })
+  @Equals(true, { message: '请先阅读并同意用户协议与隐私政策' })
+  agreed!: boolean;
 }
 
 /** 登录入参。 */
@@ -159,6 +170,15 @@ export class WechatLoginDto {
   @IsString({ message: 'code 必须为字符串' })
   @IsNotEmpty({ message: 'code 不能为空' })
   code!: string;
+
+  /**
+   * 已阅读并同意《用户协议》《隐私政策》。
+   * 微信一键登录对**新用户会自动建号**（等于注册），此时必须勾选；
+   * 老用户登录不涉及同意时点，可选。由服务端按「是否新建」裁决。
+   */
+  @IsOptional()
+  @IsBoolean({ message: 'agreed 必须是布尔值' })
+  agreed?: boolean;
 }
 
 /**

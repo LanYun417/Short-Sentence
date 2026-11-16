@@ -109,12 +109,13 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  /// 注册（成功后直接登录）。
+  /// 注册（成功后直接登录；agreed 必须为 true——服务端同样强校验）。
   Future<bool> register(
     String email,
     String password, {
     String? nickname,
     required String emailCode,
+    required bool agreed,
   }) async {
     state = state.copyWith(submitting: true, error: null);
     try {
@@ -123,6 +124,7 @@ class AuthController extends Notifier<AuthState> {
         password,
         nickname: nickname,
         emailCode: emailCode,
+        agreed: agreed,
       );
       await _persist(result);
       state = state.copyWith(user: result.user, submitting: false, error: null);

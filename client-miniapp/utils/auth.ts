@@ -47,12 +47,17 @@ export function getWxLoginCode(): Promise<string> {
   });
 }
 
-/** 微信一键登录（新用户由服务端按 openid 自动建号）。 */
-export async function loginWithWechat(): Promise<ClientAuthResult> {
+/**
+ * 微信一键登录（新用户由服务端按 openid 自动建号）。
+ *
+ * @param agreed 是否已勾选同意用户协议与隐私政策。新用户自动建号 = 注册，
+ *   服务端只在此情形下强校验（老用户登录无同意时点）。启动期静默登录不传。
+ */
+export async function loginWithWechat(agreed?: boolean): Promise<ClientAuthResult> {
   const code = await getWxLoginCode();
   const result = await request<ClientAuthResult>('/client/auth/wechat', {
     method: 'POST',
-    data: { code },
+    data: agreed === undefined ? { code } : { code, agreed },
     auth: false,
   });
   persistSession(result);

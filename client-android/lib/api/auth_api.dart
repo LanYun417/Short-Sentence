@@ -81,12 +81,13 @@ class AuthApi {
     });
   }
 
-  /// 注册（成功后直接登录；emailCode 为邮箱验证码，必填）。
+  /// 注册（成功后直接登录；emailCode 为邮箱验证码，必填；agreed 必须为 true）。
   Future<AuthResult> register(
     String email,
     String password, {
     String? nickname,
     required String emailCode,
+    required bool agreed,
   }) async {
     return _postAuth('/client/auth/register', <String, dynamic>{
       'email': email.trim(),
@@ -94,6 +95,7 @@ class AuthApi {
       if (nickname != null && nickname.trim().isNotEmpty)
         'nickname': nickname.trim(),
       'emailCode': emailCode.trim(),
+      'agreed': agreed,
     });
   }
 

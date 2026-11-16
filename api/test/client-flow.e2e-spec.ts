@@ -92,7 +92,7 @@ describe('用户端主链路 (e2e)', () => {
     await redis.set(`client:email-code:register:${E2E_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
     const reg = await request(app.getHttpServer())
       .post(`${API}/client/auth/register`)
-      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, emailCode: '123456' });
+      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, emailCode: '123456', agreed: true });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }
@@ -159,6 +159,27 @@ describe('用户端主链路 (e2e)', () => {
     await app?.close();
   });
 
+  it('注册必须勾选同意协议：缺 agreed / agreed=false 均 400，带 agreed=true 可过', async () => {
+    // 未勾选：DTO 校验直接拒（附带头像/昵称都不放行）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456' })
+      .expect(400);
+    // 显式 false：同样拒
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456', agreed: false })
+      .expect(400);
+    // 勾选后：走到邮箱验证码校验（验证码未写 Redis → 提示验证码错，说明协议关已过）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456', agreed: true })
+      .expect(400)
+      .expect((res) => {
+        expect((res.body as { message: string }).message).toContain('验证码');
+      });
+  });
+
   it('GET /client/auth/me 返回本人资料（令牌可用）', async () => {
     const res = await authGet('/client/auth/me').expect(200);
     expect(res.body).toMatchObject({ code: 200, message: 'success' });
@@ -182,6 +203,8 @@ describe('用户端主链路 (e2e)', () => {
         'todayDone',
         'todayGoal',
         'translationZh',
+        // ttsText：盲听作答模式（listen）恒定下发的朗读文本
+        'ttsText',
         'wordMeanings',
         'words',
       ].sort(),

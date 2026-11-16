@@ -112,13 +112,14 @@ export class ClientAuthUserService {
     return this.captchaService.createCaptcha();
   }
 
-  /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。 */
+  /** 注册（邮箱唯一；昵称缺省取邮箱前缀）。注册时必须已同意用户协议与隐私政策。 */
   async register(
     email: string,
     password: string,
     nickname?: string,
     emailCode?: string,
     clientIp?: string,
+    agreed?: boolean,
   ): Promise<ClientTokenPair> {
     const normalizedEmail = email.trim().toLowerCase();
     // 记录一次注册尝试（按 IP 自然日计数；超过阈值自动封禁该 IP）
@@ -126,6 +127,10 @@ export class ClientAuthUserService {
     // 注册必须先验证邮箱：这是「邮箱归属」的唯一凭证，也挡掉脚本批量注册
     if (!emailCode || !(await this.emailCode.verify(normalizedEmail, 'register', emailCode))) {
       throw AppException.badRequest('邮箱验证码错误或已过期');
+    }
+    // 同意协议是注册的前置条件（DTO 已校验，服务端再兜底一次：service 也可能被内部复用）
+    if (agreed !== true) {
+      throw AppException.badRequest('请先阅读并同意用户协议与隐私政策');
     }
     this.assertPasswordStrength(password, normalizedEmail);
 
@@ -215,10 +220,11 @@ export class ClientAuthUserService {
   /**
    * 微信小程序登录（code → openid → 我们自己的 JWT 双 token）。
    * - 已有 openid 的用户：直接签发令牌（status≠启用仍判禁用）；
-   * - 新用户：用 openid 派生唯一占位邮箱（无密码，纯微信登录），自动建号。
+   * - 新用户：用 openid 派生唯一占位邮箱（无密码，纯微信登录），自动建号——
+   *   自动建号即注册，**必须已勾选同意协议**（老用户登录无同意时点，不要求）。
    * 复用与邮箱登录同一套令牌体系（tokenType='client'），后续所有 /api/client/* 通用。
    */
-  async loginWithWechat(code: string): Promise<ClientTokenPair> {
+  async loginWithWechat(code: string, agreed?: boolean): Promise<ClientTokenPair> {
     const session = await this.wechat.code2Session(code);
     const existing = await this.clientAuth.findByWechatOpenid(session.openid);
     if (existing) {
@@ -234,6 +240,10 @@ export class ClientAuthUserService {
     }
 
     // 新用户：openid 作为唯一凭据派生邮箱占位；口令随机不可登录，仅微信通道可用
+    // 自动建号 = 注册，未勾选同意协议一律拦住（DTO 老用户不校验，只在此裁决）
+    if (agreed !== true) {
+      throw AppException.badRequest('请先阅读并同意用户协议与隐私政策');
+    }
     const email = `${session.openid}${WECHAT_EMAIL_SUFFIX}`;
     const created = await this.prisma.clientUser.create({
       data: {
