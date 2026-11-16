@@ -2024,6 +2024,8 @@ export interface XpLogAdminItem {
   id: number;
   eventKey: string;
   eventType: string;
+  /** 事件类型中文名（未登记类型回落为 eventType 原文） */
+  eventLabel?: string;
   amount: number;
   remark: string;
   userId: number;
@@ -2039,7 +2041,7 @@ export interface GamifyAdminStats {
   logCount: number;
   userCount: number;
   unlockTotal: number;
-  byEventType: Array<{ eventType: string; count: number; sum: number }>;
+  byEventType: Array<{ eventType: string; label: string; count: number; sum: number }>;
 }
 
 /* ------------------------------ 排行榜（后台） ------------------------------ */

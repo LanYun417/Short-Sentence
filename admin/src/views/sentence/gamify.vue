@@ -39,7 +39,9 @@ const CATEGORY_TAG: Record<string, 'warning' | 'primary' | 'success'> = {
 const stats = ref<GamifyAdminStats | null>(null);
 
 /** 事件类型下拉选项（来自统计聚合，永远与库里实际口径一致）。 */
-const eventTypeOptions = computed(() => (stats.value?.byEventType ?? []).map((e) => e.eventType));
+const eventTypeOptions = computed(() =>
+  (stats.value?.byEventType ?? []).map((e) => ({ value: e.eventType, label: e.label || e.eventType })),
+);
 
 async function loadStats(): Promise<void> {
   stats.value = await getGamifyStatsApi();
@@ -191,7 +193,7 @@ async function handleGrant(): Promise<void> {
       <p class="mb-2 text-[13px] font-semibold text-ink">XP 来源分布（按事件类型）</p>
       <div class="flex flex-wrap gap-2">
         <el-tag v-for="e in stats.byEventType" :key="e.eventType" size="small" type="info">
-          {{ e.eventType }}：{{ e.sum }} XP / {{ e.count }} 次
+          {{ e.label || e.eventType }}：{{ e.sum }} XP / {{ e.count }} 次
         </el-tag>
       </div>
     </el-card>
@@ -252,7 +254,7 @@ async function handleGrant(): Promise<void> {
         </el-form-item>
         <el-form-item label="事件类型">
           <el-select v-model="query.eventType" placeholder="全部" clearable style="width: 200px">
-            <el-option v-for="t in eventTypeOptions" :key="t" :label="t" :value="t" />
+            <el-option v-for="t in eventTypeOptions" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -280,7 +282,13 @@ async function handleGrant(): Promise<void> {
       <!-- 固定高度：给足可视行数，数据多时表体内部滚动（不再被上面的卡片挤扁） -->
       <el-table v-loading="loading" :data="list" border row-key="id" height="560">
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="eventType" label="事件类型" width="180" />
+        <el-table-column label="事件类型" width="180">
+          <template #default="{ row }">
+            <el-tooltip :content="row.eventType" placement="top" :show-after="400">
+              <span>{{ row.eventLabel || row.eventType }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
         <el-table-column prop="amount" label="XP" width="70">
           <template #default="{ row }">
             <span class="font-semibold text-amber-600">+{{ row.amount }}</span>

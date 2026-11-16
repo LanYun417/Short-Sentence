@@ -711,7 +711,7 @@ export class TeamService {
 
     const team = await this.prisma.studyTeam.findUnique({
       where: { id: member.teamId },
-      select: { id: true, status: true, streak: true, lastFullDate: true },
+      select: { id: true, name: true, status: true, streak: true, lastFullDate: true },
     });
     if (!team || team.status !== 'active') return;
     const date = this.today();
@@ -738,7 +738,13 @@ export class TeamService {
 
     for (const m of members) {
       const mid = Number(m.userId);
-      await this.gamify.awardXp(mid, 'team_full', `team:full:${team.id}:${date}:${mid}`, FULL_TEAM_XP);
+      await this.gamify.awardXp(
+        mid,
+        'team_full',
+        `team:full:${team.id}:${date}:${mid}`,
+        FULL_TEAM_XP,
+        `小队全员达成：${team.name}（连续 ${streak} 天）`,
+      );
       // 队伍成就（team_full_3 / team_full_7）依赖 teamStreak，结算后统一刷新
       await this.gamify.checkAchievements(mid);
     }

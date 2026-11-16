@@ -162,6 +162,7 @@ export class IpaService {
           'ipa_learned',
           `ipa-learned:${userId}:${phoneme.symbol}`,
           XP_RULES.ipa_learned,
+          `音标学会：${phoneme.symbol}`,
         )
       : false;
     const learnedCount = await this.prisma.ipaLearningRecord.count({
