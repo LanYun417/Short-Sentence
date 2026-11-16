@@ -77,6 +77,24 @@ export interface AnswerResult {
   newAchievements?: Array<{ code: string; name: string }>;
 }
 
+/** 记忆巩固统计（与 Web 记忆卡 / App 同一契约：/client/questions/memory-stats）。 */
+export interface MemoryStats {
+  /** 有答对记录的不同题数（≈已复习题数） */
+  reviewed: number;
+  /** 累计答对达到毕业阈值的题数 */
+  graduated: number;
+  /** 今天到期需复习的题数 */
+  dueToday: number;
+  /** 未来 7 天内到期 */
+  dueIn7: number;
+  /** 未来 30 天内到期 */
+  dueIn30: number;
+  /** 未来 30 天每天到期题数（索引 0 = 今天） */
+  distribution: number[];
+  /** 理论遗忘曲线 R(day)=exp(-day/S)，day 0..30 */
+  retentionCurve: Array<{ day: number; retention: number }>;
+}
+
 /** 今日打卡进度。 */
 export interface TodayCheckin {
   date: string;

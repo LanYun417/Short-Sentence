@@ -47,12 +47,17 @@ export function getWxLoginCode(): Promise<string> {
   });
 }
 
-/** 微信一键登录（新用户由服务端按 openid 自动建号）。 */
-export async function loginWithWechat(): Promise<ClientAuthResult> {
+/**
+ * 微信一键登录（新用户由服务端按 openid 自动建号）。
+ *
+ * @param agreed 是否已勾选同意用户协议与隐私政策。新用户自动建号 = 注册，
+ *   服务端只在此情形下强校验（老用户登录无同意时点）。启动期静默登录不传。
+ */
+export async function loginWithWechat(agreed?: boolean): Promise<ClientAuthResult> {
   const code = await getWxLoginCode();
   const result = await request<ClientAuthResult>('/client/auth/wechat', {
     method: 'POST',
-    data: { code },
+    data: agreed === undefined ? { code } : { code, agreed },
     auth: false,
   });
   persistSession(result);
@@ -68,6 +73,26 @@ export async function loginWithPassword(email: string, password: string): Promis
   });
   persistSession(result);
   return result;
+}
+
+/** 邮箱验证码登录（先发送 purpose=login 的验证码；仅已注册用户，不自动建号）。 */
+export async function loginWithCode(email: string, emailCode: string): Promise<ClientAuthResult> {
+  const result = await request<ClientAuthResult>('/client/auth/code-login', {
+    method: 'POST',
+    data: { email: email.trim().toLowerCase(), emailCode: emailCode.trim() },
+    auth: false,
+  });
+  persistSession(result);
+  return result;
+}
+
+/** 发送邮箱验证码（注册 / 验证码登录 / 改密；同邮箱同用途 60 秒一封）。 */
+export async function sendEmailCode(email: string, purpose: 'register' | 'login' | 'reset'): Promise<void> {
+  await request<null>('/client/auth/email-code', {
+    method: 'POST',
+    data: { email: email.trim().toLowerCase(), purpose },
+    auth: false,
+  });
 }
 
 /** 刷新本人资料并写回缓存。 */

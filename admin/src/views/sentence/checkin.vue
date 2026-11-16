@@ -129,8 +129,8 @@ async function handleOpConfirm(): Promise<void> {
       <StatCard title="启用用户总数" :value="stats?.totalUsers ?? '—'" icon="people" color="#ef4444" />
     </div>
 
-    <!-- 近 30 天热力图 -->
-    <el-card shadow="never" class="table-page__card mb-3">
+    <!-- 近 30 天热力图（固定高度展示块：标 extra，不抢打卡记录表的高度） -->
+    <el-card shadow="never" class="table-page__extra mb-3">
       <p class="mb-3 text-[13px] font-semibold text-ink">近 30 天打卡热力图（颜色 = 当日完成目标人数占比）</p>
       <div class="flex flex-wrap gap-1.5">
         <div

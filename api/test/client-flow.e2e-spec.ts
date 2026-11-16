@@ -92,7 +92,7 @@ describe('用户端主链路 (e2e)', () => {
     await redis.set(`client:email-code:register:${E2E_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
     const reg = await request(app.getHttpServer())
       .post(`${API}/client/auth/register`)
-      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, emailCode: '123456' });
+      .send({ email: E2E_EMAIL, password: E2E_PASSWORD, nickname: E2E_NICKNAME, emailCode: '123456', agreed: true });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }
@@ -159,6 +159,73 @@ describe('用户端主链路 (e2e)', () => {
     await app?.close();
   });
 
+  it('注册必须勾选同意协议：缺 agreed / agreed=false 均 400，带 agreed=true 可过', async () => {
+    // 未勾选：DTO 校验直接拒（附带头像/昵称都不放行）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456' })
+      .expect(400);
+    // 显式 false：同样拒
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456', agreed: false })
+      .expect(400);
+    // 勾选后：走到邮箱验证码校验（验证码未写 Redis → 提示验证码错，说明协议关已过）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email: 'e2e-noagree@example.com', password: 'E2eAgree2026', emailCode: '123456', agreed: true })
+      .expect(400)
+      .expect((res) => {
+        expect((res.body as { message: string }).message).toContain('验证码');
+      });
+  });
+
+  it('邮箱验证码登录：错码 401 / 对码 200 / 未注册 400', async () => {
+    const email = 'e2e-code-login@example.com';
+    // 未注册 + 错码：先被验证码关拦下（401，统一文案防枚举）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '000000' })
+      .expect(401);
+
+    // 注册一个真实账号（协议勾选 path 已被上个用例覆盖）
+    await redis.set(`client:email-code:register:${email}`, '654321', 5 * 60 * 1000);
+    const reg = await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email, password: 'E2eCodeLogin2026', emailCode: '654321', agreed: true });
+    if (reg.status !== 200 && reg.status !== 409) {
+      throw new Error(`注册失败（HTTP ${reg.status}）：${JSON.stringify(reg.body)}`);
+    }
+
+    // 错码：401
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '000000' })
+      .expect(401);
+
+    // 对码：200 且拿到 client 类型令牌
+    await redis.set(`client:email-code:login:${email}`, '123456', 5 * 60 * 1000);
+    const ok = await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '123456' })
+      .expect(200);
+    const data = ok.body.data as { accessToken: string; user: { email: string } };
+    expect(data.user.email).toBe(email);
+    expect(typeof data.accessToken).toBe('string');
+    // 一次性：同一个码再登一次应失败
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '123456' })
+      .expect(401);
+
+    // 未注册 + 对码：400（邮箱已被证明归属，引导去注册；不自动建号）
+    await redis.set('client:email-code:login:nobody-e2e@example.com', '123456', 5 * 60 * 1000);
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email: 'nobody-e2e@example.com', emailCode: '123456' })
+      .expect(400);
+  });
+
   it('GET /client/auth/me 返回本人资料（令牌可用）', async () => {
     const res = await authGet('/client/auth/me').expect(200);
     expect(res.body).toMatchObject({ code: 200, message: 'success' });
@@ -182,6 +249,8 @@ describe('用户端主链路 (e2e)', () => {
         'todayDone',
         'todayGoal',
         'translationZh',
+        // ttsText：盲听作答模式（listen）恒定下发的朗读文本
+        'ttsText',
         'wordMeanings',
         'words',
       ].sort(),

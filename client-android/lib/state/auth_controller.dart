@@ -109,12 +109,27 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  /// 注册（成功后直接登录）。
+  /// 邮箱验证码登录（先发送 purpose=login 的验证码；仅已注册用户）。
+  Future<bool> loginByCode(String email, String emailCode) async {
+    state = state.copyWith(submitting: true, error: null);
+    try {
+      final result = await _api.loginByCode(email, emailCode);
+      await _persist(result);
+      state = state.copyWith(user: result.user, submitting: false, error: null);
+      return true;
+    } catch (error) {
+      state = state.copyWith(submitting: false, error: _message(error));
+      return false;
+    }
+  }
+
+  /// 注册（成功后直接登录；agreed 必须为 true——服务端同样强校验）。
   Future<bool> register(
     String email,
     String password, {
     String? nickname,
     required String emailCode,
+    required bool agreed,
   }) async {
     state = state.copyWith(submitting: true, error: null);
     try {
@@ -123,6 +138,7 @@ class AuthController extends Notifier<AuthState> {
         password,
         nickname: nickname,
         emailCode: emailCode,
+        agreed: agreed,
       );
       await _persist(result);
       state = state.copyWith(user: result.user, submitting: false, error: null);

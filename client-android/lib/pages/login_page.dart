@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,6 +44,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailCodeController = TextEditingController();
 
   bool _isRegister = false;
+  /// 邮箱验证码登录（与密码登录、注册并列的第三种模式）
+  bool _loginByCode = false;
   bool _obscure = true;
   /// 验证码发送中
   bool _sendingCode = false;
@@ -51,6 +54,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Timer? _codeTimer;
   /// 验证码相关的行内提示（发送成功 / 失败原因）
   String? _codeMessage;
+  /// 是否已勾选同意用户协议与隐私政策（注册前置）
+  bool _agreed = false;
+  /// 未勾选协议的行内报错（点注册时才出现，不提前红脸）
+  String? _agreedError;
 
   /// 切换登录/注册时收起上一次的错误：换了模式还挂着旧报错会让人以为新表单也有问题。
   bool _showError = true;
@@ -127,6 +134,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    // 注册必须勾选协议（服务端 also 强校验，这里先挡一步给明确行内提示）
+    if (_isRegister && !_agreed) {
+      setState(() => _agreedError = '请先阅读并同意用户协议与隐私政策');
+      return;
+    }
     _submitting = true;
     setState(() => _showError = true);
     try {
@@ -136,8 +148,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _emailController.text,
               _passwordController.text,
               emailCode: _emailCodeController.text.trim(),
+              agreed: _agreed,
             )
-          : await auth.login(_emailController.text, _passwordController.text);
+          : _loginByCode
+              ? await auth.loginByCode(
+                  _emailController.text,
+                  _emailCodeController.text.trim(),
+                )
+              : await auth.login(_emailController.text, _passwordController.text);
       if (ok) {
         // 登录态变化**不会**自动触发 go_router 的 redirect（它只认路由事件），
         // 所以这里必须显式跳转，否则用户会停在登录页、以为没登上。
@@ -154,11 +172,54 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void _toggleMode() {
     setState(() {
       _isRegister = !_isRegister;
+      _loginByCode = false;
       _showError = false;
       _formKey = GlobalKey<FormState>();
       _codeMessage = null;
+      // 回登录模式时清掉勾选态：下次注册要重新确认
+      if (!_isRegister) {
+        _agreed = false;
+        _agreedError = null;
+      }
     });
     _emailCodeController.clear();
+  }
+
+  /// 切到邮箱验证码登录（退出注册/密码态）。
+  void _toCodeLogin() {
+    setState(() {
+      _isRegister = false;
+      _loginByCode = true;
+      _showError = false;
+      _agreed = false;
+      _agreedError = null;
+    });
+    _emailCodeController.clear();
+    _passwordController.clear();
+  }
+
+  /// 回到密码登录。
+  void _toPasswordLogin() {
+    setState(() {
+      _isRegister = false;
+      _loginByCode = false;
+      _showError = false;
+      _codeMessage = null;
+    });
+    _emailCodeController.clear();
+  }
+
+  /// 法务链接段（《用户协议》/《隐私政策》）：点击走原生桥开系统浏览器，
+  /// 零新增运行时依赖。地址由 apiBaseUrl 去掉 /api 推导（同源部署即站点根）。
+  TextSpan _legalLinkSpan(String text, String url) {
+    return TextSpan(
+      text: text,
+      style: TextStyle(
+        color: context.colors.brand,
+        fontWeight: FontWeight.w600,
+      ),
+      recognizer: TapGestureRecognizer()..onTap = () => UrlLauncher.open(url),
+    );
   }
 
   @override
@@ -221,7 +282,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 Text(
-                                  isRegister ? '创建账号' : '欢迎回来',
+                                  isRegister
+                                      ? '创建账号'
+                                      : _loginByCode
+                                          ? '邮箱验证码登录'
+                                          : '欢迎回来',
                                   style: theme.textTheme.headlineMedium
                                       ?.copyWith(
                                         fontSize: 30,
@@ -233,7 +298,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 Text(
                                   isRegister
                                       ? '一个账号，同步收藏、打卡与复习进度'
-                                      : '登录后继续今天的刷题',
+                                      : _loginByCode
+                                          ? '验证码发到邮箱，5 分钟内有效'
+                                          : '登录后继续今天的刷题',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colors.inkSoft,
                                     fontSize: 12.5,
@@ -281,47 +348,51 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     },
                                   ),
                                   const SizedBox(height: 12),
-                                  TextFormField(
-                                    controller: _passwordController,
-                                    obscureText: _obscure,
-                                    textInputAction: TextInputAction.next,
-                                    autofillHints: const <String>[
-                                      AutofillHints.password,
-                                    ],
-                                    decoration: InputDecoration(
-                                      hintText: '密码',
-                                      prefixIcon: const Icon(
-                                        Icons.lock_outline_rounded,
-                                        size: 20,
-                                      ),
-                                      suffixIcon: IconButton(
-                                        onPressed: () => setState(
-                                          () => _obscure = !_obscure,
+                                  // 密码：仅验证码登录模式隐藏（注册/密码登录都要填密码）
+                                  if (!_loginByCode) ...<Widget>[
+                                    TextFormField(
+                                      controller: _passwordController,
+                                      obscureText: _obscure,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const <String>[
+                                        AutofillHints.password,
+                                      ],
+                                      decoration: InputDecoration(
+                                        hintText: '密码',
+                                        prefixIcon: const Icon(
+                                          Icons.lock_outline_rounded,
+                                          size: 20,
                                         ),
-                                        tooltip: _obscure ? '显示密码' : '隐藏密码',
-                                        icon: Icon(
-                                          _obscure
-                                              ? Icons.visibility_off_outlined
-                                              : Icons.visibility_outlined,
-                                          size: 19,
-                                          color: colors.inkFaint,
+                                        suffixIcon: IconButton(
+                                          onPressed: () => setState(
+                                            () => _obscure = !_obscure,
+                                          ),
+                                          tooltip: _obscure ? '显示密码' : '隐藏密码',
+                                          icon: Icon(
+                                            _obscure
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 19,
+                                            color: colors.inkFaint,
+                                          ),
                                         ),
+                                        helperText: isRegister ? kPasswordHint : null,
                                       ),
-                                      helperText: isRegister ? kPasswordHint : null,
+                                      validator: (value) {
+                                        final text = value ?? '';
+                                        if (text.isEmpty) {
+                                          return '请输入密码';
+                                        }
+                                        if (isRegister && text.length < kPasswordMinLength) {
+                                          return '密码至少 $kPasswordMinLength 位';
+                                        }
+                                        return null;
+                                      },
                                     ),
-                                    validator: (value) {
-                                      final text = value ?? '';
-                                      if (text.isEmpty) {
-                                        return '请输入密码';
-                                      }
-                                      if (isRegister && text.length < kPasswordMinLength) {
-                                        return '密码至少 $kPasswordMinLength 位';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  // 注册才需要邮箱验证码：登录是账号 + 密码
-                                  if (isRegister) ...<Widget>[
+                                    const SizedBox(height: 12),
+                                  ],
+                                  // 注册 / 验证码登录需要邮箱验证码
+                                  if (isRegister || _loginByCode) ...<Widget>[
                                     const SizedBox(height: 12),
                                     Row(
                                       crossAxisAlignment:
@@ -390,6 +461,66 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                         ),
                                       ),
                                     ],
+                                    // 协议勾选：仅注册需要（验证码登录无同意时点）
+                                    if (isRegister) ...<Widget>[
+                                      const SizedBox(height: 14),
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          SizedBox(
+                                            width: 26,
+                                            height: 26,
+                                            child: Checkbox(
+                                              value: _agreed,
+                                              onChanged: (value) => setState(() {
+                                                _agreed = value ?? false;
+                                                if (_agreed) {
+                                                  _agreedError = null;
+                                                }
+                                              }),
+                                              materialTapTargetSize:
+                                                  MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Expanded(
+                                            child: Text.rich(
+                                              TextSpan(
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  height: 1.5,
+                                                  color: colors.inkSoft,
+                                                ),
+                                                children: <InlineSpan>[
+                                                  const TextSpan(
+                                                    text: '已仔细阅读并同意',
+                                                  ),
+                                                  _legalLinkSpan(
+                                                    '《用户协议》',
+                                                    '${AppConfig.staticBaseUrl}/terms',
+                                                  ),
+                                                  const TextSpan(text: '与'),
+                                                  _legalLinkSpan(
+                                                    '《隐私政策》',
+                                                    '${AppConfig.staticBaseUrl}/privacy',
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (_agreedError != null) ...<Widget>[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _agreedError!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: colors.danger,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ],
                                   if (state.error != null &&
                                       _showError) ...<Widget>[
@@ -414,21 +545,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           const SizedBox(height: 10),
                           StaggeredEntrance(
                             index: 3,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: Column(
                               children: <Widget>[
-                                Text(
-                                  isRegister ? '已经有账号了？' : '第一次来？',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colors.inkFaint,
+                                // 登录方式切换：密码 ↔ 邮箱验证码（注册态不显示）
+                                if (!isRegister) ...<Widget>[
+                                  TextButton(
+                                    onPressed: state.submitting
+                                        ? null
+                                        : () => _loginByCode
+                                            ? _toPasswordLogin()
+                                            : _toCodeLogin(),
+                                    child: Text(
+                                      _loginByCode ? '使用密码登录' : '使用邮箱验证码登录',
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
                                   ),
-                                ),
-                                TextButton(
-                                  onPressed: state.submitting
-                                      ? null
-                                      : _toggleMode,
-                                  child: Text(isRegister ? '去登录' : '创建账号'),
+                                  const SizedBox(height: 2),
+                                ],
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Text(
+                                      isRegister ? '已经有账号了？' : '第一次来？',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: colors.inkFaint,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: state.submitting
+                                          ? null
+                                          : _toggleMode,
+                                      child: Text(isRegister ? '去登录' : '创建账号'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

@@ -18,6 +18,7 @@ import { ClientAuthUserService, type ClientUserProfile } from './client-auth.ser
 import { EmailCodeService } from './email-code.service.js';
 import {
   ChangeClientPasswordDto,
+  ClientCodeLoginDto,
   ClientLoginDto,
   ClientRefreshDto,
   ClientRegisterDto,
@@ -67,6 +68,7 @@ export class ClientAuthController {
       dto.nickname,
       dto.emailCode,
       getClientIp(req),
+      dto.agreed,
     );
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '注册成功' };
@@ -77,6 +79,15 @@ export class ClientAuthController {
   @Post('login')
   async login(@Body() dto: ClientLoginDto, @Req() req: Request): Promise<ResponseEnvelope<ClientAuthResult>> {
     const tokens = await this.clientAuth.login(dto.email, dto.password, getClientIp(req));
+    const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
+    return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
+  }
+
+  /** 邮箱验证码登录（先调 `/client/auth/email-code`（purpose=login）发送验证码）。 */
+  @Public()
+  @Post('code-login')
+  async codeLogin(@Body() dto: ClientCodeLoginDto, @Req() req: Request): Promise<ResponseEnvelope<ClientAuthResult>> {
+    const tokens = await this.clientAuth.loginByCode(dto.email, dto.emailCode, getClientIp(req));
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }
@@ -98,7 +109,7 @@ export class ClientAuthController {
   @Public()
   @Post('wechat')
   async wechatLogin(@Body() dto: WechatLoginDto): Promise<ResponseEnvelope<ClientAuthResult>> {
-    const tokens = await this.clientAuth.loginWithWechat(dto.code);
+    const tokens = await this.clientAuth.loginWithWechat(dto.code, dto.agreed);
     const user = await this.clientAuth.getProfile(this.userIdOf(tokens.accessToken));
     return { __raw: true, data: { ...tokens, user }, message: '登录成功' };
   }

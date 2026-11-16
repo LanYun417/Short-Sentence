@@ -43,6 +43,7 @@ final dioProvider = Provider<Dio>((ref) {
 /// 无需鉴权的公开接口（登录 / 注册 / 刷新 / 验证码）。
 const Set<String> _publicPaths = <String>{
   '/client/auth/login',
+  '/client/auth/code-login',
   '/client/auth/register',
   '/client/auth/refresh',
   '/client/auth/captcha',

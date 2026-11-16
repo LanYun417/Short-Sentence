@@ -346,3 +346,114 @@
   padding: 60rpx 0;
   text-align: center;
 }
+
+/* ------------------------------ 记忆巩固 ------------------------------ */
+
+.memory {
+  margin-top: 24rpx;
+}
+
+.mem-stats {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+  text-align: center;
+}
+
+.mem-stat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.mem-num {
+  font-size: 40rpx;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.mem-num-green {
+  color: #059669;
+}
+
+.mem-num-blue {
+  color: #0284c7;
+}
+
+.mem-num-indigo {
+  color: #4f46e5;
+}
+
+.mem-label {
+  font-size: 20rpx;
+  color: var(--ink-3);
+}
+
+.mem-caption {
+  display: block;
+  margin-top: 28rpx;
+  font-size: 22rpx;
+  color: var(--ink-3);
+}
+
+.mem-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4rpx;
+  height: 132rpx;
+  margin-top: 12rpx;
+  padding-bottom: 4rpx;
+  border-bottom: 1rpx solid #eef2f7;
+}
+
+.mem-bar-col {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.mem-bar {
+  width: 100%;
+  min-height: 6rpx;
+  background: linear-gradient(180deg, #38bdf8, #0ea5e9);
+  border-radius: 4rpx 4rpx 2rpx 2rpx;
+  transition: height 0.4s ease;
+}
+
+.mem-bar-empty {
+  background: #e2e8f0;
+}
+
+.mem-retain {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+
+.mem-retain-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.mem-retain-num {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.mem-retain-label {
+  font-size: 20rpx;
+  color: var(--ink-3);
+}
+
+.mem-retain-line {
+  width: 28rpx;
+  height: 2rpx;
+  background: #e2e8f0;
+}

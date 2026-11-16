@@ -73,6 +73,7 @@ export function reportSentence(payload: ReportSentencePayload): Promise<{ id: nu
 }
 
 /** 记忆巩固统计：未来 30 天复习分布 + 理论遗忘曲线。 */
+/** 记忆巩固统计（已复习 / 已毕业 / 到期分布 / 遗忘曲线）。 */
 export function fetchMemoryStats(): Promise<MemoryStats> {
   return request<MemoryStats>('/client/questions/memory-stats');
 }

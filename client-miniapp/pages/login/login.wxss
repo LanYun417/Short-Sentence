@@ -44,6 +44,27 @@
   margin-top: 96rpx;
 }
 
+/* 协议勾选行：checkbox 缩放一点与文字对齐 */
+.agree-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 28rpx;
+  padding: 0 8rpx;
+}
+
+.agree-row checkbox {
+  margin-right: 12rpx;
+  transform: scale(0.82);
+  transform-origin: left center;
+  flex-shrink: 0;
+}
+
+.agree-text {
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 .field {
   height: 104rpx;
   margin-bottom: 24rpx;
@@ -68,6 +89,43 @@
   font-size: 26rpx;
   color: var(--ink-2);
   text-align: center;
+}
+
+/* 登录方式切换（密码 ↔ 验证码）：比主切换键弱一档 */
+.switch-link {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--ink-3);
+}
+
+/* 验证码行：输入框 + 发送按钮同一行 */
+.code-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.field-code {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.code-btn {
+  margin-top: 0;
+  padding: 0 24rpx;
+  height: 104rpx;
+  line-height: 104rpx;
+  font-size: 26rpx;
+  color: #0ea5e9;
+  background: #f0f9ff;
+  border: 2rpx solid #e8eef6;
+  border-radius: 24rpx;
+}
+
+.code-btn[disabled] {
+  color: var(--ink-3);
+  background: #f6f8fb;
 }
 
 .tip {

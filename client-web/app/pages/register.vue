@@ -5,6 +5,7 @@
  */
 import { useAuthStore } from '~/stores/auth';
 import { useEmailCode } from '~/composables/useEmailCode';
+import { secretInputHandlers } from '~/composables/useLogoEyes';
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '~/utils/password';
 
 definePageMeta({ layout: 'auth' });
@@ -29,8 +30,13 @@ const {
 const email = ref('');
 const password = ref('');
 const nickname = ref('');
+/** 是否已勾选同意用户协议与隐私政策（注册前置；不勾不给提交） */
+const agreed = ref(false);
 const errorMessage = ref('');
 const submitting = ref(false);
+
+/** 敏感输入聚焦闭眼（密码框 / 验证码框） */
+const secretFocus = secretInputHandlers();
 
 /** 发送邮箱验证码（失败原因直接展示在表单里）。 */
 async function onSendCode(): Promise<void> {
@@ -50,10 +56,20 @@ async function onSubmit(): Promise<void> {
     errorMessage.value = '请填写邮箱验证码';
     return;
   }
+  if (!agreed.value) {
+    errorMessage.value = '请先阅读并同意用户协议与隐私政策';
+    return;
+  }
   submitting.value = true;
   errorMessage.value = '';
   try {
-    await auth.register(email.value.trim(), password.value, nickname.value.trim() || undefined, emailCode.value.trim());
+    await auth.register(
+      email.value.trim(),
+      password.value,
+      nickname.value.trim() || undefined,
+      emailCode.value.trim(),
+      agreed.value,
+    );
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
     await navigateTo(redirect);
   } catch (error) {
@@ -65,7 +81,7 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <AuthShell title="创建账号">
+  <AuthShell title="创建账号" :show-legal="false">
     <UCard
       :ui="{
         body: 'p-6',
@@ -102,21 +118,23 @@ async function onSubmit(): Promise<void> {
         </UFormField>
 
         <UFormField label="密码" :help="PASSWORD_HINT">
-          <UInput
-            v-model="password"
-            type="password"
-            required
-            :minlength="PASSWORD_MIN_LENGTH"
-            autocomplete="new-password"
-            size="lg"
-            class="w-full"
-            icon="i-lucide-lock"
-            placeholder="设置登录密码"
-          />
+          <div @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
+            <UInput
+              v-model="password"
+              type="password"
+              required
+              :minlength="PASSWORD_MIN_LENGTH"
+              autocomplete="new-password"
+              size="lg"
+              class="w-full"
+              icon="i-lucide-lock"
+              placeholder="设置登录密码"
+            />
+          </div>
         </UFormField>
 
         <UFormField label="邮箱验证码" help="6 位数字，5 分钟内有效；收不到请检查垃圾箱">
-          <div class="flex gap-2">
+          <div class="flex gap-2" @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
             <UInput
               v-model="emailCode"
               type="text"
@@ -143,6 +161,16 @@ async function onSubmit(): Promise<void> {
           </div>
         </UFormField>
 
+        <label class="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <UCheckbox v-model="agreed" class="mt-0.5" />
+          <span>
+            已仔细阅读并同意
+            <ULink to="/terms" class="font-medium text-sky-600 dark:text-sky-300">《用户协议》</ULink>
+            与
+            <ULink to="/privacy" class="font-medium text-sky-600 dark:text-sky-300">《隐私政策》</ULink>
+          </span>
+        </label>
+
         <UAlert v-if="errorMessage" color="error" variant="subtle" :description="errorMessage" />
 
         <UButton
@@ -150,7 +178,7 @@ async function onSubmit(): Promise<void> {
           block
           size="lg"
           :loading="submitting"
-          :disabled="!email || password.length < PASSWORD_MIN_LENGTH || emailCode.length !== 6"
+          :disabled="!email || password.length < PASSWORD_MIN_LENGTH || emailCode.length !== 6 || !agreed"
         >
           {{ submitting ? '注册中…' : '注册并登录' }}
           <template #trailing>

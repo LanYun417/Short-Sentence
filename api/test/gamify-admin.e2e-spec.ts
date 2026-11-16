@@ -65,9 +65,13 @@ describe('成长体系后台 /api/gamify (e2e)', () => {
 
   async function loginClient(): Promise<string> {
     await redis.set(`client:email-code:register:${CLIENT_EMAIL.toLowerCase()}`, '123456', 5 * 60 * 1000);
-    const reg = await request(app.getHttpServer())
-      .post(`${API}/client/auth/register`)
-      .send({ email: CLIENT_EMAIL, password: CLIENT_PASSWORD, nickname: 'E2E 成长后台账号', emailCode: '123456' });
+    const reg = await request(app.getHttpServer()).post(`${API}/client/auth/register`).send({
+      email: CLIENT_EMAIL,
+      password: CLIENT_PASSWORD,
+      nickname: 'E2E 成长后台账号',
+      emailCode: '123456',
+      agreed: true,
+    });
     if (reg.status === 200) {
       return (reg.body.data as { accessToken: string }).accessToken;
     }

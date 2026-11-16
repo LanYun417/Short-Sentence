@@ -17,7 +17,6 @@ import {
   updateAchievementApi,
 } from '@/api/gamify';
 import { useTable } from '@/composables/useTable';
-import { useTablePage } from '@/composables/useTablePage';
 import { formatDateTime } from '@/utils/format';
 import type { AchievementAdminItem, GamifyAdminStats } from '@/types/api';
 import Pagination from '@/components/Pagination/index.vue';
@@ -27,8 +26,6 @@ import StatCard from '@/views/home/components/StatCard.vue';
 import { computed, onMounted, ref } from 'vue';
 
 defineOptions({ name: 'SentenceGamify' });
-
-const { tableHeight } = useTablePage();
 
 const CATEGORY_LABEL: Record<string, string> = { persist: '坚持', behavior: '行为', luck: '运气' };
 const CATEGORY_TAG: Record<string, 'warning' | 'primary' | 'success'> = {
@@ -42,7 +39,9 @@ const CATEGORY_TAG: Record<string, 'warning' | 'primary' | 'success'> = {
 const stats = ref<GamifyAdminStats | null>(null);
 
 /** 事件类型下拉选项（来自统计聚合，永远与库里实际口径一致）。 */
-const eventTypeOptions = computed(() => (stats.value?.byEventType ?? []).map((e) => e.eventType));
+const eventTypeOptions = computed(() =>
+  (stats.value?.byEventType ?? []).map((e) => ({ value: e.eventType, label: e.label || e.eventType })),
+);
 
 async function loadStats(): Promise<void> {
   stats.value = await getGamifyStatsApi();
@@ -174,27 +173,33 @@ async function handleGrant(): Promise<void> {
 </script>
 
 <template>
-  <div class="sentence-gamify-page table-page">
+  <!--
+    多区块页面：统计卡 + 来源分布 + 成就表 + XP 账本。
+    不套 .table-page 固定布局——那套只适合「筛选 + 单表 + 分页」的三段式页面，
+    这里若沿用会让几个卡片争抢剩余高度，账本表被压成一条。
+    改为整页正常滚动，两块表格各自给固定高度、表体内部滚动。
+  -->
+  <div class="sentence-gamify-page">
     <!-- 统计总览 -->
     <div class="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard title="累计发放 XP" :value="stats?.totalXpIssued ?? '—'" icon="award" color="#f59e0b" />
       <StatCard title="今日发放 XP" :value="stats?.todayXp ?? '—'" icon="lightning-charge" color="#ef4444" />
-      <StatCard title="账本条数" :value="stats?.logCount ?? '—'" icon="list-ordered" color="#6366f1" />
+      <StatCard title="账本条数" :value="stats?.logCount ?? '—'" icon="list-ol" color="#6366f1" />
       <StatCard title="成就解锁人次" :value="stats?.unlockTotal ?? '—'" icon="trophy" color="#10b981" />
     </div>
 
     <!-- 按事件类型聚合 -->
-    <el-card v-if="stats?.byEventType?.length" shadow="never" class="table-page__card mb-3">
+    <el-card v-if="stats?.byEventType?.length" shadow="never" class="mb-3">
       <p class="mb-2 text-[13px] font-semibold text-ink">XP 来源分布（按事件类型）</p>
       <div class="flex flex-wrap gap-2">
         <el-tag v-for="e in stats.byEventType" :key="e.eventType" size="small" type="info">
-          {{ e.eventType }}：{{ e.sum }} XP / {{ e.count }} 次
+          {{ e.label || e.eventType }}：{{ e.sum }} XP / {{ e.count }} 次
         </el-tag>
       </div>
     </el-card>
 
     <!-- 成就列表 -->
-    <el-card shadow="never" class="table-page__card mb-3">
+    <el-card shadow="never" class="mb-3">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-y-2">
         <span class="text-[15px] font-semibold text-ink"
           >成就定义（共 {{ achievements.length }} 个，code 为判定键不可改）</span
@@ -236,8 +241,8 @@ async function handleGrant(): Promise<void> {
     </el-card>
 
     <!-- XP 账本 -->
-    <el-card shadow="never" class="table-page__card">
-      <SearchForm class="table-page__filter" @search="search" @reset="reset">
+    <el-card shadow="never">
+      <SearchForm @search="search" @reset="reset">
         <el-form-item label="用户">
           <el-input
             v-model="query.keyword"
@@ -249,7 +254,7 @@ async function handleGrant(): Promise<void> {
         </el-form-item>
         <el-form-item label="事件类型">
           <el-select v-model="query.eventType" placeholder="全部" clearable style="width: 200px">
-            <el-option v-for="t in eventTypeOptions" :key="t" :label="t" :value="t" />
+            <el-option v-for="t in eventTypeOptions" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="日期范围">
@@ -274,35 +279,40 @@ async function handleGrant(): Promise<void> {
         </div>
       </div>
 
-      <div class="table-page__table">
-        <el-table v-loading="loading" :data="list" border row-key="id" :height="tableHeight">
-          <el-table-column prop="id" label="ID" width="70" />
-          <el-table-column prop="eventType" label="事件类型" width="180" />
-          <el-table-column prop="amount" label="XP" width="70">
-            <template #default="{ row }">
-              <span class="font-semibold text-amber-600">+{{ row.amount }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="用户" min-width="190">
-            <template #default="{ row }">
-              <div class="text-sm text-ink">{{ row.nickname || `用户 ${row.userId}` }}</div>
-              <div class="text-xs text-muted">{{ row.email }}</div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.remark || '—' }}</template>
-          </el-table-column>
-          <el-table-column prop="eventKey" label="幂等键" min-width="180" show-overflow-tooltip />
-          <el-table-column label="时间" width="160">
-            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-          </el-table-column>
-        </el-table>
-      </div>
+      <!-- 固定高度：给足可视行数，数据多时表体内部滚动（不再被上面的卡片挤扁） -->
+      <el-table v-loading="loading" :data="list" border row-key="id" height="560">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="事件类型" width="180">
+          <template #default="{ row }">
+            <el-tooltip :content="row.eventType" placement="top" :show-after="400">
+              <span>{{ row.eventLabel || row.eventType }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column prop="amount" label="XP" width="70">
+          <template #default="{ row }">
+            <span class="font-semibold text-amber-600">+{{ row.amount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="用户" min-width="190">
+          <template #default="{ row }">
+            <div class="text-sm text-ink">{{ row.nickname || `用户 ${row.userId}` }}</div>
+            <div class="text-xs text-muted">{{ row.email }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.remark || '—' }}</template>
+        </el-table-column>
+        <el-table-column prop="eventKey" label="幂等键" min-width="180" show-overflow-tooltip />
+        <el-table-column label="时间" width="160">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
+      </el-table>
 
       <Pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
-        class="table-page__pagination"
+        class="mt-3"
         :total="total"
         @size-change="changePageSize"
         @current-change="changePage"

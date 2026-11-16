@@ -8,10 +8,21 @@
  *
  * 页面通过默认插槽填入表单卡片；标题由 `title` 传入，保证两页版式完全一致。
  */
-defineProps<{
-  /** 页面标题（居中显示在品牌下方） */
-  title: string;
-}>();
+withDefaults(
+  defineProps<{
+    /** 页面标题（居中显示在品牌下方） */
+    title: string;
+    /**
+     * 是否渲染页脚法务链接（用户协议 / 隐私政策）。
+     * 注册页表单内已有带链接的协议勾选框，传 false 免同页两行重复链接；
+     * 备案号行不受影响（始终随此块渲染，登录/注册页都可见）。
+     *
+     * 注意：布尔 prop 不传时会被 Vue 布尔转换为 false，必须给显式默认 true。
+     */
+    showLegal?: boolean;
+  }>(),
+  { showLegal: true },
+);
 </script>
 
 <template>
@@ -47,20 +58,15 @@ defineProps<{
         <slot />
       </div>
 
-      <!-- 未登录用户也要能下载 App：入口固定在认证页底部（首页需登录，这里是唯一必经之地） -->
+      <!-- 未登录用户也要能下载 App：入口固定在认证页底部（首页需登录，这里是唯一必经之地）。
+           法务链接统一由 auth 布局的 SiteFooter 在页面底部展示，此处不再重复。 -->
       <div class="anim-in mt-6 text-center" :style="{ animationDelay: '180ms' }">
         <AppDownloadEntry variant="link" />
       </div>
 
-      <!-- 法务链接：登录/注册即视为同意协议，入口必须在认证页可见 -->
-      <div
-        class="anim-in mt-3 flex items-center justify-center gap-3 text-[11px] text-slate-400 dark:text-slate-500"
-        :style="{ animationDelay: '220ms' }"
-      >
-        <NuxtLink to="/terms" class="transition hover:text-sky-600 dark:hover:text-sky-300">用户协议</NuxtLink>
-        <span aria-hidden="true">·</span>
-        <NuxtLink to="/privacy" class="transition hover:text-sky-600 dark:hover:text-sky-300">隐私政策</NuxtLink>
-      </div>
+      <!-- 法务链接 + 备案号：必须贴着「下载 App」在首屏内可见。
+           沉到页面底要滚动才看得到的同意入口不合规（用户反馈），故内联到此处。 -->
+      <SiteFooter class="mt-2" :with-legal="showLegal" />
     </div>
   </div>
 </template>

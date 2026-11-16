@@ -9,6 +9,7 @@ import { useAuthStore } from '~/stores/auth';
 import { apiFetch, getToken } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
 import { PASSWORD_HINT } from '~/utils/password';
+import { secretInputHandlers } from '~/composables/useLogoEyes';
 import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
@@ -335,6 +336,9 @@ const passwordCodeHelp = computed(() => {
   const target = accountEmail.value ? `账号邮箱 ${accountEmail.value}，` : '你的账号邮箱，';
   return `发送到${target}6 位数字，5 分钟内有效（改密需验证邮箱归属）`;
 });
+
+/** 敏感输入聚焦闭眼：账号安全页改密验证码框（顶栏 Logo 同步闭眼）。 */
+const secretFocus = secretInputHandlers();
 
 /** 发验证码到当前账号邮箱（改密必须验证邮箱归属，光有旧密码不够）。 */
 async function onSendPasswordCode(): Promise<void> {
@@ -708,7 +712,7 @@ async function onExportData(): Promise<void> {
             </div>
 
             <UFormField label="邮箱验证码" class="mt-4" :help="passwordCodeHelp">
-              <div class="flex gap-2">
+              <div class="flex gap-2" @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
                 <UInput
                   v-model="passwordEmailCode"
                   type="text"

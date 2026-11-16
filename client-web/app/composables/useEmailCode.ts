@@ -1,8 +1,8 @@
 /**
  * 邮箱验证码（发送 + 60 秒倒计时）。
  *
- * 三处复用：注册（purpose=register）、修改密码（purpose=reset），
- * 登录不再需要验证码。倒计时与「发送中」都放在这里，
+ * 三处复用：注册（purpose=register）、邮箱验证码登录（purpose=login）、
+ * 修改密码（purpose=reset）。倒计时与「发送中」都放在这里，
  * 避免每个页面各写一套 setInterval（还会各自忘记清理）。
  */
 import { apiFetch } from '~/composables/useApi';

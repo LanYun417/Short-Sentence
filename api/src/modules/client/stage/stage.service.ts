@@ -1521,9 +1521,23 @@ export class StageService {
     const noTranslation = !clearing?.translationUsed;
     const bonus = noTranslation ? Math.round(story.rewardXp * NO_TRANSLATION_BONUS_RATIO) : 0;
 
-    const baseAwarded = await this.gamify.awardXp(userId, 'stage_clear', claimKey(userId, storyId), story.rewardXp);
+    const baseAwarded = await this.gamify.awardXp(
+      userId,
+      'stage_clear',
+      claimKey(userId, storyId),
+      story.rewardXp,
+      `情景闯关通关：${story.title}`,
+    );
     const bonusAwarded =
-      bonus > 0 ? await this.gamify.awardXp(userId, 'stage_no_translation', bonusKey(userId, storyId), bonus) : false;
+      bonus > 0
+        ? await this.gamify.awardXp(
+            userId,
+            'stage_no_translation',
+            bonusKey(userId, storyId),
+            bonus,
+            `无翻译通关加成：${story.title}`,
+          )
+        : false;
     const latest =
       baseAwarded || bonusAwarded
         ? await this.prisma.clientUser.findUnique({ where: { id: uid }, select: { xp: true } })

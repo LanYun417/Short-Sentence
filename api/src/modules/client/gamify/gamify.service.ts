@@ -76,6 +76,31 @@ export const XP_RULES = {
   ipa_learned: 2,
 } as const;
 
+/**
+ * XP 事件的中文说明，写入账本 remark，后台「成长体系」页直接可读。
+ *
+ * 为什么要落库而不是前端翻译：账本是审计凭证，事后改文案不该让历史记录变义；
+ * 落库那刻是什么原因就永久是什么原因（manual 事件写运营填的补偿原因）。
+ */
+export const XP_EVENT_LABELS: Record<string, string> = {
+  answer_correct_first: '首次答对',
+  answer_correct_review: '复习答对',
+  answer_correct_first_assemble: '首次答对（拼词）',
+  answer_correct_review_assemble: '复习答对（拼词）',
+  answer_wrong: '答错安慰奖',
+  answer_wrong_assemble: '答错安慰奖（拼词）',
+  boss_clear: '每日 Boss 通关',
+  favorite: '收藏句子',
+  daily_goal: '完成每日目标',
+  ipa_learned: '音标学会',
+  achievement: '成就达成',
+  stage_clear: '情景闯关通关',
+  stage_no_translation: '无翻译通关加成',
+  team_full: '小队全员达成',
+  manual: '后台手动补偿',
+  backfill: '历史补发',
+};
+
 /** CEFR 等级阈值（XP → 等级，只增不减）。 */
 export const LEVELS = [
   { code: 'A1', name: '入门', min: 0 },
@@ -181,6 +206,8 @@ export interface XpLogAdminItem {
   id: number;
   eventKey: string;
   eventType: string;
+  /** 事件类型中文名（后台展示用；未登记的类型回落到 eventType 原文） */
+  eventLabel: string;
   amount: number;
   remark: string;
   userId: number;
@@ -202,7 +229,7 @@ export interface GamifyAdminStats {
   /** 成就解锁总人次 */
   unlockTotal: number;
   /** 按事件类型聚合 */
-  byEventType: Array<{ eventType: string; count: number; sum: number }>;
+  byEventType: Array<{ eventType: string; label: string; count: number; sum: number }>;
 }
 
 /** 成就判定上下文（一次查询、多处复用）。 */
@@ -310,9 +337,16 @@ export class GamifyService {
    * @param eventType 事件类型（见 XP_RULES 的 key 或 achievement）
    * @param eventKey 幂等键（如 `answer:{recordId}`）
    * @param amount 本次经验值（恒为正）
+   * @param remark 备注；不传则按事件类型自动写中文说明（成就/闯关等再带上具体名称）
    * @returns 是否实际发放（false = 已发过 / 已达每日上限）
    */
-  async awardXp(userId: number, eventType: string, eventKey: string, amount: number): Promise<boolean> {
+  async awardXp(
+    userId: number,
+    eventType: string,
+    eventKey: string,
+    amount: number,
+    remark?: string,
+  ): Promise<boolean> {
     if (amount <= 0) {
       return false;
     }
@@ -321,9 +355,11 @@ export class GamifyService {
     if (await this.exceedsDailyCap(userId, amount)) {
       return false;
     }
+    // 备注落库（审计口径：写当时的原因，历史记录不随后续文案改动而变化）
+    const note = (remark ?? XP_EVENT_LABELS[eventType] ?? '').trim().slice(0, 200);
     try {
       await this.prisma.clientXpLog.create({
-        data: { eventKey, userId: BigInt(userId), eventType, amount },
+        data: { eventKey, userId: BigInt(userId), eventType, amount, remark: note },
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -431,7 +467,13 @@ export class GamifyService {
       }
       newly.push({ code: achievement.code, name: achievement.name });
       if (achievement.rewardXp > 0) {
-        await this.awardXp(userId, 'achievement', `achievement:${userId}:${achievement.code}`, achievement.rewardXp);
+        await this.awardXp(
+          userId,
+          'achievement',
+          `achievement:${userId}:${achievement.code}`,
+          achievement.rewardXp,
+          `成就达成：${achievement.name}`,
+        );
       }
     }
     return newly;
@@ -698,6 +740,7 @@ export class GamifyService {
         id: Number(r.id),
         eventKey: r.eventKey,
         eventType: r.eventType,
+        eventLabel: XP_EVENT_LABELS[r.eventType] ?? r.eventType,
         amount: r.amount,
         remark: r.remark,
         userId: Number(r.userId),
@@ -777,6 +820,7 @@ export class GamifyService {
       unlockTotal: unlockCount,
       byEventType: byEventType.map((g) => ({
         eventType: g.eventType,
+        label: XP_EVENT_LABELS[g.eventType] ?? g.eventType,
         count: g._count._all,
         sum: g._sum.amount ?? 0,
       })),

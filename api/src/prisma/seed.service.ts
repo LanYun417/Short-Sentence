@@ -1163,7 +1163,9 @@ const MENU_TREE: MenuSeedNode[] = [
         menuType: MenuType.MENU,
         path: '/sentence/leaderboard',
         component: 'sentence/leaderboard',
-        icon: 'trending-up',
+        // 图标名必须是 bootstrap-icons 合法名（admin 侧渲染 bi-<name>）；
+        // trending-up 是 lucide 名，bootstrap 里不存在，会渲染成空白
+        icon: 'graph-up-arrow',
         permission: 'sentence:leaderboard',
         sort: 16,
         visible: Status.ENABLED,
