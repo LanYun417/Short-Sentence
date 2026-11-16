@@ -180,6 +180,52 @@ describe('用户端主链路 (e2e)', () => {
       });
   });
 
+  it('邮箱验证码登录：错码 401 / 对码 200 / 未注册 400', async () => {
+    const email = 'e2e-code-login@example.com';
+    // 未注册 + 错码：先被验证码关拦下（401，统一文案防枚举）
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '000000' })
+      .expect(401);
+
+    // 注册一个真实账号（协议勾选 path 已被上个用例覆盖）
+    await redis.set(`client:email-code:register:${email}`, '654321', 5 * 60 * 1000);
+    const reg = await request(app.getHttpServer())
+      .post(`${API}/client/auth/register`)
+      .send({ email, password: 'E2eCodeLogin2026', emailCode: '654321', agreed: true });
+    if (reg.status !== 200 && reg.status !== 409) {
+      throw new Error(`注册失败（HTTP ${reg.status}）：${JSON.stringify(reg.body)}`);
+    }
+
+    // 错码：401
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '000000' })
+      .expect(401);
+
+    // 对码：200 且拿到 client 类型令牌
+    await redis.set(`client:email-code:login:${email}`, '123456', 5 * 60 * 1000);
+    const ok = await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '123456' })
+      .expect(200);
+    const data = ok.body.data as { accessToken: string; user: { email: string } };
+    expect(data.user.email).toBe(email);
+    expect(typeof data.accessToken).toBe('string');
+    // 一次性：同一个码再登一次应失败
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email, emailCode: '123456' })
+      .expect(401);
+
+    // 未注册 + 对码：400（邮箱已被证明归属，引导去注册；不自动建号）
+    await redis.set('client:email-code:login:nobody-e2e@example.com', '123456', 5 * 60 * 1000);
+    await request(app.getHttpServer())
+      .post(`${API}/client/auth/code-login`)
+      .send({ email: 'nobody-e2e@example.com', emailCode: '123456' })
+      .expect(400);
+  });
+
   it('GET /client/auth/me 返回本人资料（令牌可用）', async () => {
     const res = await authGet('/client/auth/me').expect(200);
     expect(res.body).toMatchObject({ code: 200, message: 'success' });

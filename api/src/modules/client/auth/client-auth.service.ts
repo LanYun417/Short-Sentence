@@ -187,6 +187,42 @@ export class ClientAuthUserService {
     return this.issueTokens(Number(user.id), normalizedEmail);
   }
 
+  /**
+   * 邮箱验证码登录（先调 `POST /client/auth/email-code`（purpose=login）拿码）。
+   *
+   * 与密码登录共用防爆破三层（限流 / 账号锁定 / IP 封禁），但**不自动建号**——
+   * 建号必须走注册（含协议勾选同意时点），验证码登录只服务已注册用户；
+   * 邮箱已被验证码证明归属，未注册时明确提示去注册。
+   */
+  async loginByCode(email: string, emailCode: string, clientIp?: string): Promise<ClientTokenPair> {
+    const normalizedEmail = email.trim().toLowerCase();
+    await this.accountLock.assertNotLocked('client', normalizedEmail);
+
+    // 先验码：码不对就记失败/攻击信号（与密码登录同一套防爆破口径）
+    if (!(await this.emailCode.verify(normalizedEmail, 'login', emailCode))) {
+      await this.accountLock.recordFailure('client', normalizedEmail);
+      await this.ipBan.recordAttack(clientIp, 'login');
+      throw AppException.unauthorized('邮箱或验证码错误');
+    }
+
+    const user = await this.clientAuth.findByEmail(normalizedEmail);
+    if (!user) {
+      throw AppException.badRequest('该邮箱未注册，请先注册');
+    }
+    if (user.status !== Status.ENABLED) {
+      throw AppException.unauthorized('账号已被禁用');
+    }
+    // 与密码登录同一套会话清理
+    await this.blacklist.clearLogout(Number(user.id), 'client');
+    await this.accountLock.clear('client', normalizedEmail);
+    await this.ipBan.clearAttack(clientIp, 'login');
+    await this.prisma.clientUser.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+    return this.issueTokens(Number(user.id), normalizedEmail);
+  }
+
   /** 刷新令牌（refreshToken 必须也是 client 类型）。 */
   async refresh(refreshToken: string): Promise<ClientTokenPair> {
     let payload;

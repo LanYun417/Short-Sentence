@@ -71,6 +71,17 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = data.user;
   }
 
+  /** 邮箱验证码登录（先发送 purpose=login 的验证码；仅已注册用户，不自动建号）。 */
+  async function loginByCode(email: string, emailCode: string): Promise<void> {
+    const data = await apiFetch<{ accessToken: string; refreshToken: string; user: ClientUserProfile }>(
+      '/client/auth/code-login',
+      { method: 'POST', body: { email, emailCode } },
+    );
+    applyToken(data.accessToken, data.refreshToken);
+    setCachedUser(data.user);
+    user.value = data.user;
+  }
+
   /** 注册（成功后直接登录；必须先通过邮箱验证码，且勾选同意用户协议与隐私政策）。 */
   async function register(
     email: string,
@@ -140,6 +151,7 @@ export const useAuthStore = defineStore('auth', () => {
     loggedIn,
     hydrate,
     login,
+    loginByCode,
     register,
     fetchMe,
     updateProfile,

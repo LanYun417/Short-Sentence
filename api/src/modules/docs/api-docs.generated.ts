@@ -5850,6 +5850,17 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/client/auth/code-login",
+        "summary": "邮箱验证码登录（先调 `/client/auth/email-code`（purpose=login）发送验证码）",
+        "permission": [],
+        "isPublic": true,
+        "action": "",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/client/auth/code-login\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/client/auth/deletion-code",
         "summary": "发送注销验证码（只发给当前登录用户本人的邮箱）。 与公开的 `email-code` 分开：注销验证码不能允许给任意邮箱发",
         "permission": [],

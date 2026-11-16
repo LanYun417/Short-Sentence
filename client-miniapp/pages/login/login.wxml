@@ -27,7 +27,24 @@
         placeholder-class="field-ph"
         bindinput="onEmailInput"
       />
+      <!-- 邮箱验证码登录：验证码 + 发送按钮 -->
+      <view wx:if="{{mode === 'code'}}" class="code-row">
+        <input
+          class="field field-code"
+          type="number"
+          value="{{emailCode}}"
+          placeholder="邮箱验证码"
+          placeholder-class="field-ph"
+          maxlength="6"
+          bindinput="onCodeInput"
+        />
+        <button class="code-btn" disabled="{{codeSending || codeCountdown > 0}}" bindtap="onSendCode">
+          {{codeSending ? '发送中' : codeCountdown > 0 ? codeCountdown + 's' : '发送验证码'}}
+        </button>
+      </view>
+      <!-- 密码登录 -->
       <input
+        wx:else
         class="field"
         password
         value="{{password}}"
@@ -37,9 +54,12 @@
       />
       <button
         class="btn btn-primary btn-block login-btn {{loading ? 'btn-disabled' : ''}}"
-        bindtap="onEmailLogin"
+        bindtap="{{mode === 'code' ? 'onCodeLogin' : 'onEmailLogin'}}"
       >{{loading ? '登录中…' : '登录'}}</button>
       <view class="switch" bindtap="onSwitchMode">返回微信登录</view>
+      <view class="switch switch-link" bindtap="onToggleLoginMode">
+        {{mode === 'code' ? '使用密码登录' : '使用邮箱验证码登录'}}
+      </view>
     </block>
   </view>
 

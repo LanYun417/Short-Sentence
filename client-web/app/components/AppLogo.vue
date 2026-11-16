@@ -6,10 +6,17 @@
  * 客户端挂载后才接管鼠标跟踪并用 rAF 缓动逼近，跨浏览器一致（不依赖 CSS 过渡 cx/cy）。
  * 系统开启「减弱动效」时自动关闭跟踪，回归静态图标。
  *
+ * 闭眼：聚焦密码/验证码等敏感输入时（见 useLogoEyes），双眼闭合成弧线——
+ * 「我不看」的隐私小动作，与微信支付密码输入时吉祥物闭眼同款体验。
+ *
  * 用法：<AppLogo class="h-8 w-8" />（尺寸由外部 class 控制，viewBox 为 160×160 的方形图标区）。
  */
 import { onBeforeUnmount, onMounted, ref, useId } from 'vue';
 import { pupilOffset } from '~/utils/pupil';
+import { maskCount } from '~/composables/useLogoEyes';
+
+/** 敏感输入聚焦中（计数>0）：闭眼 */
+const closed = computed(() => maskCount.value > 0);
 
 withDefaults(
   defineProps<{
@@ -116,15 +123,21 @@ onBeforeUnmount(() => {
     <circle cx="55" cy="82" r="10" :fill="`url(#${uid}-blush)`" />
     <circle cx="105" cy="82" r="10" :fill="`url(#${uid}-blush)`" />
 
-    <!-- 左眼：眼白 + 瞳孔 + 高光（瞳孔与高光随鼠标偏移） -->
-    <circle cx="62" cy="70" r="10" fill="#FFFFFF" />
-    <circle :cx="62 + ox" :cy="70 + oy" r="5" fill="#1E3A8A" />
-    <circle :cx="60 + ox" :cy="68 + oy" r="2" fill="#FFFFFF" />
+    <!-- 左眼：眼白 + 瞳孔 + 高光（瞳孔与高光随鼠标偏移；闭眼时换成弧线） -->
+    <template v-if="!closed">
+      <circle cx="62" cy="70" r="10" fill="#FFFFFF" />
+      <circle :cx="62 + ox" :cy="70 + oy" r="5" fill="#1E3A8A" />
+      <circle :cx="60 + ox" :cy="68 + oy" r="2" fill="#FFFFFF" />
+    </template>
+    <path v-else d="M 53 72 Q 62 79 71 72" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
 
     <!-- 右眼 -->
-    <circle cx="98" cy="70" r="10" fill="#FFFFFF" />
-    <circle :cx="98 + ox" :cy="70 + oy" r="5" fill="#1E3A8A" />
-    <circle :cx="96 + ox" :cy="68 + oy" r="2" fill="#FFFFFF" />
+    <template v-if="!closed">
+      <circle cx="98" cy="70" r="10" fill="#FFFFFF" />
+      <circle :cx="98 + ox" :cy="70 + oy" r="5" fill="#1E3A8A" />
+      <circle :cx="96 + ox" :cy="68 + oy" r="2" fill="#FFFFFF" />
+    </template>
+    <path v-else d="M 89 72 Q 98 79 107 72" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
 
     <!-- 微笑 -->
     <path d="M 75 85 Q 80 92 85 85" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />

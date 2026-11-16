@@ -10673,6 +10673,44 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/auth/code-login": {
+      "post": {
+        "tags": [
+          "客户端认证"
+        ],
+        "summary": "邮箱验证码登录（先调 `/client/auth/email-code`（purpose=login）发送验证码）",
+        "operationId": "post__api_client_auth_code_login",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/client/auth/deletion-code": {
       "post": {
         "tags": [

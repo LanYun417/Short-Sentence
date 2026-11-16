@@ -83,6 +83,18 @@ export class ClientLoginDto {
   password!: string;
 }
 
+/** 邮箱验证码登录入参（先调 `POST /client/auth/email-code`（purpose=login）发送）。 */
+export class ClientCodeLoginDto {
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @MaxLength(100, { message: '邮箱最长 100 个字符' })
+  email!: string;
+
+  /** 邮箱验证码（6 位数字，一次性） */
+  @IsString({ message: '邮箱验证码必须为字符串' })
+  @Matches(/^\d{6}$/, { message: '邮箱验证码为 6 位数字' })
+  emailCode!: string;
+}
+
 /** 刷新令牌入参。 */
 export class ClientRefreshDto {
   @IsString({ message: 'refreshToken 必须为字符串' })

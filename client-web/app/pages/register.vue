@@ -5,6 +5,7 @@
  */
 import { useAuthStore } from '~/stores/auth';
 import { useEmailCode } from '~/composables/useEmailCode';
+import { secretInputHandlers } from '~/composables/useLogoEyes';
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '~/utils/password';
 
 definePageMeta({ layout: 'auth' });
@@ -33,6 +34,9 @@ const nickname = ref('');
 const agreed = ref(false);
 const errorMessage = ref('');
 const submitting = ref(false);
+
+/** 敏感输入聚焦闭眼（密码框 / 验证码框） */
+const secretFocus = secretInputHandlers();
 
 /** 发送邮箱验证码（失败原因直接展示在表单里）。 */
 async function onSendCode(): Promise<void> {
@@ -114,21 +118,23 @@ async function onSubmit(): Promise<void> {
         </UFormField>
 
         <UFormField label="密码" :help="PASSWORD_HINT">
-          <UInput
-            v-model="password"
-            type="password"
-            required
-            :minlength="PASSWORD_MIN_LENGTH"
-            autocomplete="new-password"
-            size="lg"
-            class="w-full"
-            icon="i-lucide-lock"
-            placeholder="设置登录密码"
-          />
+          <div @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
+            <UInput
+              v-model="password"
+              type="password"
+              required
+              :minlength="PASSWORD_MIN_LENGTH"
+              autocomplete="new-password"
+              size="lg"
+              class="w-full"
+              icon="i-lucide-lock"
+              placeholder="设置登录密码"
+            />
+          </div>
         </UFormField>
 
         <UFormField label="邮箱验证码" help="6 位数字，5 分钟内有效；收不到请检查垃圾箱">
-          <div class="flex gap-2">
+          <div class="flex gap-2" @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
             <UInput
               v-model="emailCode"
               type="text"
