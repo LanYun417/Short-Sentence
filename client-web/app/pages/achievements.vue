@@ -103,6 +103,11 @@ const groupedAchievements = computed(() => {
 });
 
 const selected = ref<GamifyAchievement | null>(null);
+/** 详情大图加载失败标记（切成就时重置），失败则回落 lucide icon。 */
+const selectedArtFailed = ref(false);
+watch(selected, () => {
+  selectedArtFailed.value = false;
+});
 
 /** 分类默认折叠，但第一个分类默认展开：记录展开中的分类 label。 */
 const expanded = ref<Set<string>>(new Set<string>());
@@ -243,7 +248,17 @@ watch(
         class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
       >
         <div class="flex flex-col items-center text-center">
+          <!-- 有 AI 卡通大图且未加载失败时优先显示（裸 img，走同源 /static，不走 IPX）；否则回落 lucide -->
+          <img
+            v-if="selected.artUrl && !selectedArtFailed"
+            :src="selected.artUrl"
+            :alt="selected.name"
+            class="size-28 rounded-2xl object-contain"
+            :class="!selected.unlocked && 'opacity-40 grayscale'"
+            @error="selectedArtFailed = true"
+          />
           <span
+            v-else
             class="grid size-16 place-items-center rounded-2xl"
             :class="
               selected.unlocked

@@ -3,7 +3,7 @@
  * 成长面板（微游戏化）：XP / CEFR 等级、成就勋章墙、场景探索地图。
  * 数据来自 GET /client/gamify/overview（服务端权威、幂等发放）。
  */
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { GamifyAchievement, GamifyOverview } from '~/types';
 
 const { data: overview } = await useSsrApi<GamifyOverview>('ss:gamify', '/client/gamify/overview');
@@ -17,6 +17,11 @@ const PREVIEW_SCENES = 6;
 const previewScenes = computed(() => overview.value?.sceneMap.slice(0, PREVIEW_SCENES) ?? []);
 /** 点开某枚勋章看详情（首页勋章墙点开用）。「全部」入口跳转 /achievements 页。 */
 const selected = ref<GamifyAchievement | null>(null);
+/** 详情大图加载失败标记（切成就时重置），失败则回落 lucide icon。 */
+const selectedArtFailed = ref(false);
+watch(selected, () => {
+  selectedArtFailed.value = false;
+});
 
 /**
  * 成就图标映射：DB 存的是 lucide 名（不含前缀）。
@@ -218,7 +223,17 @@ function iconOf(name: string): string {
       class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
     >
       <div class="flex flex-col items-center text-center">
+        <!-- 有 AI 卡通大图且未加载失败时优先显示（裸 img，走同源 /static，不走 IPX）；否则回落 lucide -->
+        <img
+          v-if="selected.artUrl && !selectedArtFailed"
+          :src="selected.artUrl"
+          :alt="selected.name"
+          class="size-28 rounded-2xl object-contain"
+          :class="!selected.unlocked && 'opacity-40 grayscale'"
+          @error="selectedArtFailed = true"
+        />
         <span
+          v-else
           class="grid size-16 place-items-center rounded-2xl"
           :class="
             selected.unlocked

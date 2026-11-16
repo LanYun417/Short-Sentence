@@ -221,6 +221,8 @@ export interface GamifyAchievement {
   description: string;
   /** lucide 图标名（不含 i-lucide- 前缀） */
   icon: string;
+  /** AI 卡通大图 URL（详情大图优先显示；空值回落 lucide icon） */
+  artUrl: string | null;
   category: string;
   rewardXp: number;
   unlocked: boolean;
