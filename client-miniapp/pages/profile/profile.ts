@@ -12,30 +12,47 @@ import { showError, toast } from '../../utils/feedback';
 import { absoluteUrl, initialOf } from '../../utils/format';
 import { goLogin } from '../../utils/nav';
 import { syncNoticeBadge } from '../../utils/notice-badge';
+import { menuIcon } from '../../utils/menu-icons';
 import { getCachedUser } from '../../utils/storage';
 
 /** 微信登录自动建的占位邮箱后缀（不展示给用户）。 */
 const WECHAT_PLACEHOLDER_SUFFIX = '@wx.local';
 
-/** 功能入口（分三组渲染）。 */
+/** 功能入口（分三组渲染）。图标用语义名，交给 menuIcon() 生成内联 SVG，取代 emoji。 */
 const MENUS = [
-  { key: 'banks', label: '题库', icon: '📚', group: 1 },
-  { key: 'library', label: '语句库', icon: '🗂', group: 1 },
-  { key: 'boss', label: '每日 Boss', icon: '⚡', group: 1 },
-  { key: 'ipa', label: '音标', icon: '🔤', group: 1 },
-  { key: 'wordRoot', label: '词根', icon: '🧩', group: 1 },
-  { key: 'coach', label: 'AI 私教', icon: '🎓', group: 1 },
-  { key: 'memory', label: '记忆健康', icon: '🧠', group: 1 },
-  { key: 'cards', label: '句签', icon: '✦', group: 2 },
-  { key: 'checkin', label: '打卡', icon: '🔥', group: 2 },
-  { key: 'weekly', label: '周报', icon: '📈', group: 2 },
-  { key: 'chains', label: '接龙', icon: '🔗', group: 2 },
-  { key: 'team', label: '小分队', icon: '👥', group: 2 },
-  { key: 'submissions', label: '投稿', icon: '✍️', group: 3 },
-  { key: 'notices', label: '通知', icon: '🔔', group: 3 },
-  { key: 'feedback', label: '反馈', icon: '💡', group: 3 },
-  { key: 'edit', label: '编辑资料', icon: '⚙️', group: 3 },
+  { key: 'banks', label: '题库', icon: 'bookOpen', group: 1 },
+  { key: 'library', label: '语句库', icon: 'library', group: 1 },
+  { key: 'boss', label: '每日 Boss', icon: 'zap', group: 1 },
+  { key: 'ipa', label: '音标', icon: 'type', group: 1 },
+  { key: 'wordRoot', label: '词根', icon: 'puzzle', group: 1 },
+  { key: 'coach', label: 'AI 私教', icon: 'graduationCap', group: 1 },
+  { key: 'memory', label: '记忆健康', icon: 'brain', group: 1 },
+  { key: 'cards', label: '句签', icon: 'sparkles', group: 2 },
+  { key: 'checkin', label: '打卡', icon: 'flame', group: 2 },
+  { key: 'weekly', label: '周报', icon: 'chartColumn', group: 2 },
+  { key: 'chains', label: '接龙', icon: 'link', group: 2 },
+  { key: 'team', label: '小分队', icon: 'usersRound', group: 2 },
+  { key: 'submissions', label: '投稿', icon: 'penLine', group: 3 },
+  { key: 'notices', label: '通知', icon: 'bell', group: 3 },
+  { key: 'feedback', label: '反馈', icon: 'lightbulb', group: 3 },
+  { key: 'edit', label: '编辑资料', icon: 'settings', group: 3 },
 ];
+
+/** 菜单项视图模型：icon 已预生成为 SVG background-image。 */
+interface MenuItem {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+/** 造一组菜单（把语义图标名转成可直接用的 background-image data URI）。 */
+function menuGroup(group: number): MenuItem[] {
+  return MENUS.filter((item) => item.group === group).map((item) => ({
+    key: item.key,
+    label: item.label,
+    icon: menuIcon(item.icon),
+  }));
+}
 
 /** key → 页面路径。 */
 const ROUTES: Record<string, string> = {
@@ -68,9 +85,9 @@ interface ProfileData {
   version: string;
   /** 未读公告数（通知入口上的小红点） */
   noticeUnread: number;
-  group1: Array<{ key: string; label: string; icon: string }>;
-  group2: Array<{ key: string; label: string; icon: string }>;
-  group3: Array<{ key: string; label: string; icon: string }>;
+  group1: MenuItem[];
+  group2: MenuItem[];
+  group3: MenuItem[];
 }
 
 interface ProfileCustom {
@@ -96,9 +113,9 @@ Page<ProfileData, ProfileCustom>({
     achievementText: '0',
     version: '1.0.0',
     noticeUnread: 0,
-    group1: MENUS.filter((item) => item.group === 1),
-    group2: MENUS.filter((item) => item.group === 2),
-    group3: MENUS.filter((item) => item.group === 3),
+    group1: menuGroup(1),
+    group2: menuGroup(2),
+    group3: menuGroup(3),
   },
 
   onLoad() {

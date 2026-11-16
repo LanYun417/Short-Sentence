@@ -136,16 +136,14 @@
   transform: scale(0.94);
 }
 
-/* 图标做成圆角色块，比裸 emoji 更有"入口"的形状感 */
+/* 图标做成圆角色块：SVG 内联为背景图（style 里下发 background-image），线性风格统一品牌蓝 */
 .menu-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 72rpx;
   height: 72rpx;
-  font-size: 34rpx;
-  line-height: 1;
-  background: linear-gradient(160deg, #f0f9ff, #e0f2fe);
+  background-color: #e0f2fe;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 40rpx 40rpx;
   border-radius: 22rpx;
   transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }

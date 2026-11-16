@@ -42,7 +42,7 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <view class="menu-icon">{{item.icon}}</view>
+      <view class="menu-icon" style="background-image: {{item.icon}};"></view>
       <text class="menu-label">{{item.label}}</text>
     </view>
   </view>
@@ -56,7 +56,7 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <view class="menu-icon">{{item.icon}}</view>
+      <view class="menu-icon" style="background-image: {{item.icon}};"></view>
       <text class="menu-label">{{item.label}}</text>
     </view>
   </view>
@@ -70,7 +70,7 @@
       data-key="{{item.key}}"
       bindtap="onMenu"
     >
-      <view class="menu-icon">{{item.icon}}</view>
+      <view class="menu-icon" style="background-image: {{item.icon}};"></view>
       <text class="menu-label">{{item.label}}</text>
       <text wx:if="{{item.key === 'notices' && noticeUnread > 0}}" class="menu-dot">{{noticeUnread}}</text>
     </view>
