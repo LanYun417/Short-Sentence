@@ -324,16 +324,6 @@
 }
 
 /* 按钮上的高光扫过：只在主 CTA 上，克制使用 */
-.btn-sheen {
-  position: absolute;
-  top: -20%;
-  left: 0;
-  width: 90rpx;
-  height: 140%;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
-  animation: ss-sheen 4.2s ease-in-out infinite;
-}
-
 .start {
   position: relative;
 }
