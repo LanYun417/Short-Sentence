@@ -77,18 +77,42 @@
     </block>
   </block>
 
-  <!-- 详情 -->
+  <!-- 详情：闪卡（打开先给卡背，点卡片本身翻到正面，与 App 端一致） -->
   <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
     <view class="sheet" catchtap="onTapSheet">
-      <image wx:if="{{detail.imageUrl}}" class="sheet-img" src="{{detail.imageUrl}}" mode="aspectFill" />
-      <text class="sheet-date">{{detail.bizDate}}</text>
-      <text class="sheet-title">{{detail.title}}</text>
-      <text class="sheet-zh">{{detail.titleZh}}</text>
-      <view class="divider"></view>
-      <text class="sheet-en" selectable>{{detail.en}}</text>
-      <text class="sheet-trans">{{detail.zh}}</text>
-      <text wx:if="{{detail.owned}}" class="sheet-blessing">{{detail.blessing}}</text>
-      <text wx:else class="sheet-blessing">完成对应日期的目标即可解锁</text>
+      <!-- 已拥有：可双向翻面的闪卡；双面用 grid 叠在同一格，高度取较高的一面（正面） -->
+      <view wx:if="{{detail.owned}}" class="flip" bindtap="onFlipCard">
+        <view class="flip-inner {{cardFlipped ? 'is-flipped' : ''}}">
+          <!-- 卡背：只给日期、封蜡与寄语，不泄露句子 -->
+          <view class="flip-face flip-back">
+            <text class="flip-date">{{detail.bizDate}}</text>
+            <view class="flip-seal">✦</view>
+            <text class="flip-blessing">{{detail.blessing}}</text>
+            <text class="flip-hint">轻触翻开</text>
+            <text class="flip-brand">短句 · 每天一句，慢慢变好</text>
+          </view>
+
+          <!-- 正面：句子与译文 -->
+          <view class="flip-face flip-front">
+            <image wx:if="{{detail.imageUrl}}" class="sheet-img" src="{{detail.imageUrl}}" mode="aspectFill" />
+            <text class="sheet-date">{{detail.bizDate}}</text>
+            <text class="sheet-title">{{detail.title}}</text>
+            <text class="sheet-zh">{{detail.titleZh}}</text>
+            <view class="divider"></view>
+            <text class="sheet-en" selectable>{{detail.en}}</text>
+            <text class="sheet-trans">{{detail.zh}}</text>
+            <text class="flip-backtip">轻触翻回</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 未拥有：没有正面可看，不翻面，直接给解锁提示 -->
+      <block wx:else>
+        <text class="sheet-date">{{detail.bizDate}}</text>
+        <text class="sheet-title">{{detail.title || '未解锁句签'}}</text>
+        <text class="sheet-blessing">完成对应日期的目标即可解锁</text>
+      </block>
+
       <button class="btn btn-ghost btn-block mt-24" bindtap="onCloseDetail">关闭</button>
     </view>
   </view>

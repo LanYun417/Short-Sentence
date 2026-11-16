@@ -240,3 +240,96 @@
   background: #fffbeb;
   border-radius: 16rpx;
 }
+
+/* ------------------------------ 闪卡（句签翻面） ------------------------------ */
+
+/* 透视放在最外层：本体做 preserve-3d 旋转，两面各自 backface-visibility 隐身 */
+.flip {
+  perspective: 1600rpx;
+}
+
+.flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* 两面叠在同一格：容器高度取较高的一面（正面含配图），翻面时不会跳高 */
+.flip-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  padding: 28rpx 24rpx;
+  background: #ffffff;
+  border: 2rpx solid rgba(253, 230, 138, 0.85);
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 40rpx rgba(15, 23, 42, 0.08);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-front {
+  transform: rotateY(180deg);
+}
+
+.flip-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.flip-date {
+  font-size: 21rpx;
+  color: var(--ink-3);
+  letter-spacing: 3rpx;
+}
+
+/* 封蜡：品牌渐变圆 + ✦，卡背的视觉重心 */
+.flip-seal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  margin: 30rpx 0 24rpx;
+  font-size: 46rpx;
+  color: #ffffff;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 50%;
+  box-shadow: 0 10rpx 24rpx rgba(245, 158, 11, 0.35);
+}
+
+.flip-blessing {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.7;
+  color: var(--ink);
+  letter-spacing: 1rpx;
+}
+
+.flip-hint {
+  margin-top: 22rpx;
+  font-size: 21rpx;
+  color: var(--ink-3);
+  letter-spacing: 5rpx;
+}
+
+.flip-brand {
+  margin-top: 10rpx;
+  font-size: 19rpx;
+  color: var(--ink-3);
+  opacity: 0.8;
+  letter-spacing: 1rpx;
+}
+
+.flip-backtip {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 19rpx;
+  color: var(--ink-3);
+  letter-spacing: 2rpx;
+}

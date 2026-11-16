@@ -33,6 +33,8 @@ interface CardsData {
   loading: boolean;
   claiming: boolean;
   detail: CardView | null;
+  /** 闪卡是否已翻到正面（false = 卡背） */
+  cardFlipped: boolean;
 }
 
 interface CardsCustom {
@@ -42,6 +44,7 @@ interface CardsCustom {
   onSwitchTab(event: WechatMiniprogram.TouchEvent): void;
   onClaim(): Promise<void>;
   onOpenCard(event: WechatMiniprogram.TouchEvent): void;
+  onFlipCard(): void;
   onCloseDetail(): void;
   onTapSheet(): void;
   onGoPractice(): void;
@@ -57,6 +60,9 @@ Page<CardsData, CardsCustom>({
     loading: true,
     claiming: false,
     detail: null,
+    // 闪卡翻面状态：false = 卡背（寄语），true = 正面（句子）。
+    // 每次打开详情都重置为卡背，与 App 端「打开先给卡背」一致。
+    cardFlipped: false,
   },
 
   async onShow() {
@@ -143,7 +149,8 @@ Page<CardsData, CardsCustom>({
       }
       toastSuccess('句签已领取');
       await this.refresh();
-      this.setData({ detail: this.toView(card, true) });
+      // 新领到的卡也从卡背开始（保留「轻触翻开」的仪式感）
+      this.setData({ detail: this.toView(card, true), cardFlipped: false });
     } catch (error) {
       this.setData({ claiming: false });
       showError(error);
@@ -156,15 +163,27 @@ Page<CardsData, CardsCustom>({
     const index = Number(event.currentTarget.dataset.index as string);
     if (tab === 'today') {
       if (this.data.today) {
-        this.setData({ detail: this.data.today });
+        this.setData({ detail: this.data.today, cardFlipped: false });
       }
       return;
     }
     const list = tab === 'mine' ? this.data.mine : tab === 'missing' ? this.data.missing : [];
     const card = list[index];
     if (card) {
-      this.setData({ detail: card });
+      this.setData({ detail: card, cardFlipped: false });
     }
+  },
+
+  /**
+   * 翻面（闪卡）：卡背 ↔ 正面，点卡片本身触发。
+   * 未拥有的句签没有正面可看，不响应翻面。
+   */
+  onFlipCard() {
+    const detail = this.data.detail;
+    if (!detail || !detail.owned) {
+      return;
+    }
+    this.setData({ cardFlipped: !this.data.cardFlipped });
   },
 
   /** 关闭详情。 */
