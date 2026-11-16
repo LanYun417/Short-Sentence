@@ -59,6 +59,7 @@ class AchievementView {
     required this.name,
     required this.description,
     required this.icon,
+    required this.artUrl,
     required this.category,
     required this.rewardXp,
     required this.unlocked,
@@ -71,6 +72,9 @@ class AchievementView {
 
   /// 图标名（后端下发，前端映射到本地图标）。
   final String icon;
+
+  /// AI 卡通大图 URL（详情大图优先显示；空值回落 icon 映射的本地图标）。
+  final String? artUrl;
 
   /// 分组：persist 坚持 / behavior 行为 / luck 运气。
   final String category;
@@ -90,6 +94,7 @@ class AchievementView {
       name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
       icon: json['icon'] as String? ?? '',
+      artUrl: json['artUrl'] as String?,
       category: json['category'] as String? ?? '',
       rewardXp: (json['rewardXp'] as num?)?.toInt() ?? 0,
       unlocked: json['unlocked'] as bool? ?? false,

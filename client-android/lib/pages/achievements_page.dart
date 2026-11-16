@@ -3,9 +3,11 @@
 /// 从成长页「成就 · 全部」进入。与 Web `pages/achievements.vue` 同源同契约。
 library;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/auth_api.dart';
 import '../api/models/growth.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
@@ -41,6 +43,16 @@ class _AchievementsPageState extends ConsumerState<AchievementsPage> {
         _expanded.add(label);
       }
     });
+  }
+
+  /// 点开某枚勋章看详情：有 AI 卡通大图显示大图，否则回落本地图标。
+  void _showDetail(AchievementView item) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _AchievementDetailSheet(item: item),
+    );
   }
 
   @override
@@ -146,7 +158,8 @@ class _AchievementsPageState extends ConsumerState<AchievementsPage> {
                         ),
                         if (expandedSet.contains(group.label)) ...<Widget>[
                           const SizedBox(height: 4),
-                          for (final item in group.items) _AchievementRow(item: item),
+                          for (final item in group.items)
+                            _AchievementRow(item: item, onTap: () => _showDetail(item)),
                         ],
                       ],
                     ),
@@ -191,16 +204,17 @@ class _AchievementsPageState extends ConsumerState<AchievementsPage> {
 
 /// 单行成就：图标 + 名称 + 描述 + 状态。
 class _AchievementRow extends StatelessWidget {
-  const _AchievementRow({required this.item});
+  const _AchievementRow({required this.item, required this.onTap});
 
   final AchievementView item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final unlocked = item.unlocked;
     return PressScale(
-      onTap: () {},
+      onTap: onTap,
       scale: 0.99,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -295,6 +309,111 @@ class _FilterChip extends StatelessWidget {
             color: selected ? Colors.white : colors.inkSoft,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 勋章详情底部弹窗：有 AI 卡通大图显示大图，否则回落本地 lucide 映射图标。
+/// 与 Web 端 achievements.vue / GrowthPanel.vue 的详情弹窗同口径。
+class _AchievementDetailSheet extends StatelessWidget {
+  const _AchievementDetailSheet({required this.item});
+
+  final AchievementView item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final unlocked = item.unlocked;
+    final hasArt = item.artUrl != null && item.artUrl!.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colors.line,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // 有 AI 大图且 URL 非空优先显示（走 staticUrl 拼 host + 缓存）；否则回落本地图标。
+          if (hasArt)
+            Opacity(
+              opacity: unlocked ? 1.0 : 0.4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: CachedNetworkImage(
+                  imageUrl: staticUrl(item.artUrl),
+                  width: 112,
+                  height: 112,
+                  fit: BoxFit.contain,
+                  memCacheWidth: 336,
+                  color: unlocked ? null : Colors.grey,
+                  colorBlendMode: unlocked ? null : BlendMode.saturation,
+                  placeholder: (context, _) => _iconFallback(colors, unlocked),
+                  errorWidget: (context, _, _) => _iconFallback(colors, unlocked),
+                ),
+              ),
+            )
+          else
+            _iconFallback(colors, unlocked),
+          const SizedBox(height: 14),
+          Text(
+            item.name,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: colors.ink,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            item.description,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: colors.inkSoft),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Pill(
+                label: unlocked ? '已解锁' : '未解锁',
+                background: (unlocked ? colors.success : colors.inkFaint).withValues(alpha: 0.1),
+                foreground: unlocked ? colors.success : colors.inkFaint,
+              ),
+              const SizedBox(width: 10),
+              Pill(
+                label: '+${item.rewardXp} XP',
+                background: colors.gold.withValues(alpha: 0.12),
+                foreground: colors.gold,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 无大图 / 大图加载失败时的 lucide 图标回落。
+  Widget _iconFallback(AppColors colors, bool unlocked) {
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: unlocked ? colors.gold.withValues(alpha: 0.1) : colors.cardMuted,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: unlocked ? colors.gold.withValues(alpha: 0.35) : colors.line,
+        ),
+      ),
+      child: Icon(
+        unlocked ? appIcon(item.icon) : Icons.lock_rounded,
+        size: 34,
+        color: unlocked ? colors.gold : colors.inkFaint,
       ),
     );
   }
