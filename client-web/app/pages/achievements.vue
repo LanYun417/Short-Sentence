@@ -238,58 +238,60 @@ watch(
       </section>
     </div>
 
-    <!-- 勋章详情弹窗 -->
-    <div
-      v-if="selected"
-      class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
-      @click.self="selected = null"
-    >
+    <!-- 勋章详情弹窗：Teleport 到 body，脱离列表项 .anim-in 的 transform 包含块（否则 fixed 相对祖先定位，底部跑出视口） -->
+    <Teleport to="body">
       <div
-        class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
+        v-if="selected"
+        class="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+        @click.self="selected = null"
       >
-        <div class="flex flex-col items-center text-center">
-          <!-- 有 AI 卡通大图且未加载失败时优先显示（裸 img，走同源 /static，不走 IPX）；否则回落 lucide -->
-          <img
-            v-if="selected.artUrl && !selectedArtFailed"
-            :src="selected.artUrl"
-            :alt="selected.name"
-            class="size-28 rounded-2xl object-contain"
-            :class="!selected.unlocked && 'opacity-40 grayscale'"
-            @error="selectedArtFailed = true"
-          />
-          <span
-            v-else
-            class="grid size-16 place-items-center rounded-2xl"
-            :class="
-              selected.unlocked
-                ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
-                : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
-            "
-          >
-            <UIcon :name="iconOf(selected.icon)" class="h-8 w-8" />
-          </span>
-          <h3 class="mt-3 text-base font-bold text-slate-800 dark:text-slate-100">{{ selected.name }}</h3>
-          <p class="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ selected.description }}</p>
-          <div class="mt-3 flex items-center gap-2">
+        <div
+          class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800"
+        >
+          <div class="flex flex-col items-center text-center">
+            <!-- 有 AI 卡通大图且未加载失败时优先显示（裸 img，走同源 /static，不走 IPX）；否则回落 lucide -->
+            <img
+              v-if="selected.artUrl && !selectedArtFailed"
+              :src="selected.artUrl"
+              :alt="selected.name"
+              class="size-28 rounded-2xl object-contain"
+              :class="!selected.unlocked && 'opacity-40 grayscale'"
+              @error="selectedArtFailed = true"
+            />
             <span
-              class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+              v-else
+              class="grid size-16 place-items-center rounded-2xl"
               :class="
                 selected.unlocked
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                  : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                  ? 'bg-amber-50 text-amber-500 ring-1 ring-amber-200/70 dark:bg-amber-500/10 dark:ring-amber-500/20'
+                  : 'bg-slate-100 text-slate-300 dark:bg-slate-800 dark:text-slate-600'
               "
             >
-              {{ selected.unlocked ? '已解锁' : '未解锁' }}
+              <UIcon :name="iconOf(selected.icon)" class="h-8 w-8" />
             </span>
-            <span
-              class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"
-            >
-              +{{ selected.rewardXp }} XP
-            </span>
+            <h3 class="mt-3 text-base font-bold text-slate-800 dark:text-slate-100">{{ selected.name }}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ selected.description }}</p>
+            <div class="mt-3 flex items-center gap-2">
+              <span
+                class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                :class="
+                  selected.unlocked
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+                "
+              >
+                {{ selected.unlocked ? '已解锁' : '未解锁' }}
+              </span>
+              <span
+                class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                +{{ selected.rewardXp }} XP
+              </span>
+            </div>
           </div>
+          <UButton class="mt-4 w-full" color="neutral" variant="outline" @click="selected = null">关闭</UButton>
         </div>
-        <UButton class="mt-4 w-full" color="neutral" variant="outline" @click="selected = null">关闭</UButton>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
