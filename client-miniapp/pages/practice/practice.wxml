@@ -122,7 +122,10 @@
         <text wx:if="{{achievementText}}" class="achievement">{{achievementText}}</text>
 
         <view class="result-foot">
-          <view class="fav" bindtap="onToggleFavorite">{{favorited ? '★ 已收藏' : '☆ 收藏'}}</view>
+          <view class="foot-actions">
+            <view class="fav" bindtap="onToggleFavorite">{{favorited ? '★ 已收藏' : '☆ 收藏'}}</view>
+            <view class="fav" bindtap="onReport">⚑ 报错</view>
+          </view>
           <text class="muted">{{progressText}}</text>
         </view>
 

@@ -3,7 +3,7 @@
  */
 import type { AnswerMode } from '../utils/storage';
 import { request } from '../utils/request';
-import type { AnswerResult, NextQuestion } from './types';
+import type { AnswerResult, MemoryStats, NextQuestion } from './types';
 
 /** 抽题范围参数（undefined 项会被剔除，避免序列化成 "undefined"）。 */
 export interface NextQuestionParams {
@@ -49,4 +49,20 @@ export function submitAnswer(
 /** 收藏 / 取消收藏（同一入口，幂等）。 */
 export function toggleFavorite(sentenceId: number): Promise<{ favorited: boolean }> {
   return request<{ favorited: boolean }>(`/client/questions/${sentenceId}/favorite`, { method: 'POST' });
+}
+
+/** 题目举报类型（与后端 CreateReportDto 的枚举一致）。 */
+export type ReportReason = 'wrong' | 'inappropriate' | 'image' | 'other';
+
+/** 举报/反馈一道题（题目或翻译有误、配图不雅等）。 */
+export function reportQuestion(sentenceId: number, reason: ReportReason, description?: string): Promise<null> {
+  return request<null>('/client/report', {
+    method: 'POST',
+    data: { sentenceId, reason, description: description?.trim() || undefined },
+  });
+}
+
+/** 记忆巩固统计（已复习 / 已毕业 / 到期分布 / 遗忘曲线）。 */
+export function fetchMemoryStats(): Promise<MemoryStats> {
+  return request<MemoryStats>('/client/questions/memory-stats');
 }

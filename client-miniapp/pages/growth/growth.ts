@@ -1,11 +1,12 @@
 /**
- * 成长页：经验 / 等级 / 成就 / 场景探索。
+ * 成长页：经验 / 等级 / 记忆巩固 / 成就 / 场景探索。
  */
 import { fetchGamifyOverview } from '../../services/gamify';
-import type { GamifyAchievement } from '../../services/types';
+import { fetchMemoryStats } from '../../services/question';
+import type { GamifyAchievement, MemoryStats } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError } from '../../utils/feedback';
-import { goLogin } from '../../utils/nav';
+import { goLogin, goPractice } from '../../utils/nav';
 
 /** 成就视图模型（多带一个首字，用于无图标字体时的圆形徽章）。 */
 interface AchievementView extends GamifyAchievement {
@@ -31,6 +32,13 @@ interface GrowthData {
   achPercent: number;
   unlockedScenes: number;
   totalScenes: number;
+  /** 记忆巩固统计（与 Web 记忆卡 / App 同一契约；拉取失败时为 null，不挡成长页其它内容） */
+  memory: MemoryStats | null;
+  /** 未来 30 天到期分布，已换算成百分比高度（用于纯 CSS 柱状条） */
+  memoryBars: Array<{ day: number; due: number; height: number }>;
+  /** 第 7 / 30 天的理论记忆保留率（百分数） */
+  retain7: number;
+  retain30: number;
   achievements: AchievementView[];
   scenes: SceneView[];
   loading: boolean;
@@ -38,6 +46,8 @@ interface GrowthData {
 
 interface GrowthCustom {
   refresh(): Promise<void>;
+  /** 从记忆卡直接开刷到期复习题 */
+  onStartReview(): void;
 }
 
 Page<GrowthData, GrowthCustom>({
@@ -51,6 +61,10 @@ Page<GrowthData, GrowthCustom>({
     achPercent: 0,
     unlockedScenes: 0,
     totalScenes: 0,
+    memory: null,
+    memoryBars: [],
+    retain7: 0,
+    retain30: 0,
     achievements: [],
     scenes: [],
     loading: true,
@@ -71,16 +85,25 @@ Page<GrowthData, GrowthCustom>({
     });
   },
 
-  /** 拉取成长概览。 */
+  /** 拉取成长概览与记忆统计。 */
   async refresh() {
     try {
-      const overview = await fetchGamifyOverview();
+      // 记忆统计是「锦上添花」：单独失败只丢那块卡片，不能让整个成长页报错
+      const [overview, memory] = await Promise.all([fetchGamifyOverview(), fetchMemoryStats().catch(() => null)]);
       const { level } = overview;
       const hasNext = level.next !== null && Boolean(level.nextName);
       const achievements: AchievementView[] = overview.achievements
         .slice()
         .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || b.rewardXp - a.rewardXp)
         .map((item) => ({ ...item, initial: item.name ? item.name.charAt(0) : '·' }));
+      // 柱状条只吃百分比高度：按 30 天内最大值归一，空值留 6% 底线让基线不断
+      const dist = memory?.distribution ?? [];
+      const maxDue = Math.max(1, ...dist);
+      const curve = memory?.retentionCurve ?? [];
+      const retentionAt = (day: number): number => {
+        const point = curve.find((c) => c.day === day);
+        return point ? Math.round(point.retention * 100) : 0;
+      };
       this.setData({
         xpText: String(overview.xp),
         levelName: level.name || '初学',
@@ -96,6 +119,14 @@ Page<GrowthData, GrowthCustom>({
             : 0,
         unlockedScenes: overview.unlockedScenes,
         totalScenes: overview.totalScenes,
+        memory,
+        memoryBars: dist.map((due, index) => ({
+          day: index + 1,
+          due,
+          height: due > 0 ? Math.max(8, Math.round((due / maxDue) * 100)) : 6,
+        })),
+        retain7: retentionAt(7),
+        retain30: retentionAt(30),
         achievements,
         scenes: overview.sceneMap.map((item) => ({
           id: item.id,
@@ -109,5 +140,10 @@ Page<GrowthData, GrowthCustom>({
       this.setData({ loading: false });
       showError(error);
     }
+  },
+
+  /** 记忆卡「开始复习」：只抽到期题（与首页复习入口同一路径）。 */
+  onStartReview() {
+    goPractice('?source=review');
   },
 });

@@ -45,6 +45,62 @@
     </view>
   </view>
 
+  <!-- 记忆巩固：已复习 / 已毕业 / 到期分布 / 遗忘曲线（与 Web、App 同契约） -->
+  <view wx:if="{{memory}}" class="card memory anim-up d1">
+    <view class="row-between">
+      <text class="subtitle">记忆巩固</text>
+      <text class="muted">你的遗忘曲线</text>
+    </view>
+
+    <view class="mem-stats">
+      <view class="mem-stat">
+        <text class="mem-num mono">{{memory.reviewed}}</text>
+        <text class="mem-label">已复习</text>
+      </view>
+      <view class="mem-stat">
+        <text class="mem-num mono mem-num-green">{{memory.graduated}}</text>
+        <text class="mem-label">已毕业</text>
+      </view>
+      <view class="mem-stat">
+        <text class="mem-num mono mem-num-blue">{{memory.dueToday}}</text>
+        <text class="mem-label">今日待复习</text>
+      </view>
+      <view class="mem-stat">
+        <text class="mem-num mono mem-num-indigo">{{memory.dueIn7}}</text>
+        <text class="mem-label">7天待复习</text>
+      </view>
+    </view>
+
+    <text class="mem-caption">未来 30 天复习分布</text>
+    <view class="mem-bars">
+      <view wx:for="{{memoryBars}}" wx:key="day" class="mem-bar-col">
+        <view class="mem-bar {{item.due > 0 ? '' : 'mem-bar-empty'}}" style="height: {{item.height}}%"></view>
+      </view>
+    </view>
+
+    <text class="mem-caption">理论记忆保留率（每复习一次即被拉平）</text>
+    <view class="mem-retain">
+      <view class="mem-retain-item">
+        <text class="mem-retain-num mono">100%</text>
+        <text class="mem-retain-label">今天</text>
+      </view>
+      <view class="mem-retain-line"></view>
+      <view class="mem-retain-item">
+        <text class="mem-retain-num mono">{{retain7}}%</text>
+        <text class="mem-retain-label">第 7 天</text>
+      </view>
+      <view class="mem-retain-line"></view>
+      <view class="mem-retain-item">
+        <text class="mem-retain-num mono">{{retain30}}%</text>
+        <text class="mem-retain-label">第 30 天</text>
+      </view>
+    </view>
+
+    <button wx:if="{{memory.dueToday > 0}}" class="btn btn-primary btn-block mt-24" bindtap="onStartReview">
+      开始复习（{{memory.dueToday}} 张到期）
+    </button>
+  </view>
+
   <!-- 成就 -->
   <view class="section anim-up d2">
     <view class="row-between">

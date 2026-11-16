@@ -364,6 +364,12 @@
   margin-top: 32rpx;
 }
 
+.foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 .fav {
   padding: 10rpx 24rpx;
   font-size: 24rpx;

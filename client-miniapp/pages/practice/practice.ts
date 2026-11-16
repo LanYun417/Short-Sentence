@@ -4,8 +4,8 @@
  * 状态流转：loadQuestion → answering → onSubmit → flipped → onNext → loadQuestion …
  * 判分完全由后端裁决（normalizeAnswer 不收宽），前端只负责收集答案与展示。
  */
-import { fetchNextQuestion, submitAnswer, toggleFavorite } from '../../services/question';
-import type { NextQuestionParams } from '../../services/question';
+import { fetchNextQuestion, reportQuestion, submitAnswer, toggleFavorite } from '../../services/question';
+import type { NextQuestionParams, ReportReason } from '../../services/question';
 import type { AnswerResult, NextQuestion } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { haptic, showError, toast, toastSuccess } from '../../utils/feedback';
@@ -86,6 +86,7 @@ interface PracticeCustom {
   onNext(): void;
   onSwitchMode(event: WechatMiniprogram.TouchEvent): void;
   onToggleFavorite(): Promise<void>;
+  onReport(): void;
   onBack(): void;
   onRetry(): void;
 }
@@ -305,6 +306,48 @@ Page<PracticeData, PracticeCustom>({
     } catch (error) {
       showError(error);
     }
+  },
+
+  /** 举报当前题目：先选类型，再可选补充说明（与 Web/App 同一后端 /client/report）。 */
+  onReport() {
+    const question = this.data.question;
+    if (!question) {
+      return;
+    }
+    const reasons: Array<{ value: ReportReason; label: string }> = [
+      { value: 'wrong', label: '题目/翻译有误' },
+      { value: 'inappropriate', label: '内容不适当' },
+      { value: 'image', label: '图片不雅/有问题' },
+      { value: 'other', label: '其他' },
+    ];
+    wx.showActionSheet({
+      itemList: reasons.map((r) => r.label),
+      success: (picked) => {
+        const target = reasons[picked.tapIndex];
+        if (!target) {
+          return;
+        }
+        // 第二步才收补充说明：类型是必选枚举，描述可留空，不强制用户写字
+        wx.showModal({
+          title: '补充说明（可留空）',
+          editable: true,
+          placeholderText: '如：正确答案拼写有误 / 配图和句子不符',
+          confirmText: '提交',
+          success: (res) => {
+            if (!res.confirm) {
+              return;
+            }
+            void reportQuestion(question.sentenceId, target.value, res.content ?? '')
+              .then(() => {
+                toastSuccess('已收到，感谢你的反馈');
+              })
+              .catch((error: unknown) => {
+                showError(error);
+              });
+          },
+        });
+      },
+    });
   },
 
   /** 关闭：有返回栈就回上一页，否则回首页。 */
