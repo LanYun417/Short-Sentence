@@ -15,8 +15,8 @@ name: CI
 
 on:
   push:
-    # 主分支为 main（本地仓库历史上曾用 master；两个都监听，避免更名后流水线静默失联）
-    branches: [main, master]
+    # 主分支为 main（2026-11-15 由 master 更名；2026-11-16 起 master 已删除）
+    branches: [main]
   pull_request:
 
 # 同一分支只保留最新一次运行，避免连续 push 排队

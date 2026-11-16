@@ -70,7 +70,7 @@
 
 ## 6. 分支与推送
 
-- 主分支是 `main`（2026-11-15 由 `master` 更名，两端已同步）；
+- 主分支是 `main`（2026-11-15 由 `master` 更名，两端已同步；11-16 Gitee 默认分支改为 `main`，`master` 已删）；
 - 分支从 `main` 切出：`feature/*` / `fix/*` / `hotfix/*`；
 - 仓库是**双远端**：`origin` = Gitee（主远端）、`github` = GitHub 镜像，用 `git pushall` 一次推两边；fetch/pull 只走 `origin`；
 - 禁止 `--no-verify` 绕过钩子。
