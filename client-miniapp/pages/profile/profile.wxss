@@ -111,6 +111,8 @@
   width: 33.333%;
   padding: 20rpx 0;
   border-radius: 20rpx;
+  /* 按压反馈只做缩放：hover-class 是瞬时切换，靠这行让按下/回弹都是「缩一下」而不是硬跳 */
+  transition: transform 120ms ease;
 }
 
 .menu-dot {
@@ -129,9 +131,8 @@
   border-radius: 999rpx;
 }
 
-/* 按压：父级 .menu-grid 挂的是入场动画，子元素做 transform 不会被打架 */
+/* 按压：只缩小、不铺高亮底色（宫格本身没有卡片底，铺色会显得脏） */
 .menu-item-hover {
-  background: #f6f8fb;
   transform: scale(0.94);
 }
 
