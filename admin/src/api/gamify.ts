@@ -17,6 +17,8 @@ export function updateAchievementApi(
     name?: string;
     description?: string;
     icon?: string;
+    /** AI 大图 URL；空字符串 = 清空回落 lucide */
+    artUrl?: string;
     category?: string;
     rewardXp?: number;
     sort?: number;

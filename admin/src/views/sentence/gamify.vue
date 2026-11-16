@@ -69,16 +69,23 @@ async function loadAchievements(): Promise<void> {
 const editVisible = ref(false);
 const saving = ref(false);
 const editingCode = ref('');
-const form = ref<{ name: string; description: string; icon: string; category: string; rewardXp: number; sort: number }>(
-  {
-    name: '',
-    description: '',
-    icon: '',
-    category: 'behavior',
-    rewardXp: 0,
-    sort: 0,
-  },
-);
+const form = ref<{
+  name: string;
+  description: string;
+  icon: string;
+  artUrl: string;
+  category: string;
+  rewardXp: number;
+  sort: number;
+}>({
+  name: '',
+  description: '',
+  icon: '',
+  artUrl: '',
+  category: 'behavior',
+  rewardXp: 0,
+  sort: 0,
+});
 
 function handleEdit(row: AchievementAdminItem): void {
   editingCode.value = row.code;
@@ -86,6 +93,7 @@ function handleEdit(row: AchievementAdminItem): void {
     name: row.name,
     description: row.description,
     icon: row.icon,
+    artUrl: row.artUrl ?? '',
     category: row.category,
     rewardXp: row.rewardXp,
     sort: row.sort,
@@ -108,6 +116,8 @@ async function handleSaveAchievement(): Promise<void> {
       name: form.value.name.trim(),
       description: form.value.description.trim(),
       icon: form.value.icon.trim(),
+      // 留空 = 清空大图，回落 lucide icon
+      artUrl: form.value.artUrl.trim(),
       category: form.value.category,
       rewardXp: form.value.rewardXp,
       sort: form.value.sort,
@@ -350,6 +360,25 @@ async function handleGrant(): Promise<void> {
         </el-form-item>
         <el-form-item label="图标">
           <el-input v-model="form.icon" maxlength="100" placeholder="lucide 图标名，如 trophy、flame" />
+        </el-form-item>
+        <el-form-item label="AI 大图">
+          <div class="flex w-full items-center gap-3">
+            <el-input
+              v-model="form.artUrl"
+              maxlength="500"
+              placeholder="留空回落 lucide 图标，如 /static/achievements/streak_7.png"
+            />
+            <img
+              v-if="form.artUrl"
+              :src="form.artUrl"
+              alt=""
+              class="size-11 shrink-0 rounded-lg object-contain ring-1 ring-slate-200"
+            />
+          </div>
+          <div class="mt-1 text-xs text-slate-400">
+            详情大图优先显示此图；留空则用上面的 lucide 图标。图片放后端 uploads 目录后以
+            /static/achievements/&lt;code&gt;.png 引用。
+          </div>
         </el-form-item>
         <el-form-item label="分组">
           <el-select v-model="form.category" style="width: 160px">

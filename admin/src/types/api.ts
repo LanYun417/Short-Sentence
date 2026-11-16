@@ -2012,6 +2012,8 @@ export interface AchievementAdminItem {
   name: string;
   description: string;
   icon: string;
+  /** AI 卡通大图 URL（空值回落 lucide icon） */
+  artUrl: string | null;
   category: string;
   rewardXp: number;
   sort: number;
