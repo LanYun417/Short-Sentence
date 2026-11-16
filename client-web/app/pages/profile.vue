@@ -337,7 +337,7 @@ const passwordCodeHelp = computed(() => {
   return `发送到${target}6 位数字，5 分钟内有效（改密需验证邮箱归属）`;
 });
 
-/** 敏感输入聚焦闭眼：账号安全页改密验证码框（顶栏 Logo 同步闭眼）。 */
+/** 敏感输入聚焦闭眼：账号安全页三个改密输入（原密码 / 新密码 / 验证码），顶栏 Logo 同步闭眼。 */
 const secretFocus = secretInputHandlers();
 
 /** 发验证码到当前账号邮箱（改密必须验证邮箱归属，光有旧密码不够）。 */
@@ -692,22 +692,27 @@ async function onExportData(): Promise<void> {
           >
             <div class="grid gap-4 md:grid-cols-2">
               <UFormField label="原密码">
-                <UInput
-                  v-model="oldPassword"
-                  type="password"
-                  icon="i-lucide-lock"
-                  autocomplete="current-password"
-                  class="w-full"
-                />
+                <!-- 敏感输入：聚焦即让吉祥物闭眼（与登录/注册页同一套 useLogoEyes） -->
+                <div @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
+                  <UInput
+                    v-model="oldPassword"
+                    type="password"
+                    icon="i-lucide-lock"
+                    autocomplete="current-password"
+                    class="w-full"
+                  />
+                </div>
               </UFormField>
               <UFormField label="新密码" :help="PASSWORD_HINT">
-                <UInput
-                  v-model="newPassword"
-                  type="password"
-                  icon="i-lucide-key-round"
-                  autocomplete="new-password"
-                  class="w-full"
-                />
+                <div @focusin="secretFocus.onFocus" @focusout="secretFocus.onBlur">
+                  <UInput
+                    v-model="newPassword"
+                    type="password"
+                    icon="i-lucide-key-round"
+                    autocomplete="new-password"
+                    class="w-full"
+                  />
+                </div>
               </UFormField>
             </div>
 
