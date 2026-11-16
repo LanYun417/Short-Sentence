@@ -1,14 +1,30 @@
 <script setup lang="ts">
 /**
- * 站点页脚：法务链接（用户协议 / 隐私政策，固定展示）+ 备案号（ICP / 公安备案）。
+ * 站点页脚：法务链接（用户协议 / 隐私政策）+ 备案号（ICP / 公安备案）。
  *
  * 备案号来自后台「系统管理 → 参数管理」的 site.icp / site.policeIcp
- * （公开接口 /api/client/site 下发）；两个都为空时备案行不渲染，但法务链接始终展示。
+ * （公开接口 /api/client/site 下发）；两个都为空时备案行不渲染。
  * 公安备案号带盾牌图标，点击跳全国互联网安全管理服务平台。
+ *
+ * 用在两处：
+ * - 默认布局 / 下载页：页面底部（页脚位置）；
+ * - auth 布局：渲染在 AuthShell 的「下载 App」下方（登录/注册的同意入口必须
+ *   在首屏可见，沉底要滚动才看见不合规）。
+ *
+ * `withLegal` 控制法务链接是否渲染：注册页表单内已有勾选链接，传 false 免重复。
  *
  * 读取一律 `?? ''` 兜底：状态可能来自水合/旧 payload，字段缺失时不能让整页 500。
  */
 import { useSiteFiling } from '~/composables/useSiteFiling';
+
+// 布尔 prop 不传时会被 Vue 转换为 false，必须给显式默认 true
+withDefaults(
+  defineProps<{
+    /** 是否渲染法务链接（默认渲染；注册页表单已带勾选链接时传 false 免重复） */
+    withLegal?: boolean;
+  }>(),
+  { withLegal: true },
+);
 
 const { site, ensureLoaded } = useSiteFiling();
 
@@ -23,8 +39,8 @@ const policeIcp = computed(() => (site.value?.policeIcp ?? '').trim());
   <footer
     class="border-t border-slate-200/70 py-4 text-center text-[11px] leading-relaxed text-slate-400 dark:border-slate-800 dark:text-slate-500"
   >
-    <!-- 法务链接固定展示（合规要求，与备案号是否配置无关） -->
-    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+    <!-- 法务链接固定展示（合规要求；注册页表单已带勾选链接时由 withLegal=false 裁掉） -->
+    <div v-if="withLegal" class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
       <NuxtLink to="/terms" class="transition hover:text-sky-600 dark:hover:text-sky-300">用户协议</NuxtLink>
       <span aria-hidden="true">·</span>
       <NuxtLink to="/privacy" class="transition hover:text-sky-600 dark:hover:text-sky-300">隐私政策</NuxtLink>

@@ -8,10 +8,21 @@
  *
  * 页面通过默认插槽填入表单卡片；标题由 `title` 传入，保证两页版式完全一致。
  */
-defineProps<{
-  /** 页面标题（居中显示在品牌下方） */
-  title: string;
-}>();
+withDefaults(
+  defineProps<{
+    /** 页面标题（居中显示在品牌下方） */
+    title: string;
+    /**
+     * 是否渲染页脚法务链接（用户协议 / 隐私政策）。
+     * 注册页表单内已有带链接的协议勾选框，传 false 免同页两行重复链接；
+     * 备案号行不受影响（始终随此块渲染，登录/注册页都可见）。
+     *
+     * 注意：布尔 prop 不传时会被 Vue 布尔转换为 false，必须给显式默认 true。
+     */
+    showLegal?: boolean;
+  }>(),
+  { showLegal: true },
+);
 </script>
 
 <template>
@@ -52,6 +63,10 @@ defineProps<{
       <div class="anim-in mt-6 text-center" :style="{ animationDelay: '180ms' }">
         <AppDownloadEntry variant="link" />
       </div>
+
+      <!-- 法务链接 + 备案号：必须贴着「下载 App」在首屏内可见。
+           沉到页面底要滚动才看得到的同意入口不合规（用户反馈），故内联到此处。 -->
+      <SiteFooter class="mt-2" :with-legal="showLegal" />
     </div>
   </div>
 </template>

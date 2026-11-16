@@ -77,7 +77,7 @@ async function onSubmit(): Promise<void> {
 </script>
 
 <template>
-  <AuthShell title="创建账号">
+  <AuthShell title="创建账号" :show-legal="false">
     <UCard
       :ui="{
         body: 'p-6',
