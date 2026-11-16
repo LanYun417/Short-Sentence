@@ -1193,6 +1193,28 @@ const MENU_TREE: MenuSeedNode[] = [
           },
         ],
       },
+      {
+        // 投稿审核：用户投稿的通过 / 驳回（投稿不进刷题池，精选是展示位）
+        key: 'client:submission:list',
+        menuName: '投稿审核',
+        menuType: MenuType.MENU,
+        path: '/sentence/submissions',
+        component: 'sentence/submissions',
+        icon: 'journal-check',
+        permission: 'client:submission:list',
+        sort: 18,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'client:submission:review',
+            menuName: '审核投稿',
+            menuType: MenuType.BUTTON,
+            permission: 'client:submission:review',
+            sort: 1,
+          },
+        ],
+      },
     ],
   },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）
@@ -1779,6 +1801,10 @@ async function cleanupObsoleteMenus(prisma: PrismaService): Promise<void> {
 const ICON_ALIASES: Record<string, string> = {
   BIconDiagram2: 'diagram-2',
   BIconDiagram3: 'diagram-3',
+  // 历史误用的非 bootstrap 名：admin 侧按 `bi bi-<name>` 渲染，这些名不存在 → 图标空白。
+  // trending-up 是 lucide 名；EditPen 是 Element Plus 名（建「投稿审核」菜单时写错）。
+  'trending-up': 'graph-up-arrow',
+  EditPen: 'journal-check',
 };
 
 /** 组件名（`BIconBarChartLine`）→ 原生图标名（`bar-chart-line`）。 */
@@ -1802,8 +1828,12 @@ function toNativeIconName(name: string): string {
  * 后续启动为空操作。
  */
 async function normalizeMenuIcons(prisma: PrismaService): Promise<void> {
+  // 扫描范围 = 组件名形式（BIcon*）+ 别名表里登记过的历史错名
+  const legacyNames = Object.keys(ICON_ALIASES);
   const rows = await prisma.menu.findMany({
-    where: { icon: { startsWith: 'BIcon' } },
+    where: {
+      OR: [{ icon: { startsWith: 'BIcon' } }, { icon: { in: legacyNames } }],
+    },
     select: { id: true, icon: true },
   });
   if (rows.length === 0) {
