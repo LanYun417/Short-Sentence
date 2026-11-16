@@ -205,9 +205,6 @@ function iconOf(name: string): string {
     <!-- 周学习报告：把这一周的努力变成一张看得懂、可分享的卡 -->
     <WeeklyReportCard />
 
-    <!-- 每日 Boss：一天一道挑战题（入口卡自带状态，空态也显示，不做条件渲染） -->
-    <BossEntryCard />
-
     <!-- 记忆巩固独立成卡，与上方「场景探索」卡片之间由外层 space-y 留出间隙 -->
     <MemoryHealthCard />
 

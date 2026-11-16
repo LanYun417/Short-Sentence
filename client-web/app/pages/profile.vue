@@ -551,6 +551,12 @@ async function onExportData(): Promise<void> {
       </div>
     </section>
 
+    <!-- 每日 Boss：一天一道挑战题。放在「我的收藏」上方——挑战是高频动作，
+         收藏/记录是低频回看，入口排序按使用频率排（原在「成长」Tab 内，太深）。 -->
+    <div class="anim-in mt-5" style="animation-delay: 85ms">
+      <BossEntryCard />
+    </div>
+
     <!-- 收藏与复习：低频的「回看 / 巩固」动作，收进「我的」做二级入口，
          顶部导航只留核心四项（刷题 / 功能 / 排行榜 / 我的）。
          别把排行榜 / 情景闯关 / 句子接龙再放回来：它们分别常驻导航 Tab 与「功能」页，
