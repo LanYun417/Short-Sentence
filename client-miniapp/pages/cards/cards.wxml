@@ -77,22 +77,14 @@
     </block>
   </block>
 
-  <!-- 详情：闪卡（打开先给卡背，点卡片本身翻到正面，与 App 端一致） -->
+  <!-- 详情：闪卡（默认显示正面，点卡片翻到卡背寄语，再点翻回） -->
   <view wx:if="{{detail}}" class="mask" bindtap="onCloseDetail">
     <view class="sheet" catchtap="onTapSheet">
       <!-- 已拥有：可双向翻面的闪卡；双面用 grid 叠在同一格，高度取较高的一面（正面） -->
       <view wx:if="{{detail.owned}}" class="flip" bindtap="onFlipCard">
-        <view class="flip-inner {{cardFlipped ? 'is-flipped' : ''}}">
-          <!-- 卡背：只给日期、封蜡与寄语，不泄露句子 -->
-          <view class="flip-face flip-back">
-            <text class="flip-date">{{detail.bizDate}}</text>
-            <view class="flip-seal">✦</view>
-            <text class="flip-blessing">{{detail.blessing}}</text>
-            <text class="flip-hint">轻触翻开</text>
-            <text class="flip-brand">短句 · 每天一句，慢慢变好</text>
-          </view>
+        <view class="flip-inner {{cardBackShown ? 'is-flipped' : ''}}">
 
-          <!-- 正面：句子与译文 -->
+          <!-- 正面：配图、标题与句子译文，默认朝向用户 -->
           <view class="flip-face flip-front">
             <image wx:if="{{detail.imageUrl}}" class="sheet-img" src="{{detail.imageUrl}}" mode="aspectFill" />
             <text class="sheet-date">{{detail.bizDate}}</text>
@@ -101,7 +93,16 @@
             <view class="divider"></view>
             <text class="sheet-en" selectable>{{detail.en}}</text>
             <text class="sheet-trans">{{detail.zh}}</text>
-            <text class="flip-backtip">轻触翻回</text>
+            <text class="flip-backtip">轻触翻看寄语</text>
+          </view>
+
+          <!-- 卡背：只给日期、封蜡与寄语（预旋转 180°，默认藏在背面） -->
+          <view class="flip-face flip-back">
+            <text class="flip-date">{{detail.bizDate}}</text>
+            <view class="flip-seal">✦</view>
+            <text class="flip-blessing">{{detail.blessing}}</text>
+            <text class="flip-hint">轻触翻回</text>
+            <text class="flip-brand">短句 · 每天一句，慢慢变好</text>
           </view>
         </view>
       </view>

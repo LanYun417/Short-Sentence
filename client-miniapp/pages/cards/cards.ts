@@ -33,8 +33,8 @@ interface CardsData {
   loading: boolean;
   claiming: boolean;
   detail: CardView | null;
-  /** 闪卡是否已翻到正面（false = 卡背） */
-  cardFlipped: boolean;
+  /** 闪卡当前是否显示卡背面（false = 默认显示正面；点击卡片切换） */
+  cardBackShown: boolean;
 }
 
 interface CardsCustom {
@@ -60,9 +60,9 @@ Page<CardsData, CardsCustom>({
     loading: true,
     claiming: false,
     detail: null,
-    // 闪卡翻面状态：false = 卡背（寄语），true = 正面（句子）。
-    // 每次打开详情都重置为卡背，与 App 端「打开先给卡背」一致。
-    cardFlipped: false,
+    // 闪卡翻面状态：false = 正面（句子+配图），true = 卡背（日期+寄语）。
+    // 打开详情默认显示正面，与「先看到内容、再翻看寄语」的预期一致。
+    cardBackShown: false,
   },
 
   async onShow() {
@@ -149,8 +149,8 @@ Page<CardsData, CardsCustom>({
       }
       toastSuccess('句签已领取');
       await this.refresh();
-      // 新领到的卡也从卡背开始（保留「轻触翻开」的仪式感）
-      this.setData({ detail: this.toView(card, true), cardFlipped: false });
+      // 新领到的卡也先显示正面（看到内容才算「翻开」这张卡）
+      this.setData({ detail: this.toView(card, true), cardBackShown: false });
     } catch (error) {
       this.setData({ claiming: false });
       showError(error);
@@ -163,19 +163,19 @@ Page<CardsData, CardsCustom>({
     const index = Number(event.currentTarget.dataset.index as string);
     if (tab === 'today') {
       if (this.data.today) {
-        this.setData({ detail: this.data.today, cardFlipped: false });
+        this.setData({ detail: this.data.today, cardBackShown: false });
       }
       return;
     }
     const list = tab === 'mine' ? this.data.mine : tab === 'missing' ? this.data.missing : [];
     const card = list[index];
     if (card) {
-      this.setData({ detail: card, cardFlipped: false });
+      this.setData({ detail: card, cardBackShown: false });
     }
   },
 
   /**
-   * 翻面（闪卡）：卡背 ↔ 正面，点卡片本身触发。
+   * 翻面（闪卡）：默认正面，点击切到卡背寄语，再点翻回正面。
    * 未拥有的句签没有正面可看，不响应翻面。
    */
   onFlipCard() {
@@ -183,7 +183,7 @@ Page<CardsData, CardsCustom>({
     if (!detail || !detail.owned) {
       return;
     }
-    this.setData({ cardFlipped: !this.data.cardFlipped });
+    this.setData({ cardBackShown: !this.data.cardBackShown });
   },
 
   /** 关闭详情。 */

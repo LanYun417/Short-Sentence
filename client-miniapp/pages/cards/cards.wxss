@@ -271,8 +271,11 @@
   -webkit-backface-visibility: hidden;
 }
 
+/* 正面是默认朝向用户的面：无预旋转；卡背带 180° 预旋转藏在背面，
+   is-flipped 时整体转 180° 露出卡背。规则必须显式存在（check-pages 会校验
+   wxml 里每个 class 都有样式定义），但正面这段不写任何 3D 变换。 */
 .flip-front {
-  transform: rotateY(180deg);
+  transform: none;
 }
 
 .flip-back {
@@ -280,6 +283,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  transform: rotateY(180deg);
 }
 
 .flip-date {
