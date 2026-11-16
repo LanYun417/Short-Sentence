@@ -110,8 +110,8 @@ loadBoard();
       </el-table>
     </el-card>
 
-    <!-- 按用户查全部名次 -->
-    <el-card shadow="never" class="table-page__card">
+    <!-- 按用户查全部名次（固定高度查询结果：标 extra，不抢实时榜单表的高度） -->
+    <el-card shadow="never" class="table-page__extra">
       <div class="mb-3 flex flex-wrap items-center gap-2">
         <el-input
           v-model="userKeyword"

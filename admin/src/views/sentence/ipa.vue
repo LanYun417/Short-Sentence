@@ -182,9 +182,10 @@ watch(recordsVisible, (visible) => {
       <StatCard title="今日学会" :value="stats?.todayLearned ?? '—'" icon="lightning-charge" color="#ef4444" />
     </div>
 
-    <!-- 趋势 + Top5 -->
+    <!-- 趋势 + Top5：都是固定高度的展示块，必须标 table-page__extra（不参与剩余高度分配），
+         否则会和音标库抢内容区，把账本表挤成一条 -->
     <div class="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <el-card shadow="never" class="table-page__card">
+      <el-card shadow="never" class="table-page__extra">
         <p class="mb-3 text-[13px] font-semibold text-ink">近 7 天学会标记</p>
         <div class="flex h-24 items-end gap-2">
           <div v-for="t in stats?.trend ?? []" :key="t.date" class="flex flex-1 flex-col items-center gap-1">
@@ -197,7 +198,7 @@ watch(recordsVisible, (visible) => {
           </div>
         </div>
       </el-card>
-      <el-card shadow="never" class="table-page__card">
+      <el-card shadow="never" class="table-page__extra">
         <p class="mb-3 text-[13px] font-semibold text-ink">学会人数最多 Top5</p>
         <div v-if="stats?.top?.length" class="space-y-2.5">
           <div v-for="t in stats.top" :key="t.symbol" class="flex items-center gap-2">
