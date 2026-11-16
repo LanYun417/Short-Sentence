@@ -289,7 +289,9 @@ watch(
               </span>
             </div>
           </div>
-          <UButton class="mt-4 w-full" color="neutral" variant="outline" @click="selected = null">关闭</UButton>
+          <UButton class="mt-4 w-full justify-center" color="neutral" variant="outline" @click="selected = null"
+            >关闭</UButton
+          >
         </div>
       </div>
     </Teleport>
