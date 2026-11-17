@@ -2356,17 +2356,19 @@ async function seedAchievements(prisma: PrismaService): Promise<void> {
   let redrawn = 0;
   for (const seed of ACHIEVEMENT_SEEDS) {
     const svg = renderAchievementSvg(seed.code, seed.icon, seed.category);
-    const svgUrl = `/static/achievements/${seed.code}.svg`;
+    // /static 挂的是 immutable + 30 天缓存，文件名不变浏览器就不会重新下载。
+    // 把 SVG 内容哈希拼成 ?v=xxxx，内容一变 URL 就变，旧缓存自然失效。
+    const version = createHash('sha256').update(svg).digest('hex').slice(0, 8);
+    const svgBase = `/static/achievements/${seed.code}.svg`;
+    const svgUrl = `${svgBase}?v=${version}`;
     const old = storedById.get(seed.code);
     const oldPngUrl = `/static/achievements/${seed.code}.png`;
-    // 只更新种子自己管理的字段；后台自定义 URL（非标准 .png/.svg）原样保留
-    if (old?.artSvg !== svg || old?.artUrl === null || old?.artUrl === oldPngUrl) {
+    // 只更新种子自己管理的 URL（null / 旧 .png / 带或不带版本的本站 .svg）；后台自定义 URL 原样保留
+    const managedUrl = old?.artUrl === null || old?.artUrl === oldPngUrl || (old?.artUrl?.startsWith(svgBase) ?? false);
+    if (old?.artSvg !== svg || managedUrl) {
       await prisma.achievement.update({
         where: { code: seed.code },
-        data: {
-          artSvg: svg,
-          ...(old?.artUrl === null || old?.artUrl === oldPngUrl ? { artUrl: svgUrl } : {}),
-        },
+        data: { artSvg: svg, ...(managedUrl ? { artUrl: svgUrl } : {}) },
       });
     }
 

@@ -348,7 +348,8 @@ class _AchievementDetailSheet extends StatelessWidget {
               opacity: unlocked ? 1.0 : 0.4,
               child: () {
                 final Widget art;
-                if (item.artUrl!.endsWith('.svg')) {
+                // artUrl 带 ?v= 内容版本号（缓存失效用），所以不能简单 endsWith
+                if (RegExp(r'\.svg(\?|$)').hasMatch(item.artUrl!)) {
                   art = AnimatedAchievementArt(
                     url: staticUrl(item.artUrl),
                     fallback: _iconFallback(colors, unlocked),
