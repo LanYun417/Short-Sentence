@@ -1,4 +1,8 @@
 /**
+ * @deprecated 已废弃（2026-11-17）：成就徽章改为「种子 SVG → 服务端栅格化」，
+ * 见 src/common/achievement-art.ts 与 seed.service.ts 的 seedAchievements。
+ * 本脚本保留仅供历史参考，npm scripts 里已移除入口，勿再调用（依赖外部生图 key）。
+ *
  * 成就 AI 卡通大图：给 8 枚高光成就各生成一张软 3D 黏土卡通徽章图。
  *
  * 为什么单独一个脚本：图片是内容资产不是代码，出错重试不影响服务；

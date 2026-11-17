@@ -11,7 +11,13 @@
  * - 服务启动时由 SeedService 的 onApplicationBootstrap 自动执行，早于 app.listen；
  * - 也可手动执行：`npm run seed`（入口见 prisma/seed.ts）。
  */
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import sharp from 'sharp';
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { renderAchievementSvg } from '../common/achievement-art.js';
+import { config } from '../common/config/config.js';
 import { DataScope, MenuType, Status, SUPER_ADMIN_ROLE } from '../common/config/constants.js';
 import { hashPassword } from '../common/utils/utils.js';
 import { CHAIN_TOPIC_SEEDS } from '../modules/client/chain/chain-topics.js';
@@ -2004,7 +2010,7 @@ export const ACHIEVEMENT_SEEDS: Array<{
   name: string;
   description: string;
   icon: string;
-  /** AI 卡通大图 URL（约定 /static/achievements/<code>.png）；仅高光成就填，其余留空回落 lucide */
+  /** 徽章大图 URL（约定 /static/achievements/<code>.png）；种子会为所有成就补该默认值，显式声明仅为历史高光条目保留 */
   artUrl?: string;
   category: string;
   rewardXp: number;
@@ -2337,16 +2343,41 @@ async function seedAchievements(prisma: PrismaService): Promise<void> {
       },
     });
   }
-  // 高光成就的默认大图 URL 只补空值：upsert 的 update 刻意不含 artUrl，
-  // 这样后台手动填过的自定义 URL 不会被种子覆盖。
+  // 徽章大图 URL 只补空值：upsert 的 update 刻意不含 artUrl，
+  // 这样后台手动填过的自定义 URL 不会被种子覆盖。现在 33 枚全部有徽章（SVG 栅格化产物）。
   for (const seed of ACHIEVEMENT_SEEDS) {
-    if (!seed.artUrl) continue;
     await prisma.achievement.updateMany({
       where: { code: seed.code, artUrl: null },
-      data: { artUrl: seed.artUrl },
+      data: { artUrl: `/static/achievements/${seed.code}.png` },
     });
   }
-  logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个`);
+
+  // SVG 文本随种子落库，服务端启动时按约定栅格化到 uploads/achievements/<code>.png。
+  // 这样三端仍读同一个 /static 路径，不用各自处理 SVG，也不再依赖外部生图 key。
+  const outDir = join(config.upload.dir, 'achievements');
+  await mkdir(outDir, { recursive: true });
+  const stored = await prisma.achievement.findMany({
+    where: { code: { in: ACHIEVEMENT_SEEDS.map((s) => s.code) } },
+    select: { code: true, artSvg: true },
+  });
+  const storedSvg = new Map(stored.map((row) => [row.code, row.artSvg]));
+  let redrawn = 0;
+  for (const seed of ACHIEVEMENT_SEEDS) {
+    const svg = renderAchievementSvg(seed.code, seed.icon, seed.category);
+    if (storedSvg.get(seed.code) !== svg) {
+      await prisma.achievement.update({ where: { code: seed.code }, data: { artSvg: svg } });
+    }
+    // PNG 内容没变就不重写，避免每次启动都刷一遍磁盘
+    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+    const hash = createHash('sha256').update(png).digest('hex');
+    const target = join(outDir, `${seed.code}.png`);
+    const existing = await readFile(target).catch(() => null);
+    if (!existing || createHash('sha256').update(existing).digest('hex') !== hash) {
+      await writeFile(target, png);
+      redrawn += 1;
+    }
+  }
+  logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个；徽章 SVG 已入库，本次重绘 ${redrawn} 张 PNG`);
 }
 
 /**

@@ -34,7 +34,6 @@
     "seed": "tsx prisma/seed.ts",
     "reset:question-bank": "tsx scripts/reset-question-bank.ts",
     "seed:sentences": "tsx scripts/seed-sentences-manual.ts",
-    "gen:achievement-art": "tsx scripts/gen-achievement-art.ts",
     "ip2region:update": "tsx scripts/update-ip2region.ts"
   },
   "dependencies": {
