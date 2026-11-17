@@ -1,18 +1,15 @@
 /**
  * 成就徽章 SVG 生成器。
  *
- * 为什么用 SVG + 服务端栅格化，而不是继续调 AgnesAI 生图：
- * 1. SVG 是纯文本，可以随种子进库、随代码版本化，换机器 / 重新部署不需要外部 key，
- *    也不用手动把图片资产拷到服务器的 uploads；
- * 2. Web / Android / 小程序三端对 SVG data URI 的支持并不一致（Flutter 原生不认 SVG，
- *    微信小程序 <image> 对 SVG 也很玄），所以服务端用 sharp 按现有约定的
- *    `/static/achievements/<code>.png` 栅格化一次，三端渲染代码一行不用改。
+ * 线稿直接取 Web 列表 ICON_MAP 对应的 lucide 图标路径（见同目录 achievement-glyphs.ts，
+ * 由 scripts/extract-achievement-glyphs.cjs 从 @iconify-json/lucide 提取），
+ * 保证「列表里看到什么图标，点开弹窗就是什么图标」；不再用手写近似线稿。
  *
- * 设计：软 3D 黏土风的简化版——圆角渐变方块 + 高光 + 白色线性图标，
- * 在 112px 徽章位上清晰可辨；颜色按成就类别固定基调，再按 code 取哈希微调色相，
- * 保证 33 枚不会是一模一样的色块。
+ * 纯透明底 + 金色描边（#f59e0b，与 Web 列表的 text-amber-500 一致），无背景块。
+ * SMIL 描边动画把每枚图标从左下起点一笔连完；静态渲染器显示完整线稿不白屏。
+ * 服务端同时栅格化一份静态 PNG 作兜底，Android 则以自绘组件播同样动画。
  */
-import { createHash } from 'node:crypto';
+import { LUCIDE_GLYPHS } from './achievement-glyphs.js';
 
 /** 24x24 线稿路径（fill:none / stroke:white / stroke-width≈1.8，由外层统一设置）。 */
 const GLYPHS: Record<string, string> = {
@@ -62,54 +59,47 @@ const GLYPHS: Record<string, string> = {
 /** 没登记图标名时的兜底线稿（星光），靠配色区分即可。 */
 const FALLBACK_GLYPH = GLYPHS['sparkles'] as string;
 
-/** 类别基准色相（HSL 的 h）；未知类别按 luck 走紫色。 */
-const CATEGORY_HUE: Record<string, number> = {
-  persist: 28, // 琥珀 / 暖橙：坚持类
-  behavior: 208, // 天蓝 / 靛蓝：行为类
-  explore: 152, // 青绿：探索类
-  luck: 272, // 紫：运气类
-};
-
-/** 取图标线稿：先精确匹配，再按常见前缀兜底，最后用星光。 */
+/** 取图标线稿：优先用从 Web ICON_MAP 提取的 lucide 原路径，保证列表与弹窗一致。 */
 function glyphOf(icon: string): string {
-  const direct = GLYPHS[icon];
-  if (direct) return direct;
-  // lucide / bootstrap 图标名后缀多样，抓一个能认的词根即可
-  const hit = Object.keys(GLYPHS).find((key) => icon.includes(key) || key.includes(icon));
-  return hit ? (GLYPHS[hit] as string) : FALLBACK_GLYPH;
+  return LUCIDE_GLYPHS[icon] ?? GLYPHS[icon] ?? FALLBACK_GLYPH;
 }
 
-/** code → 稳定小整数（同 code 永远同色，不同 code 稍有差异）。 */
-function hashOf(code: string): number {
-  return createHash('sha256').update(code).digest().readUInt32BE(0);
+/** 取属性值（lucide 的 path 上带 stroke/fill 等一堆属性，不能假设 d 排第一）。 */
+function attr(attrs: string, name: string): string | null {
+  return new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1] ?? null;
 }
 
-/** 把 circle / ellipse / rect 统一转成 path，方便客户端只解析一种元素。 */
+/** 把 circle / rect / path 统一成 `<path d="..."/>`，客户端只需解析一种元素。 */
 function normalizeToPaths(glyph: string): string[] {
   if (!glyph.startsWith('<')) {
     return [`<path d="${glyph}"/>`];
   }
   const out: string[] = [];
-  for (const match of glyph.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"\/>/g)) {
-    const cx = Number(match[1]);
-    const cy = Number(match[2]);
-    const r = Number(match[3]);
+  for (const match of glyph.matchAll(/<circle\b([^>]*)\/>/g)) {
+    const cx = Number(attr(match[1] as string, 'cx'));
+    const cy = Number(attr(match[1] as string, 'cy'));
+    const r = Number(attr(match[1] as string, 'r'));
     out.push(`<path d="M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z"/>`);
   }
-  for (const match of glyph.matchAll(/<ellipse cx="([\d.]+)" cy="([\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/g)) {
-    const cx = Number(match[1]);
-    const cy = Number(match[2]);
-    const rx = Number(match[3]);
-    const ry = Number(match[4]);
+  for (const match of glyph.matchAll(/<ellipse\b([^>]*)\/>/g)) {
+    const cx = Number(attr(match[1] as string, 'cx'));
+    const cy = Number(attr(match[1] as string, 'cy'));
+    const rx = Number(attr(match[1] as string, 'rx'));
+    const ry = Number(attr(match[1] as string, 'ry'));
     out.push(`<path d="M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0 Z"/>`);
   }
-  for (const match of glyph.matchAll(
-    /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="([\d.]+)"\/>/g,
-  )) {
-    out.push(`<path d="M ${match[1]} ${match[2]} h ${match[3]} v ${match[4]} h ${-Number(match[3])} Z"/>`);
+  for (const match of glyph.matchAll(/<rect\b([^>]*)\/>/g)) {
+    const x = attr(match[1] as string, 'x');
+    const y = attr(match[1] as string, 'y');
+    const w = attr(match[1] as string, 'width');
+    const h = attr(match[1] as string, 'height');
+    out.push(`<path d="M ${x} ${y} h ${w} v ${h} h ${-Number(w)} Z"/>`);
   }
-  for (const match of glyph.matchAll(/<path d="([^"]+)"\/>/g)) {
-    out.push(`<path d="${match[1]}"/>`);
+  for (const match of glyph.matchAll(/<path\b([^>]*)\/>/g)) {
+    const d = attr(match[1] as string, 'd');
+    if (d) {
+      out.push(`<path d="${d}"/>`);
+    }
   }
   return out;
 }
@@ -121,12 +111,10 @@ function normalizeToPaths(glyph: string): string[] {
  * 视觉上就是从一个点出发把线稿连完。静态渲染器（不支持 SMIL）会看到 base 状态
  * dashoffset=0，即完整线稿，不会白屏。
  *
- * 描边用类别色（不是白色）——没有背景块后，白线在浅色卡片上会看不见。
+ * 描边统一用列表里的金色（Tailwind amber-500 / #f59e0b），没有背景块后白线会看不见。
  */
-export function renderAchievementSvg(code: string, icon: string, category: string): string {
-  const baseHue = CATEGORY_HUE[category] ?? CATEGORY_HUE['luck']!;
-  const hue = baseHue + ((hashOf(code) % 25) - 12);
-  const stroke = `hsl(${hue}, 76%, 42%)`;
+export function renderAchievementSvg(_code: string, icon: string, _category: string): string {
+  const stroke = '#f59e0b';
   const glyph = normalizeToPaths(glyphOf(icon));
   const paths = glyph
     .map((item, index) =>

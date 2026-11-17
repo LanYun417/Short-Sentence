@@ -31,9 +31,12 @@ class _PathParser {
     for (final d in dValues) {
       paths.add(_parsePath(d));
     }
+    final hex = RegExp(r'stroke="#([0-9a-fA-F]{6})"').firstMatch(svg);
     final hsl = RegExp(r'stroke="hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)"').firstMatch(svg);
-    var color = const Color(0xFF4F46E5);
-    if (hsl != null) {
+    var color = const Color(0xFFF59E0B); // Tailwind amber-500，与列表图标同色
+    if (hex != null) {
+      color = Color(int.parse('FF${hex.group(1)}', radix: 16));
+    } else if (hsl != null) {
       final h = int.parse(hsl.group(1)!);
       final s = int.parse(hsl.group(2)!) / 100;
       final l = int.parse(hsl.group(3)!) / 100;
@@ -58,6 +61,10 @@ class _PathParser {
     var y = 0.0;
     var subX = 0.0;
     var subY = 0.0;
+    double? lastCubicX;
+    double? lastCubicY;
+    double? lastQuadCtrlX;
+    double? lastQuadCtrlY;
     num number() {
       if (i >= tokens.length) return 0;
       return num.tryParse(tokens[i++]) ?? 0;
@@ -76,6 +83,10 @@ class _PathParser {
           path.moveTo(x, y);
           subX = x;
           subY = y;
+          lastCubicX = null;
+          lastCubicY = null;
+          lastQuadCtrlX = null;
+          lastQuadCtrlY = null;
           cmd = rel ? 'l' : 'L'; // 后续坐标对隐式 lineTo
           break;
         case 'L':
@@ -100,10 +111,76 @@ class _PathParser {
           final ey = number().toDouble();
           if (rel) {
             path.cubicTo(x + c1x, y + c1y, x + c2x, y + c2y, x + ex, y + ey);
+            lastCubicX = x + c2x;
+            lastCubicY = y + c2y;
             x += ex;
             y += ey;
           } else {
             path.cubicTo(c1x, c1y, c2x, c2y, ex, ey);
+            lastCubicX = c2x;
+            lastCubicY = c2y;
+            x = ex;
+            y = ey;
+          }
+          break;
+        case 'S':
+          final c2x = number().toDouble();
+          final c2y = number().toDouble();
+          final ex = number().toDouble();
+          final ey = number().toDouble();
+          final startX = x;
+          final startY = y;
+          final c1x = lastCubicX == null ? x : 2 * x - lastCubicX;
+          final c1y = lastCubicY == null ? y : 2 * y - lastCubicY;
+          if (rel) {
+            path.cubicTo(c1x, c1y, startX + c2x, startY + c2y, startX + ex, startY + ey);
+            lastCubicX = startX + c2x;
+            lastCubicY = startY + c2y;
+            x += ex;
+            y += ey;
+          } else {
+            path.cubicTo(c1x, c1y, c2x, c2y, ex, ey);
+            lastCubicX = c2x;
+            lastCubicY = c2y;
+            x = ex;
+            y = ey;
+          }
+          break;
+        case 'Q':
+          final cx = number().toDouble();
+          final cy = number().toDouble();
+          final ex = number().toDouble();
+          final ey = number().toDouble();
+          final startX = x;
+          final startY = y;
+          if (rel) {
+            path.quadraticBezierTo(startX + cx, startY + cy, startX + ex, startY + ey);
+            lastQuadCtrlX = startX + cx;
+            lastQuadCtrlY = startY + cy;
+            x += ex;
+            y += ey;
+          } else {
+            path.quadraticBezierTo(cx, cy, ex, ey);
+            lastQuadCtrlX = cx;
+            lastQuadCtrlY = cy;
+            x = ex;
+            y = ey;
+          }
+          break;
+        case 'T':
+          final ex = number().toDouble();
+          final ey = number().toDouble();
+          final startX = x;
+          final startY = y;
+          final cx = lastQuadCtrlX == null ? x : 2 * x - lastQuadCtrlX;
+          final cy = lastQuadCtrlY == null ? y : 2 * y - lastQuadCtrlY;
+          path.quadraticBezierTo(cx, cy, rel ? startX + ex : ex, rel ? startY + ey : ey);
+          lastQuadCtrlX = cx;
+          lastQuadCtrlY = cy;
+          if (rel) {
+            x += ex;
+            y += ey;
+          } else {
             x = ex;
             y = ey;
           }
