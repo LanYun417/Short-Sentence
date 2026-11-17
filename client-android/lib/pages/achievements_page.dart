@@ -12,6 +12,7 @@ import '../api/models/growth.dart';
 import '../state/growth_controller.dart';
 import '../theme.dart';
 import '../theme/icon_map.dart';
+import '../widgets/animated_achievement_art.dart';
 import '../widgets/app_card.dart';
 import '../widgets/page_header.dart';
 import '../widgets/press_scale.dart';
@@ -340,24 +341,41 @@ class _AchievementDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          // 有 AI 大图且 URL 非空优先显示（走 staticUrl 拼 host + 缓存）；否则回落本地图标。
+          // 种子 SVG 走自绘描边动画（三端一致的「一笔连完」效果）；
+          // 后台手填的自定义 PNG 仍走缓存图；都没有则回落本地图标。
           if (hasArt)
             Opacity(
               opacity: unlocked ? 1.0 : 0.4,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: CachedNetworkImage(
-                  imageUrl: staticUrl(item.artUrl),
-                  width: 112,
-                  height: 112,
-                  fit: BoxFit.contain,
-                  memCacheWidth: 336,
-                  color: unlocked ? null : Colors.grey,
-                  colorBlendMode: unlocked ? null : BlendMode.saturation,
-                  placeholder: (context, _) => _iconFallback(colors, unlocked),
-                  errorWidget: (context, _, _) => _iconFallback(colors, unlocked),
-                ),
-              ),
+              child: () {
+                final Widget art;
+                if (item.artUrl!.endsWith('.svg')) {
+                  art = AnimatedAchievementArt(
+                    url: staticUrl(item.artUrl),
+                    fallback: _iconFallback(colors, unlocked),
+                  );
+                } else {
+                  art = ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: CachedNetworkImage(
+                      imageUrl: staticUrl(item.artUrl),
+                      width: 112,
+                      height: 112,
+                      fit: BoxFit.contain,
+                      memCacheWidth: 336,
+                      color: unlocked ? null : Colors.grey,
+                      colorBlendMode: unlocked ? null : BlendMode.saturation,
+                      placeholder: (context, _) => _iconFallback(colors, unlocked),
+                      errorWidget: (context, _, _) => _iconFallback(colors, unlocked),
+                    ),
+                  );
+                }
+                return unlocked
+                    ? art
+                    : ColorFiltered(
+                        colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.saturation),
+                        child: art,
+                      );
+              }(),
             )
           else
             _iconFallback(colors, unlocked),

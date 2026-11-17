@@ -2343,41 +2343,50 @@ async function seedAchievements(prisma: PrismaService): Promise<void> {
       },
     });
   }
-  // 徽章大图 URL 只补空值：upsert 的 update 刻意不含 artUrl，
-  // 这样后台手动填过的自定义 URL 不会被种子覆盖。现在 33 枚全部有徽章（SVG 栅格化产物）。
-  for (const seed of ACHIEVEMENT_SEEDS) {
-    await prisma.achievement.updateMany({
-      where: { code: seed.code, artUrl: null },
-      data: { artUrl: `/static/achievements/${seed.code}.png` },
-    });
-  }
-
-  // SVG 文本随种子落库，服务端启动时按约定栅格化到 uploads/achievements/<code>.png。
-  // 这样三端仍读同一个 /static 路径，不用各自处理 SVG，也不再依赖外部生图 key。
+  // 徽章用纯 SVG（无背景 + SMIL 绘制动画），artUrl 指向 .svg；
+  // 后台手填过的自定义 URL 不覆盖，只替换种子自己写过的标准 .png 链接。
   const outDir = join(config.upload.dir, 'achievements');
   await mkdir(outDir, { recursive: true });
+  const codes = ACHIEVEMENT_SEEDS.map((s) => s.code);
   const stored = await prisma.achievement.findMany({
-    where: { code: { in: ACHIEVEMENT_SEEDS.map((s) => s.code) } },
-    select: { code: true, artSvg: true },
+    where: { code: { in: codes } },
+    select: { code: true, artSvg: true, artUrl: true },
   });
-  const storedSvg = new Map(stored.map((row) => [row.code, row.artSvg]));
+  const storedById = new Map(stored.map((row) => [row.code, row]));
   let redrawn = 0;
   for (const seed of ACHIEVEMENT_SEEDS) {
     const svg = renderAchievementSvg(seed.code, seed.icon, seed.category);
-    if (storedSvg.get(seed.code) !== svg) {
-      await prisma.achievement.update({ where: { code: seed.code }, data: { artSvg: svg } });
+    const svgUrl = `/static/achievements/${seed.code}.svg`;
+    const old = storedById.get(seed.code);
+    const oldPngUrl = `/static/achievements/${seed.code}.png`;
+    // 只更新种子自己管理的字段；后台自定义 URL（非标准 .png/.svg）原样保留
+    if (old?.artSvg !== svg || old?.artUrl === null || old?.artUrl === oldPngUrl) {
+      await prisma.achievement.update({
+        where: { code: seed.code },
+        data: {
+          artSvg: svg,
+          ...(old?.artUrl === null || old?.artUrl === oldPngUrl ? { artUrl: svgUrl } : {}),
+        },
+      });
     }
-    // PNG 内容没变就不重写，避免每次启动都刷一遍磁盘
+
+    // 动画 SVG 本体（Web / 小程序直接吃它）+ 静态 PNG 兜底（老客户端 / 不支持 SVG 的场景）
+    const svgTarget = join(outDir, `${seed.code}.svg`);
+    const existingSvg = await readFile(svgTarget, 'utf8').catch(() => null);
+    if (existingSvg !== svg) {
+      await writeFile(svgTarget, svg, 'utf8');
+      redrawn += 1;
+    }
     const png = await sharp(Buffer.from(svg)).png().toBuffer();
     const hash = createHash('sha256').update(png).digest('hex');
-    const target = join(outDir, `${seed.code}.png`);
-    const existing = await readFile(target).catch(() => null);
-    if (!existing || createHash('sha256').update(existing).digest('hex') !== hash) {
-      await writeFile(target, png);
+    const pngTarget = join(outDir, `${seed.code}.png`);
+    const existingPng = await readFile(pngTarget).catch(() => null);
+    if (!existingPng || createHash('sha256').update(existingPng).digest('hex') !== hash) {
+      await writeFile(pngTarget, png);
       redrawn += 1;
     }
   }
-  logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个；徽章 SVG 已入库，本次重绘 ${redrawn} 张 PNG`);
+  logger.log(`成就数据完成，共 ${ACHIEVEMENT_SEEDS.length} 个；SVG 已入库，本次更新 ${redrawn} 个文件`);
 }
 
 /**

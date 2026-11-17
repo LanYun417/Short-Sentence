@@ -84,28 +84,66 @@ function hashOf(code: string): number {
   return createHash('sha256').update(code).digest().readUInt32BE(0);
 }
 
+/** 把 circle / ellipse / rect 统一转成 path，方便客户端只解析一种元素。 */
+function normalizeToPaths(glyph: string): string[] {
+  if (!glyph.startsWith('<')) {
+    return [`<path d="${glyph}"/>`];
+  }
+  const out: string[] = [];
+  for (const match of glyph.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"\/>/g)) {
+    const cx = Number(match[1]);
+    const cy = Number(match[2]);
+    const r = Number(match[3]);
+    out.push(`<path d="M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z"/>`);
+  }
+  for (const match of glyph.matchAll(/<ellipse cx="([\d.]+)" cy="([\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/g)) {
+    const cx = Number(match[1]);
+    const cy = Number(match[2]);
+    const rx = Number(match[3]);
+    const ry = Number(match[4]);
+    out.push(`<path d="M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0 Z"/>`);
+  }
+  for (const match of glyph.matchAll(
+    /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="([\d.]+)"\/>/g,
+  )) {
+    out.push(`<path d="M ${match[1]} ${match[2]} h ${match[3]} v ${match[4]} h ${-Number(match[3])} Z"/>`);
+  }
+  for (const match of glyph.matchAll(/<path d="([^"]+)"\/>/g)) {
+    out.push(`<path d="${match[1]}"/>`);
+  }
+  return out;
+}
+
 /**
- * 按成就元数据生成徽章 SVG（256x256，圆角渐变底 + 高光 + 白色线稿）。
- * 纯字符串，可直接进 DB 文本列，也可直接喂给 sharp。
+ * 按成就元数据生成「纯线稿 + 绘制动画」的 SVG（256x256，无背景，透明底）。
+ *
+ * 动画用 SMIL：pathLength=1 把每条路径长度归一，dasharray=1 / dashoffset 从 1 走到 0，
+ * 视觉上就是从一个点出发把线稿连完。静态渲染器（不支持 SMIL）会看到 base 状态
+ * dashoffset=0，即完整线稿，不会白屏。
+ *
+ * 描边用类别色（不是白色）——没有背景块后，白线在浅色卡片上会看不见。
  */
 export function renderAchievementSvg(code: string, icon: string, category: string): string {
   const baseHue = CATEGORY_HUE[category] ?? CATEGORY_HUE['luck']!;
   const hue = baseHue + ((hashOf(code) % 25) - 12);
-  const from = `hsl(${hue}, 88%, 64%)`;
-  const to = `hsl(${hue + 16}, 82%, 48%)`;
-  // 大部分线稿是裸 path 的 d 属性；少数含 ellipse/circle 的已经是完整元素
-  const glyph = glyphOf(icon);
-  const glyphBody = glyph.startsWith('<') ? glyph : `<path d="${glyph}"/>`;
+  const stroke = `hsl(${hue}, 76%, 42%)`;
+  const glyph = normalizeToPaths(glyphOf(icon));
+  const paths = glyph
+    .map((item, index) =>
+      item.replace(
+        '/>',
+        ` pathLength="1" stroke-dasharray="1" stroke-dashoffset="0">` +
+          `<animate attributeName="stroke-dashoffset" from="1" to="0" begin="${(index * 0.12).toFixed(2)}s" ` +
+          `dur="1s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1"/></path>`,
+      ),
+    )
+    .join('');
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">',
-    '<defs>',
-    `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`,
-    '<linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>',
-    '</defs>',
-    '<rect x="8" y="8" width="240" height="240" rx="64" fill="url(#g)"/>',
-    '<rect x="8" y="8" width="240" height="132" rx="64" fill="url(#s)"/>',
-    `<g transform="translate(56 56) scale(6)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${glyphBody}</g>`,
-    '<circle cx="198" cy="58" r="5" fill="#fff" opacity=".6"/>',
+    `<g transform="translate(56 56) scale(6)" fill="none" stroke="${stroke}" ` +
+      'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">',
+    paths,
+    '</g>',
     '</svg>',
   ].join('');
 }
