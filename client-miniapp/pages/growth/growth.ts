@@ -6,11 +6,14 @@ import { fetchMemoryStats } from '../../services/question';
 import type { GamifyAchievement, MemoryStats } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError } from '../../utils/feedback';
+import { absoluteUrl } from '../../utils/format';
 import { goLogin, goPractice } from '../../utils/nav';
 
 /** 成就视图模型（多带一个首字，用于无图标字体时的圆形徽章）。 */
 interface AchievementView extends GamifyAchievement {
   initial: string;
+  /** artUrl 转绝对地址（静态资源走 API 域名，小程序没有同源概念） */
+  artSrc: string;
 }
 
 /** 场景视图模型。 */
@@ -95,7 +98,11 @@ Page<GrowthData, GrowthCustom>({
       const achievements: AchievementView[] = overview.achievements
         .slice()
         .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || b.rewardXp - a.rewardXp)
-        .map((item) => ({ ...item, initial: item.name ? item.name.charAt(0) : '·' }));
+        .map((item) => ({
+          ...item,
+          initial: item.name ? item.name.charAt(0) : '·',
+          artSrc: absoluteUrl(item.artUrl),
+        }));
       // 柱状条只吃百分比高度：按 30 天内最大值归一，空值留 6% 底线让基线不断
       const dist = memory?.distribution ?? [];
       const maxDue = Math.max(1, ...dist);

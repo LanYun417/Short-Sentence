@@ -131,8 +131,10 @@ export interface GamifyAchievement {
   code: string;
   name: string;
   description: string;
-  /** lucide 图标名（不含 i-lucide- 前缀） */
+  /** lucide 图标名（不含 i-lucide- 前缀；无 AI 大图时回落用） */
   icon: string;
+  /** AI 生成的卡通大图（/static/achievements/<code>.png）；空则回落首字徽章 */
+  artUrl: string | null;
   category: string;
   rewardXp: number;
   unlocked: boolean;

@@ -127,7 +127,8 @@
         class="ach anim-up {{item.unlocked ? '' : 'ach-locked'}}"
         style="animation-delay: {{index < 8 ? index * 45 : 0}}ms"
       >
-        <view class="ach-icon {{item.unlocked ? 'ach-icon-on' : ''}}">{{item.initial}}</view>
+        <image wx:if="{{item.artSrc}}" class="ach-art" src="{{item.artSrc}}" mode="aspectFit" />
+        <view wx:else class="ach-icon {{item.unlocked ? 'ach-icon-on' : ''}}">{{item.initial}}</view>
         <view class="ach-body">
           <view class="ach-title-row">
             <text class="ach-name">{{item.name}}</text>

@@ -223,6 +223,15 @@
   transition: all 0.24s ease;
 }
 
+/* AI 大图（有 artUrl 时替换首字徽章；无图时回落上面的 .ach-icon） */
+.ach-art {
+  flex-shrink: 0;
+  width: 76rpx;
+  height: 76rpx;
+  background: #f1f5f9;
+  border-radius: 22rpx;
+}
+
 /* 已解锁的徽章：紫金渐变 + 外发光，和未解锁一眼分开 */
 .ach-icon-on {
   color: #ffffff;
