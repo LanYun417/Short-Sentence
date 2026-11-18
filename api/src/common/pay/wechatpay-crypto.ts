@@ -12,6 +12,7 @@
  */
 import { createDecipheriv, createSign, createVerify, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 /** 微信支付 API 域名（直连模式）。 */
 export const WECHATPAY_API_BASE = 'https://api.mch.weixin.qq.com';
@@ -60,16 +61,33 @@ export function buildCallbackSignatureString(timestamp: string, nonce: string, b
   return `${timestamp}\n${nonce}\n${body}\n`;
 }
 
-/** 商户私钥归一化：接受文件路径 / 行内 PEM / `\n` 转义三种形态，统一输出可用的 PEM 文本。 */
-export function normalizePrivateKey(raw: string): string {
+/**
+ * 商户私钥归一化：接受文件路径 / 行内 PEM / `\n` 转义三种形态，统一输出可用的 PEM 文本。
+ *
+ * @param raw 配置原值
+ * @param allowedRoot 允许读取的根目录（安全边界）。传了就**只允许读该目录内的文件**——
+ *   后台「支付设置」的值来自网页表单，若不限制路径，一个有设置权限的账号就能让服务
+ *   读取服务器任意文件（`/etc/passwd`、其他应用的密钥）并借错误信息/行为侧信道探测。
+ *   不传时按「不读文件」处理（行内 PEM 场景）。
+ */
+export function normalizePrivateKey(raw: string, allowedRoot?: string): string {
   const value = (raw ?? '').trim();
   if (!value) {
     return '';
   }
-  // 形态一：文件路径（以 .pem/.key 结尾，或能以文件读出且内容含 PRIVATE KEY）
+  // 形态一：文件路径（以 .pem/.key 结尾）
   if (/\.(pem|key)$/i.test(value)) {
+    if (!allowedRoot) {
+      return '';
+    }
+    const target = isAbsolute(value) ? resolve(value) : resolve(allowedRoot, value);
+    const rel = relative(resolve(allowedRoot), target);
+    // `..` 开头或绝对路径 = 越界；直接判为不可用（调用方会给出「格式不正确」的提示）
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      return '';
+    }
     try {
-      return readFileSync(value, 'utf8');
+      return readFileSync(target, 'utf8');
     } catch {
       // 文件读不到时按行内文本继续（很可能就是被误判成路径的转义串，交给后续校验报错）
     }

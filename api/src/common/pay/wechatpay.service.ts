@@ -16,6 +16,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../exception/app.exception.js';
+import { config } from '../config/config.js';
 import { PaySettingsService } from './pay-settings.service.js';
 import type { PayWechatSettings } from './pay-settings.js';
 import {
@@ -131,6 +132,15 @@ export class WechatPayService {
   /** 支付是否可用（配置齐全）。 */
   get enabled(): boolean {
     return this.settings.enabled;
+  }
+
+  /**
+   * 当前商户身份（回调校验用）：微信平台证书是**所有商户共用**的，
+   * 验签通过只证明「报文来自微信」，还必须核对 mchid/appid 是本商户的，否则
+   * 别的商户的通知理论上可被转发/重放到本回调地址。
+   */
+  get merchant(): { appId: string; mchId: string } {
+    return { appId: this.settings.current.appId, mchId: this.settings.current.mchId };
   }
 
   /**
@@ -264,7 +274,17 @@ export class WechatPayService {
     if (!this.settings.enabled) {
       return { verified: false, serial, reason: '支付未配置' };
     }
-    const cert = await this.findCertificate(serial);
+    let cert: string;
+    try {
+      cert = await this.findCertificate(serial);
+    } catch (error) {
+      // 拉平台证书失败（网络/配置）：按「验签失败」回 401，让微信按策略重试，
+      // 而不是把异常抛成 500 并可能把内部错误写进响应
+      this.logger.error(
+        `[Pay] 平台证书获取失败 serial=${serial}：${error instanceof Error ? error.message : String(error)}`,
+      );
+      return { verified: false, serial, reason: '平台证书获取失败' };
+    }
     if (!cert) {
       return { verified: false, serial, reason: `未找到序列号 ${serial} 对应的平台证书` };
     }
@@ -317,7 +337,7 @@ export class WechatPayService {
     const nonceStr = randomNonce();
     const packageValue = `prepay_id=${prepayId}`;
     const message = `${cfg.appId}\n${timeStamp}\n${nonceStr}\n${packageValue}\n`;
-    const paySign = signWithPrivateKey(normalizePrivateKey(cfg.privateKey), message);
+    const paySign = signWithPrivateKey(normalizePrivateKey(cfg.privateKey, config.rootDir), message);
     return {
       appId: cfg.appId,
       timeStamp,
@@ -336,7 +356,7 @@ export class WechatPayService {
    */
   private async request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
     const cfg = this.requireConfig();
-    const privateKey = normalizePrivateKey(cfg.privateKey);
+    const privateKey = normalizePrivateKey(cfg.privateKey, config.rootDir);
     if (!privateKey.includes('-----BEGIN')) {
       throw AppException.badRequest('商户 API 私钥未配置或格式不正确（后台「支付设置」检查）');
     }

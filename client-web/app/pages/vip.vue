@@ -155,6 +155,10 @@ async function pollOrder(orderNo: string, seq: number): Promise<void> {
       pollMessage.value = '支付成功，会员已到账';
       return;
     }
+    if (status.status === 'refunding') {
+      pollMessage.value = '退款处理中，请稍后查看';
+      return;
+    }
     if (status.status === 'closed' || status.status === 'refunded') {
       pollMessage.value = status.status === 'closed' ? '订单已关闭，请重新下单' : '订单已退款';
       return;

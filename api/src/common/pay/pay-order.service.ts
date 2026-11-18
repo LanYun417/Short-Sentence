@@ -43,6 +43,24 @@ export interface PayOrderView {
   expiredAt: string;
 }
 
+/**
+ * 客户端订单视图：**不含** refundReason / refundId 等运营内部字段。
+ * 退款原因由后台填写，可能含内部备注，只给运营看。
+ */
+export interface PayOrderClientView {
+  orderNo: string;
+  skuCode: string;
+  title: string;
+  amount: number;
+  channel: string;
+  status: string;
+  paidAt: string | null;
+  refundAmount: number;
+  refundedAt: string | null;
+  createdAt: string;
+  expiredAt: string;
+}
+
 /** 下单结果。 */
 export interface CreateOrderResult {
   orderNo: string;
@@ -133,6 +151,15 @@ function newRefundNo(): string {
 /** 轮询补单的节流（同一订单 5 秒内最多查一次微信）。 */
 const SYNC_MIN_INTERVAL_MS = 5_000;
 
+/** 单个用户同时存在的待支付订单上限（防刷单号 / 刷微信下单接口）。 */
+const MAX_PENDING_ORDERS = 5;
+
+/** 回调流水保留天数（资金链路审计材料；与操作日志的 180 天口径一致）。 */
+const CALLBACK_LOG_RETENTION_DAYS = 180;
+
+/** 单次清理最多删除的行数（分批，避免长事务锁表）。 */
+const CALLBACK_LOG_CLEAN_BATCH = 500;
+
 @Injectable()
 export class PayOrderService {
   private readonly logger = new Logger(PayOrderService.name);
@@ -158,9 +185,23 @@ export class PayOrderService {
       throw AppException.badRequest('支付功能尚未开通（后台「支付设置」补齐密钥后可用）');
     }
     const sku = await this.skus.requireEnabled(skuCode);
+    if (!Number.isInteger(sku.price) || sku.price <= 0) {
+      // 价格只可能来自库；出现 0/负数说明运营配置或数据被改坏，绝不能下单
+      throw AppException.badRequest('套餐价格异常，请联系客服');
+    }
     const vip = await this.entitlements.status(userId);
     if (vip.lifetime) {
       throw AppException.badRequest('你已是终身会员，无需重复购买');
+    }
+
+    // 防刷：待支付订单上限（每笔都会打一次微信下单接口，且占用支付单号）
+    const pendingCount = await this.prisma.payOrder.count({
+      where: { userId: BigInt(userId), status: 'pending', expiredAt: { gt: new Date() } },
+    });
+    if (pendingCount >= MAX_PENDING_ORDERS) {
+      throw AppException.tooManyRequests(
+        `你已有 ${pendingCount} 笔待支付订单，请先完成支付或等待其过期（${config.pay.orderTtlMinutes} 分钟）后再试`,
+      );
     }
 
     const ttlMinutes = config.pay.orderTtlMinutes;
@@ -232,7 +273,12 @@ export class PayOrderService {
           data: { status: 'closed' },
         })
         .catch(() => undefined);
-      throw error;
+      // 上游错误细节只进服务端日志：客户端拿到通用文案，避免把商户配置状态
+      // （签名错误 / 商户号未开通等）透给普通用户
+      this.logger.error(
+        `[Pay] 预下单失败 orderNo=${orderNo} channel=${channel}：${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw AppException.serviceUnavailable('支付下单失败，请稍后重试');
     }
   }
 
@@ -269,7 +315,7 @@ export class PayOrderService {
   async listMine(
     userId: number,
     query: { page?: number | string; pageSize?: number | string },
-  ): Promise<PageResult<PayOrderView>> {
+  ): Promise<PageResult<PayOrderClientView>> {
     const page = Math.max(1, Number(query.page ?? 1) || 1);
     const pageSize = Math.min(50, Math.max(1, Number(query.pageSize ?? 10) || 10));
     const where = { userId: BigInt(userId) };
@@ -282,7 +328,7 @@ export class PayOrderService {
       }),
       this.prisma.payOrder.count({ where }),
     ]);
-    return { list: rows.map((row) => this.toView(row)), total, page, pageSize };
+    return { list: rows.map((row) => this.toClientView(row)), total, page, pageSize };
   }
 
   /**
@@ -344,19 +390,23 @@ export class PayOrderService {
   async handleNotify(headers: Record<string, string | string[] | undefined>, rawBody: string): Promise<NotifyResult> {
     const verify = await this.wechatPay.verifyCallback(headers, rawBody);
     if (!verify.verified) {
-      // 验签失败：落流水（不含明文），回 401 让微信重试并暴露配置问题
-      await this.writeCallbackLog({
-        orderNo: null,
-        transactionId: null,
-        eventType: 'UNKNOWN',
-        serial: verify.serial,
-        verified: 0,
-        handled: 0,
-        resultNote: verify.reason ?? '验签失败',
-        plainText: null,
-        responseCode: 401,
-      });
-      return { statusCode: 401, body: { code: 'FAIL', message: verify.reason ?? '验签失败' } };
+      // 缺验签头基本是扫描器/误请求：直接拒，不写库（否则任何人都能刷爆流水表）；
+      // 头部齐全但验签失败才留痕，便于排查配置/证书轮换问题。
+      if (verify.reason !== '缺少验签请求头') {
+        await this.writeCallbackLog({
+          orderNo: null,
+          transactionId: null,
+          eventType: 'UNKNOWN',
+          serial: verify.serial,
+          verified: 0,
+          handled: 0,
+          resultNote: verify.reason ?? '验签失败',
+          plainText: null,
+          responseCode: 401,
+        });
+      }
+      // 响应只给通用文案：原因写在本服务日志/流水里，不透给调用方
+      return { statusCode: 401, body: { code: 'FAIL', message: '验签失败' } };
     }
 
     // 解析 + 解密：放进闭包拿到确定的结果对象，避免「声明后再赋值」被 lint 判定为无效初值
@@ -395,30 +445,67 @@ export class PayOrderService {
     }
 
     const { eventType, plainText, payload } = parsed;
-
     const orderNo = typeof payload.out_trade_no === 'string' ? payload.out_trade_no : '';
     const transactionId = typeof payload.transaction_id === 'string' ? payload.transaction_id : '';
+
+    // 商户身份校验：平台证书是所有商户共用的，验签通过只说明「报文来自微信」，
+    // 还必须确认这笔通知属于本商户（mchid/appid 必须与配置一致），否则拒收。
+    const merchant = this.wechatPay.merchant;
+    const payloadMchId = typeof payload.mchid === 'string' ? payload.mchid : '';
+    const payloadAppId = typeof payload.appid === 'string' ? payload.appid : '';
+    const merchantMismatch =
+      (payloadMchId !== '' && payloadMchId !== merchant.mchId) ||
+      (eventType === 'TRANSACTION.SUCCESS' &&
+        (payloadMchId === '' || payloadAppId === '' || payloadAppId !== merchant.appId));
+    if (merchantMismatch) {
+      return this.rejectNotify(
+        verify.serial,
+        eventType,
+        orderNo,
+        plainText,
+        `商户身份不匹配（回调 mchid=${payloadMchId || '-'} appid=${payloadAppId || '-'}）`,
+      );
+    }
+
+    // 金额/币种前置校验：非法就回 400（不要落到 catch 里回 500，那会让微信无限重试）
+    let paidTotal = 0;
+    if (eventType === 'TRANSACTION.SUCCESS') {
+      const amount = (payload.amount ?? {}) as { total?: number; currency?: string };
+      if (amount.currency && amount.currency !== 'CNY') {
+        return this.rejectNotify(verify.serial, eventType, orderNo, plainText, `币种不支持：${amount.currency}`);
+      }
+      paidTotal = Number(amount.total ?? 0);
+      if (!Number.isInteger(paidTotal) || paidTotal <= 0) {
+        return this.rejectNotify(verify.serial, eventType, orderNo, plainText, `回调金额非法：${String(amount.total)}`);
+      }
+    }
 
     try {
       let handled = 0;
       let note = '';
       if (eventType === 'TRANSACTION.SUCCESS') {
-        const amount = (payload.amount ?? {}) as { total?: number };
         const successTime = typeof payload.success_time === 'string' ? new Date(payload.success_time) : undefined;
         const result = await this.markPaid({
           orderNo,
           transactionId,
-          total: Number(amount.total ?? 0),
+          total: paidTotal,
           paidAt: successTime && !Number.isNaN(successTime.getTime()) ? successTime : undefined,
         });
         handled = result.changed ? 1 : 0;
-        note = result.changed ? 'order paid' : 'duplicate ignored';
+        note = result.changed ? 'order paid' : result.userId === null ? 'unknown order' : 'duplicate ignored';
       } else if (eventType.startsWith('REFUND.')) {
         const refundStatus = typeof payload.refund_status === 'string' ? payload.refund_status : '';
+        const refundAmount = (payload.amount ?? {}) as { refund?: number; currency?: string };
         if (refundStatus === 'SUCCESS') {
-          await this.markRefundedByNotify(orderNo, typeof payload.refund_id === 'string' ? payload.refund_id : '');
-          handled = 1;
-          note = 'refund confirmed';
+          // 只认「全额退款」：部分退款（如运营在商户平台手工退）不能撤掉整笔会员权益
+          const full = await this.isFullRefund(orderNo, Number(refundAmount.refund ?? 0));
+          if (full) {
+            await this.markRefundedByNotify(orderNo, typeof payload.refund_id === 'string' ? payload.refund_id : '');
+            handled = 1;
+            note = 'refund confirmed';
+          } else {
+            note = 'partial refund ignored';
+          }
         } else {
           note = `refund status ${refundStatus}`;
         }
@@ -459,7 +546,10 @@ export class PayOrderService {
 
   /**
    * 后台退款（全额）。退款成功后订单置 refunded 并撤销该笔权益。
-   * 微信受理即返回，最终结果以异步通知为准（这里同步落状态，通知重复到达时幂等）。
+   *
+   * 并发防护：先用条件更新把 `paid → refunding`（同一时刻只有一次能成功），再调微信；
+   * 调用失败回滚成 `paid` 允许重试。没有这一步时，两个管理员同时点退款会各发一次
+   * 全额退款请求（微信侧第二笔通常失败，但资金链路上不能依赖上游兜底）。
    */
   async refund(orderNo: string, reason: string): Promise<PayOrderView> {
     const order = await this.prisma.payOrder.findUnique({ where: { orderNo } });
@@ -470,30 +560,49 @@ export class PayOrderService {
       throw AppException.badRequest('该订单已退款');
     }
     if (order.status !== 'paid') {
-      throw AppException.badRequest('只有已支付的订单可以退款');
+      throw AppException.badRequest(
+        order.status === 'refunding' ? '退款处理中，请稍后刷新' : '只有已支付的订单可以退款',
+      );
     }
+    // 抢占退款权：条件更新是唯一判据
+    const claimed = await this.prisma.payOrder.updateMany({
+      where: { id: order.id, status: 'paid' },
+      data: { status: 'refunding' },
+    });
+    if (claimed.count === 0) {
+      throw AppException.badRequest('退款处理中，请稍后刷新');
+    }
+
     const refundNo = newRefundNo();
-    const result = await this.wechatPay.refund({
-      orderNo,
-      refundNo,
-      total: order.amount,
-      refund: order.amount,
-      reason,
-    });
-    const updated = await this.prisma.payOrder.update({
-      where: { id: order.id },
-      data: {
-        status: 'refunded',
+    try {
+      const result = await this.wechatPay.refund({
+        orderNo,
         refundNo,
-        refundId: result.refundId,
-        refundAmount: order.amount,
-        refundedAt: new Date(),
-        refundReason: reason || null,
-      },
-    });
-    await this.entitlements.revokeForOrder(Number(order.id), Number(order.userId));
-    this.logger.log(`[Pay] 订单已退款 orderNo=${orderNo} refundNo=${refundNo} by=${reason || '-'}`);
-    return this.toView(updated);
+        total: order.amount,
+        refund: order.amount,
+        reason,
+      });
+      const updated = await this.prisma.payOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'refunded',
+          refundNo,
+          refundId: result.refundId,
+          refundAmount: order.amount,
+          refundedAt: new Date(),
+          refundReason: reason || null,
+        },
+      });
+      await this.entitlements.revokeForOrder(Number(order.id), Number(order.userId));
+      this.logger.log(`[Pay] 订单已退款 orderNo=${orderNo} refundNo=${refundNo} by=${reason || '-'}`);
+      return this.toView(updated);
+    } catch (error) {
+      // 退款未受理：回滚成 paid，管理员可重试（绝不把订单留在 refunding）
+      await this.prisma.payOrder
+        .updateMany({ where: { id: order.id, status: 'refunding' }, data: { status: 'paid' } })
+        .catch(() => undefined);
+      throw error;
+    }
   }
 
   /** 后台手动同步（回调丢失时补单）。 */
@@ -540,6 +649,37 @@ export class PayOrderService {
       this.logger.log(`[Pay] 已关闭 ${closed} 笔过期未支付订单`);
     }
     return closed;
+  }
+
+  /**
+   * 清理过期回调流水（保留 180 天）。
+   * 回调流水含解密明文（payer openid 等），无限增长既有存储成本也有隐私风险；
+   * 分批删除，单次调用最多删 4×500 行，避免长事务。
+   */
+  async cleanupCallbackLogs(): Promise<number> {
+    const cutoff = new Date(Date.now() - CALLBACK_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    let deleted = 0;
+    for (let round = 0; round < 4; round += 1) {
+      const rows = await this.prisma.payCallbackLog.findMany({
+        where: { createdAt: { lt: cutoff } },
+        select: { id: true },
+        take: CALLBACK_LOG_CLEAN_BATCH,
+      });
+      if (rows.length === 0) {
+        break;
+      }
+      const result = await this.prisma.payCallbackLog.deleteMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+      });
+      deleted += result.count;
+      if (rows.length < CALLBACK_LOG_CLEAN_BATCH) {
+        break;
+      }
+    }
+    if (deleted > 0) {
+      this.logger.log(`[Pay] 已清理过期回调流水 ${deleted} 条（保留 ${CALLBACK_LOG_RETENTION_DAYS} 天）`);
+    }
+    return deleted;
   }
 
   /** 后台订单列表（分页 + 筛选）。 */
@@ -681,6 +821,15 @@ export class PayOrderService {
     }
   }
 
+  /** 退款金额是否等于订单金额（全额）。订单不存在按 false 处理。 */
+  private async isFullRefund(orderNo: string, refundAmount: number): Promise<boolean> {
+    const order = await this.prisma.payOrder.findUnique({ where: { orderNo }, select: { amount: true } });
+    if (!order) {
+      return false;
+    }
+    return Number.isInteger(refundAmount) && refundAmount >= order.amount;
+  }
+
   /** 退款通知确认（幂等：状态已是 refunded 则跳过）。 */
   private async markRefundedByNotify(orderNo: string, refundId: string): Promise<void> {
     if (!orderNo) {
@@ -700,6 +849,30 @@ export class PayOrderService {
       },
     });
     await this.entitlements.revokeForOrder(Number(order.id), Number(order.userId));
+  }
+
+  /** 拒收回调（400）：留痕后返回，不推进任何订单状态。 */
+  private async rejectNotify(
+    serial: string,
+    eventType: string,
+    orderNo: string,
+    plainText: string,
+    note: string,
+  ): Promise<NotifyResult> {
+    this.logger.error(`[Pay] 回调拒收：${note}`);
+    await this.writeCallbackLog({
+      orderNo: orderNo || null,
+      transactionId: null,
+      eventType,
+      serial,
+      verified: 1,
+      handled: 0,
+      resultNote: note.slice(0, 200),
+      plainText,
+      responseCode: 400,
+    });
+    // 不把具体原因回给微信（避免把配置细节写进对方日志），细节只在本地流水里
+    return { statusCode: 400, body: { code: 'FAIL', message: '回调校验未通过' } };
   }
 
   /** 写回调流水（失败只告警，绝不影响给微信的响应）。 */
@@ -733,7 +906,36 @@ export class PayOrderService {
     }
   }
 
-  /** 行 → 视图。 */
+  /** 行 → 客户端视图（剔除运营内部字段）。 */
+  private toClientView(row: {
+    orderNo: string;
+    skuCode: string;
+    title: string;
+    amount: number;
+    channel: string;
+    status: string;
+    paidAt: Date | null;
+    refundAmount: number;
+    refundedAt: Date | null;
+    createdAt: Date;
+    expiredAt: Date;
+  }): PayOrderClientView {
+    return {
+      orderNo: row.orderNo,
+      skuCode: row.skuCode,
+      title: row.title,
+      amount: row.amount,
+      channel: row.channel,
+      status: row.status,
+      paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+      refundAmount: row.refundAmount,
+      refundedAt: row.refundedAt ? row.refundedAt.toISOString() : null,
+      createdAt: row.createdAt.toISOString(),
+      expiredAt: row.expiredAt.toISOString(),
+    };
+  }
+
+  /** 行 → 后台视图。 */
   private toView(row: {
     orderNo: string;
     userId: bigint;

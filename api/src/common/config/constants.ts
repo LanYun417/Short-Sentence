@@ -124,7 +124,41 @@ export const REGEX = {
 } as const;
 
 /** 密码类敏感字段名，日志中需脱敏。 */
-export const SENSITIVE_KEYS = ['password', 'oldPassword', 'newPassword', 'confirmPassword'];
+/**
+ * 操作日志 / 快照的敏感字段名（命中即替换为 `***`，递归生效）。
+ *
+ * 覆盖三类容易漏的密钥：
+ * - 登录口令：password / oldPassword / newPassword / confirmPassword；
+ * - 第三方凭证：apiKey（AI 模型）、privateKey（微信支付商户私钥）、apiv3Key（回调解密密钥）、
+ *   secret / appSecret / clientSecret（微信、邮件等）；
+ * - 令牌：token / accessToken / refreshToken / authorization。
+ *
+ * 注意：**不要**用「键名包含 key/secret」的通配规则——`configKey`、`serialNo` 这类
+ * 正常字段会被误伤，日志反而失去排查价值；这里用白名单精确匹配（大小写不敏感）。
+ */
+export const SENSITIVE_KEYS = [
+  'password',
+  'oldPassword',
+  'newPassword',
+  'confirmPassword',
+  'apiKey',
+  'privateKey',
+  'apiv3Key',
+  'secret',
+  'secretKey',
+  'passwordHash',
+  'appSecret',
+  'clientSecret',
+  'token',
+  'accessToken',
+  'refreshToken',
+  'authorization',
+  // 一次性验证码：注销/改密/登录的邮件码与微信 code，落日志即等于泄露
+  'emailCode',
+  'wechatCode',
+  'captchaCode',
+  'verifyCode',
+] as const;
 
 /** 上传允许的 MIME 类型白名单。 */
 export const UPLOAD_ALLOWED_MIME = [

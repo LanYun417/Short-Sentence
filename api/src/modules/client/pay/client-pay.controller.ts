@@ -12,7 +12,7 @@ import {
   PayOrderService,
   type CreateOrderResult,
   type OrderStatusResult,
-  type PayOrderView,
+  type PayOrderClientView,
 } from '../../../common/pay/pay-order.service.js';
 import { PaySkuService, type PaySkuView } from '../../../common/pay/pay-sku.service.js';
 import { EntitlementService, type EntitlementItem, type VipStatus } from '../../../common/pay/entitlement.service.js';
@@ -58,7 +58,7 @@ export class ClientPayController {
   orders(
     @CurrentClientUser() user: ClientUserContext,
     @Query() query: Record<string, unknown>,
-  ): Promise<PageResult<PayOrderView>> {
+  ): Promise<PageResult<PayOrderClientView>> {
     return this.payOrders.listMine(user.userId, query);
   }
 

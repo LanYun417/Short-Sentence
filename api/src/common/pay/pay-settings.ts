@@ -88,7 +88,7 @@ export function paySettingsMissing(settings: PayWechatSettings): string[] {
   if (!settings.apiv3Key) missing.push('APIv3 密钥');
   else if (settings.apiv3Key.length !== 32) missing.push('APIv3 密钥（须 32 位）');
   if (!settings.notifyUrl) missing.push('回调地址');
-  const pem = normalizePrivateKey(settings.privateKey);
+  const pem = normalizePrivateKey(settings.privateKey, config.rootDir);
   if (pem && !isValidPemKey(pem)) missing.push('商户 API 私钥（PEM 格式不正确）');
   return missing;
 }
@@ -116,7 +116,7 @@ export function toPaySettingsView(settings: PayWechatSettings): PaySettingsView 
 
 /** 保存配置（整表提交；入库前做可读性校验）。 */
 export async function savePaySettings(prisma: PrismaService, input: PayWechatSettings): Promise<void> {
-  const pem = normalizePrivateKey(input.privateKey);
+  const pem = normalizePrivateKey(input.privateKey, config.rootDir);
   if (pem && !isValidPemKey(pem)) {
     throw AppException.badRequest('商户 API 私钥不是合法的 PEM（需含 -----BEGIN PRIVATE KEY----- 头）');
   }

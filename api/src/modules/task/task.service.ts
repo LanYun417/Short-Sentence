@@ -194,6 +194,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       generateMissingSceneCovers: () => this.sentenceGen.generateMissingCategoryCovers(),
       cleanTeamMessages: () => this.team.cleanTeamMessages(),
       closeExpiredPayOrders: () => this.payOrders.closeExpired(),
+      cleanupPayCallbackLogs: () => this.payOrders.cleanupCallbackLogs(),
     };
 
     // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值

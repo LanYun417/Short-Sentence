@@ -76,6 +76,7 @@ function handleReset(): void {
 const STATUS_MAP: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' }> = {
   pending: { label: '待支付', type: 'warning' },
   paid: { label: '已支付', type: 'success' },
+  refunding: { label: '退款中', type: 'warning' },
   refunded: { label: '已退款', type: 'info' },
   closed: { label: '已关闭', type: 'info' },
 };

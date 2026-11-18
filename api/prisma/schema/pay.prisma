@@ -59,7 +59,7 @@ model PayOrder {
   amount Int
   /// 渠道：web 扫码 / android 扫码 / miniapp JSAPI
   channel String @db.VarChar(20)
-  /// 状态：pending 待支付 / paid 已支付 / refunded 已退款 / closed 已关闭
+  /// 状态：pending 待支付 / paid 已支付 / refunding 退款处理中 / refunded 已退款 / closed 已关闭
   status String @default("pending") @db.VarChar(20)
   /// 微信预支付会话（JSAPI prepay_id；Native 为空）
   prepayId String? @map("prepay_id") @db.VarChar(64)

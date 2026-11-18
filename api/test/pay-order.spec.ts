@@ -115,6 +115,7 @@ function makeService(
 
   const wechatPay = {
     enabled: true,
+    merchant: { appId: 'wxapp', mchId: 'mch1' },
     verifyCallback: vi.fn(async () => options.verify ?? { verified: true, serial: 'SERIAL' }),
     decryptResource: vi.fn(() => options.plain ?? '{}'),
     refund: vi.fn(async () => ({ refundId: 'R1', status: 'PROCESSING' })),
@@ -194,11 +195,13 @@ describe('订单入账（markPaid）', () => {
 
 describe('支付回调（handleNotify）', () => {
   const payload = JSON.stringify({
+    mchid: 'mch1',
+    appid: 'wxapp',
     out_trade_no: 'SS20260101000000abcdef',
     transaction_id: 'T1',
     trade_state: 'SUCCESS',
     success_time: '2026-01-01T12:00:00+08:00',
-    amount: { total: 1200 },
+    amount: { total: 1200, currency: 'CNY' },
   });
 
   it('验签失败：回 401 让微信重试，且不写明文', async () => {

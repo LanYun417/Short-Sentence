@@ -30,6 +30,12 @@ export interface OperationLogInput {
  * 递归脱敏：命中敏感键名（password/oldPassword/newPassword/confirmPassword）
  * 的值整体替换为 `***`。大小写敏感、精确匹配。
  */
+/**
+ * 递归脱敏：敏感字段（口令 / 第三方密钥 / 令牌）一律替换为 `***`，其余原样保留。
+ *
+ * 大小写不敏感：DTO 走 camelCase，但脚本/第三方回调偶尔用 snake_case 或全大写键，
+ * 只按原样比对会漏掉（`private_key` 就绕过去了）。
+ */
 export function maskSensitive(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => maskSensitive(item));
@@ -37,7 +43,12 @@ export function maskSensitive(value: unknown): unknown {
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      result[key] = (SENSITIVE_KEYS as string[]).includes(key) ? '***' : maskSensitive(item);
+      // 归一化后比对：兼容 camelCase / snake_case / kebab-case 与全大写
+      const normalized = key.toLowerCase().replace(/[_-]/g, '');
+      const sensitive = (SENSITIVE_KEYS as readonly string[]).some(
+        (candidate) => candidate.toLowerCase().replace(/[_-]/g, '') === normalized,
+      );
+      result[key] = sensitive ? '***' : maskSensitive(item);
     }
     return result;
   }
