@@ -43,6 +43,11 @@ export function getPaySettingsApi(): Promise<PaySettingsInfo> {
   return get<PaySettingsInfo>('/pay/settings');
 }
 
+/** 测试微信支付连接（拉平台证书验证私钥与 APIv3 密钥，不产生资金动作） */
+export function testPayConnectionApi(): Promise<{ ok: boolean; message: string; certificates?: number }> {
+  return post<{ ok: boolean; message: string; certificates?: number }>('/pay/settings/test');
+}
+
 /** 保存微信支付配置（保存后立即生效，无需重启） */
 export function savePaySettingsApi(payload: SavePaySettingsPayload): Promise<PaySettingsInfo> {
   return put<PaySettingsInfo>('/pay/settings', payload);

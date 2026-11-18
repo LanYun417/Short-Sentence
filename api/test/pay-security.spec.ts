@@ -16,6 +16,7 @@ import { ConfigService, isDedicatedConfigKey } from '../src/modules/config/confi
 import { normalizePrivateKey } from '../src/common/pay/wechatpay-crypto.js';
 import { toPaySettingsView } from '../src/common/pay/pay-settings.js';
 import { PayOrderService } from '../src/common/pay/pay-order.service.js';
+import { WechatPayService } from '../src/common/pay/wechatpay.service.js';
 
 /** 密钥脱敏。 */
 describe('操作日志脱敏', () => {
@@ -272,6 +273,17 @@ function makeOrderService(
   const service = new PayOrderService(prisma as never, skus as never, wechatPay as never, entitlements as never);
   return { service, order, prisma, wechatPay, skus, updateMany, entitlements };
 }
+
+/** 配置自检：未配置时直接拒绝，不打微信接口。 */
+describe('支付配置自检', () => {
+  it('未配置时 probe 抛可读错误（不会发网络请求）', async () => {
+    const service = new WechatPayService({
+      enabled: false,
+      current: { appId: '', mchId: '', serialNo: '', privateKey: '', apiv3Key: '', notifyUrl: '' },
+    } as never);
+    await expect(service.probe()).rejects.toThrow(/未配置/);
+  });
+});
 
 /** 下单防刷。 */
 describe('下单防刷', () => {

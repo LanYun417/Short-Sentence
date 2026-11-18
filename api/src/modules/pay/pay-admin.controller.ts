@@ -15,6 +15,7 @@ import {
 import { PaySettingsService } from '../../common/pay/pay-settings.service.js';
 import type { PaySettingsView } from '../../common/pay/pay-settings.js';
 import { PaySkuService, type PaySkuView } from '../../common/pay/pay-sku.service.js';
+import { WechatPayService } from '../../common/pay/wechatpay.service.js';
 import { RefundPayOrderDto, SavePaySettingsDto } from './dto.js';
 
 @Controller('pay/orders')
@@ -65,13 +66,36 @@ export class PayAdminController {
 
 @Controller('pay')
 export class PaySettingsController {
-  constructor(private readonly paySettings: PaySettingsService) {}
+  constructor(
+    private readonly paySettings: PaySettingsService,
+    private readonly wechatPay: WechatPayService,
+  ) {}
 
   /** 读取微信支付配置（密钥只回掩码；附带缺项提示）。 */
   @Get('settings')
   @RequirePermissions('pay:settings:query')
   get(): PaySettingsView {
     return this.paySettings.toView();
+  }
+
+  /**
+   * 测试连接（不产生资金动作）。
+   * 拉取平台证书并用 APIv3 密钥解密：同时验证商户私钥签名与密钥正确性。
+   */
+  @Post('settings/test')
+  @RequirePermissions('pay:settings:edit')
+  @OperationLog('支付设置', '测试连接')
+  async test(): Promise<{ ok: boolean; message: string; certificates?: number }> {
+    try {
+      const result = await this.wechatPay.probe();
+      return {
+        ok: true,
+        message: `连接成功：已获取 ${result.certificates} 张平台证书`,
+        certificates: result.certificates,
+      };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : '测试失败' };
+    }
   }
 
   /** 保存微信支付配置（整表提交；保存后立即生效，无需重启）。 */

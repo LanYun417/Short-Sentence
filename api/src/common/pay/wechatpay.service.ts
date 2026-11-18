@@ -144,6 +144,36 @@ export class WechatPayService {
   }
 
   /**
+   * 配置连通性自检（后台「支付设置 → 测试连接」）。
+   *
+   * 只调 `GET /v3/certificates`：它会同时验证**商户私钥签名**（否则 401）与
+   * **APIv3 密钥能否解密证书**（否则解密抛错）。不产生任何资金动作，可在正式收款前
+   * 反复使用；失败信息只回给有 `pay:settings:edit` 的管理员。
+   */
+  async probe(): Promise<{ certificates: number; firstSerial: string }> {
+    this.requireConfig();
+    const result = await this.request<CertificatesResponse>('GET', '/v3/certificates');
+    const list = result.data ?? [];
+    if (list.length === 0) {
+      throw new Error('微信未返回平台证书（请确认商户号/证书序列号是否正确）');
+    }
+    const first = list[0];
+    const pem = this.decryptResource({
+      algorithm: first.encrypt_certificate.algorithm,
+      ciphertext: first.encrypt_certificate.ciphertext,
+      nonce: first.encrypt_certificate.nonce,
+      associated_data: first.encrypt_certificate.associated_data ?? '',
+    });
+    if (!pem.includes('BEGIN CERTIFICATE')) {
+      throw new Error('平台证书解密结果异常（请检查 APIv3 密钥）');
+    }
+    // 自检成功顺手刷新缓存，后续回调可直接验签
+    this.certificates.set(first.serial_no, pem);
+    this.certificatesFetchedAt = Date.now();
+    return { certificates: list.length, firstSerial: first.serial_no };
+  }
+
+  /**
    * Native 下单（Web / Android 收银台展示二维码）。
    * @returns code_url（weixin://wxpay/bizpayurl?...），前端渲染二维码
    */

@@ -9,14 +9,17 @@
  * - 保存即生效（运行时快照刷新），无需重启服务。
  */
 import { ElMessage } from '@/utils/element';
-import { getPaySettingsApi, savePaySettingsApi } from '@/api/pay';
+import { getPaySettingsApi, savePaySettingsApi, testPayConnectionApi } from '@/api/pay';
 import type { PaySettingsInfo, SavePaySettingsPayload } from '@/types/api';
 
 defineOptions({ name: 'PaySettings' });
 
 const loading = ref(false);
 const saving = ref(false);
+const testing = ref(false);
 const info = ref<PaySettingsInfo | null>(null);
+/** 测试连接结果（null = 未测） */
+const testResult = ref<{ ok: boolean; message: string } | null>(null);
 
 /** 表单（密钥为空表示不修改） */
 const form = reactive({
@@ -97,6 +100,17 @@ async function handleSave(): Promise<void> {
   }
 }
 
+/** 测试连接：验证商户私钥签名 + APIv3 密钥解密（不产生资金动作） */
+async function handleTest(): Promise<void> {
+  testing.value = true;
+  testResult.value = null;
+  try {
+    testResult.value = await testPayConnectionApi();
+  } finally {
+    testing.value = false;
+  }
+}
+
 /** 把建议的回调地址填进输入框 */
 function useSuggestedNotifyUrl(): void {
   form.notifyUrl = notifyUrlHint.value;
@@ -114,7 +128,10 @@ function useSuggestedNotifyUrl(): void {
               {{ info?.enabled ? '已启用' : '未启用' }}
             </el-tag>
           </div>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          <div class="flex items-center gap-2">
+            <el-button :loading="testing" :disabled="!info?.enabled" @click="handleTest">测试连接</el-button>
+            <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+          </div>
         </div>
       </template>
 
@@ -126,6 +143,15 @@ function useSuggestedNotifyUrl(): void {
         class="mb-4"
         title="支付功能尚未启用"
         :description="`还缺：${info.missing.join('、')}。补齐并保存后，客户端会立即出现购买入口。`"
+      />
+      <el-alert
+        v-if="testResult"
+        :type="testResult.ok ? 'success' : 'error'"
+        :closable="false"
+        show-icon
+        class="mb-4"
+        :title="testResult.ok ? '连接正常' : '连接失败'"
+        :description="testResult.message"
       />
 
       <el-form label-width="140px" class="max-w-3xl">

@@ -19689,6 +19689,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/pay/settings/test": {
+      "post": {
+        "tags": [
+          "支付设置"
+        ],
+        "summary": "测试连接（不产生资金动作）。 拉取平台证书并用 APIv3 密钥解密：同时验证商户私钥签名与密钥正确性",
+        "operationId": "post__api_pay_settings_test",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/ai-settings": {
       "get": {
         "tags": [

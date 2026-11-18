@@ -10514,6 +10514,19 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "POST",
+        "path": "/api/pay/settings/test",
+        "summary": "测试连接（不产生资金动作）。 拉取平台证书并用 APIv3 密钥解密：同时验证商户私钥签名与密钥正确性",
+        "permission": [
+          "pay:settings:edit"
+        ],
+        "isPublic": false,
+        "action": "支付设置 · 测试连接",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/pay/settings/test\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
         "method": "PUT",
         "path": "/api/pay/settings",
         "summary": "保存微信支付配置（整表提交；保存后立即生效，无需重启）",
