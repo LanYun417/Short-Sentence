@@ -421,6 +421,10 @@ export const ModelName = {
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
   Notice: 'Notice',
+  PaySku: 'PaySku',
+  PayOrder: 'PayOrder',
+  PayCallbackLog: 'PayCallbackLog',
+  UserEntitlement: 'UserEntitlement',
   DailySentenceCard: 'DailySentenceCard',
   UserSentenceCard: 'UserSentenceCard',
   ClientUser: 'ClientUser',
@@ -465,7 +469,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientAccountDeletion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "userSubmission" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
+    modelProps: "appVersion" | "chainTopic" | "chainEntry" | "chainEntryLike" | "chainEntryReport" | "clientAccountDeletion" | "clientFeedback" | "clientNotice" | "clientNoticeRead" | "userSubmission" | "dictType" | "dictItem" | "sysConfig" | "file" | "clientXpLog" | "achievement" | "userAchievement" | "ipBan" | "ipaPhoneme" | "ipaLearningRecord" | "loginLog" | "operationLog" | "httpLog" | "notice" | "paySku" | "payOrder" | "payCallbackLog" | "userEntitlement" | "dailySentenceCard" | "userSentenceCard" | "clientUser" | "sentenceCategory" | "sentence" | "sentenceGenTask" | "sentenceRecord" | "sentenceFavorite" | "sentenceReport" | "userCheckin" | "aiCallLog" | "studyStageProgress" | "stageDialogueSession" | "stageDialogueMessage" | "stageScript" | "stageStory" | "studyTeam" | "studyTeamMember" | "studyTeamMessage" | "user" | "role" | "menu" | "dept" | "userRole" | "roleMenu" | "roleDept" | "userMenu" | "taskLog" | "wordRoot"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2050,6 +2054,270 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.NoticeCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.NoticeCountAggregateOutputType> | number
+        }
+      }
+    }
+    PaySku: {
+      payload: Prisma.$PaySkuPayload<ExtArgs>
+      fields: Prisma.PaySkuFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PaySkuFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PaySkuFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        findFirst: {
+          args: Prisma.PaySkuFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PaySkuFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        findMany: {
+          args: Prisma.PaySkuFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>[]
+        }
+        create: {
+          args: Prisma.PaySkuCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        createMany: {
+          args: Prisma.PaySkuCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PaySkuDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        update: {
+          args: Prisma.PaySkuUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        deleteMany: {
+          args: Prisma.PaySkuDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PaySkuUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PaySkuUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PaySkuPayload>
+        }
+        aggregate: {
+          args: Prisma.PaySkuAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePaySku>
+        }
+        groupBy: {
+          args: Prisma.PaySkuGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PaySkuGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PaySkuCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PaySkuCountAggregateOutputType> | number
+        }
+      }
+    }
+    PayOrder: {
+      payload: Prisma.$PayOrderPayload<ExtArgs>
+      fields: Prisma.PayOrderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PayOrderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PayOrderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        findFirst: {
+          args: Prisma.PayOrderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PayOrderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        findMany: {
+          args: Prisma.PayOrderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>[]
+        }
+        create: {
+          args: Prisma.PayOrderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        createMany: {
+          args: Prisma.PayOrderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PayOrderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        update: {
+          args: Prisma.PayOrderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        deleteMany: {
+          args: Prisma.PayOrderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PayOrderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PayOrderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayOrderPayload>
+        }
+        aggregate: {
+          args: Prisma.PayOrderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePayOrder>
+        }
+        groupBy: {
+          args: Prisma.PayOrderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayOrderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PayOrderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayOrderCountAggregateOutputType> | number
+        }
+      }
+    }
+    PayCallbackLog: {
+      payload: Prisma.$PayCallbackLogPayload<ExtArgs>
+      fields: Prisma.PayCallbackLogFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PayCallbackLogFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PayCallbackLogFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        findFirst: {
+          args: Prisma.PayCallbackLogFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PayCallbackLogFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        findMany: {
+          args: Prisma.PayCallbackLogFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>[]
+        }
+        create: {
+          args: Prisma.PayCallbackLogCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        createMany: {
+          args: Prisma.PayCallbackLogCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.PayCallbackLogDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        update: {
+          args: Prisma.PayCallbackLogUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        deleteMany: {
+          args: Prisma.PayCallbackLogDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PayCallbackLogUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.PayCallbackLogUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayCallbackLogPayload>
+        }
+        aggregate: {
+          args: Prisma.PayCallbackLogAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePayCallbackLog>
+        }
+        groupBy: {
+          args: Prisma.PayCallbackLogGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayCallbackLogGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PayCallbackLogCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayCallbackLogCountAggregateOutputType> | number
+        }
+      }
+    }
+    UserEntitlement: {
+      payload: Prisma.$UserEntitlementPayload<ExtArgs>
+      fields: Prisma.UserEntitlementFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserEntitlementFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserEntitlementFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        findFirst: {
+          args: Prisma.UserEntitlementFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserEntitlementFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        findMany: {
+          args: Prisma.UserEntitlementFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>[]
+        }
+        create: {
+          args: Prisma.UserEntitlementCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        createMany: {
+          args: Prisma.UserEntitlementCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        delete: {
+          args: Prisma.UserEntitlementDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        update: {
+          args: Prisma.UserEntitlementUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserEntitlementDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserEntitlementUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        upsert: {
+          args: Prisma.UserEntitlementUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserEntitlementPayload>
+        }
+        aggregate: {
+          args: Prisma.UserEntitlementAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUserEntitlement>
+        }
+        groupBy: {
+          args: Prisma.UserEntitlementGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserEntitlementGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserEntitlementCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserEntitlementCountAggregateOutputType> | number
         }
       }
     }
@@ -4369,6 +4637,83 @@ export const NoticeScalarFieldEnum = {
 export type NoticeScalarFieldEnum = (typeof NoticeScalarFieldEnum)[keyof typeof NoticeScalarFieldEnum]
 
 
+export const PaySkuScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  kind: 'kind',
+  price: 'price',
+  durationDays: 'durationDays',
+  benefits: 'benefits',
+  status: 'status',
+  sort: 'sort',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PaySkuScalarFieldEnum = (typeof PaySkuScalarFieldEnum)[keyof typeof PaySkuScalarFieldEnum]
+
+
+export const PayOrderScalarFieldEnum = {
+  id: 'id',
+  orderNo: 'orderNo',
+  userId: 'userId',
+  skuId: 'skuId',
+  skuCode: 'skuCode',
+  title: 'title',
+  amount: 'amount',
+  channel: 'channel',
+  status: 'status',
+  prepayId: 'prepayId',
+  transactionId: 'transactionId',
+  paidAt: 'paidAt',
+  refundNo: 'refundNo',
+  refundId: 'refundId',
+  refundAmount: 'refundAmount',
+  refundedAt: 'refundedAt',
+  refundReason: 'refundReason',
+  expiredAt: 'expiredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PayOrderScalarFieldEnum = (typeof PayOrderScalarFieldEnum)[keyof typeof PayOrderScalarFieldEnum]
+
+
+export const PayCallbackLogScalarFieldEnum = {
+  id: 'id',
+  orderNo: 'orderNo',
+  transactionId: 'transactionId',
+  eventType: 'eventType',
+  serial: 'serial',
+  verified: 'verified',
+  handled: 'handled',
+  resultNote: 'resultNote',
+  plainText: 'plainText',
+  responseCode: 'responseCode',
+  createdAt: 'createdAt'
+} as const
+
+export type PayCallbackLogScalarFieldEnum = (typeof PayCallbackLogScalarFieldEnum)[keyof typeof PayCallbackLogScalarFieldEnum]
+
+
+export const UserEntitlementScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  kind: 'kind',
+  source: 'source',
+  orderId: 'orderId',
+  skuCode: 'skuCode',
+  status: 'status',
+  startedAt: 'startedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserEntitlementScalarFieldEnum = (typeof UserEntitlementScalarFieldEnum)[keyof typeof UserEntitlementScalarFieldEnum]
+
+
 export const DailySentenceCardScalarFieldEnum = {
   id: 'id',
   bizDate: 'bizDate',
@@ -5108,6 +5453,54 @@ export const NoticeOrderByRelevanceFieldEnum = {
 export type NoticeOrderByRelevanceFieldEnum = (typeof NoticeOrderByRelevanceFieldEnum)[keyof typeof NoticeOrderByRelevanceFieldEnum]
 
 
+export const PaySkuOrderByRelevanceFieldEnum = {
+  code: 'code',
+  name: 'name',
+  kind: 'kind',
+  benefits: 'benefits'
+} as const
+
+export type PaySkuOrderByRelevanceFieldEnum = (typeof PaySkuOrderByRelevanceFieldEnum)[keyof typeof PaySkuOrderByRelevanceFieldEnum]
+
+
+export const PayOrderOrderByRelevanceFieldEnum = {
+  orderNo: 'orderNo',
+  skuCode: 'skuCode',
+  title: 'title',
+  channel: 'channel',
+  status: 'status',
+  prepayId: 'prepayId',
+  transactionId: 'transactionId',
+  refundNo: 'refundNo',
+  refundId: 'refundId',
+  refundReason: 'refundReason'
+} as const
+
+export type PayOrderOrderByRelevanceFieldEnum = (typeof PayOrderOrderByRelevanceFieldEnum)[keyof typeof PayOrderOrderByRelevanceFieldEnum]
+
+
+export const PayCallbackLogOrderByRelevanceFieldEnum = {
+  orderNo: 'orderNo',
+  transactionId: 'transactionId',
+  eventType: 'eventType',
+  serial: 'serial',
+  resultNote: 'resultNote',
+  plainText: 'plainText'
+} as const
+
+export type PayCallbackLogOrderByRelevanceFieldEnum = (typeof PayCallbackLogOrderByRelevanceFieldEnum)[keyof typeof PayCallbackLogOrderByRelevanceFieldEnum]
+
+
+export const UserEntitlementOrderByRelevanceFieldEnum = {
+  kind: 'kind',
+  source: 'source',
+  skuCode: 'skuCode',
+  status: 'status'
+} as const
+
+export type UserEntitlementOrderByRelevanceFieldEnum = (typeof UserEntitlementOrderByRelevanceFieldEnum)[keyof typeof UserEntitlementOrderByRelevanceFieldEnum]
+
+
 export const DailySentenceCardOrderByRelevanceFieldEnum = {
   bizDate: 'bizDate',
   title: 'title',
@@ -5579,6 +5972,10 @@ export type GlobalOmitConfig = {
   operationLog?: Prisma.OperationLogOmit
   httpLog?: Prisma.HttpLogOmit
   notice?: Prisma.NoticeOmit
+  paySku?: Prisma.PaySkuOmit
+  payOrder?: Prisma.PayOrderOmit
+  payCallbackLog?: Prisma.PayCallbackLogOmit
+  userEntitlement?: Prisma.UserEntitlementOmit
   dailySentenceCard?: Prisma.DailySentenceCardOmit
   userSentenceCard?: Prisma.UserSentenceCardOmit
   clientUser?: Prisma.ClientUserOmit

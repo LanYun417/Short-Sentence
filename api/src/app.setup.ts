@@ -128,7 +128,17 @@ export function configureApp(app: NestExpressApplication, options: AppSetupOptio
   app.use(securityHeaders());
 
   // 请求体上限 2mb
-  app.useBodyParser('json', { limit: '2mb' });
+  // verify：把原始报文 Buffer 挂到 request.rawBody —— 微信支付回调用**原文**验签，
+  // 重新 JSON.stringify 会因键序/空白差异导致签名校验失败（见 common/pay/wechatpay.service.ts）。
+  // 这里用 express.json 而非 app.useBodyParser：后者类型签名不接受 verify 选项。
+  app.use(
+    express.json({
+      limit: '2mb',
+      verify: (req: Request, _res: Response, buf: Buffer) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.useBodyParser('urlencoded', { limit: '2mb', extended: true });
 
   // 全局校验管道：class-validator 失败交由 AllExceptionsFilter 统一转 400

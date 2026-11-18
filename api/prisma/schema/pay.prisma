@@ -1,0 +1,151 @@
+// use prisma-next
+
+// 「短句」付费域（会员订阅支付）。
+// 公共约定（snake_case 映射 / 哨兵值 / 注释落库）见 base.prisma。
+//
+// 为什么四张表而不是一张大表：
+// - pay_sku 与订单分离：**价格只从 SKU 读**，客户端永远不传金额（改价即时生效，历史订单留痕当时快照）；
+// - pay_order 与 pay_callback_log 分离：回调原文（验签结果 + 解密明文）是资金链路的取证材料，
+//   与订单状态解耦，查询订单列表不会被大文本拖慢；
+// - user_entitlement 与订单分离：权益是「当前有没有会员」的事实表，按月/年/终身多订单叠加时
+//   只认「有效期最晚的一条」，查询不受订单历史增长影响。
+//
+// 金额单位一律**分**（Int，有符号即可——单笔订阅远小于 2^31）；币种一期只做 CNY。
+
+/// 会员 SKU 定义（启动幂等种子，后台「支付设置」可改价）
+model PaySku {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// SKU 编码（客户端只传这个：vip_month / vip_year / vip_lifetime）
+  code String @unique @db.VarChar(30)
+  /// 名称（收银台展示）
+  name String @db.VarChar(30)
+  /// 权益类型（一期只有 vip；预留给未来的次数包 pass 等）
+  kind String @default("vip") @db.VarChar(20)
+  /// 价格（分；服务端唯一定价来源）
+  price Int
+  /// 有效天数（0 = 终身，expires_at 落 NULL）
+  durationDays Int @default(0) @map("duration_days")
+  /// 权益说明（JSON 字符串数组，如 ["AI 私教每日 200 次","弱项深度点评"]）
+  benefits String? @db.Text
+  /// 状态：1 上架 / 0 下架
+  status Int @default(1) @db.UnsignedInt
+  /// 排序（小的在前）
+  sort Int @default(0)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, sort])
+  @@map("pay_sku")
+}
+
+/// 支付订单（状态机：pending → paid → refunded｜closed）
+model PayOrder {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 商户订单号（out_trade_no；服务端生成，唯一 = 幂等兜底）
+  orderNo String @unique @map("order_no") @db.VarChar(32)
+  /// 下单用户（client_user id；不建关系）
+  userId BigInt @map("user_id") @db.BigInt
+  /// SKU 快照（冗余保存，改价后历史订单仍可还原当时商品）
+  skuId BigInt @map("sku_id") @db.BigInt
+  /// SKU 编码快照
+  skuCode String @map("sku_code") @db.VarChar(30)
+  /// 订单标题快照（微信支付账单上的商品描述）
+  title String @db.VarChar(60)
+  /// 金额快照（分）
+  amount Int
+  /// 渠道：web 扫码 / android 扫码 / miniapp JSAPI
+  channel String @db.VarChar(20)
+  /// 状态：pending 待支付 / paid 已支付 / refunded 已退款 / closed 已关闭
+  status String @default("pending") @db.VarChar(20)
+  /// 微信预支付会话（JSAPI prepay_id；Native 为空）
+  prepayId String? @map("prepay_id") @db.VarChar(64)
+  /// 微信支付单号（transaction_id，回调写入）
+  transactionId String? @map("transaction_id") @db.VarChar(32)
+  /// 支付完成时间
+  paidAt DateTime? @map("paid_at")
+  /// 退款单号（out_refund_no）
+  refundNo String? @map("refund_no") @db.VarChar(32)
+  /// 微信退款单号
+  refundId String? @map("refund_id") @db.VarChar(64)
+  /// 退款金额（分；全额退款 = amount）
+  refundAmount Int @default(0) @map("refund_amount")
+  /// 退款时间
+  refundedAt DateTime? @map("refund_at")
+  /// 退款原因（运营填）
+  refundReason String? @map("refund_reason") @db.VarChar(200)
+  /// 订单过期时刻（到点未付自动关单）
+  expiredAt DateTime @map("expired_at")
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, expiredAt])
+  @@index([userId, createdAt])
+  @@index([transactionId])
+  @@map("pay_order")
+}
+
+/// 微信支付回调流水（验签结果 + 解密明文，资金链路取证材料）
+model PayCallbackLog {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 对应订单号（解析不出订单时为空，留待人工排查）
+  orderNo String? @map("order_no") @db.VarChar(32)
+  /// 微信支付单号
+  transactionId String? @map("transaction_id") @db.VarChar(32)
+  /// 事件类型（如 TRANSACTION.SUCCESS）
+  eventType String @map("event_type") @db.VarChar(40)
+  /// 平台证书序列号（验签用的证书）
+  serial String @db.VarChar(64)
+  /// 是否验签通过：1 是 / 0 否
+  verified Int @default(0) @db.UnsignedInt
+  /// 是否已按本标准处理（幂等标记）
+  handled Int @default(0) @db.UnsignedInt
+  /// 处理结果说明（如 "order paid" / "duplicate ignored" / 失败原因）
+  resultNote String? @map("result_note") @db.VarChar(200)
+  /// 解密后的明文 JSON（微信通知原文）
+  plainText String? @map("plain_text") @db.Text
+  /// 响应状态码（回给微信的 HTTP 码）
+  responseCode Int @default(200) @map("response_code")
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderNo, createdAt])
+  @@index([transactionId])
+  @@map("pay_callback_log")
+}
+
+/// 用户权益表（当前是否会员的事实表；多订单叠加只认有效期最晚的一条）
+model UserEntitlement {
+  /// 主键
+  id BigInt @id @default(autoincrement()) @db.BigInt
+  /// 用户（client_user id；不建关系）
+  userId BigInt @map("user_id") @db.BigInt
+  /// 权益类型（一期只有 vip）
+  kind String @db.VarChar(20)
+  /// 来源：order 订单 / promo 运营发放 / refund_revoke 退款撤销标记
+  source String @db.VarChar(20)
+  /// 来源订单（发放时留痕）
+  orderId BigInt? @map("order_id") @db.BigInt
+  /// SKU 编码快照
+  skuCode String? @map("sku_code") @db.VarChar(30)
+  /// 状态：active 生效 / revoked 撤销（退款）
+  status String @default("active") @db.VarChar(20)
+  /// 生效时间
+  startedAt DateTime @map("started_at")
+  /// 到期时间（NULL = 终身）
+  expiresAt DateTime? @map("expires_at")
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, kind, status])
+  @@index([expiresAt])
+  @@map("user_entitlement")
+}

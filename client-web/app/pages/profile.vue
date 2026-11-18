@@ -557,6 +557,24 @@ async function onExportData(): Promise<void> {
       <BossEntryCard />
     </div>
 
+    <!-- 会员中心：付费入口放在高频动作之前，用暖色与学习类入口区分 -->
+    <NuxtLink
+      to="/vip"
+      class="anim-in mt-5 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3.5 ring-1 ring-amber-200/70 transition hover:ring-amber-300 dark:from-amber-500/10 dark:to-orange-500/10 dark:ring-amber-400/30"
+      style="animation-delay: 88ms"
+    >
+      <span
+        class="grid size-8 shrink-0 place-items-center rounded-full bg-amber-400/20 text-amber-600 dark:text-amber-300"
+      >
+        <UIcon name="i-lucide-crown" class="h-4 w-4" />
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-sm font-medium text-slate-800 dark:text-slate-100">短句会员</span>
+        <span class="block text-xs text-slate-500 dark:text-slate-400">AI 私教 200 次/日 · 弱项深度点评</span>
+      </span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-amber-500/70" />
+    </NuxtLink>
+
     <!-- 收藏与复习：低频的「回看 / 巩固」动作，收进「我的」做二级入口，
          顶部导航只留核心四项（刷题 / 功能 / 排行榜 / 我的）。
          别把排行榜 / 情景闯关 / 句子接龙再放回来：它们分别常驻导航 Tab 与「功能」页，

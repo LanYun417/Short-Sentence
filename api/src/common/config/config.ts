@@ -502,6 +502,32 @@ export const config = {
       appSecret: process.env.WECHAT_MINIAPP_SECRET ?? '',
     },
   },
+  /**
+   * 会员与支付（微信支付 v3）。
+   * 密钥缺失时支付功能整体禁用（接口返回明确错误），**不阻断服务启动**——
+   * 与 AI / 微信登录同一口径：JWT 是地基必须 fail-fast，支付只是增值功能。
+   * 注意：**后台「支付设置」可在 sys_config 覆盖这里的全部值**，运行时以快照为准
+   * （见 common/pay/pay-settings.service.ts），env 只是新库首次兜底。
+   */
+  pay: {
+    /** 订单未付自动关闭时长（分钟；到点未付自动关单、释放额度） */
+    orderTtlMinutes: Math.max(5, toNumber(process.env.PAY_ORDER_TTL_MINUTES, 30)),
+    /** 会员每日 AI 次数上限（免费层为 ai.dailyQuota 的 4 倍；当日升级当日生效） */
+    vipAiDailyQuota: Math.max(1, toNumber(process.env.PAY_VIP_AI_DAILY_QUOTA, 200)),
+    /** 微信支付商户配置（后台可覆盖；私钥支持文件路径 / 行内 PEM / \n 转义三种形态） */
+    wechat: {
+      appId: process.env.WECHAT_PAY_APPID ?? '',
+      mchId: process.env.WECHAT_PAY_MCHID ?? '',
+      /** 商户证书序列号（apiclient_cert.pem 对应的序列号，商户平台可查） */
+      serialNo: process.env.WECHAT_PAY_SERIAL_NO ?? '',
+      /** 商户 API 私钥（apiclient_key.pem 内容或路径） */
+      privateKey: process.env.WECHAT_PAY_PRIVATE_KEY ?? '',
+      /** APIv3 密钥（32 位；回调通知解密用） */
+      apiv3Key: process.env.WECHAT_PAY_API_V3_KEY ?? '',
+      /** 支付回调地址（须公网可达：https://<域名>/api/pay/notify/wechat） */
+      notifyUrl: process.env.WECHAT_PAY_NOTIFY_URL ?? '',
+    },
+  },
 } as const;
 
 export type AppConfig = typeof config;

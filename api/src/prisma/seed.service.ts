@@ -1223,6 +1223,68 @@ const MENU_TREE: MenuSeedNode[] = [
       },
     ],
   },
+  {
+    // 支付管理：会员订单（同步/退款）与微信支付密钥配置（卡片支付，故用 credit-card）
+    key: 'pay',
+    menuName: '支付管理',
+    menuType: MenuType.DIRECTORY,
+    path: '/pay',
+    icon: 'credit-card',
+    sort: 8,
+    visible: Status.ENABLED,
+    redirect: '/pay/order',
+    children: [
+      {
+        key: 'pay:order',
+        menuName: '支付订单',
+        menuType: MenuType.MENU,
+        path: '/pay/order',
+        component: 'pay/order/index',
+        icon: 'receipt',
+        permission: 'pay:order:query',
+        sort: 1,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'pay:order:edit',
+            menuName: '同步订单',
+            menuType: MenuType.BUTTON,
+            permission: 'pay:order:edit',
+            sort: 1,
+          },
+          {
+            key: 'pay:order:refund',
+            menuName: '订单退款',
+            menuType: MenuType.BUTTON,
+            permission: 'pay:order:refund',
+            sort: 2,
+          },
+        ],
+      },
+      {
+        key: 'pay:settings',
+        menuName: '支付设置',
+        menuType: MenuType.MENU,
+        path: '/pay/settings',
+        component: 'pay/settings/index',
+        icon: 'gear-wide-connected',
+        permission: 'pay:settings:query',
+        sort: 2,
+        visible: Status.ENABLED,
+        keepAlive: 1,
+        children: [
+          {
+            key: 'pay:settings:edit',
+            menuName: '保存配置',
+            menuType: MenuType.BUTTON,
+            permission: 'pay:settings:edit',
+            sort: 1,
+          },
+        ],
+      },
+    ],
+  },
   // [GEN-ANCHOR] 代码生成器自动插入位置，请勿删除（gen.writer 会在本行之前插入新模块菜单节点）
 ];
 

@@ -2161,3 +2161,94 @@ export interface ReviewSubmissionPayload {
   action: 'approve' | 'reject';
   note?: string;
 }
+
+/* ------------------------------ 会员支付 ------------------------------ */
+
+/** 支付订单状态：pending 待支付 / paid 已支付 / refunded 已退款 / closed 已关闭 */
+export type PayOrderStatus = 'pending' | 'paid' | 'refunded' | 'closed';
+
+/** 支付渠道：web 网页 / android 安卓 / miniapp 微信小程序 */
+export type PayChannel = 'web' | 'android' | 'miniapp';
+
+/** 后台支付订单条目（GET /pay/orders） */
+export interface PayOrderItem {
+  orderNo: string;
+  userId: number;
+  skuCode: string;
+  title: string;
+  /** 金额（分） */
+  amount: number;
+  channel: string;
+  status: string;
+  transactionId: string | null;
+  paidAt: string | null;
+  refundAmount: number;
+  refundedAt: string | null;
+  refundReason: string | null;
+  createdAt: string;
+  expiredAt: string;
+}
+
+/** 订单列表查询 */
+export interface PayOrderQuery {
+  page: number;
+  pageSize: number;
+  status?: string;
+  channel?: string;
+  userId?: number;
+  keyword?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+/** 收入概览（GET /pay/orders/stats） */
+export interface PayOrderStats {
+  paidCount: number;
+  /** 累计支付（分，含已退款） */
+  paidAmount: number;
+  /** 累计退款（分） */
+  refundAmount: number;
+  /** 净收入（分） */
+  netAmount: number;
+  todayPaidCount: number;
+  /** 今日净收入（分） */
+  todayNetAmount: number;
+  activeVipCount: number;
+  pendingCount: number;
+}
+
+/** 会员套餐（GET /pay/orders/skus） */
+export interface PaySkuItem {
+  code: string;
+  name: string;
+  kind: string;
+  price: number;
+  durationDays: number;
+  benefits: string[];
+}
+
+/** 微信支付配置（GET /pay/settings；密钥只回掩码） */
+export interface PaySettingsInfo {
+  appId: string;
+  mchId: string;
+  serialNo: string;
+  privateKeyConfigured: boolean;
+  privateKeyMasked: string;
+  apiv3KeyConfigured: boolean;
+  apiv3KeyMasked: string;
+  notifyUrl: string;
+  /** 六项齐全且格式正确 */
+  enabled: boolean;
+  /** 缺项提示 */
+  missing: string[];
+}
+
+/** 保存微信支付配置入参（留空字段沿用现值） */
+export interface SavePaySettingsPayload {
+  appId?: string;
+  mchId?: string;
+  serialNo?: string;
+  privateKey?: string;
+  apiv3Key?: string;
+  notifyUrl?: string;
+}

@@ -29,6 +29,11 @@ import { AiSettingsService } from './ai/ai-settings.service.js';
 import { TextChatProvider } from './ai/text-chat.provider.js';
 import { ImageGenApiProvider } from './ai/image-gen.provider.js';
 import { MailService } from './mail/mail.service.js';
+import { PaySettingsService } from './pay/pay-settings.service.js';
+import { WechatPayService } from './pay/wechatpay.service.js';
+import { PaySkuService } from './pay/pay-sku.service.js';
+import { PayOrderService } from './pay/pay-order.service.js';
+import { EntitlementService } from './pay/entitlement.service.js';
 
 @Global()
 @Module({
@@ -65,6 +70,13 @@ import { MailService } from './mail/mail.service.js';
     ImageGenApiProvider,
     // 邮件（腾讯云 SES；凭证存 sys_config，后台可编辑，缺配置时发送接口报可读错误）
     MailService,
+    // 会员支付（微信支付 v3；配置存 sys_config、后台「支付设置」维护，缺失时整体禁用不阻断启动）
+    PaySettingsService,
+    WechatPayService,
+    // SKU 种子与订单/权益：AI 配额（AiQuotaService）与客户端购买、后台退款共用同一套口径
+    PaySkuService,
+    PayOrderService,
+    EntitlementService,
     // 静态资源链的中间件：由 app.setup.ts 显式挂到 express 上，需要能被 app.get 解析
     HotlinkGuardMiddleware,
     ImageScaleMiddleware,
@@ -97,6 +109,11 @@ import { MailService } from './mail/mail.service.js';
     TextChatProvider,
     ImageGenApiProvider,
     MailService,
+    PaySettingsService,
+    WechatPayService,
+    PaySkuService,
+    PayOrderService,
+    EntitlementService,
   ],
 })
 export class CommonModule {}

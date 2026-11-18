@@ -704,3 +704,33 @@ export interface MemoryStats {
   /** 理论遗忘曲线（day 0..30，retention 0..1，仅作示意） */
   retentionCurve: Array<{ day: number; retention: number }>;
 }
+
+/** 会员套餐（与后端 pay_sku 对齐；price 单位为分）。 */
+export interface PaySku {
+  code: string;
+  name: string;
+  kind: string;
+  /** 分 */
+  price: number;
+  /** 0 = 终身 */
+  durationDays: number;
+  benefits: string[];
+}
+
+/** 会员状态。 */
+export interface VipStatus {
+  vip: boolean;
+  lifetime: boolean;
+  expiresAt: string | null;
+  skuCode: string | null;
+}
+
+/** 小程序支付参数（wx.requestPayment 入参 + appId 供展示）。 */
+export interface WechatPayParams {
+  appId: string;
+  timeStamp: string;
+  nonceStr: string;
+  package: string;
+  signType: 'RSA';
+  paySign: string;
+}

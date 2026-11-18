@@ -181,6 +181,26 @@ export type HttpLog = Prisma.HttpLogModel
  */
 export type Notice = Prisma.NoticeModel
 /**
+ * Model PaySku
+ * 会员 SKU 定义（启动幂等种子，后台「支付设置」可改价）
+ */
+export type PaySku = Prisma.PaySkuModel
+/**
+ * Model PayOrder
+ * 支付订单（状态机：pending → paid → refunded｜closed）
+ */
+export type PayOrder = Prisma.PayOrderModel
+/**
+ * Model PayCallbackLog
+ * 微信支付回调流水（验签结果 + 解密明文，资金链路取证材料）
+ */
+export type PayCallbackLog = Prisma.PayCallbackLogModel
+/**
+ * Model UserEntitlement
+ * 用户权益表（当前是否会员的事实表；多订单叠加只认有效期最晚的一条）
+ */
+export type UserEntitlement = Prisma.UserEntitlementModel
+/**
  * Model DailySentenceCard
  * 每日句签（一天一张，由定时任务 AI 生成；bizDate 唯一即幂等保证）
  */
