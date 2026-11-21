@@ -27,7 +27,6 @@ import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
 import 'pages/stage_list_page.dart';
 import 'pages/team_page.dart';
-import 'pages/vip_page.dart';
 import 'state/auth_controller.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -88,7 +87,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/chains', builder: (context, state) => const ChainPage()),
       GoRoute(path: '/team', builder: (context, state) => const TeamPage()),
       GoRoute(path: '/ipa', builder: (context, state) => const IpaPage()),
-      GoRoute(path: '/vip', builder: (context, state) => const VipPage()),
       GoRoute(
         path: '/achievements',
         builder: (context, state) => const AchievementsPage(),

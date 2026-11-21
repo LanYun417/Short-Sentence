@@ -52,7 +52,6 @@
     "ip2region.js": "^3.1.8",
     "jose": "^6.2.12",
     "multer": "^2.4.0",
-    "qr-image": "^3.2.0",
     "redis": "^6.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

@@ -192,8 +192,6 @@ export default defineNuxtConfig({
       '/achievements',
       '/scenes',
       '/account-delete',
-      // 会员收银台：登录后才有意义，且价格随活动变化，不进搜索引擎索引
-      '/vip',
     ],
   },
 
@@ -215,8 +213,6 @@ export default defineNuxtConfig({
       '/achievements',
       '/scenes',
       '/account-delete',
-      // 会员收银台：登录后才有意义，且价格随活动变化，不进搜索引擎索引
-      '/vip',
     ],
     urls: () => [
       { loc: '/', changefreq: 'daily', priority: 1 },

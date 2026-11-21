@@ -50,7 +50,6 @@ import { IpaController } from './ipa/ipa.controller.js';
 import { IpaAdminController } from './ipa/ipa-admin.controller.js';
 import { IpaService } from './ipa/ipa.service.js';
 import { TeamAdminController } from './team/team-admin.controller.js';
-import { ClientPayController } from './pay/client-pay.controller.js';
 
 @Module({
   // FilesModule：客户端头像上传复用 FilesService（幻数校验 / 秒传去重）
@@ -97,8 +96,6 @@ import { ClientPayController } from './pay/client-pay.controller.js';
     // 用户投稿（UGC）：提交 / 我的投稿 / 精选；后台审核 /api/submissions
     SubmissionController,
     SubmissionAdminController,
-    // 会员购买（/api/client/pay：套餐 / 下单 / 订单状态 / 我的权益；后台与回调在 PayModule）
-    ClientPayController,
   ],
   // ChainService 导出给 TaskModule 挂「接龙主题周更」定时任务；
   // StageService 同理导出给「闯关章节封面补生成」；

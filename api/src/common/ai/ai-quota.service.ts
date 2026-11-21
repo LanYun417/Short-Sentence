@@ -16,7 +16,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../exception/app.exception.js';
 import { config } from '../config/config.js';
 import { RedisService } from '../redis/redis.service.js';
-import { EntitlementService } from '../pay/entitlement.service.js';
 
 /** 额度键前缀。 */
 const QUOTA_KEY_PREFIX = 'ai:quota:';
@@ -43,10 +42,7 @@ export interface AiQuotaUsage {
 export class AiQuotaService {
   private readonly logger = new Logger(AiQuotaService.name);
 
-  constructor(
-    private readonly redis: RedisService,
-    private readonly entitlements: EntitlementService,
-  ) {}
+  constructor(private readonly redis: RedisService) {}
 
   /**
    * 扣一次额度；超限抛 429。
@@ -57,16 +53,11 @@ export class AiQuotaService {
    * @param feature 触发特征（expand / word_root / word_lookup），仅用于日志与后续分池
    */
   async consume(userId: number, feature: string): Promise<void> {
-    const limit = await this.resolveLimit(userId);
+    const limit = this.resolveLimit();
     const key = this.keyOf(userId);
     const used = await this.currentUsed(key);
     if (used >= limit) {
-      const isVip = await this.entitlements.isVip(userId);
-      throw AppException.tooManyRequests(
-        isVip
-          ? `今日 AI 次数已用完（会员每天 ${limit} 次），明天 0 点恢复`
-          : `今日 AI 次数已用完（每天 ${limit} 次，开通会员可提升至 ${config.pay.vipAiDailyQuota} 次），明天 0 点恢复`,
-      );
+      throw AppException.tooManyRequests(`今日 AI 次数已用完（每天 ${limit} 次），明天 0 点恢复`);
     }
     const ok = await this.redis.incrWithTtl(key, RETENTION_MS);
     if (!ok) {
@@ -85,7 +76,7 @@ export class AiQuotaService {
 
   /** 今日用量（给客户端展示「剩余 N 次」）。 */
   async usage(userId: number): Promise<AiQuotaUsage> {
-    const limit = await this.resolveLimit(userId);
+    const limit = this.resolveLimit();
     const used = await this.currentUsed(this.keyOf(userId));
     return {
       used,
@@ -96,15 +87,11 @@ export class AiQuotaService {
   }
 
   /**
-   * 额度来源：会员与免费用户分档（会员默认 200 次/日，免费 50 次/日）。
-   * 用量计数不区分档位——用户当天升级，剩余额度自然变大（键仍是同一个）。
+   * 额度来源。当前统一走配置；**后续做会员时只改这里**（按 userId 查等级返回不同上限），
+   * 用量计数不用动——用户当天升级，剩余额度自然变大。
    */
-  private async resolveLimit(userId: number): Promise<number> {
-    const vip = await this.entitlements.isVip(userId);
-    if (!vip) {
-      return config.ai.dailyQuota;
-    }
-    return Math.max(config.ai.dailyQuota, config.pay.vipAiDailyQuota);
+  private resolveLimit(): number {
+    return config.ai.dailyQuota;
   }
 
   /** 读取今日已用次数（Redis 不可用按 0 处理 = 放行）。 */

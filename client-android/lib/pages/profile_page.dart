@@ -253,13 +253,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               child: Column(
                 children: <Widget>[
                   _MenuRow(
-                    icon: Icons.workspace_premium_outlined,
-                    label: '会员中心',
-                    hint: 'AI 私教 200 次/日 · 弱项深度点评',
-                    onTap: () => context.push('/vip'),
-                  ),
-                  const _MenuDivider(),
-                  _MenuRow(
                     icon: Icons.emoji_events_outlined,
                     label: '排行榜',
                     hint: '今日答题 / 答对前 100',

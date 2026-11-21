@@ -75,10 +75,6 @@ export const ModelName = {
   OperationLog: 'OperationLog',
   HttpLog: 'HttpLog',
   Notice: 'Notice',
-  PaySku: 'PaySku',
-  PayOrder: 'PayOrder',
-  PayCallbackLog: 'PayCallbackLog',
-  UserEntitlement: 'UserEntitlement',
   DailySentenceCard: 'DailySentenceCard',
   UserSentenceCard: 'UserSentenceCard',
   ClientUser: 'ClientUser',
@@ -487,83 +483,6 @@ export const NoticeScalarFieldEnum = {
 } as const
 
 export type NoticeScalarFieldEnum = (typeof NoticeScalarFieldEnum)[keyof typeof NoticeScalarFieldEnum]
-
-
-export const PaySkuScalarFieldEnum = {
-  id: 'id',
-  code: 'code',
-  name: 'name',
-  kind: 'kind',
-  price: 'price',
-  durationDays: 'durationDays',
-  benefits: 'benefits',
-  status: 'status',
-  sort: 'sort',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type PaySkuScalarFieldEnum = (typeof PaySkuScalarFieldEnum)[keyof typeof PaySkuScalarFieldEnum]
-
-
-export const PayOrderScalarFieldEnum = {
-  id: 'id',
-  orderNo: 'orderNo',
-  userId: 'userId',
-  skuId: 'skuId',
-  skuCode: 'skuCode',
-  title: 'title',
-  amount: 'amount',
-  channel: 'channel',
-  status: 'status',
-  prepayId: 'prepayId',
-  transactionId: 'transactionId',
-  paidAt: 'paidAt',
-  refundNo: 'refundNo',
-  refundId: 'refundId',
-  refundAmount: 'refundAmount',
-  refundedAt: 'refundedAt',
-  refundReason: 'refundReason',
-  expiredAt: 'expiredAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type PayOrderScalarFieldEnum = (typeof PayOrderScalarFieldEnum)[keyof typeof PayOrderScalarFieldEnum]
-
-
-export const PayCallbackLogScalarFieldEnum = {
-  id: 'id',
-  orderNo: 'orderNo',
-  transactionId: 'transactionId',
-  eventType: 'eventType',
-  serial: 'serial',
-  verified: 'verified',
-  handled: 'handled',
-  resultNote: 'resultNote',
-  plainText: 'plainText',
-  responseCode: 'responseCode',
-  createdAt: 'createdAt'
-} as const
-
-export type PayCallbackLogScalarFieldEnum = (typeof PayCallbackLogScalarFieldEnum)[keyof typeof PayCallbackLogScalarFieldEnum]
-
-
-export const UserEntitlementScalarFieldEnum = {
-  id: 'id',
-  userId: 'userId',
-  kind: 'kind',
-  source: 'source',
-  orderId: 'orderId',
-  skuCode: 'skuCode',
-  status: 'status',
-  startedAt: 'startedAt',
-  expiresAt: 'expiresAt',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type UserEntitlementScalarFieldEnum = (typeof UserEntitlementScalarFieldEnum)[keyof typeof UserEntitlementScalarFieldEnum]
 
 
 export const DailySentenceCardScalarFieldEnum = {
@@ -1303,54 +1222,6 @@ export const NoticeOrderByRelevanceFieldEnum = {
 } as const
 
 export type NoticeOrderByRelevanceFieldEnum = (typeof NoticeOrderByRelevanceFieldEnum)[keyof typeof NoticeOrderByRelevanceFieldEnum]
-
-
-export const PaySkuOrderByRelevanceFieldEnum = {
-  code: 'code',
-  name: 'name',
-  kind: 'kind',
-  benefits: 'benefits'
-} as const
-
-export type PaySkuOrderByRelevanceFieldEnum = (typeof PaySkuOrderByRelevanceFieldEnum)[keyof typeof PaySkuOrderByRelevanceFieldEnum]
-
-
-export const PayOrderOrderByRelevanceFieldEnum = {
-  orderNo: 'orderNo',
-  skuCode: 'skuCode',
-  title: 'title',
-  channel: 'channel',
-  status: 'status',
-  prepayId: 'prepayId',
-  transactionId: 'transactionId',
-  refundNo: 'refundNo',
-  refundId: 'refundId',
-  refundReason: 'refundReason'
-} as const
-
-export type PayOrderOrderByRelevanceFieldEnum = (typeof PayOrderOrderByRelevanceFieldEnum)[keyof typeof PayOrderOrderByRelevanceFieldEnum]
-
-
-export const PayCallbackLogOrderByRelevanceFieldEnum = {
-  orderNo: 'orderNo',
-  transactionId: 'transactionId',
-  eventType: 'eventType',
-  serial: 'serial',
-  resultNote: 'resultNote',
-  plainText: 'plainText'
-} as const
-
-export type PayCallbackLogOrderByRelevanceFieldEnum = (typeof PayCallbackLogOrderByRelevanceFieldEnum)[keyof typeof PayCallbackLogOrderByRelevanceFieldEnum]
-
-
-export const UserEntitlementOrderByRelevanceFieldEnum = {
-  kind: 'kind',
-  source: 'source',
-  skuCode: 'skuCode',
-  status: 'status'
-} as const
-
-export type UserEntitlementOrderByRelevanceFieldEnum = (typeof UserEntitlementOrderByRelevanceFieldEnum)[keyof typeof UserEntitlementOrderByRelevanceFieldEnum]
 
 
 export const DailySentenceCardOrderByRelevanceFieldEnum = {

@@ -26,7 +26,6 @@
     "pages/chains/detail/detail",
     "pages/team/team",
     "pages/profile-edit/profile-edit",
-    "pages/vip/vip",
     "pages/account-delete/account-delete",
     "pages/memory/memory",
     "pages/privacy/privacy",

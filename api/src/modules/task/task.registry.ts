@@ -124,10 +124,6 @@ export interface TaskDeps {
   generateMissingSceneCovers: () => Promise<{ generated: number[]; failed: number[] }>;
   /** 小队群聊记录清理（TeamService.cleanTeamMessages；仅保留最近 30 天） */
   cleanTeamMessages: () => Promise<number>;
-  /** 关闭过期未支付会员订单（PayOrderService.closeExpired；同步向微信关单） */
-  closeExpiredPayOrders: () => Promise<number>;
-  /** 清理过期支付回调流水（PayOrderService.cleanupCallbackLogs；保留 180 天） */
-  cleanupPayCallbackLogs: () => Promise<number>;
 }
 
 /** 任务注册表条目（描述 + 执行体工厂）。 */
@@ -292,22 +288,6 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
         // 先场景后剧本：场景卡没了封面整页观感最差；两类都只补缺失、不覆盖
         await deps.generateMissingSceneCovers();
         await deps.generateMissingStageCovers();
-      },
-    },
-    {
-      name: 'pay-order-close',
-      title: '过期订单关闭',
-      description:
-        '关闭超过 ' +
-        `${config.pay.orderTtlMinutes} 分钟未支付的会员订单（并同步向微信关单），避免长期挂着无人支付的 pending 单。` +
-        '已支付的订单不受影响；用户卡点支付时由回调/轮询补单。' +
-        '顺带清理超过 180 天的回调流水（含解密明文，不宜无限留存）。',
-      // 每 2 小时扫一次：轻量查询（走 status + expired_at 索引），不与夜间生成抢资源
-      schedule: { kind: 'everyHours', hours: 2 },
-      enabled: true,
-      create: (deps) => async () => {
-        await deps.closeExpiredPayOrders();
-        await deps.cleanupPayCallbackLogs();
       },
     },
   ];

@@ -33,7 +33,6 @@ import { buildPageResult, parsePagination } from '../../common/utils/utils.js';
 import { ConfigService } from '../config/config.service.js';
 import { AiSettingsService } from '../../common/ai/ai-settings.service.js';
 import { resolveModel } from '../../common/ai/ai-protocol.js';
-import { PayOrderService } from '../../common/pay/pay-order.service.js';
 import {
   buildTaskRegistry,
   cronOf,
@@ -170,7 +169,6 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly aiSettings: AiSettingsService,
     private readonly redis: RedisService,
-    private readonly payOrders: PayOrderService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -193,8 +191,6 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       generateMissingStageCovers: () => this.stage.generateMissingScriptCovers(),
       generateMissingSceneCovers: () => this.sentenceGen.generateMissingCategoryCovers(),
       cleanTeamMessages: () => this.team.cleanTeamMessages(),
-      closeExpiredPayOrders: () => this.payOrders.closeExpired(),
-      cleanupPayCallbackLogs: () => this.payOrders.cleanupCallbackLogs(),
     };
 
     // 每日提醒的时间/开关存 sys_config（后台「参数管理」可改），启动时读出来覆盖注册表默认值

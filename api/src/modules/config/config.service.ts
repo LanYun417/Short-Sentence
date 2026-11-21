@@ -23,36 +23,6 @@ import type { CreateConfigDto, UpdateConfigDto } from './dto/config.dto.js';
  */
 const DEDICATED_PAGE_KEYS: readonly string[] = [AI_CONFIG_KEYS.models];
 
-/**
- * 由专属页面管理、且**值里含密钥**的参数前缀（安全红线）。
- *
- * 为什么必须单独拦：`GET /configs/data/:configKey` 只校验登录、没有权限码，
- * 列表页也只按 `system:config:*` 授权。若不拦，任何登录后台的账号（哪怕只是个
- * 只读角色）都能按 key 读到微信支付商户私钥、APIv3 密钥与邮件 SES 密钥。
- *
- * 这些键只能通过各自专属接口读写：`/pay/settings`（pay:settings:*）、`/mail-settings`。
- */
-const SECRET_CONFIG_PREFIXES: readonly string[] = ['pay.wechat.', 'mail.ses.'];
-
-/** 是否为「专属页面 / 含密钥」参数键（命中即禁止走通用参数接口）。 */
-export function isDedicatedConfigKey(configKey: string): boolean {
-  return (
-    DEDICATED_PAGE_KEYS.includes(configKey) || SECRET_CONFIG_PREFIXES.some((prefix) => configKey.startsWith(prefix))
-  );
-}
-
-/** 通用列表的过滤条件（精确键 + 密钥前缀用 NOT 逐个排除）。 */
-function buildListWhere(configName: string | undefined, configKey: string | undefined): Record<string, unknown> {
-  return {
-    ...(configName ? { configName: { contains: configName } } : {}),
-    configKey: {
-      ...(configKey ? { contains: configKey } : {}),
-      notIn: [...DEDICATED_PAGE_KEYS],
-    },
-    AND: SECRET_CONFIG_PREFIXES.map((prefix) => ({ NOT: { configKey: { startsWith: prefix } } })),
-  };
-}
-
 /** 参数（对外 DTO）。 */
 export interface SysConfigBrief {
   id: number;
@@ -111,13 +81,20 @@ export class ConfigService {
     const configKey = readString(query.configKey);
 
     const rows = await this.prisma.sysConfig.findMany({
-      where: buildListWhere(configName, configKey),
+      where: {
+        ...(configName ? { configName: { contains: configName } } : {}),
+        // 专属页面管理的键（如 ai.models）不出现在通用列表
+        configKey: { ...(configKey ? { contains: configKey } : {}), notIn: [...DEDICATED_PAGE_KEYS] },
+      },
       orderBy: { id: 'asc' },
       skip: offset,
       take: limit,
     });
     const count = await this.prisma.sysConfig.count({
-      where: buildListWhere(configName, configKey),
+      where: {
+        ...(configName ? { configName: { contains: configName } } : {}),
+        configKey: { ...(configKey ? { contains: configKey } : {}), notIn: [...DEDICATED_PAGE_KEYS] },
+      },
     });
 
     return buildPageResult(
@@ -134,23 +111,15 @@ export class ConfigService {
     if (!row) {
       throw AppException.notFound('参数不存在');
     }
-    // 密钥类参数只能通过专属页面读取（README 的「密钥只回掩码」口径）
-    if (isDedicatedConfigKey(row.configKey)) {
-      throw AppException.forbidden('该参数由专属设置页管理，请从对应页面查看');
-    }
     return this.toSysConfigBrief(row);
   }
 
   /**
    * 按键取参数值（业务取数，仅需登录）。
    * @param configKey 参数键名
-   * @returns 键值对；键不存在或属于密钥类参数时返回 null（不泄露存在性）
+   * @returns 键值对；键不存在时返回 null
    */
   async getConfigData(configKey: string): Promise<ConfigData | null> {
-    // 安全红线：该端点只校验登录、没有权限码，绝不能返回密钥类参数
-    if (isDedicatedConfigKey(configKey)) {
-      return null;
-    }
     const row = await this.prisma.sysConfig.findUnique({ where: { configKey } });
     if (!row) {
       return null;
@@ -182,10 +151,6 @@ export class ConfigService {
 
   /** 新增参数。 */
   async createConfig(input: CreateConfigDto): Promise<SysConfigBrief> {
-    // 禁止通过通用接口创建密钥类参数（否则「隐藏」形同虚设）
-    if (isDedicatedConfigKey(input.configKey)) {
-      throw AppException.forbidden('该参数键由专属设置页管理，不能在此新增');
-    }
     const exists = await this.prisma.sysConfig.findUnique({ where: { configKey: input.configKey } });
     if (exists) {
       throw AppException.conflict('参数键名已存在');
@@ -209,9 +174,6 @@ export class ConfigService {
     const existing = await this.prisma.sysConfig.findUnique({ where: { id: BigInt(id) } });
     if (!existing) {
       throw AppException.notFound('参数不存在');
-    }
-    if (isDedicatedConfigKey(existing.configKey)) {
-      throw AppException.forbidden('该参数由专属设置页管理，请从对应页面修改');
     }
     // 变更留痕：系统参数直接影响运行行为，改动前值必须留档
     recordBefore({
@@ -247,9 +209,6 @@ export class ConfigService {
     }
     if (Number(existing.systemFlag) === 1) {
       throw AppException.conflict('内置参数不可删除');
-    }
-    if (isDedicatedConfigKey(existing.configKey)) {
-      throw AppException.forbidden('该参数由专属设置页管理，不能在此删除');
     }
     await this.prisma.sysConfig.delete({ where: { id: BigInt(id) } });
   }

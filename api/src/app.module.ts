@@ -43,7 +43,6 @@ import { AiModule } from './modules/ai/ai.module.js';
 import { ClientUsersModule } from './modules/client-users/client-users.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { SecurityModule } from './modules/security/ip-ban.module.js';
-import { PayModule } from './modules/pay/pay.module.js';
 
 @Module({
   imports: [
@@ -87,8 +86,6 @@ import { PayModule } from './modules/pay/pay.module.js';
     ClientUsersModule,
     AnalyticsModule,
     SecurityModule,
-    // 会员支付：微信支付回调（公开）+ 后台订单/退款/支付设置（RBAC）
-    PayModule,
   ],
   providers: [
     // 守卫顺序：先鉴权（挂 req.user），再校验权限码
