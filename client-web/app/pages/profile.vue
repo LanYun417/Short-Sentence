@@ -10,7 +10,7 @@ import { apiFetch, getToken } from '~/composables/useApi';
 import { useCountUp } from '~/composables/useCountUp';
 import { PASSWORD_HINT } from '~/utils/password';
 import { secretInputHandlers } from '~/composables/useLogoEyes';
-import type { ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
+import type { AiQuotaUsage, ClientUserProfile, MissingSentenceCards, SentenceCard, TodayCheckin } from '~/types';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -115,6 +115,9 @@ function fillForm(): void {
 const { data: ssrUser } = await useSsrApi<ClientUserProfile>('ss:me', '/client/auth/me');
 const { data: ssrToday } = await useSsrApi<TodayCheckin>('ss:today', '/client/checkin/today');
 const { data: ssrSentenceCards } = await useSsrApi<SentenceCard[]>('ss:sentenceCards', '/client/sentence-card/mine');
+// 今日 AI 剩余次数（个人中心直接展示；SSR 预取让首屏就带真实数字，不闪 0）
+const { data: ssrAiQuota } = await useSsrApi<AiQuotaUsage>('ss:ai-quota', '/client/ai/quota');
+const aiQuota = ref<AiQuotaUsage | null>(ssrAiQuota.value ?? null);
 // 消息中心未读数（红点）：服务端口径，SSR 预取让首屏就带红点，不用等水合
 const { data: ssrNoticeUnread } = await useSsrApi<{ count: number }>(
   'ss:notices-unread',
@@ -254,6 +257,11 @@ watch(ssrSentenceCards, (data) => {
     sentenceCards.value = data;
   }
 });
+watch(ssrAiQuota, (data) => {
+  if (data) {
+    aiQuota.value = data;
+  }
+});
 
 onMounted(() => {
   // SSR 资料：顺带刷新 localStorage 缓存（离线兜底也保持新鲜）
@@ -267,6 +275,14 @@ onMounted(() => {
     void apiFetch<TodayCheckin>('/client/checkin/today').then((data) => {
       today.value = data;
     });
+  }
+  // SSR 拿不到额度（Cookie 过期等）时客户端兜底拉一次，保证个人中心能显示
+  if (!aiQuota.value) {
+    void apiFetch<AiQuotaUsage>('/client/ai/quota')
+      .then((data) => {
+        aiQuota.value = data;
+      })
+      .catch(() => undefined);
   }
   // 未读数每次进入都重取：SSR 快照可能已过期（多了公告 / 在别处读过），
   // 红点只在「刚发的公告」才亮起来才有意义
@@ -537,6 +553,42 @@ async function onExportData(): Promise<void> {
               </div>
               <UProgress :model-value="goalPercent" size="sm" />
             </div>
+
+            <!-- 今日 AI 剩余：与「功能 → AI 拓展」同源额度，首屏 SSR 直出真实数字；
+                 点进去用 AI（造句/词根/私教点评都从这里扣）。用完时转琥珀色提示次日 0 点恢复 -->
+            <NuxtLink
+              v-if="aiQuota"
+              to="/features?tab=ai"
+              class="mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 ring-1 transition"
+              :class="
+                aiQuota.remaining > 0
+                  ? 'bg-indigo-50/70 ring-indigo-200/70 hover:ring-indigo-300 dark:bg-indigo-500/10 dark:ring-indigo-500/20 dark:hover:ring-indigo-500/40'
+                  : 'bg-amber-50 ring-amber-200/70 hover:ring-amber-300 dark:bg-amber-500/10 dark:ring-amber-500/20'
+              "
+            >
+              <span class="flex min-w-0 items-center gap-2">
+                <UIcon
+                  name="i-lucide-sparkles"
+                  class="h-4 w-4 shrink-0"
+                  :class="aiQuota.remaining > 0 ? 'text-indigo-500' : 'text-amber-500'"
+                />
+                <span class="text-xs text-slate-500 dark:text-slate-400">今日 AI 剩余</span>
+                <span
+                  class="text-sm font-semibold tabular-nums"
+                  :class="
+                    aiQuota.remaining > 0
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  "
+                >
+                  {{ aiQuota.remaining }} / {{ aiQuota.limit }} 次
+                </span>
+              </span>
+              <span class="flex shrink-0 items-center gap-1 text-[11px] text-slate-400">
+                {{ aiQuota.remaining > 0 ? '去使用' : '明天 0 点恢复' }}
+                <UIcon name="i-lucide-chevron-right" class="h-3.5 w-3.5" />
+              </span>
+            </NuxtLink>
           </template>
 
           <!-- 签名 -->
