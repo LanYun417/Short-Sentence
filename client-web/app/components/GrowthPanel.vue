@@ -208,8 +208,7 @@ function iconOf(name: string): string {
     <!-- 记忆巩固独立成卡，与上方「场景探索」卡片之间由外层 space-y 留出间隙 -->
     <MemoryHealthCard />
 
-    <!-- AI 私教：把上面的记忆数据变成「今天具体练什么」，规则层始终可用 -->
-    <AiCoachCard />
+    <!-- AI 私教已提为独立页（/ai-coach），入口在「功能」页顶部，成长面板不再重复放 -->
   </div>
 
   <div v-else class="py-10 text-center text-sm text-slate-400">成长数据加载中…</div>

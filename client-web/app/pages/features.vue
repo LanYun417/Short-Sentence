@@ -371,6 +371,32 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!--
+      AI 私教独立入口横条：从「我的 → 成长面板」提为独立页。
+      做成全宽横条而非塞进下面的四宫格——既更显眼，也避免第五张卡在桌面端掉到第二行。
+    -->
+    <NuxtLink
+      to="/ai-coach"
+      class="anim-in group mb-4 flex items-center gap-3 rounded-2xl bg-linear-to-r from-indigo-600 to-violet-600 p-4 text-white shadow-sm shadow-indigo-500/25 transition active:scale-[0.99] sm:gap-4"
+      style="animation-delay: 30ms"
+    >
+      <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15 ring-1 ring-white/20">
+        <UIcon name="i-lucide-graduation-cap" class="h-6 w-6" />
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-base font-semibold">AI 私教</span>
+        <span class="block truncate text-xs text-white/75">按你的作答数据，生成薄弱点画像与今日复习计划</span>
+      </span>
+      <span class="hidden shrink-0 items-center gap-1 text-xs font-medium text-white/85 sm:flex">
+        去看看
+        <UIcon
+          name="i-lucide-arrow-right"
+          class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5"
+        />
+      </span>
+      <UIcon name="i-lucide-chevron-right" class="h-5 w-5 shrink-0 text-white/70 sm:hidden" />
+    </NuxtLink>
+
     <!-- 特色玩法入口：音标学习 / 情景闯关 / 句子接龙 / 学习小队 -->
     <div class="anim-in mb-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4" style="animation-delay: 40ms">
       <NuxtLink
