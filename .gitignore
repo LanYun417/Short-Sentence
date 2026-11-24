@@ -81,6 +81,9 @@ coverage/
 .workbuddy/
 .agents/
 
+# 成就 AI 大图出图草稿与风格样张（本地留档、不入源码库；正式图落 api/uploads/achievements/）
+tmp-achievement-art/
+
 # 数据备份文件（含用户数据，仅本地留档，不入库）
 api/.card-backup-*.json
 backups/
