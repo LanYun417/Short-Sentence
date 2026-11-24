@@ -14,6 +14,8 @@
  *   执行记录也不进 sys_task_log——运维以为没配，其实在跑。
  */
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { config } from '../../common/config/config.js';
 import { dayContextOf, parseDateKey, type DayContext } from '../../common/calendar/day-context.js';
 import {
@@ -1293,6 +1295,61 @@ export class SentenceGenService implements OnModuleInit {
     }
 
     return { accepted: jobs.map((job) => Number(job.id)), skipped };
+  }
+
+  /**
+   * 一键补全「配图文件丢失」的题目（管理端按钮用：点一次自动扫描 + 分批补齐，无需手动勾题）。
+   *
+   * 场景：磁盘上的 uploads/webp 被 git clean / 重新克隆 / 卷重置清掉，但 sys_file 记录还在，
+   * 于是题仍是 ready、imageFileId 指向一条存在的记录，前端却拿到 404 破图。
+   * 与 CLI 脚本 repair-missing-images.ts 同一口径，只是搬到后端让运营点按钮就能跑。
+   *
+   * 扫描条件（缺一不可，避免误伤）：
+   * - status='ready' 且未退场：只补正常在用的题；pending_image（已有任务在跑）、image_rejected
+   *   （审核隔离）、offline（下架）都不碰；
+   * - image_file_id > 0 且 sys_file 有记录：从未生过图的题由「生成题库」流程负责，不在这里；
+   * - 磁盘文件不存在：以 sys_file.file_path（相对 ROOT_DIR）为准，与 FileService.save 落盘口径一致。
+   *
+   * 分批：每批 50 张（与后台「批量重新生图」上限一致），由 regenerateImages 走进程内生图信号量
+   * 串行处理；一次性全塞会堆几小时并打爆 Agnes 按小时配额。返回扫描总数与已受理数，
+   * 剩余的可再次点按钮继续补（幂等：已补好的题不再命中扫描条件）。
+   */
+  async repairMissingImages(): Promise<{
+    scanned: number;
+    accepted: number;
+    skipped: number;
+    remaining: number;
+  }> {
+    if (!this.imageGen.enabled) {
+      throw AppException.serviceUnavailable('生图能力未配置，无法补全配图');
+    }
+
+    // 只读扫描：join sys_file 拿物理相对路径，在内存里用 existsSync 判断文件是否还在。
+    // 不把 existsSync 塞进 SQL——文件在磁盘上，数据库无从判断。
+    const rows = await this.prisma.$queryRaw<Array<{ id: bigint; file_path: string | null }>>`
+      SELECT s.id, f.file_path
+      FROM sentence s
+      JOIN sys_file f ON f.id = s.image_file_id
+      WHERE s.status = 'ready'
+        AND s.retired_at IS NULL
+        AND s.image_file_id > 0`;
+    const missingIds = rows
+      .filter((row) => !row.file_path || !existsSync(path.resolve(config.rootDir, row.file_path)))
+      .map((row) => Number(row.id));
+
+    if (missingIds.length === 0) {
+      return { scanned: 0, accepted: 0, skipped: 0, remaining: 0 };
+    }
+
+    // 分批受理：单批 50，避免一次性把上千张图塞进队列烧配额 / 卡住出题。
+    const batch = missingIds.slice(0, 50);
+    const result = await this.regenerateImages(batch);
+    return {
+      scanned: missingIds.length,
+      accepted: result.accepted.length,
+      skipped: result.skipped.length,
+      remaining: Math.max(0, missingIds.length - result.accepted.length),
+    };
   }
 
   /** 生题入库（按 sentenceEn 唯一约束去重；返回净增条数）。 */

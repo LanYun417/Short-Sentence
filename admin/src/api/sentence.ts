@@ -63,6 +63,19 @@ export function batchRegenerateSentenceImageApi(ids: number[]): Promise<{ accept
   return post<{ accepted: number[]; skipped: number[] }>('/sentences/batch-regenerate-image', { ids });
 }
 
+/**
+ * 一键补全缺失配图（无需勾题）：后端自动扫描「ready 但磁盘图片丢失」的题，分批重生。
+ * 每次受理 50 张，剩余的再次点击继续补（幂等，补好的题不再命中）。
+ */
+export function repairMissingImagesApi(): Promise<{
+  scanned: number;
+  accepted: number;
+  skipped: number;
+  remaining: number;
+}> {
+  return post('/sentences/repair-missing-images');
+}
+
 /** 下架题目（软删除） */
 export function deleteSentenceApi(id: number): Promise<null> {
   return del<null>(`/sentences/${id}`);

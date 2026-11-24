@@ -409,6 +409,28 @@ export class SentenceController {
   }
 
   /**
+   * 一键补全缺失配图：自动扫描「ready 但磁盘图片丢失」的题并分批重生图，无需手动勾题。
+   * 静态路由，必须声明在 `@Post(':id/regenerate-image')` 之前。
+   */
+  @Post('repair-missing-images')
+  @RequirePermissions('sentence:gen')
+  @OperationLog('题库管理', '补全缺失配图')
+  async repairMissingImages(): Promise<
+    ResponseEnvelope<{ scanned: number; accepted: number; skipped: number; remaining: number }>
+  > {
+    const result = await this.sentenceGen.repairMissingImages();
+    return {
+      __raw: true,
+      data: result,
+      message:
+        result.scanned === 0
+          ? '没有缺失配图的题目'
+          : `扫描到 ${result.scanned} 题缺图，已受理 ${result.accepted} 张` +
+            (result.remaining > 0 ? `，剩余 ${result.remaining} 题可再次点击继续补` : ''),
+    };
+  }
+
+  /**
    * 批量重新生图（异步，立即返回；单题接口的批量版，换配图风格时用）。
    *
    * 与批量上下架不同，这里**不要求全部成功**：单题不存在、正在生成中、已有生图

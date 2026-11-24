@@ -10,6 +10,7 @@ import {
   createSentenceApi,
   batchSentenceStatusApi,
   batchRegenerateSentenceImageApi,
+  repairMissingImagesApi,
   deleteGenTaskApi,
   deleteSentenceApi,
   exportSentencesApi,
@@ -482,6 +483,35 @@ async function handleBatchRegen(): Promise<void> {
   await getList();
 }
 
+/** 一键补全缺失配图：自动扫描全库缺图题，分批受理（每次 50 张），无需手动勾题。 */
+const repairing = ref(false);
+async function handleRepairMissingImages(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '将自动扫描全库「已就绪但配图文件丢失」的题目，分批重新生成配图（每批 50 张，约消耗 1 张/题的 AI 生图配额）。已补好的题会自动跳过，剩余的可再次点击继续补。确认开始？',
+      '一键补全缺失配图',
+      { type: 'warning' },
+    );
+  } catch {
+    return;
+  }
+  repairing.value = true;
+  try {
+    const result = await repairMissingImagesApi();
+    if (result.scanned === 0) {
+      ElMessage.success('没有缺失配图的题目');
+      return;
+    }
+    ElMessage.success(
+      `扫描到 ${result.scanned} 题缺图，已受理 ${result.accepted} 张` +
+        (result.remaining > 0 ? `，剩余 ${result.remaining} 题可再次点击继续补` : '，约 10~40 秒后自动更新'),
+    );
+    await getList();
+  } finally {
+    repairing.value = false;
+  }
+}
+
 /* ------------------------------ 生成批次 ------------------------------ */
 
 const genDialogVisible = ref(false);
@@ -866,6 +896,19 @@ onMounted(async () => {
                 @click="handleBatchRegen"
               >
                 批量重新生图<span v-if="selectedIds.length > 0">（{{ selectedIds.length }}）</span>
+              </el-button>
+            </span>
+          </el-tooltip>
+          <el-tooltip content="自动扫描全库「已就绪但配图丢失」的题并分批重生，无需手动勾题；补好的会自动跳过">
+            <span>
+              <el-button
+                v-permission="'sentence:gen'"
+                type="success"
+                plain
+                :loading="repairing"
+                @click="handleRepairMissingImages"
+              >
+                补全缺失配图
               </el-button>
             </span>
           </el-tooltip>
