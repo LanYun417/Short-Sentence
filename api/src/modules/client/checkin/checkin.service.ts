@@ -20,6 +20,15 @@ export interface TodayCheckin {
   completed: boolean;
 }
 
+/** 热力图单日数据（前端画 52 周方格用）。 */
+export interface CheckinHistoryDay {
+  date: string;
+  doneCount: number;
+  goalCount: number;
+  /** 是否完成当日目标 */
+  completed: boolean;
+}
+
 /** 后台-某日打卡统计。 */
 export interface CheckinDayStat {
   date: string;
@@ -67,6 +76,29 @@ export class CheckinService {
       streak: row.streak,
       completed: row.doneCount >= row.goalCount,
     };
+  }
+
+  /**
+   * 最近 N 天的打卡记录（热力图数据源）。
+   *
+   * 只查 user_checkin 一张表：它每次作答都 upsert，天然覆盖「有活动的日子」；
+   * 没有记录的日子前端按 0 渲染空格即可，不需要后端补齐日历。
+   * days 夹在 1~400，避免恶意大值扫全表。
+   */
+  async getHistory(userId: number, days = 371): Promise<CheckinHistoryDay[]> {
+    const limit = Math.min(400, Math.max(1, Math.floor(days)));
+    const since = this.shiftDate(this.today(), -(limit - 1));
+    const rows = await this.prisma.userCheckin.findMany({
+      where: { userId: BigInt(userId), checkinDate: { gte: since } },
+      select: { checkinDate: true, doneCount: true, goalCount: true },
+      orderBy: { checkinDate: 'asc' },
+    });
+    return rows.map((row) => ({
+      date: row.checkinDate,
+      doneCount: row.doneCount,
+      goalCount: row.goalCount,
+      completed: row.goalCount > 0 && row.doneCount >= row.goalCount,
+    }));
   }
 
   /** 记录一次作答（upsert 今日打卡行；streak 在「当天首次作答」时结算）。 */

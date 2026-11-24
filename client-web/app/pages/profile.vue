@@ -609,6 +609,11 @@ async function onExportData(): Promise<void> {
       <BossEntryCard />
     </div>
 
+    <!-- 学习热力图：一年答题分布，成就感可视化（数据来自打卡记录，不依赖 AI） -->
+    <div class="anim-in mt-5" style="animation-delay: 95ms">
+      <StudyHeatmap />
+    </div>
+
     <!-- 收藏与复习：低频的「回看 / 巩固」动作，收进「我的」做二级入口，
          顶部导航只留核心四项（刷题 / 功能 / 排行榜 / 我的）。
          别把排行榜 / 情景闯关 / 句子接龙再放回来：它们分别常驻导航 Tab 与「功能」页，
