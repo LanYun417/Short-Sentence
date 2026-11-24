@@ -6577,6 +6577,39 @@ export const API_DOCS: ApiDocGroup[] = [
     "endpoints": [
       {
         "method": "GET",
+        "path": "/api/client/checkin/history",
+        "summary": "最近 N 天打卡记录（学习热力图数据源；days 夹在 1~400，默认 371 天 ≈ 53 周）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/checkin/history?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/client/checkin/today",
         "summary": "今日进度",
         "permission": [],
@@ -9094,6 +9127,19 @@ export const API_DOCS: ApiDocGroup[] = [
       },
       {
         "method": "POST",
+        "path": "/api/sentences/repair-missing-images",
+        "summary": "一键补全缺失配图：自动扫描「ready 但磁盘图片丢失」的题并分批重生图，无需手动勾题。 静态路由，必须声明在 `@Post(':id/regenerate-image')` 之前",
+        "permission": [
+          "sentence:gen"
+        ],
+        "isPublic": false,
+        "action": "题库管理 · 补全缺失配图",
+        "examples": {
+          "curl": "curl -X POST \"http://localhost:3000/api/sentences/repair-missing-images\" \\\n  -H \"Authorization: Bearer <accessToken>\""
+        }
+      },
+      {
+        "method": "POST",
         "path": "/api/sentences/word-meanings/backfill",
         "summary": "补全存量题逐词释义（管理端手动、按批；拼词模式悬浮词义用）。 与解析回填同一取舍：全量补一遍要花不少 token，由运营决定什么时候花、花多少。 默认补「还没有词义」的题；force=true 重生成「已有词义」的题（模型升级后刷新口径）。 每批返回 scanned/updated/remaining（remaining 恒为「缺词义」的题数，便于点到 0）",
         "permission": [
@@ -10187,6 +10233,18 @@ export const API_DOCS: ApiDocGroup[] = [
             "page": 1,
             "pageSize": 10
           }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/favorites/anki.csv",
+        "summary": "导出收藏句子为 Anki 可导入的 CSV（英文 / 中文 / 音标，Tab 分隔兼容 Anki 字段）。 RawResponse 跳过统一信封，直接以附件下发",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/favorites/anki.csv\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "isRawResponse": true
         }
       },
       {

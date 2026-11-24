@@ -12388,6 +12388,91 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/checkin/history": {
+      "get": {
+        "tags": [
+          "每日打卡"
+        ],
+        "summary": "最近 N 天打卡记录（学习热力图数据源；days 夹在 1~400，默认 371 天 ≈ 53 周）",
+        "operationId": "get__api_client_checkin_history",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/checkin/today": {
       "get": {
         "tags": [
@@ -17120,6 +17205,49 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/sentences/repair-missing-images": {
+      "post": {
+        "tags": [
+          "题库管理"
+        ],
+        "summary": "一键补全缺失配图：自动扫描「ready 但磁盘图片丢失」的题并分批重生图，无需手动勾题。 静态路由，必须声明在 `@Post(':id/regenerate-image')` 之前",
+        "operationId": "post__api_sentences_repair_missing_images",
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {}
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/sentences/word-meanings/backfill": {
       "post": {
         "tags": [
@@ -18934,6 +19062,33 @@ export const OPENAPI_DOC: Record<string, unknown> = {
                     "message",
                     "data"
                   ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/favorites/anki.csv": {
+      "get": {
+        "tags": [
+          "语句库"
+        ],
+        "summary": "导出收藏句子为 Anki 可导入的 CSV（英文 / 中文 / 音标，Tab 分隔兼容 Anki 字段）。 RawResponse 跳过统一信封，直接以附件下发",
+        "operationId": "get__api_client_favorites_anki_csv",
+        "responses": {
+          "200": {
+            "description": "文件流（CSV / ZIP / 附件），响应体为二进制，无 JSON 信封",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
