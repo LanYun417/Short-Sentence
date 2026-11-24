@@ -123,6 +123,25 @@ export class FileService {
     return record ? this.toFileItem(record) : null;
   }
 
+  /**
+   * 文件记录在库、但物理文件是否还在磁盘上。
+   *
+   * 为什么需要：sys_file 记录可能被 git clean / 卷重置清掉而残留（磁盘图没了、记录还在），
+   * 这时按 id 取 URL 仍返回正常地址，用户端却是破图。抽题前用它把这类题排除掉。
+   * fileName 是相对 uploads 根的路径（如 `webp/xxx.webp`），经 resolveStoredPath 防越界。
+   */
+  async existsOnDisk(id: number): Promise<boolean> {
+    const record = await this.prisma.file.findUnique({
+      where: { id: BigInt(id) },
+      select: { fileName: true },
+    });
+    if (!record) {
+      return false;
+    }
+    const absolute = resolveStoredPath(record.fileName);
+    return absolute !== null && existsSync(absolute);
+  }
+
   /** 分页查询文件列表。 */
   async list(query: {
     skip: number;

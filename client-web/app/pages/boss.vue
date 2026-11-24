@@ -19,6 +19,8 @@ usePageSeo({
 });
 
 const boss = ref<BossToday | null>(null);
+/** 配图加载失败时隐藏图片，不露破图（磁盘文件可能已丢失）。 */
+const imageFailed = ref(false);
 const loading = ref(true);
 const error = ref('');
 const answer = ref('');
@@ -138,8 +140,17 @@ onMounted(load);
           </h2>
         </div>
 
-        <div v-if="boss.question.imageUrl" class="mt-4 aspect-video overflow-hidden rounded-2xl bg-slate-100">
-          <img :src="boss.question.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+        <div
+          v-if="boss.question.imageUrl && !imageFailed"
+          class="mt-4 aspect-video overflow-hidden rounded-2xl bg-slate-100"
+        >
+          <img
+            :src="boss.question.imageUrl"
+            alt=""
+            class="h-full w-full object-cover"
+            loading="lazy"
+            @error="imageFailed = true"
+          />
         </div>
 
         <div class="mt-4 space-y-3">

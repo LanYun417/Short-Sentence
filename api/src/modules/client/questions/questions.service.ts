@@ -336,8 +336,13 @@ export class QuestionsService {
     festival?: string,
     categoryId?: number,
     source?: 'review' | 'new',
+    /** 内部递归用：已判定缺图、本轮要排除的题 id（外部不要传）。 */
+    missingImageExcludes: number[] = [],
   ): Promise<NextQuestion> {
-    const recentIds = await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow);
+    const recentIds = [
+      ...(await this.recentSentenceIds(userId, config.sentence.antiRepeatWindow)),
+      ...missingImageExcludes,
+    ];
     // 「累计答对」降权：答对越多，随机抽中概率越低（不再硬禁抽——
     // 毕业题靠拉长的复习间隔自然淡出，到期仍会出现，符合间隔重复）。
     const mastery = await this.groupMastery(userId);
@@ -349,7 +354,16 @@ export class QuestionsService {
       if (festivalSentenceId === null) {
         throw AppException.notFound(`「${festivalName}」题库暂无可用题目`);
       }
-      return this.buildNextQuestion(userId, festivalSentenceId, 'new');
+      return this.buildChecked(
+        userId,
+        festivalSentenceId,
+        'new',
+        difficulty,
+        festival,
+        categoryId,
+        source,
+        missingImageExcludes,
+      );
     }
 
     // 场景题库：专门刷题——只在该场景当前（未退场）的题库里抽
@@ -358,7 +372,16 @@ export class QuestionsService {
       if (categorySentenceId === null) {
         throw AppException.notFound('该场景题库暂无可用题目');
       }
-      return this.buildNextQuestion(userId, categorySentenceId, 'new');
+      return this.buildChecked(
+        userId,
+        categorySentenceId,
+        'new',
+        difficulty,
+        festival,
+        categoryId,
+        source,
+        missingImageExcludes,
+      );
     }
 
     // 「复习中心」一键开刷：只走一侧，不给概率。
@@ -369,7 +392,16 @@ export class QuestionsService {
       if (reviewId === null) {
         throw AppException.notFound('今日没有到期要复习的题，去刷点新题吧');
       }
-      return this.buildNextQuestion(userId, reviewId, 'review');
+      return this.buildChecked(
+        userId,
+        reviewId,
+        'review',
+        difficulty,
+        festival,
+        categoryId,
+        source,
+        missingImageExcludes,
+      );
     }
     if (source === 'new') {
       let newId = await this.pickReadySentence(recentIds, difficulty, mastery);
@@ -380,7 +412,7 @@ export class QuestionsService {
       if (newId === null) {
         throw AppException.notFound('暂无可用的新题，稍后再来');
       }
-      return this.buildNextQuestion(userId, newId, 'new');
+      return this.buildChecked(userId, newId, 'new', difficulty, festival, categoryId, source, missingImageExcludes);
     }
 
     const wantNew = Math.random() < config.sentence.newRatio;
@@ -411,6 +443,45 @@ export class QuestionsService {
     }
     if (sentenceId === null) {
       throw AppException.notFound('暂无可用题目，休息一下 or 等待每日更新');
+    }
+    return this.buildChecked(
+      userId,
+      sentenceId,
+      pickedSource,
+      difficulty,
+      festival,
+      categoryId,
+      source,
+      missingImageExcludes,
+    );
+  }
+
+  /**
+   * 抽题末端校验：题目选好后、组卡前，确认配图物理文件还在磁盘上。
+   *
+   * 背景：抽题 SQL 已过滤 `imageFileId > 0`，但拦不住「sys_file 记录还在、
+   * 磁盘 webp 被 git clean / 卷重置清掉」——那样会下发一张破图卡。
+   * 校验到缺图就把该题加入排除集、递归重抽（最多 8 次，避免整库缺图时死循环）；
+   * 超限后仍返回该题，由前端 @error 降级兜底，绝不 404 卡死用户。
+   */
+  private async buildChecked(
+    userId: number,
+    sentenceId: number,
+    pickedSource: 'new' | 'review',
+    difficulty: number | undefined,
+    festival: string | undefined,
+    categoryId: number | undefined,
+    source: 'review' | 'new' | undefined,
+    excludes: number[],
+  ): Promise<NextQuestion> {
+    // 先拿到 imageFileId（buildNextQuestion 里也要查，这里复用同一条查询的思路）
+    const row = await this.prisma.sentence.findUnique({
+      where: { id: BigInt(sentenceId) },
+      select: { imageFileId: true },
+    });
+    const imageOk = row && row.imageFileId > 0n ? await this.fileService.existsOnDisk(Number(row.imageFileId)) : false;
+    if (!imageOk && excludes.length < 8) {
+      return this.next(userId, difficulty, festival, categoryId, source, [...excludes, sentenceId]);
     }
     return this.buildNextQuestion(userId, sentenceId, pickedSource);
   }
@@ -1409,6 +1480,28 @@ export class QuestionsService {
       select: { id: true },
     });
     return row !== null;
+  }
+
+  /**
+   * 导出收藏句子给 Anki（全量、不分页）。
+   * 按收藏时间倒序；上限 5000 条保护（收藏超过这个量级 Anki 导入也不现实）。
+   */
+  async exportFavoritesForAnki(userId: number): Promise<Array<{ en: string; zh: string; ipa: string }>> {
+    const rows = await this.prisma.sentenceFavorite.findMany({
+      where: { userId: BigInt(userId) },
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+      select: {
+        sentence: { select: { sentenceEn: true, translationZh: true, ipa: true } },
+      },
+    });
+    return rows
+      .filter((row) => row.sentence)
+      .map((row) => ({
+        en: row.sentence.sentenceEn,
+        zh: row.sentence.translationZh,
+        ipa: row.sentence.ipa ?? '',
+      }));
   }
 
   /** 图片文件 id → 访问 URL（文件缺失返回 null）。 */

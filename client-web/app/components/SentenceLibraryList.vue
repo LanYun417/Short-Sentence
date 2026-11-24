@@ -12,7 +12,7 @@
  * 结果 Nuxt 生成的路由是 /library，导航上的两个入口全部 404。
  */
 import type { SentenceCategory, SentenceLibraryItem } from '~/types';
-import { apiFetch } from '~/composables/useApi';
+import { apiFetch, getToken } from '~/composables/useApi';
 import { DIFFICULTIES, type DifficultyLevel } from '~/composables/useQuestionSession';
 import { parseDate, today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 
@@ -35,6 +35,35 @@ const listEndpoint = computed(() =>
 );
 
 const items = ref<SentenceLibraryItem[]>([]);
+/** Anki 导出（仅收藏模式）：RawResponse 裸文本，走 $fetch + Bearer 触发下载。 */
+const exportingAnki = ref(false);
+async function exportAnki(): Promise<void> {
+  if (exportingAnki.value) return;
+  exportingAnki.value = true;
+  try {
+    const config = useRuntimeConfig();
+    const blob = await $fetch<Blob>(`${config.public.apiBaseUrl}/client/favorites/anki.csv`, {
+      headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `short-sentence-anki-${new Date().toISOString().slice(0, 10)}.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    exportingAnki.value = false;
+  }
+}
+
+/** 配图加载失败的题 id：磁盘文件丢失时降级为占位图标，不露原生破图。 */
+const failedImages = ref(new Set<number>());
+function markImageFailed(id: number): void {
+  if (!failedImages.value.has(id)) {
+    failedImages.value = new Set(failedImages.value).add(id);
+  }
+}
 const total = ref(0);
 const page = ref(1);
 const pageSize = 10;
@@ -336,7 +365,22 @@ const emptyText = computed(() => {
         </h1>
         <p class="mt-1.5 text-sm text-slate-400">{{ subtitle }}</p>
       </div>
-      <UBadge v-if="total > 0" color="neutral" variant="soft" size="lg">共 {{ total }} 条</UBadge>
+      <div class="flex shrink-0 items-center gap-2">
+        <!-- Anki 导出：收藏夹专属，下载 Tab 分隔文本（英文/中文/音标），直接导入 Anki -->
+        <UTooltip v-if="!isHistory && !isReview" text="导出为 Anki 可导入的文本（英文 / 中文 / 音标）">
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-download"
+            :loading="exportingAnki"
+            @click="exportAnki"
+          >
+            Anki
+          </UButton>
+        </UTooltip>
+        <UBadge v-if="total > 0" color="neutral" variant="soft" size="lg">共 {{ total }} 条</UBadge>
+      </div>
     </div>
 
     <!-- 筛选栏 -->
@@ -467,11 +511,12 @@ const emptyText = computed(() => {
         <div class="flex gap-3">
           <div class="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-700">
             <img
-              v-if="item.imageUrl"
+              v-if="item.imageUrl && !failedImages.has(item.sentenceId)"
               :src="itemSrc(item.imageUrl)"
               :alt="item.translationZh"
               class="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
               loading="lazy"
+              @error="markImageFailed(item.sentenceId)"
             />
             <div v-else class="flex h-full items-center justify-center text-slate-300">
               <UIcon name="i-lucide-image-off" class="h-5 w-5" />
