@@ -381,10 +381,10 @@ export const config = {
     maxOutputTokens: Math.max(1, toNumber(process.env.AI_MAX_OUTPUT_TOKENS, 16_000)),
     /**
      * 客户端用户每日免费 AI 次数（按自然日、Asia/Shanghai 计）。
-     * 实测单次约 450 token，50 次≈2.2 万 token/人/天（成本可忽略）；
-     * 先按 50 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
+     * 实测单次约 450 token，30 次≈1.35 万 token/人/天（成本可忽略）；
+     * 先按 30 上线观察真实用量分布，后续按会员等级在 AiQuotaService.resolveLimit 里分档。
      */
-    dailyQuota: Math.max(1, toNumber(process.env.AI_DAILY_QUOTA, 50)),
+    dailyQuota: Math.max(1, toNumber(process.env.AI_DAILY_QUOTA, 30)),
     /**
      * 全局每日 AI 预算（跨所有调用方：批次生题/生图、客户端造句/词根、句签）。
      * 0 = 不限制（默认）。任一维度达到上限即闸断所有 AI 调用入口。

@@ -17,7 +17,7 @@ class ApiException implements Exception {
   /// 从后端响应体构造。
   ///
   /// 优先用服务端的 `message`（它已经是对用户友好的中文，例如
-  /// 「验证码错误或已过期」「今日 AI 次数已用完（每天 50 次）…」），
+  /// 「验证码错误或已过期」「今日 AI 次数已用完（每天 30 次）…」），
   /// 取不到时才回退到按状态码推断的兜底文案。
   factory ApiException.fromResponse(int? statusCode, dynamic body) {
     String message = '请求失败，请稍后重试';
