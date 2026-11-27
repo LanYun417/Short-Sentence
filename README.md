@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./admin/src/assets/logo.svg" alt="LYAdmin 蓝云后台管理系统" width="420">
+  <img src="./client-web/public/logo.svg" alt="短句" width="360">
 </p>
 
-<h1 align="center">短句（Short Sentence）· LYAdmin 基座</h1>
+<h1 align="center">短句（Short Sentence）</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-42b883" alt="Vue" height="20">
@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License" height="20">
 </p>
 
-> 一个仓库、一套后端、四个用户入口：以 LYAdmin 后台基座为工程底座，落地「短句」——视觉场景英语闪卡产品。
+> 一个仓库、一套后端、四个用户入口：视觉场景英语闪卡「短句」，把「看中文 → 默写英文 → 场景配图 → 间隔复习」做成每天几分钟的学习闭环。
 > 后端 `api/` 同时服务运营后台 `admin/`、用户端 Web `client-web/`、微信小程序 `client-miniapp/` 与 Android App `client-android/`，四端共享同一套接口契约。
 
 | 层         | 技术                                                                                         |
@@ -33,19 +33,25 @@
 
 ## 界面预览
 
-「短句」用户端（小程序）真实页面截图：
+### Web 端（桌面）
 
-| 首页 · 今日目标                                           | 练习 · 作答闪卡                                              | 答案 · 翻转反馈                                                         |
-| --------------------------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| <img src="./screenshot/index.png" width="200" alt="首页"> | <img src="./screenshot/practice.png" width="200" alt="练习"> | <img src="./screenshot/practice-result.png" width="200" alt="作答反馈"> |
+| 首页 · 今日目标与抽题                                            | 复习 · 今日计划                                                    | 弱点词根 · 错词归类                                                      |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| <img src="./screenshot/web-home.png" width="360" alt="Web 首页"> | <img src="./screenshot/web-review.png" width="360" alt="Web 复习"> | <img src="./screenshot/web-weakness.png" width="360" alt="Web 弱点词根"> |
 
-| 成长 · XP 与 33 枚成就                                     | 排行榜 · 周期 × 指标                                              | 情景闯关 · 四章 14 关                                          |
-| ---------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------- |
-| <img src="./screenshot/growth.png" width="200" alt="成长"> | <img src="./screenshot/leaderboard.png" width="200" alt="排行榜"> | <img src="./screenshot/stages.png" width="200" alt="情景闯关"> |
+| 排行榜 · 周期 × 指标                                                      | 成就 · 33 枚徽章                                                         |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| <img src="./screenshot/web-leaderboard.png" width="420" alt="Web 排行榜"> | <img src="./screenshot/web-achievements.png" width="420" alt="Web 成就"> |
 
-| 我的 · 功能入口                                             |
-| ----------------------------------------------------------- |
-| <img src="./screenshot/profile.png" width="200" alt="我的"> |
+### 小程序端（移动）
+
+| 首页 · 今日目标                                           | 练习 · 作答闪卡                                              | 成长 · XP 与 33 枚成就                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| <img src="./screenshot/index.png" width="150" alt="首页"> | <img src="./screenshot/practice.png" width="150" alt="练习"> | <img src="./screenshot/growth.png" width="150" alt="成长"> |
+
+| 情景闯关 · 四章 14 关                                          | 我的 · 功能入口                                             |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| <img src="./screenshot/stages.png" width="150" alt="情景闯关"> | <img src="./screenshot/profile.png" width="150" alt="我的"> |
 
 ## 目录
 
