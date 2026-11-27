@@ -183,6 +183,7 @@ class AuthApi {
     String? gender,
     String? signature,
     int? emailReminder,
+    int? weeklyReportEmail,
   }) async {
     try {
       final response = await _dio.put<dynamic>(
@@ -193,6 +194,7 @@ class AuthApi {
           'gender': ?gender,
           if (signature != null) 'signature': signature.trim(),
           'emailReminder': ?emailReminder,
+          'weeklyReportEmail': ?weeklyReportEmail,
         },
       );
       return UserProfile.fromJson(_unwrap(response));

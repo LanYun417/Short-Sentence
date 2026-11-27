@@ -27,6 +27,8 @@ export interface MailSettingsView extends MailStatus {
   fromAlias: string;
   templateCaptcha: number;
   templateReminder: number;
+  /** 周报模板 ID（0 = 未配置，邮件周报不发送） */
+  templateWeekly: number;
 }
 
 @Controller('mail-settings')
@@ -52,6 +54,7 @@ export class MailSettingsController {
       fromAlias: settings.fromAlias,
       templateCaptcha: settings.templateCaptcha,
       templateReminder: settings.templateReminder,
+      templateWeekly: settings.templateWeekly,
     };
   }
 
@@ -122,6 +125,14 @@ export class MailSettingsController {
         MAIL_CONFIG_KEYS.templateReminder,
         MAIL_CONFIG_NAMES[MAIL_CONFIG_KEYS.templateReminder],
         String(dto.templateReminder),
+      );
+    }
+    if (dto.templateWeekly !== undefined) {
+      await saveMailSetting(
+        this.prisma,
+        MAIL_CONFIG_KEYS.templateWeekly,
+        MAIL_CONFIG_NAMES[MAIL_CONFIG_KEYS.templateWeekly],
+        String(dto.templateWeekly),
       );
     }
     return { __raw: true, data: null, message: '已保存' };

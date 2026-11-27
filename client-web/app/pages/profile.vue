@@ -27,6 +27,8 @@ const gender = ref('secret');
 const signature = ref('');
 /** 每日学习提醒邮件开关（1 订阅 / 0 不订阅，随「保存资料」一起提交） */
 const emailReminder = ref(false);
+/** 每周学习报告邮件开关（与每日提醒独立，随「保存资料」一起提交） */
+const weeklyReportEmail = ref(false);
 const saving = ref(false);
 const saveMessage = ref('');
 
@@ -106,6 +108,7 @@ function fillForm(): void {
   gender.value = user.gender;
   signature.value = user.signature ?? '';
   emailReminder.value = user.emailReminder === 1;
+  weeklyReportEmail.value = user.weeklyReportEmail === 1;
 }
 
 /**
@@ -335,6 +338,7 @@ async function onSave(): Promise<void> {
       gender: gender.value,
       signature: signature.value,
       emailReminder: emailReminder.value ? 1 : 0,
+      weeklyReportEmail: weeklyReportEmail.value ? 1 : 0,
     });
     saveMessage.value = '已保存';
   } catch (error) {
@@ -648,6 +652,16 @@ async function onExportData(): Promise<void> {
       <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
     </NuxtLink>
 
+    <NuxtLink
+      to="/weakness"
+      class="anim-in mt-3 flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition hover:ring-sky-300 dark:bg-slate-900 dark:ring-slate-800/80 dark:hover:ring-sky-500/40"
+      style="animation-delay: 102ms"
+    >
+      <UIcon name="i-lucide-target" class="h-5 w-5 shrink-0 text-sky-500" />
+      <span class="min-w-0 flex-1 text-sm font-medium text-slate-700 dark:text-slate-200">弱点词根</span>
+      <UIcon name="i-lucide-chevron-right" class="h-4 w-4 shrink-0 text-slate-400" />
+    </NuxtLink>
+
     <!-- 消息中心入口：未读红点来自服务端口径（SSR 预取，首屏即带） -->
     <NuxtLink
       to="/notices"
@@ -738,6 +752,25 @@ async function onExportData(): Promise<void> {
               <USwitch v-model="emailReminder" />
             </div>
             <p class="mt-3 text-xs text-slate-400">开关随「保存资料」一起提交。</p>
+          </div>
+
+          <!-- 每周学习报告（邮件）：每周一发上一完整周的数据，与每日提醒独立 -->
+          <div
+            class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900 dark:ring-slate-800/80 md:p-6"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <UIcon name="i-lucide-chart-no-axes-combined" class="h-4 w-4 text-sky-500" />
+                  每周学习报告（邮件）
+                </p>
+                <p class="mt-1 text-xs text-slate-400">
+                  每周一发送上周的答题、正确率与打卡汇总（发送到 {{ auth.user?.email }}）；上周没有学习记录则不发。
+                </p>
+              </div>
+              <USwitch v-model="weeklyReportEmail" />
+            </div>
+            <p class="mt-3 text-xs text-slate-400">开关随「保存资料」一起提交；站内周报在「成长」页始终可看。</p>
           </div>
         </template>
 

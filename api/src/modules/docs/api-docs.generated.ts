@@ -8165,6 +8165,72 @@ export const API_DOCS: ApiDocGroup[] = [
         }
       },
       {
+        "method": "GET",
+        "path": "/api/client/questions/review-plan",
+        "summary": "今日复习计划：到期题按「逾期优先」排序，带场景分组与今日已复习进度。 与 next(source=review) 共用同一候选条件，一键开刷不会刷到另一批题",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/review-plan?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/client/questions/weakness",
+        "summary": "弱点词根：近 30 天错题按词自动归类，按错次排序（附中文释义 / 词根解析 / 典型错题）",
+        "permission": [],
+        "isPublic": false,
+        "action": "",
+        "params": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "页码，从 1 开始",
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "required": false,
+            "description": "每页条数",
+            "example": 10
+          }
+        ],
+        "examples": {
+          "curl": "curl -X GET \"http://localhost:3000/api/client/questions/weakness?page=1&pageSize=10\" \\\n  -H \"Authorization: Bearer <accessToken>\"",
+          "query": {
+            "page": 1,
+            "pageSize": 10
+          }
+        }
+      },
+      {
         "method": "POST",
         "path": "/api/client/questions/:id/answer",
         "summary": "提交答案（返回正确答案，用于翻转面）",
@@ -10181,10 +10247,18 @@ export const API_DOCS: ApiDocGroup[] = [
             "required": false,
             "description": "",
             "example": 1
+          },
+          {
+            "name": "templateWeekly",
+            "in": "body",
+            "type": "number",
+            "required": false,
+            "description": "周报模板 ID（可选；不填 = 不启用邮件周报，站内周报不受影响）",
+            "example": 1
           }
         ],
         "examples": {
-          "curl": "curl -X PUT \"http://localhost:3000/api/mail-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"enabled\": true,\n      \"secretId\": \"示例值\",\n      \"secretKey\": \"示例值\",\n      \"region\": \"示例值\",\n      \"fromAddress\": \"示例值\",\n      \"fromAlias\": \"示例值\",\n      \"templateCaptcha\": 1,\n      \"templateReminder\": 1\n    }'",
+          "curl": "curl -X PUT \"http://localhost:3000/api/mail-settings\" \\\n  -H \"Authorization: Bearer <accessToken>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n      \"enabled\": true,\n      \"secretId\": \"示例值\",\n      \"secretKey\": \"示例值\",\n      \"region\": \"示例值\",\n      \"fromAddress\": \"示例值\",\n      \"fromAlias\": \"示例值\",\n      \"templateCaptcha\": 1,\n      \"templateReminder\": 1,\n      \"templateWeekly\": 1\n    }'",
           "requestBody": {
             "enabled": true,
             "secretId": "示例值",
@@ -10193,7 +10267,8 @@ export const API_DOCS: ApiDocGroup[] = [
             "fromAddress": "示例值",
             "fromAlias": "示例值",
             "templateCaptcha": 1,
-            "templateReminder": 1
+            "templateReminder": 1,
+            "templateWeekly": 1
           }
         }
       }

@@ -40,6 +40,18 @@
   color: var(--ink-2);
 }
 
+.switch-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.switch-tip {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--ink-3, #94a3b8);
+}
+
 .field-input {
   flex: 1;
   min-width: 0;

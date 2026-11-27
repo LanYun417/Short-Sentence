@@ -1,0 +1,41 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">
+    <text class="muted">正在归类你的错题…</text>
+  </view>
+
+  <view wx:elif="{{errorText}}" class="state">
+    <text class="muted">{{errorText}}</text>
+    <button class="btn btn-primary retry" bindtap="onRetry">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="intro">
+      <text class="intro-title">弱点词根</text>
+      <text class="intro-sub">近 {{report.windowDays}} 天答错 {{report.totalWrong}} 次，按词归类</text>
+      <button class="btn btn-primary intro-btn" bindtap="onGoReview">去复习</button>
+    </view>
+
+    <view wx:if="{{items.length === 0}}" class="state">
+      <text class="muted">最近没有需要补的词，继续保持！</text>
+    </view>
+
+    <view wx:for="{{items}}" wx:key="word" class="item-card">
+      <view class="item-head">
+        <view class="item-title-wrap">
+          <text class="item-word">{{item.word}}</text>
+          <text wx:if="{{item.meaning}}" class="item-meaning">{{item.meaning}}</text>
+        </view>
+        <text class="item-count">错 {{item.wrongCount}} 次 · 共 {{item.totalCount}} 次</text>
+      </view>
+      <text wx:if="{{item.rootAnalysis}}" class="item-root">{{item.rootAnalysis}}</text>
+
+      <view wx:for="{{item.examples}}" wx:for-item="example" wx:key="sentenceId" class="example">
+        <image wx:if="{{example.imageUrl}}" class="example-img" src="{{example.imageUrl}}" mode="aspectFill" />
+        <view class="example-body">
+          <text class="example-zh">{{example.translationZh}}</text>
+          <text class="example-answer">你的作答：{{example.userAnswer}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

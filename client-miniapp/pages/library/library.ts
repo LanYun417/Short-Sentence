@@ -7,7 +7,8 @@
  * - review   ：答错且已到复习期的句子（间隔重复排期）。
  */
 import { fetchFavorites, fetchHistory, fetchReview, type HistoryKind } from '../../services/library';
-import type { SentenceLibraryItem } from '../../services/types';
+import { fetchReviewPlan } from '../../services/learn';
+import type { ReviewPlan, SentenceLibraryItem } from '../../services/types';
 import { isLoggedIn, sessionReady } from '../../utils/auth';
 import { showError } from '../../utils/feedback';
 import { goLogin, goPractice } from '../../utils/nav';
@@ -39,6 +40,9 @@ interface LibraryData {
   hasMore: boolean;
   loading: boolean;
   detail: ItemView | null;
+  /** 复习 tab 的今日计划概览（其他 tab 为 null） */
+  plan: ReviewPlan | null;
+  planCategories: string;
 }
 
 interface LibraryCustom {
@@ -52,6 +56,7 @@ interface LibraryCustom {
   onCloseDetail(): void;
   onTapSheet(): void;
   onGoPractice(): void;
+  onGoWeakness(): void;
 }
 
 Page<LibraryData, LibraryCustom>({
@@ -64,6 +69,8 @@ Page<LibraryData, LibraryCustom>({
     hasMore: false,
     loading: true,
     detail: null,
+    plan: null,
+    planCategories: '',
   },
 
   async onShow() {
@@ -89,13 +96,21 @@ Page<LibraryData, LibraryCustom>({
   async refresh() {
     this.setData({ loading: true });
     try {
-      const result = await this.fetchPage(1);
+      const [result, plan] = await Promise.all([
+        this.fetchPage(1),
+        this.data.tab === 'review' ? fetchReviewPlan() : Promise.resolve(null),
+      ]);
       this.setData({
         items: result.list.map((item) => this.toItem(item)),
         total: result.total,
         page: 1,
         hasMore: result.list.length >= PAGE_SIZE,
         loading: false,
+        plan,
+        planCategories: (plan?.byCategory ?? [])
+          .slice(0, 5)
+          .map((item) => `${item.name} ${item.count}`)
+          .join(' · '),
       });
     } catch (error) {
       this.setData({ loading: false });
@@ -197,5 +212,10 @@ Page<LibraryData, LibraryCustom>({
   /** 去刷几题（空态引导）。 */
   onGoPractice() {
     goPractice();
+  },
+
+  /** 从复习计划去看弱点词根。 */
+  onGoWeakness() {
+    wx.navigateTo({ url: '/pages/weakness/weakness' });
   },
 });

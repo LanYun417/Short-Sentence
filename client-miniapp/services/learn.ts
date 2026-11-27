@@ -12,6 +12,8 @@ import type {
   IpaLearnedResult,
   IpaPhonemeGroup,
   IpaProgressItem,
+  ReviewPlan,
+  WeaknessReport,
   WeeklyReport,
   WordRootItem,
 } from './types';
@@ -87,6 +89,16 @@ export function fetchWordRoot(word: string): Promise<WordRootItem> {
 /** 周学习报告。 */
 export function fetchWeeklyReport(): Promise<WeeklyReport> {
   return request<WeeklyReport>('/client/gamify/weekly-report');
+}
+
+/** 今日复习计划（与一键开刷的到期题同口径）。 */
+export function fetchReviewPlan(): Promise<ReviewPlan> {
+  return request<ReviewPlan>('/client/questions/review-plan', { data: { limit: 10 } });
+}
+
+/** 弱点词根：近 30 天错题按词归类。 */
+export function fetchWeakness(): Promise<WeaknessReport> {
+  return request<WeaknessReport>('/client/questions/weakness', { data: { limit: 30 } });
 }
 
 /* ------------------------------ AI 私教 ------------------------------ */

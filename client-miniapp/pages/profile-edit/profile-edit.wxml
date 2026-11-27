@@ -45,7 +45,7 @@
       />
     </view>
 
-    <view class="field-row field-row-last">
+    <view class="field-row">
       <text class="field-label">性别</text>
       <view class="genders">
         <view
@@ -56,6 +56,14 @@
           bindtap="onPickGender"
         >{{item.label}}</view>
       </view>
+    </view>
+
+    <view class="field-row field-row-last">
+      <view class="switch-copy">
+        <text class="field-label">周报邮件</text>
+        <text class="switch-tip">每周一发上周学习汇总；上周没学习不发</text>
+      </view>
+      <switch checked="{{weeklyReportEmail}}" color="#0ea5e9" bindchange="onToggleWeeklyReport" />
     </view>
   </view>
 

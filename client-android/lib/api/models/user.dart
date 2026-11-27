@@ -22,6 +22,7 @@ class UserProfile {
     required this.bgCardTitle,
     required this.bgImageUrl,
     required this.emailReminder,
+    required this.weeklyReportEmail,
     this.birthday,
   });
 
@@ -46,6 +47,9 @@ class UserProfile {
   /// 每日邮件提醒：1 = 开启（当天未达标傍晚发提醒邮件），0 = 关闭。
   /// 与 Web 端 `emailReminder` 同字段、同口径；后端未返回时按 0（关闭）处理。
   final int emailReminder;
+
+  /// 每周学习报告邮件：1 = 开启（每周一发上一完整周汇总），0 = 关闭。
+  final int weeklyReportEmail;
 
   /// 注册时间（ISO 字符串）。
   final DateTime createdAt;
@@ -74,6 +78,7 @@ class UserProfile {
       bgCardTitle: json['bgCardTitle'] as String?,
       bgImageUrl: json['bgImageUrl'] as String?,
       emailReminder: (json['emailReminder'] as num?)?.toInt() ?? 0,
+      weeklyReportEmail: (json['weeklyReportEmail'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -91,6 +96,7 @@ class UserProfile {
       'bgCardTitle': bgCardTitle,
       'bgImageUrl': bgImageUrl,
       'emailReminder': emailReminder,
+      'weeklyReportEmail': weeklyReportEmail,
     };
   }
 

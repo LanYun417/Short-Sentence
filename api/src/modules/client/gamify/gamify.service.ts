@@ -841,9 +841,10 @@ export class GamifyService {
    * user_achievement / user_checkin 四处，前端拼会重复实现口径（尤其「本周」
    * 的时区边界），且分享文案必须与服务端数字一致。
    */
-  async weeklyReport(userId: number): Promise<WeeklyReport> {
+  async weeklyReport(userId: number, startOfWeek?: Date): Promise<WeeklyReport> {
     const uid = BigInt(userId);
-    const weekStart = shanghaiWeekStart();
+    // 站内卡片看「本周一至今」；邮件周报在周一发「上一完整周」，由调用方显式传入周一零点。
+    const weekStart = startOfWeek ?? shanghaiWeekStart();
     const prevWeekStart = new Date(weekStart.getTime() - 7 * DAY_MS);
     const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 

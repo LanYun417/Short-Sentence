@@ -43,6 +43,9 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   /// 每日邮件提醒：跟随当前用户设置（1 = 开）。
   late bool _emailReminder = _user?.emailReminder == 1;
 
+  /// 每周学习报告邮件：跟随当前用户设置（1 = 开），与每日提醒独立。
+  late bool _weeklyReportEmail = _user?.weeklyReportEmail == 1;
+
   /// 生日的年 / 月 / 日。
   ///
   /// ⚠️ 这里**不能**写成 `late int?`：`late` 的读前必赋值与「可空」无关，
@@ -113,6 +116,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           birthday: birthday,
           // 提醒开关：0/1 直接透传；后端未传即不更新，不影响其它字段
           emailReminder: _emailReminder ? 1 : 0,
+          weeklyReportEmail: _weeklyReportEmail ? 1 : 0,
         );
     if (!mounted) {
       return;
@@ -235,6 +239,49 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                       activeTrackColor: colors.brand.withValues(alpha: 0.5),
                       value: _emailReminder,
                       onChanged: (value) => setState(() => _emailReminder = value),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _Label(text: '每周学习报告（邮件）'),
+              const SizedBox(height: 8),
+              Container(
+                height: 58,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: colors.cardMuted,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colors.line),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '每周一发一份周报',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: colors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '汇总上一完整周；上周没学习不发',
+                            style: TextStyle(fontSize: 11, color: colors.inkFaint),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      activeThumbColor: colors.brand,
+                      activeTrackColor: colors.brand.withValues(alpha: 0.5),
+                      value: _weeklyReportEmail,
+                      onChanged: (value) => setState(() => _weeklyReportEmail = value),
                     ),
                   ],
                 ),

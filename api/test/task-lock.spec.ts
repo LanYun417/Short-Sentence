@@ -42,6 +42,7 @@ function makeService(redis: FakeRedis, handler: ReturnType<typeof vi.fn>) {
     {} as never,
     {} as never,
     {} as never,
+    {} as never,
     redis as never,
   );
   (service as unknown as { definitions: Map<string, unknown> }).definitions.set('demo', {

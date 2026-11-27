@@ -501,11 +501,11 @@ export type $AchievementPayload<ExtArgs extends runtime.Types.Extensions.Interna
      */
     icon: string
     /**
-     * 徽章大图 URL（详情大图优先显示；空值回落 lucide icon）。约定 /static/achievements/<code>.png
+     * 徽章线稿 URL（详情优先显示；空值回落 lucide icon）。约定 /static/achievements/<code>.svg；后台可填自定义 URL
      */
     artUrl: string | null
     /**
-     * 徽章 SVG 源文本（种子按 code/icon/category 生成并落库；服务端据此栅格化 artUrl 指向的 PNG）
+     * 徽章 SVG 源文本（种子按 code/icon/category 生成并落库；无背景彩色线稿 + SMIL 绘制动画）
      */
     artSvg: string | null
     /**

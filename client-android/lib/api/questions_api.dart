@@ -15,6 +15,8 @@ import 'api_exception.dart';
 import 'dio_client.dart';
 import 'models/question.dart';
 import 'models/memory_stats.dart';
+import 'models/review_plan.dart';
+import 'models/weakness.dart';
 import 'models/boss.dart';
 
 /// 抽题查询参数。
@@ -171,6 +173,32 @@ class QuestionsApi {
     try {
       final response = await _dio.get<dynamic>('/client/questions/memory-stats');
       return MemoryStats.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 今日复习计划（到期题按逾期优先，与 next(source=review) 同口径）。
+  Future<ReviewPlan> reviewPlan() async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/client/questions/review-plan',
+        queryParameters: <String, dynamic>{'limit': 10},
+      );
+      return ReviewPlan.fromJson(_data(response));
+    } on DioException catch (error) {
+      throw _wrap(error);
+    }
+  }
+
+  /// 弱点词根：近 30 天错题按词自动归类。
+  Future<WeaknessReport> weakness() async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '/client/questions/weakness',
+        queryParameters: <String, dynamic>{'limit': 30},
+      );
+      return WeaknessReport.fromJson(_data(response));
     } on DioException catch (error) {
       throw _wrap(error);
     }

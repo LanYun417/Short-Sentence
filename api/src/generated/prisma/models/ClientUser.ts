@@ -33,6 +33,7 @@ export type ClientUserAvgAggregateOutputType = {
   xp: number | null
   status: number | null
   emailReminder: number | null
+  weeklyReportEmail: number | null
 }
 
 export type ClientUserSumAggregateOutputType = {
@@ -42,6 +43,7 @@ export type ClientUserSumAggregateOutputType = {
   xp: number | null
   status: number | null
   emailReminder: number | null
+  weeklyReportEmail: number | null
 }
 
 export type ClientUserMinAggregateOutputType = {
@@ -57,6 +59,7 @@ export type ClientUserMinAggregateOutputType = {
   xp: number | null
   status: number | null
   emailReminder: number | null
+  weeklyReportEmail: number | null
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
   createdAt: Date | null
@@ -79,6 +82,7 @@ export type ClientUserMaxAggregateOutputType = {
   xp: number | null
   status: number | null
   emailReminder: number | null
+  weeklyReportEmail: number | null
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
   createdAt: Date | null
@@ -101,6 +105,7 @@ export type ClientUserCountAggregateOutputType = {
   xp: number
   status: number
   emailReminder: number
+  weeklyReportEmail: number
   lastLoginAt: number
   passwordChangedAt: number
   createdAt: number
@@ -119,6 +124,7 @@ export type ClientUserAvgAggregateInputType = {
   xp?: true
   status?: true
   emailReminder?: true
+  weeklyReportEmail?: true
 }
 
 export type ClientUserSumAggregateInputType = {
@@ -128,6 +134,7 @@ export type ClientUserSumAggregateInputType = {
   xp?: true
   status?: true
   emailReminder?: true
+  weeklyReportEmail?: true
 }
 
 export type ClientUserMinAggregateInputType = {
@@ -143,6 +150,7 @@ export type ClientUserMinAggregateInputType = {
   xp?: true
   status?: true
   emailReminder?: true
+  weeklyReportEmail?: true
   lastLoginAt?: true
   passwordChangedAt?: true
   createdAt?: true
@@ -165,6 +173,7 @@ export type ClientUserMaxAggregateInputType = {
   xp?: true
   status?: true
   emailReminder?: true
+  weeklyReportEmail?: true
   lastLoginAt?: true
   passwordChangedAt?: true
   createdAt?: true
@@ -187,6 +196,7 @@ export type ClientUserCountAggregateInputType = {
   xp?: true
   status?: true
   emailReminder?: true
+  weeklyReportEmail?: true
   lastLoginAt?: true
   passwordChangedAt?: true
   createdAt?: true
@@ -296,6 +306,7 @@ export type ClientUserGroupByOutputType = {
   xp: number
   status: number
   emailReminder: number
+  weeklyReportEmail: number
   lastLoginAt: Date | null
   passwordChangedAt: Date | null
   createdAt: Date
@@ -341,6 +352,7 @@ export type ClientUserWhereInput = {
   xp?: Prisma.IntFilter<"ClientUser"> | number
   status?: Prisma.IntFilter<"ClientUser"> | number
   emailReminder?: Prisma.IntFilter<"ClientUser"> | number
+  weeklyReportEmail?: Prisma.IntFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
@@ -363,6 +375,7 @@ export type ClientUserOrderByWithRelationInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -390,6 +403,7 @@ export type ClientUserWhereUniqueInput = Prisma.AtLeast<{
   xp?: Prisma.IntFilter<"ClientUser"> | number
   status?: Prisma.IntFilter<"ClientUser"> | number
   emailReminder?: Prisma.IntFilter<"ClientUser"> | number
+  weeklyReportEmail?: Prisma.IntFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ClientUser"> | Date | string
@@ -411,6 +425,7 @@ export type ClientUserOrderByWithAggregationInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrderInput | Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -441,6 +456,7 @@ export type ClientUserScalarWhereWithAggregatesInput = {
   xp?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
   status?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
   emailReminder?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
+  weeklyReportEmail?: Prisma.IntWithAggregatesFilter<"ClientUser"> | number
   lastLoginAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
   passwordChangedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ClientUser"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ClientUser"> | Date | string
@@ -463,6 +479,7 @@ export type ClientUserCreateInput = {
   xp?: number
   status?: number
   emailReminder?: number
+  weeklyReportEmail?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
@@ -485,6 +502,7 @@ export type ClientUserUncheckedCreateInput = {
   xp?: number
   status?: number
   emailReminder?: number
+  weeklyReportEmail?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
@@ -507,6 +525,7 @@ export type ClientUserUpdateInput = {
   xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   emailReminder?: Prisma.IntFieldUpdateOperationsInput | number
+  weeklyReportEmail?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -529,6 +548,7 @@ export type ClientUserUncheckedUpdateInput = {
   xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   emailReminder?: Prisma.IntFieldUpdateOperationsInput | number
+  weeklyReportEmail?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -551,6 +571,7 @@ export type ClientUserCreateManyInput = {
   xp?: number
   status?: number
   emailReminder?: number
+  weeklyReportEmail?: number
   lastLoginAt?: Date | string | null
   passwordChangedAt?: Date | string | null
   createdAt?: Date | string
@@ -573,6 +594,7 @@ export type ClientUserUpdateManyMutationInput = {
   xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   emailReminder?: Prisma.IntFieldUpdateOperationsInput | number
+  weeklyReportEmail?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -595,6 +617,7 @@ export type ClientUserUncheckedUpdateManyInput = {
   xp?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.IntFieldUpdateOperationsInput | number
   emailReminder?: Prisma.IntFieldUpdateOperationsInput | number
+  weeklyReportEmail?: Prisma.IntFieldUpdateOperationsInput | number
   lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   passwordChangedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -623,6 +646,7 @@ export type ClientUserCountOrderByAggregateInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -639,6 +663,7 @@ export type ClientUserAvgOrderByAggregateInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
 }
 
 export type ClientUserMaxOrderByAggregateInput = {
@@ -654,6 +679,7 @@ export type ClientUserMaxOrderByAggregateInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -676,6 +702,7 @@ export type ClientUserMinOrderByAggregateInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
   lastLoginAt?: Prisma.SortOrder
   passwordChangedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -692,6 +719,7 @@ export type ClientUserSumOrderByAggregateInput = {
   xp?: Prisma.SortOrder
   status?: Prisma.SortOrder
   emailReminder?: Prisma.SortOrder
+  weeklyReportEmail?: Prisma.SortOrder
 }
 
 
@@ -709,6 +737,7 @@ export type ClientUserSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   xp?: boolean
   status?: boolean
   emailReminder?: boolean
+  weeklyReportEmail?: boolean
   lastLoginAt?: boolean
   passwordChangedAt?: boolean
   createdAt?: boolean
@@ -733,6 +762,7 @@ export type ClientUserSelectScalar = {
   xp?: boolean
   status?: boolean
   emailReminder?: boolean
+  weeklyReportEmail?: boolean
   lastLoginAt?: boolean
   passwordChangedAt?: boolean
   createdAt?: boolean
@@ -742,7 +772,7 @@ export type ClientUserSelectScalar = {
   deletedAt?: boolean
 }
 
-export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "bgCardId" | "xp" | "status" | "emailReminder" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt" | "wechatOpenid" | "wechatUnionid" | "deletedAt", ExtArgs["result"]["clientUser"]>
+export type ClientUserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "nickname" | "avatarFileId" | "birthday" | "gender" | "signature" | "bgCardId" | "xp" | "status" | "emailReminder" | "weeklyReportEmail" | "lastLoginAt" | "passwordChangedAt" | "createdAt" | "updatedAt" | "wechatOpenid" | "wechatUnionid" | "deletedAt", ExtArgs["result"]["clientUser"]>
 
 export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ClientUser"
@@ -796,6 +826,10 @@ export type $ClientUserPayload<ExtArgs extends runtime.Types.Extensions.Internal
      * 每日学习提醒邮件：1 订阅 / 0 不订阅（用户主动开启才发，即视为同意接收）
      */
     emailReminder: number
+    /**
+     * 每周学习报告邮件：1 订阅 / 0 不订阅（用户主动开启才发，与每日提醒独立）
+     */
+    weeklyReportEmail: number
     /**
      * 最后登录时间
      */
@@ -1205,6 +1239,7 @@ export interface ClientUserFieldRefs {
   readonly xp: Prisma.FieldRef<"ClientUser", 'Int'>
   readonly status: Prisma.FieldRef<"ClientUser", 'Int'>
   readonly emailReminder: Prisma.FieldRef<"ClientUser", 'Int'>
+  readonly weeklyReportEmail: Prisma.FieldRef<"ClientUser", 'Int'>
   readonly lastLoginAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly passwordChangedAt: Prisma.FieldRef<"ClientUser", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ClientUser", 'DateTime'>

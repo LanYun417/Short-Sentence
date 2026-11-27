@@ -25,6 +25,8 @@ interface EditData {
   signature: string;
   gender: string;
   birthday: string;
+  /** 每周学习报告邮件订阅（与每日提醒独立，随保存一起提交） */
+  weeklyReportEmail: boolean;
   avatarUrl: string;
   loading: boolean;
   saving: boolean;
@@ -37,6 +39,7 @@ interface EditCustom {
   onSignature(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
   onPickGender(event: WechatMiniprogram.TouchEvent): void;
   onBirthday(event: WechatMiniprogram.CustomEvent<{ value: string }>): void;
+  onToggleWeeklyReport(event: WechatMiniprogram.CustomEvent<{ value: boolean }>): void;
   onPickAvatar(): Promise<void>;
   onSave(): Promise<void>;
 }
@@ -48,6 +51,7 @@ Page<EditData, EditCustom>({
     signature: '',
     gender: 'secret',
     birthday: '',
+    weeklyReportEmail: false,
     avatarUrl: '',
     loading: true,
     saving: false,
@@ -80,6 +84,7 @@ Page<EditData, EditCustom>({
       signature: user.signature ?? '',
       gender: user.gender || 'secret',
       birthday: user.birthday ? user.birthday.slice(0, 10) : '',
+      weeklyReportEmail: user.weeklyReportEmail === 1,
       avatarUrl: absoluteUrl(user.avatarUrl),
       loading: false,
     });
@@ -106,6 +111,11 @@ Page<EditData, EditCustom>({
   /** 生日。 */
   onBirthday(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ birthday: event.detail.value });
+  },
+
+  /** 每周学习报告邮件开关。 */
+  onToggleWeeklyReport(event) {
+    this.setData({ weeklyReportEmail: event.detail.value });
   },
 
   /** 选图并上传头像。 */
@@ -147,7 +157,11 @@ Page<EditData, EditCustom>({
     }
     this.setData({ saving: true });
     try {
-      const payload: Record<string, unknown> = { nickname, gender: this.data.gender };
+      const payload: Record<string, unknown> = {
+        nickname,
+        gender: this.data.gender,
+        weeklyReportEmail: this.data.weeklyReportEmail ? 1 : 0,
+      };
       if (this.data.signature.trim()) {
         payload.signature = this.data.signature.trim();
       }

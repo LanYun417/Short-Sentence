@@ -116,6 +116,8 @@ export interface TaskDeps {
   generateDailySentenceCard: () => Promise<void>;
   /** 每日学习提醒邮件（DailyReminderService.run；只发给主动开启提醒的用户） */
   sendDailyReminders: () => Promise<void>;
+  /** 每周学习报告邮件（WeeklyReportService.run；只发给订阅周报且上周有学习记录的用户） */
+  sendWeeklyReports: () => Promise<void>;
   /** 接龙主题周更（ChainService.generateWeeklyTopics；本周已生成则跳过，旧 AI 主题自动停用） */
   generateWeeklyChainTopics: (count: number) => Promise<{ weekStart: string; created: number }>;
   /** 情景闯关剧本封面补生成（StageService.generateMissingScriptCovers；只补缺失，不覆盖已有） */
@@ -213,6 +215,20 @@ export function buildTaskRegistry(): TaskRegistryItem[] {
       enabled: true,
       create: (deps) => async () => {
         await deps.sendDailyReminders();
+      },
+    },
+    {
+      name: 'weekly-report',
+      title: '每周学习报告邮件',
+      description:
+        '每周一 09:30 给订阅周报的用户发送上一完整周（周一至周日）的学习报告' +
+        '（复用站内周报统计：答题数 / 正确率 / 活跃天数 / 经验 / 新成就 / 上周对比）。' +
+        '模板 ID 在「邮件设置」配置，未配置或邮件服务未就绪时跳过；按周幂等，重启补跑不会重复投递。',
+      // 09:30 错开 09:00 的接龙主题周更（两条任务都要调 AI / 邮件，避免扎堆）
+      schedule: { kind: 'weekly', dayOfWeek: 1, hour: 9, minute: 30 },
+      enabled: true,
+      create: (deps) => async () => {
+        await deps.sendWeeklyReports();
       },
     },
     {

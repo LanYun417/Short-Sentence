@@ -27,6 +27,7 @@ import 'pages/shell_page.dart';
 import 'pages/splash_page.dart';
 import 'pages/stage_list_page.dart';
 import 'pages/team_page.dart';
+import 'pages/weakness_page.dart';
 import 'state/auth_controller.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -92,6 +93,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AchievementsPage(),
       ),
       GoRoute(path: '/scenes', builder: (context, state) => const ScenesPage()),
+      GoRoute(
+        path: '/weakness',
+        builder: (context, state) => const WeaknessPage(),
+      ),
       GoRoute(
         path: '/account-delete',
         builder: (context, state) => const AccountDeletePage(),

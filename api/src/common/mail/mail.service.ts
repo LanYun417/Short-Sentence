@@ -115,6 +115,18 @@ export class MailService {
     await this.sendTemplate(to, settings.templateReminder, { nickname }, '短句 - 今日的英语挑战已备好');
   }
 
+  /**
+   * 每周学习报告邮件。模板 ID 可选：未配置时抛可读错误，由调用方（定时任务）跳过，
+   * 不因为「运营还没建模板」就让整个定时任务失败。
+   */
+  async sendWeeklyReport(to: string, nickname: string, data: Record<string, string>): Promise<void> {
+    const settings = await this.settings();
+    if (settings.templateWeekly <= 0) {
+      throw AppException.badRequest('周报邮件模板未配置，请在「邮件设置」填写模板 ID');
+    }
+    await this.sendTemplate(to, settings.templateWeekly, { nickname, ...data }, '短句 - 上周学习报告');
+  }
+
   /** 后台「发送测试邮件」：用验证码模板发一条固定内容，验证凭证/模板/域名都通。 */
   async sendTest(to: string): Promise<void> {
     await this.sendCaptcha(to, '123456', '测试');

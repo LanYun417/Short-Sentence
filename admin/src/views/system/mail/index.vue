@@ -28,6 +28,8 @@ const form = ref({
   fromAlias: '短句',
   templateCaptcha: 66220,
   templateReminder: 66223,
+  // 周报模板可选：未配置（0）时定时任务跳过发信，站内周报照常
+  templateWeekly: 0,
 });
 
 /** 地域选项（SES 常用地域，按需增减） */
@@ -53,6 +55,7 @@ async function load(): Promise<void> {
       fromAlias: data.fromAlias || '短句',
       templateCaptcha: data.templateCaptcha || 66220,
       templateReminder: data.templateReminder || 66223,
+      templateWeekly: data.templateWeekly || 0,
     };
     if (!testTo.value) {
       testTo.value = data.fromAddress;
@@ -73,6 +76,7 @@ async function save(): Promise<void> {
       fromAlias: form.value.fromAlias.trim(),
       templateCaptcha: form.value.templateCaptcha,
       templateReminder: form.value.templateReminder,
+      templateWeekly: form.value.templateWeekly || undefined,
     };
     // 留空 = 不修改：绝不把掩码值提交上去
     if (form.value.secretId.trim()) {
@@ -184,6 +188,14 @@ onMounted(() => {
         <el-form-item label="每日提醒模板 ID">
           <el-input-number v-model="form.templateReminder" :min="1" :step="1" />
           <span class="ml-2 text-xs text-gray-400">模板变量：nickname（昵称）</span>
+        </el-form-item>
+
+        <el-form-item label="周报模板 ID">
+          <el-input-number v-model="form.templateWeekly" :min="0" :step="1" />
+          <span class="ml-2 text-xs text-gray-400"
+            >选填；0 =
+            不启用邮件周报。变量：nickname、weekStart、weekEnd、answered、correct、accuracy、activeDays、xpGained、newAchievements、streak、topCategory、deltaAnswered</span
+          >
         </el-form-item>
 
         <el-form-item>

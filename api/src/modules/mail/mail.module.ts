@@ -9,13 +9,16 @@
 import { Module } from '@nestjs/common';
 import { MailSettingsController } from './mail-settings.controller.js';
 import { DailyReminderService } from './daily-reminder.service.js';
+import { WeeklyReportService } from './weekly-report.service.js';
 import { ConfigModule } from '../config/config.module.js';
+import { GamifyModule } from '../client/gamify/gamify.module.js';
 
 @Module({
   // ConfigModule：读取每日提醒的发送小时（sys.mail.reminderHour），用于「到点才发」的闸门
-  imports: [ConfigModule],
+  // GamifyModule：周报邮件复用 GamifyService.weeklyReport 的统计口径，避免邮件与站内数字漂移
+  imports: [ConfigModule, GamifyModule],
   controllers: [MailSettingsController],
-  providers: [DailyReminderService],
-  exports: [DailyReminderService],
+  providers: [DailyReminderService, WeeklyReportService],
+  exports: [DailyReminderService, WeeklyReportService],
 })
 export class MailModule {}

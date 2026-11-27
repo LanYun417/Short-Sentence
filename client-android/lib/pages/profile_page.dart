@@ -318,6 +318,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   const _MenuDivider(),
                   _MenuRow(
+                    icon: Icons.my_location_outlined,
+                    label: '弱点词根',
+                    hint: '近 30 天错题按词归类',
+                    onTap: () => context.push('/weakness'),
+                  ),
+                  const _MenuDivider(),
+                  _MenuRow(
                     icon: Icons.person_outline_rounded,
                     label: '编辑资料',
                     hint: '昵称、性别、签名',

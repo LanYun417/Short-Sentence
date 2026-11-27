@@ -526,6 +526,7 @@ export const ClientUserScalarFieldEnum = {
   xp: 'xp',
   status: 'status',
   emailReminder: 'emailReminder',
+  weeklyReportEmail: 'weeklyReportEmail',
   lastLoginAt: 'lastLoginAt',
   passwordChangedAt: 'passwordChangedAt',
   createdAt: 'createdAt',

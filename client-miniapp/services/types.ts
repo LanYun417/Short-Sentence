@@ -23,6 +23,8 @@ export interface ClientUserProfile {
   gender: string;
   signature: string | null;
   emailReminder: number;
+  /** 每周学习报告邮件：1 订阅 / 0 不订阅 */
+  weeklyReportEmail: number;
   createdAt: string;
   bgCardId: number;
   bgImageUrl: string | null;
@@ -683,6 +685,45 @@ export interface WeeklyReport {
   topCategory: { name: string; count: number } | null;
   prevAnswered: number;
   deltaAnswered: number;
+}
+
+/** 今日复习计划（对应 /client/questions/review-plan）。 */
+export interface ReviewPlan {
+  total: number;
+  overdue: number;
+  completedToday: number;
+  suggestedLimit: number;
+  byCategory: Array<{ name: string; count: number }>;
+  items: Array<{
+    sentenceId: number;
+    translationZh: string;
+    imageUrl: string | null;
+    categoryName: string | null;
+    dueAt: string;
+    overdue: boolean;
+    level: number;
+    lastCorrect: boolean;
+  }>;
+}
+
+/** 弱点词根报告（对应 /client/questions/weakness）。 */
+export interface WeaknessReport {
+  windowDays: number;
+  totalWrong: number;
+  items: Array<{
+    word: string;
+    meaning: string | null;
+    rootAnalysis: string | null;
+    wrongCount: number;
+    totalCount: number;
+    lastWrongAt: string;
+    examples: Array<{
+      sentenceId: number;
+      translationZh: string;
+      imageUrl: string | null;
+      userAnswer: string | null;
+    }>;
+  }>;
 }
 
 /* ------------------------------ 记忆健康 ------------------------------ */

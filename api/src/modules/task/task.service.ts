@@ -24,6 +24,7 @@ import { ImageScaleService } from '../../common/file/file-guards.js';
 import { SentenceGenService } from '../sentence/sentence-gen.service.js';
 import { SentenceService } from '../sentence/sentence.service.js';
 import { DailyReminderService } from '../mail/daily-reminder.service.js';
+import { WeeklyReportService } from '../mail/weekly-report.service.js';
 import { WordRootService } from '../client/word-root/word-root.service.js';
 import { SentenceCardService } from '../client/sentence-card/sentence-card.service.js';
 import { ChainService } from '../client/chain/chain.service.js';
@@ -163,6 +164,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
     private readonly wordRoot: WordRootService,
     private readonly sentenceCard: SentenceCardService,
     private readonly dailyReminder: DailyReminderService,
+    private readonly weeklyReport: WeeklyReportService,
     private readonly chain: ChainService,
     private readonly stage: StageService,
     private readonly team: TeamService,
@@ -187,6 +189,7 @@ export class TaskService implements OnModuleInit, OnModuleDestroy {
       },
       generateDailySentenceCard: () => this.sentenceCard.generateDaily(),
       sendDailyReminders: () => this.dailyReminder.run(),
+      sendWeeklyReports: () => this.weeklyReport.run(),
       generateWeeklyChainTopics: (count: number) => this.chain.generateWeeklyTopics(count),
       generateMissingStageCovers: () => this.stage.generateMissingScriptCovers(),
       generateMissingSceneCovers: () => this.sentenceGen.generateMissingCategoryCovers(),

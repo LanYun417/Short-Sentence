@@ -47,6 +47,13 @@ export class UpdateMailSettingsDto {
   @IsInt({ message: '模板 ID 必须为整数' })
   @Min(1, { message: '模板 ID 必须为正整数' })
   templateReminder?: number;
+
+  /** 周报模板 ID（可选；不填 = 不启用邮件周报，站内周报不受影响） */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '模板 ID 必须为整数' })
+  @Min(1, { message: '模板 ID 必须为正整数' })
+  templateWeekly?: number;
 }
 
 /** 发送测试邮件入参。 */

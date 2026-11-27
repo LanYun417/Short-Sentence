@@ -11,6 +11,20 @@
     <view class="chip {{kind === 'right' ? 'chip-active' : ''}}" data-kind="right" bindtap="onPickKind">对题</view>
   </view>
 
+  <view wx:if="{{tab === 'review' && plan && plan.total > 0}}" class="plan-card">
+    <view class="plan-title">今日复习计划</view>
+    <view class="plan-stats">
+      <view class="plan-stat"><text class="plan-num">{{plan.total}}</text><text class="plan-label">到期待复习</text></view>
+      <view class="plan-stat"><text class="plan-num plan-overdue">{{plan.overdue}}</text><text class="plan-label">已逾期</text></view>
+      <view class="plan-stat"><text class="plan-num plan-done">{{plan.completedToday}}</text><text class="plan-label">今天已复习</text></view>
+    </view>
+    <view wx:if="{{planCategories}}" class="plan-cats">{{planCategories}}</view>
+    <view class="plan-actions">
+      <button class="btn btn-primary plan-btn" bindtap="onGoPractice">一键开刷</button>
+      <button class="btn plan-btn" bindtap="onGoWeakness">弱点词根</button>
+    </view>
+  </view>
+
   <view wx:if="{{loading}}" class="empty">加载中…</view>
 
   <view wx:elif="{{items.length === 0}}" class="empty">

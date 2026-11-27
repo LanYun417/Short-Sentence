@@ -8,10 +8,13 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/models/library_item.dart';
+import '../api/models/review_plan.dart';
 import '../state/library_controller.dart';
 import '../state/quiz_controller.dart';
+import '../state/review_plan_provider.dart';
 import '../state/shell_controller.dart';
 import '../theme/motion.dart';
 import '../theme/palette.dart';
@@ -124,6 +127,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(libraryControllerProvider);
     final data = state.current;
+    // 复习计划只用于顶部概览，失败由 provider 吞掉（返回 null），不阻断列表
+    final plan = ref.watch(reviewPlanProvider).value;
 
     return Material(
       color: Colors.transparent,
@@ -154,6 +159,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 ],
               ),
             ),
+            // 今日复习计划：逾期 / 到期 / 今日已复习三个数字 + 弱点词根入口。
+            if (state.tab == LibraryTab.review &&
+                plan != null &&
+                plan.total > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: _ReviewPlanSummary(
+                  plan: plan,
+                  onWeakness: () => context.push('/weakness'),
+                ),
+              ),
             // 复习池筛选：全部到期 / 只看错题（错题本视角）。
             // 不新增独立页面——「错题」是复习池的一个视图，多一个入口只会加重导航负担。
             if (state.tab == LibraryTab.review)
@@ -383,6 +399,50 @@ class _ReviewKindChip extends StatelessWidget {
 ///
 /// 为什么放在列表顶部而不是只在空态：用户进来先看到「N 张到期 + 开始复习」，
 /// 比滚列表更直接；答完一串回来列表仍在，形成「复习 → 回来看剩余」的闭环。
+/// 今日复习计划概览（复习 Tab 顶部）：三个数字 + 弱点词根入口。
+class _ReviewPlanSummary extends StatelessWidget {
+  const _ReviewPlanSummary({required this.plan, required this.onWeakness});
+
+  final ReviewPlan plan;
+  final VoidCallback onWeakness;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '今日复习计划',
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '到期 ${plan.total} · 逾期 ${plan.overdue} · 今日已复习 ${plan.completedToday}',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: context.colors.inkSoft),
+                ),
+              ],
+            ),
+          ),
+          FilledButton.tonal(
+            onPressed: onWeakness,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            child: const Text('弱点词根'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StartReviewBanner extends ConsumerWidget {
   const _StartReviewBanner();
 

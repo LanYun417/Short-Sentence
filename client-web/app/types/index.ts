@@ -19,6 +19,8 @@ export interface ClientUserProfile {
   signature: string | null;
   /** 每日学习提醒邮件：1 订阅 / 0 不订阅 */
   emailReminder: number;
+  /** 每周学习报告邮件：1 订阅 / 0 不订阅 */
+  weeklyReportEmail: number;
   createdAt: string;
   /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
   bgCardId: number;
@@ -668,4 +670,48 @@ export interface IpaLearnedResult {
   firstTime: boolean;
   xpAwarded: boolean;
   learnedCount: number;
+}
+
+/* ------------------------------ 复习计划 / 弱点词根 ------------------------------ */
+
+/** 今日复习计划中的一张待复习卡。 */
+export interface ReviewPlanItem {
+  sentenceId: number;
+  translationZh: string;
+  imageUrl: string | null;
+  categoryName: string | null;
+  dueAt: string;
+  overdue: boolean;
+  level: number;
+  lastCorrect: boolean;
+}
+
+/** 今日复习计划概览。 */
+export interface ReviewPlan {
+  total: number;
+  overdue: number;
+  completedToday: number;
+  suggestedLimit: number;
+  byCategory: Array<{ name: string; count: number }>;
+  items: ReviewPlanItem[];
+}
+
+/** 弱点词根报告（近 30 天错题按词归类）。 */
+export interface WeaknessReport {
+  windowDays: number;
+  totalWrong: number;
+  items: Array<{
+    word: string;
+    meaning: string | null;
+    rootAnalysis: string | null;
+    wrongCount: number;
+    totalCount: number;
+    lastWrongAt: string;
+    examples: Array<{
+      sentenceId: number;
+      translationZh: string;
+      imageUrl: string | null;
+      userAnswer: string | null;
+    }>;
+  }>;
 }

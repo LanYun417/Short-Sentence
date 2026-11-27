@@ -978,6 +978,8 @@ export interface MailSettings {
   fromAlias: string;
   templateCaptcha: number;
   templateReminder: number;
+  /** 周报模板 ID（0 = 未配置，邮件周报不发送） */
+  templateWeekly: number;
 }
 
 /** 保存邮件设置入参（secretId / secretKey 留空 = 不修改） */
@@ -990,6 +992,8 @@ export interface SaveMailSettingsPayload {
   fromAlias?: string;
   templateCaptcha?: number;
   templateReminder?: number;
+  /** 周报模板 ID（可选；不填 = 保持原值） */
+  templateWeekly?: number;
 }
 
 /** AI 模型配置（管理端；API Key 只回掩码，永不回显明文） */

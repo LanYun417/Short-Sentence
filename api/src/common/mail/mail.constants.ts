@@ -11,6 +11,8 @@ export const MAIL_CONFIG_KEYS = {
   fromAlias: 'mail.ses.fromAlias',
   templateCaptcha: 'mail.ses.templateCaptcha',
   templateReminder: 'mail.ses.templateReminder',
+  /** 周报邮件模板 ID（可选：未配置时定时任务跳过发信） */
+  templateWeekly: 'mail.ses.templateWeekly',
 } as const;
 
 /** 配置项的中文名（写库时作为 config_name）。 */
@@ -23,4 +25,5 @@ export const MAIL_CONFIG_NAMES: Record<string, string> = {
   [MAIL_CONFIG_KEYS.fromAlias]: '发件人显示名',
   [MAIL_CONFIG_KEYS.templateCaptcha]: '验证码邮件模板 ID',
   [MAIL_CONFIG_KEYS.templateReminder]: '每日提醒邮件模板 ID',
+  [MAIL_CONFIG_KEYS.templateWeekly]: '周报邮件模板 ID',
 };

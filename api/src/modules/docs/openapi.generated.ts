@@ -15210,6 +15210,176 @@ export const OPENAPI_DOC: Record<string, unknown> = {
         ]
       }
     },
+    "/api/client/questions/review-plan": {
+      "get": {
+        "tags": [
+          "刷题"
+        ],
+        "summary": "今日复习计划：到期题按「逾期优先」排序，带场景分组与今日已复习进度。 与 next(source=review) 共用同一候选条件，一键开刷不会刷到另一批题",
+        "operationId": "get__api_client_questions_review_plan",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/client/questions/weakness": {
+      "get": {
+        "tags": [
+          "刷题"
+        ],
+        "summary": "弱点词根：近 30 天错题按词自动归类，按错次排序（附中文释义 / 词根解析 / 典型错题）",
+        "operationId": "get__api_client_questions_weakness",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页条数"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功（统一信封 { code, message, data }）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "业务码，0 表示成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "total": {
+                          "type": "integer",
+                          "example": 0
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "example": 10
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/client/questions/{id}/answer": {
       "post": {
         "tags": [
@@ -24525,6 +24695,11 @@ export const OPENAPI_DOC: Record<string, unknown> = {
           },
           "templateReminder": {
             "type": "number",
+            "example": 1
+          },
+          "templateWeekly": {
+            "type": "number",
+            "description": "周报模板 ID（可选；不填 = 不启用邮件周报，站内周报不受影响）",
             "example": 1
           }
         },

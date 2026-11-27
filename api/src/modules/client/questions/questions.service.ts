@@ -34,6 +34,108 @@ const GRADUATE_LEVEL = REVIEW_INTERVAL_DAYS.length;
 /** 复习池候选批大小（在此范围内随机取，兼顾「到期优先」与「不总是同一题」）。 */
 const REVIEW_POOL_BATCH = 50;
 
+/** 今日复习计划建议一轮的题数（不做硬性上限，用户可继续刷）。 */
+const REVIEW_PLAN_SUGGESTED = 20;
+/** 弱点词根统计窗口（与答题记录默认保留天数一致） */
+const WEAKNESS_WINDOW_DAYS = 30;
+/** 弱点统计单次读取的答题记录上限（防止极端用户在内存里堆太多行） */
+const WEAKNESS_MAX_RECORDS = 2000;
+/** 功能词：不列入「弱点词根」—— them/very 这类词错一次不代表词根没掌握 */
+const WEAKNESS_STOPWORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'but',
+  'of',
+  'to',
+  'in',
+  'on',
+  'at',
+  'for',
+  'with',
+  'from',
+  'by',
+  'as',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'am',
+  'do',
+  'does',
+  'did',
+  'have',
+  'has',
+  'had',
+  'i',
+  'you',
+  'he',
+  'she',
+  'it',
+  'we',
+  'they',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'its',
+  'our',
+  'their',
+  'this',
+  'that',
+  'these',
+  'those',
+  'there',
+  'here',
+  'what',
+  'which',
+  'who',
+  'when',
+  'where',
+  'why',
+  'how',
+  'not',
+  'no',
+  'yes',
+  'if',
+  'so',
+  'than',
+  'then',
+  'just',
+  'very',
+  'too',
+  'also',
+  'up',
+  'down',
+  'out',
+  'over',
+  'about',
+  'into',
+  'can',
+  'could',
+  'will',
+  'would',
+  'should',
+  'may',
+  'might',
+  'must',
+  'one',
+  'two',
+  'three',
+  'get',
+  'got',
+  'go',
+  'going',
+]);
+
 /** 某用户某题的「累计答对」聚合（抽题时由 sentence_record 实时 groupBy 得到，不另建表）。 */
 interface MasteryEntry {
   sentenceId: number;
@@ -57,6 +159,70 @@ export interface MemoryStats {
   distribution: number[];
   /** 理论遗忘曲线：R(day)=exp(-day/S)，S 取维护基线；长度 31（day 0..30） */
   retentionCurve: Array<{ day: number; retention: number }>;
+}
+
+/** 今日复习计划中的一条待复习卡（按逾期优先排序）。 */
+export interface ReviewPlanItem {
+  sentenceId: number;
+  translationZh: string;
+  imageUrl: string | null;
+  categoryName: string | null;
+  /** 本次复习到期时间 */
+  dueAt: Date;
+  /** 是否逾期（早于今天零点） */
+  overdue: boolean;
+  /** 当前间隔重复等级 */
+  level: number;
+  /** 上一轮是否答对 */
+  lastCorrect: boolean;
+}
+
+/** 今日复习计划概览（与「一键开刷」的 source=review 同口径）。 */
+export interface ReviewPlan {
+  /** 今日到期（含逾期）的独立题数 */
+  total: number;
+  /** 其中逾期题数 */
+  overdue: number;
+  /** 今天已完成复习的独立题数 */
+  completedToday: number;
+  /** 建议一轮复习的题数 */
+  suggestedLimit: number;
+  /** 按场景分组的待复习题数（降序） */
+  byCategory: Array<{ name: string; count: number }>;
+  /** 前 N 张待复习卡预览（前端可直接展示，不必再逐题查库） */
+  items: ReviewPlanItem[];
+}
+
+/** 弱点词根：按错词自动归类后的一个词/词根条目。 */
+export interface WeakRootItem {
+  /** 归一化后的英文词 */
+  word: string;
+  /** 该词在本句中的中文释义（题库逐词释义 JSON；没有则 null） */
+  meaning: string | null;
+  /** 词根词典命中时的解析摘要（未收录则 null） */
+  rootAnalysis: string | null;
+  /** 近 30 天答错次数 */
+  wrongCount: number;
+  /** 近 30 天总作答次数 */
+  totalCount: number;
+  /** 上次答错时间 */
+  lastWrongAt: Date;
+  /** 典型错题例句（最多 3 条，只包含答错记录） */
+  examples: Array<{
+    sentenceId: number;
+    translationZh: string;
+    imageUrl: string | null;
+    userAnswer: string | null;
+  }>;
+}
+
+/** 弱点词根报告。 */
+export interface WeaknessReport {
+  /** 统计窗口（天） */
+  windowDays: number;
+  /** 窗口内答错总次数 */
+  totalWrong: number;
+  items: WeakRootItem[];
 }
 
 /** 下一张卡（不含答案字段）。 */
@@ -281,6 +447,12 @@ const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 /** 东八区日期键（YYYY-MM-DD）。 */
 function shanghaiDateKey(): string {
   return new Date(Date.now() + SHANGHAI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** 东八区今天零点（复习计划的「逾期」分界线）。 */
+function shanghaiDayStart(): Date {
+  const now = new Date(Date.now() + SHANGHAI_OFFSET_MS);
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - SHANGHAI_OFFSET_MS);
 }
 
 const XP_EVENT: Record<
@@ -1502,6 +1674,258 @@ export class QuestionsService {
         zh: row.sentence.translationZh,
         ipa: row.sentence.ipa ?? '',
       }));
+  }
+
+  /**
+   * 今日复习计划：从「已到期」的间隔重复排期里按题去重，按逾期优先列出待复习卡。
+   *
+   * 与 `next(source=review)` 同一候选条件（到期 + 题目就绪 + 有配图），
+   * 所以这里显示「待复习 N」时，一键开刷不会刷到另一批题。
+   * 预览只取前 limit 张，total 统计最多 max(300, limit*10) 道独立题（再多一轮也刷不完）。
+   */
+  async getReviewPlan(userId: number, limit = REVIEW_PLAN_SUGGESTED): Promise<ReviewPlan> {
+    const uid = BigInt(userId);
+    const now = new Date();
+    const dayStart = shanghaiDayStart();
+    const take = Math.max(300, limit * 10);
+    const rows = await this.prisma.sentenceRecord.findMany({
+      where: {
+        userId: uid,
+        nextReviewAt: { lte: now },
+        sentence: { status: 'ready', retiredAt: null, imageFileId: { gt: 0n } },
+      },
+      // 到期时间倒序：同一题多次到期时先取最新那排期（答对会往后推、答错会重置为当天）
+      orderBy: [{ nextReviewAt: 'desc' }, { id: 'desc' }],
+      take: take * 3,
+      select: {
+        sentenceId: true,
+        isCorrect: true,
+        reviewLevel: true,
+        nextReviewAt: true,
+        sentence: {
+          select: {
+            translationZh: true,
+            imageFileId: true,
+            category: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // 按题去重；take*3 只是给「同题多记录」留余量，最终仍只保留 take 道独立题
+    const latest = new Map<number, (typeof rows)[number]>();
+    for (const row of rows) {
+      const id = Number(row.sentenceId);
+      if (!latest.has(id)) {
+        latest.set(id, row);
+      }
+      if (latest.size >= take) {
+        break;
+      }
+    }
+
+    const categoryCount = new Map<string, number>();
+    let overdue = 0;
+    const ordered = [...latest.entries()]
+      .map(([sentenceId, row]) => {
+        const dueAt = row.nextReviewAt ?? now;
+        const isOverdue = dueAt.getTime() < dayStart.getTime();
+        if (isOverdue) {
+          overdue += 1;
+        }
+        const name = row.sentence?.category?.name ?? '未分类';
+        categoryCount.set(name, (categoryCount.get(name) ?? 0) + 1);
+        return {
+          sentenceId,
+          translationZh: row.sentence?.translationZh ?? '',
+          imageFileId: row.sentence?.imageFileId ?? 0n,
+          categoryName: row.sentence?.category?.name ?? null,
+          dueAt,
+          overdue: isOverdue,
+          level: row.reviewLevel,
+          lastCorrect: row.isCorrect === 1,
+        };
+      })
+      .sort((a, b) => Number(b.overdue) - Number(a.overdue) || a.dueAt.getTime() - b.dueAt.getTime());
+
+    // 今日已复习的独立题数（同一题今天答两次只算一次）
+    const todayRows = await this.prisma.sentenceRecord.findMany({
+      where: { userId: uid, createdAt: { gte: dayStart } },
+      take: 1000,
+      select: { sentenceId: true },
+    });
+    const completedToday = new Set(todayRows.map((row) => Number(row.sentenceId))).size;
+
+    const items: ReviewPlanItem[] = await Promise.all(
+      ordered.slice(0, limit).map(async (item) => ({
+        sentenceId: item.sentenceId,
+        translationZh: item.translationZh,
+        imageUrl: item.imageFileId > 0n ? await this.resolveImageUrl(Number(item.imageFileId)) : null,
+        categoryName: item.categoryName,
+        dueAt: item.dueAt,
+        overdue: item.overdue,
+        level: item.level,
+        lastCorrect: item.lastCorrect,
+      })),
+    );
+
+    return {
+      total: latest.size,
+      overdue,
+      completedToday,
+      suggestedLimit: REVIEW_PLAN_SUGGESTED,
+      byCategory: [...categoryCount.entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+      items,
+    };
+  }
+
+  /**
+   * 弱点词根：近 30 天答错的句子按「词」自动归类，按错次排序。
+   *
+   * 为什么按词而不是整句：同一词根会在多个句子里反复错（unavoidable / avoid），
+   * 整句错题本看不到这个规律；按词聚合后能直接看到「哪几个词最该补」。
+   * 中文释义优先取题库的逐词释义 JSON；词根词典命中时再附解析摘要（未收录也能用）。
+   */
+  async getWeakness(userId: number, limit = 20): Promise<WeaknessReport> {
+    const since = new Date(Date.now() - WEAKNESS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await this.prisma.sentenceRecord.findMany({
+      where: { userId: BigInt(userId), createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+      take: WEAKNESS_MAX_RECORDS,
+      select: {
+        isCorrect: true,
+        userAnswer: true,
+        createdAt: true,
+        sentence: {
+          select: {
+            id: true,
+            sentenceEn: true,
+            translationZh: true,
+            imageFileId: true,
+            wordMeanings: true,
+          },
+        },
+      },
+    });
+
+    interface WeakStat {
+      wrongCount: number;
+      totalCount: number;
+      lastWrongAt: Date;
+      meaning: string | null;
+      examples: Array<{
+        sentenceId: number;
+        translationZh: string;
+        imageUrl: string | null;
+        userAnswer: string | null;
+      }>;
+      fileIds: number[];
+    }
+    const stats = new Map<string, WeakStat>();
+    const meaningsBySentence = new Map<number, Record<string, string> | null>();
+    let totalWrong = 0;
+
+    for (const row of rows) {
+      const sentence = row.sentence;
+      if (!sentence?.sentenceEn) {
+        continue;
+      }
+      const sentenceId = Number(sentence.id);
+      if (!meaningsBySentence.has(sentenceId)) {
+        meaningsBySentence.set(sentenceId, this.parseWordMeanings(sentence.wordMeanings));
+      }
+      const meanings = meaningsBySentence.get(sentenceId);
+      const isWrong = row.isCorrect === 0;
+      if (isWrong) {
+        totalWrong += 1;
+      }
+      const words = sentence.sentenceEn
+        .toLowerCase()
+        .match(/[a-z]+(?:'[a-z]+)?/g)
+        ?.filter((word) => word.length >= 3 && !WEAKNESS_STOPWORDS.has(word));
+      if (!words?.length) {
+        continue;
+      }
+      for (const word of new Set(words)) {
+        let stat = stats.get(word);
+        if (!stat) {
+          stat = {
+            wrongCount: 0,
+            totalCount: 0,
+            lastWrongAt: row.createdAt,
+            meaning: meanings?.[word] ?? null,
+            examples: [],
+            fileIds: [],
+          };
+          stats.set(word, stat);
+        }
+        stat.totalCount += 1;
+        if (!stat.meaning && meanings?.[word]) {
+          stat.meaning = meanings[word];
+        }
+        if (isWrong) {
+          stat.wrongCount += 1;
+          if (stat.examples.length < 3) {
+            stat.examples.push({
+              sentenceId,
+              translationZh: sentence.translationZh,
+              imageUrl: null,
+              userAnswer: row.userAnswer,
+            });
+            stat.fileIds.push(Number(sentence.imageFileId));
+          }
+          if (row.createdAt.getTime() > stat.lastWrongAt.getTime()) {
+            stat.lastWrongAt = row.createdAt;
+          }
+        }
+      }
+    }
+
+    const top = [...stats.entries()]
+      .filter(([, stat]) => stat.wrongCount > 0)
+      .sort(
+        (a, b) =>
+          b[1].wrongCount - a[1].wrongCount ||
+          b[1].wrongCount / b[1].totalCount - a[1].wrongCount / a[1].totalCount ||
+          a[0].localeCompare(b[0]),
+      )
+      .slice(0, limit);
+
+    // 只对最终展示的少量词查词根词典（未收录不影响归类）
+    const dictionary = await this.prisma.wordRoot.findMany({
+      where: { word: { in: top.map(([word]) => word) } },
+      select: { word: true, analysis: true },
+    });
+    const analysisByWord = new Map<string, string | null>();
+    for (const entry of dictionary) {
+      const analysis = entry.analysis as { explanation?: unknown } | null;
+      const text = analysis && typeof analysis.explanation === 'string' ? analysis.explanation.trim() : '';
+      analysisByWord.set(entry.word, text ? text.slice(0, 200) : null);
+    }
+
+    const items: WeakRootItem[] = await Promise.all(
+      top.map(async ([word, stat]) => ({
+        word,
+        meaning: stat.meaning,
+        rootAnalysis: analysisByWord.get(word) ?? null,
+        wrongCount: stat.wrongCount,
+        totalCount: stat.totalCount,
+        lastWrongAt: stat.lastWrongAt,
+        examples: await Promise.all(
+          stat.examples.map(async (example, index) => {
+            const fileId = stat.fileIds[index] ?? 0;
+            return {
+              ...example,
+              imageUrl: fileId > 0 ? await this.resolveImageUrl(fileId) : null,
+            };
+          }),
+        ),
+      })),
+    );
+
+    return { windowDays: WEAKNESS_WINDOW_DAYS, totalWrong, items };
   }
 
   /** 图片文件 id → 访问 URL（文件缺失返回 null）。 */

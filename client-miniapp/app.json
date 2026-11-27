@@ -28,6 +28,7 @@
     "pages/profile-edit/profile-edit",
     "pages/account-delete/account-delete",
     "pages/memory/memory",
+    "pages/weakness/weakness",
     "pages/privacy/privacy",
     "pages/terms/terms"
   ],

@@ -8,7 +8,7 @@ import { type ResponseEnvelope } from '../../../common/http/response.interceptor
 import { IdParamDto } from '../../../common/dto/id-param.dto.js';
 import type { ClientUserContext } from '../../../common/types.js';
 import { QuestionsService } from './questions.service.js';
-import { AnswerBossDto, AnswerSentenceDto, NextQuestionQueryDto } from './dto.js';
+import { AnswerBossDto, AnswerSentenceDto, NextQuestionQueryDto, ReviewInsightQueryDto } from './dto.js';
 
 @Controller('client/questions')
 export class QuestionsController {
@@ -44,6 +44,23 @@ export class QuestionsController {
   @Get('memory-stats')
   memoryStats(@CurrentClientUser() user: ClientUserContext) {
     return this.questions.getMemoryStats(user.userId);
+  }
+
+  /**
+   * 今日复习计划：到期题按「逾期优先」排序，带场景分组与今日已复习进度。
+   * 与 next(source=review) 共用同一候选条件，一键开刷不会刷到另一批题。
+   */
+  @Get('review-plan')
+  reviewPlan(@CurrentClientUser() user: ClientUserContext, @Query() query: ReviewInsightQueryDto) {
+    return this.questions.getReviewPlan(user.userId, query.limit);
+  }
+
+  /**
+   * 弱点词根：近 30 天错题按词自动归类，按错次排序（附中文释义 / 词根解析 / 典型错题）。
+   */
+  @Get('weakness')
+  weakness(@CurrentClientUser() user: ClientUserContext, @Query() query: ReviewInsightQueryDto) {
+    return this.questions.getWeakness(user.userId, query.limit);
   }
 
   /** 可选的节日题库列表（只含有就绪题目的节日；按节日日期倒序）。 */

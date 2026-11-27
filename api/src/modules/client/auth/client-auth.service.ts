@@ -46,6 +46,8 @@ export interface ClientUserProfile {
   signature: string | null;
   /** 每日学习提醒邮件：1 订阅 / 0 不订阅 */
   emailReminder: number;
+  /** 每周学习报告邮件：1 订阅 / 0 不订阅 */
+  weeklyReportEmail: number;
   createdAt: Date;
   /** 个人主页背景句签 id（0 = 未设置，用默认品牌渐变） */
   bgCardId: number;
@@ -74,6 +76,7 @@ export interface ClientExportData {
     signature: string | null;
     xp: number;
     emailReminder: number;
+    weeklyReportEmail: number;
     createdAt: string;
   };
   checkins: { date: string; doneCount: number; goalCount: number; streak: number }[];
@@ -448,6 +451,7 @@ export class ClientAuthUserService {
           signature: true,
           xp: true,
           emailReminder: true,
+          weeklyReportEmail: true,
           createdAt: true,
         },
       }),
@@ -472,6 +476,7 @@ export class ClientAuthUserService {
         signature: profile.signature,
         xp: profile.xp,
         emailReminder: profile.emailReminder,
+        weeklyReportEmail: profile.weeklyReportEmail,
         createdAt: profile.createdAt.toISOString(),
       },
       checkins: checkins.map((c) => ({
@@ -519,6 +524,7 @@ export class ClientAuthUserService {
         gender: true,
         signature: true,
         emailReminder: true,
+        weeklyReportEmail: true,
         bgCardId: true,
         createdAt: true,
       },
@@ -535,6 +541,7 @@ export class ClientAuthUserService {
       gender: row.gender,
       signature: row.signature,
       emailReminder: row.emailReminder,
+      weeklyReportEmail: row.weeklyReportEmail,
       createdAt: row.createdAt,
       ...(await this.resolveBackground(Number(row.bgCardId))),
     };
@@ -625,6 +632,7 @@ export class ClientAuthUserService {
       gender?: string;
       signature?: string;
       emailReminder?: number;
+      weeklyReportEmail?: number;
     },
   ): Promise<ClientUserProfile> {
     const data: Record<string, unknown> = {};
@@ -645,6 +653,9 @@ export class ClientAuthUserService {
     }
     if (input.emailReminder !== undefined) {
       data.emailReminder = input.emailReminder === 1 ? 1 : 0;
+    }
+    if (input.weeklyReportEmail !== undefined) {
+      data.weeklyReportEmail = input.weeklyReportEmail === 1 ? 1 : 0;
     }
     if (Object.keys(data).length === 0) {
       return this.getProfile(userId);

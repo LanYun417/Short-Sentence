@@ -90,6 +90,19 @@ export class NextQuestionQueryDto {
 }
 
 /**
+ * 复习计划 / 弱点词根查询入参。
+ * limit 只控制「预览条目数」，不影响待复习总数统计。
+ */
+export class ReviewInsightQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '条数必须为整数' })
+  @Min(1, { message: '条数最小为 1' })
+  @Max(50, { message: '条数最大为 50' })
+  limit?: number;
+}
+
+/**
  * 每日 Boss 作答。
  *
  * 只带 sentenceId + 用户答案：Boss 题的选取在服务端按日期确定性完成，

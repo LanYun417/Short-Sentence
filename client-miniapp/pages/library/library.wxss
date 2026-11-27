@@ -4,6 +4,69 @@
   margin-top: 20rpx;
 }
 
+.plan-card {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(15, 23, 42, 0.04);
+}
+
+.plan-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.plan-stats {
+  display: flex;
+  gap: 40rpx;
+  margin-top: 18rpx;
+}
+
+.plan-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.plan-num {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.plan-overdue {
+  color: #f59e0b;
+}
+
+.plan-done {
+  color: #059669;
+}
+
+.plan-label {
+  font-size: 21rpx;
+  color: var(--ink-3);
+}
+
+.plan-cats {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: var(--ink-2);
+}
+
+.plan-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.plan-btn {
+  flex: 1;
+  margin: 0;
+  font-size: 24rpx;
+}
+
 .item-en {
   flex: 1;
   min-width: 0;

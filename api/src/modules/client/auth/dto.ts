@@ -135,6 +135,14 @@ export class UpdateClientProfileDto {
   @Min(0, { message: '邮件提醒开关只能为 0 或 1' })
   @Max(1, { message: '邮件提醒开关只能为 0 或 1' })
   emailReminder?: number;
+
+  /** 每周学习报告邮件：1 订阅 / 0 不订阅（用户主动开启才发） */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: '周报邮件开关必须为整数' })
+  @Min(0, { message: '周报邮件开关只能为 0 或 1' })
+  @Max(1, { message: '周报邮件开关只能为 0 或 1' })
+  weeklyReportEmail?: number;
 }
 
 /** 发送邮箱验证码入参。 */

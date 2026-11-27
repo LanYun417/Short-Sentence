@@ -25,6 +25,8 @@ export interface MailSettings {
   templateCaptcha: number;
   /** 每日学习提醒模板 ID */
   templateReminder: number;
+  /** 周报模板 ID（0 = 未配置；周报定时任务跳过发信，不影响站内周报） */
+  templateWeekly: number;
 }
 
 /** 一次性把邮件相关配置全读出来（键很少，无需缓存；后台改完立即生效）。 */
@@ -48,6 +50,7 @@ export async function loadMailSettings(prisma: PrismaService): Promise<MailSetti
     fromAlias: value(MAIL_CONFIG_KEYS.fromAlias) || '短句',
     templateCaptcha: num(MAIL_CONFIG_KEYS.templateCaptcha, 0),
     templateReminder: num(MAIL_CONFIG_KEYS.templateReminder, 0),
+    templateWeekly: num(MAIL_CONFIG_KEYS.templateWeekly, 0),
   };
 }
 
