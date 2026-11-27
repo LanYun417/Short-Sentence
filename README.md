@@ -1,639 +1,219 @@
-<p align="center">
-  <img src="admin/src/assets/logo.svg" alt="LYAdmin 蓝云后台管理系统" width="480">
-</p>
+# 短句（Short Sentence）· LYAdmin 基座
 
-<p align="center"><em>开箱即用的通用后台管理基座</em></p>
+> 一个仓库、一套后端、四个用户入口：以 LYAdmin 后台基座为工程底座，落地「短句」——视觉场景英语闪卡产品。
+> 后端 `api/` 同时服务运营后台 `admin/`、用户端 Web `client-web/`、微信小程序 `client-miniapp/` 与 Android App `client-android/`，四端共享同一套接口契约。
 
-> 一套开箱即用的通用后台管理基座：JWT 双 Token 鉴权、RBAC + 数据权限、系统管理（用户 / 角色 / 菜单 / 部门 / 字典 / 参数）、三类日志、文件管理、通知中心、在线用户与系统监控（CPU / 内存 / 磁盘 / 网络吞吐）、代码生成器、ECharts 仪表盘与中英双语。前后端 TypeScript 全覆盖，遵循严格分层与统一工程规范。
->
-> 本仓库同时是**「短句」**（视觉场景英语闪卡）的完整落地：同一个后端（`api/`）之上，
-> 运营后台（`admin/`）、用户端 Web（`client-web/`，Nuxt 4）、Android App（`client-android/`，Flutter）
-> 与微信小程序（`client-miniapp/`，原生 TS）**四端同源同契约**。产品能力见[「短句」业务功能](#短句业务功能)。
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Vue-3.5-42b883" alt="Vue" height="20">
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6" alt="TypeScript" height="20">
-  <img src="https://img.shields.io/badge/Vite-8-646cff" alt="Vite" height="20">
-  <img src="https://img.shields.io/badge/Element%20Plus-2.14-409eff" alt="Element Plus" height="20">
-  <img src="https://img.shields.io/badge/Tailwind%20CSS-4.3-38bdf8" alt="Tailwind CSS" height="20">
-  <img src="https://img.shields.io/badge/NestJS-12-e0234e" alt="NestJS" height="20">
-  <img src="https://img.shields.io/badge/Prisma-7-2d3748" alt="Prisma" height="20">
-  <img src="https://img.shields.io/badge/MySQL-8-4479a1" alt="MySQL" height="20">
-  <img src="https://img.shields.io/badge/node-%3E%3D24-339933" alt="Node" height="20">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License" height="20">
-</p>
+| 层         | 技术                                                                                         |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| 后端       | NestJS 12（纯 ESM）+ Prisma 7 + MySQL 8 + Redis（可选）+ TypeScript，端口 `3000`             |
+| 运营后台   | Vue 3.5 + Vite 8 + Element Plus + Tailwind CSS 4 + Pinia，端口 `5173`                        |
+| 用户端 Web | Nuxt 4（SSR）+ `@nuxt/ui` 4 + Tailwind CSS 4，端口 `3001`（`strictPort`）                    |
+| 微信小程序 | 原生 WXML/WXSS + TypeScript，仅开发期类型依赖                                                |
+| Android    | Flutter 3.47 + Riverpod + Dio + go_router，零新增运行时依赖                                  |
+| 工程       | Node >= 24、npm、ESLint / oxlint / Prettier / Stylelint、husky + lint-staged、GitHub Actions |
 
 ## 目录
 
-- [项目简介](#项目简介)
-- [关于本项目](#关于本项目)
-- [界面预览](#界面预览)
-- [功能特性](#功能特性)
-- [「短句」业务功能](#短句业务功能)
-- [技术栈](#技术栈)
-- [目录结构](#目录结构)
 - [快速开始](#快速开始)
-- [默认账号](#默认账号)
-- [可用脚本](#可用脚本)
+- [当前业务能力](#当前业务能力)
+- [后端约定](#后端约定)
+- [各端开发要点](#各端开发要点)
+- [常用脚本](#常用脚本)
 - [环境变量](#环境变量)
 - [部署](#部署)
-- [接口约定](#接口约定)
-- [贡献指南](#贡献指南)
+- [CI 与提交前自检](#ci-与提交前自检)
 - [常见问题](#常见问题)
 - [许可](#许可)
 
----
-
-## 项目简介
-
-LYAdmin 面向企业内部运营 / 管理场景，提供一套可直接二次开发的中后台起点。它把「企业后台常见但每次都重复造」的能力沉淀为开箱可用的垂直切片：鉴权、权限、系统管理、日志、文件、代码生成、仪表盘。
-
-设计取向：
-
-- **前后端分离 + 严格分层**：后端 `module → controller → service`，数据访问统一走 `PrismaService`，业务层不直接拼 SQL；前端按 `views / api / store / components` 组织。
-- **约定优先**：统一响应体、统一分页、统一错误码、菜单驱动动态路由、按钮级权限指令。
-- **零魔法密钥**：JWT 密钥等敏感配置**无默认值**，缺失将拒绝启动，避免「默认口令」事故。
-- **响应式优先**：窄屏（移动端）适配是默认要求，固定尺寸弹层一律走响应式封装。
-
-## 关于本项目
-
-本项目**完全由 AI 开发**：从需求梳理、系统设计、前后端编码到测试与文档，均在人工把关下由 AI 完成；仓库内的架构文档、代码规范与提交历史即这一过程的产物。
-
-- 全程遵循统一的工程质量门禁（ESLint / Prettier / Stylelint / 类型检查 / 依赖基线守卫），提交前须全绿。
-- 请以审阅 AI 生成代码的心态使用本仓库——欢迎通过 Issue / PR 指出问题与可改进之处。
-
-## 界面预览
-
-![首页仪表盘](./screenshot/dashboard.png)
-
-| 菜单管理                                      | 操作日志                                    |
-| --------------------------------------------- | ------------------------------------------- |
-| ![菜单管理](./screenshot/menu-management.png) | ![操作日志](./screenshot/operation-log.png) |
-
-| 代码生成                                     | 个人中心                              |
-| -------------------------------------------- | ------------------------------------- |
-| ![代码生成](./screenshot/code-generator.png) | ![个人中心](./screenshot/profile.png) |
-
-## 功能特性
-
-| 模块       | 能力                                                                                                                                                                                                                             |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 登录鉴权   | 账号密码登录、图形验证码、JWT 双 Token（access 2h / refresh 7d）、无感刷新、登出即时失效（Redis 黑名单）、登录频率限制、账号禁用强制下线                                                                                         |
-| 权限管理   | RBAC 三段式（用户—角色—菜单）+ **数据权限**（数据范围：全部 / 自定义部门 / 本部门及以下 / 仅本人）；菜单树 → 动态路由；按钮级 `v-permission`                                                                                     |
-| 用户管理   | 分页查询、增删改、启用 / 禁用、重置密码、分配角色、头像上传、部门归属                                                                                                                                                            |
-| 角色管理   | 角色 CRUD、菜单授权（权限树勾选）、数据范围设置、编码唯一校验                                                                                                                                                                    |
-| 菜单管理   | 树形表格 CRUD、目录 / 菜单 / 按钮三类、图标选择、排序、显隐、路由与组件路径、权限标识                                                                                                                                            |
-| 部门管理   | 组织树 CRUD、上级部门选择、防成环校验、删除保护                                                                                                                                                                                  |
-| 字典管理   | 字典类型 + 字典项两表；类型编码创建后不可改；内置字典保护；业务侧 `useDict` 缓存取数                                                                                                                                             |
-| 参数管理   | 单值可调的系统参数；键名创建后不可改；内置参数禁删                                                                                                                                                                               |
-| 日志管理   | 登录日志 / 操作日志 / HTTP 访问日志；条件筛选 + 导出 + 单条 / 多选删除；自动归档 + 按保留天数清理                                                                                                                                |
-| 文件管理   | 多文件上传、哈希秒传预检、按扩展名分目录存储、类型 / 大小白名单、列表多条件筛选、下载、删除、静态访问（鉴权 + 防盗链 + 图片按需缩放）                                                                                            |
-| 代码生成   | 读取数据表结构 → 预览 → 生成前后端 CRUD 骨架（下载 ZIP 或写入项目目录，含 Prisma model 与 NestJS 模块接线）                                                                                                                      |
-| 接口文档   | `GET /api/docs` 扫描控制器自动生成接口清单（方法 / 路径 / 权限码 / 说明）；前端「接口文档」页按模块检索浏览                                                                                                                      |
-| 通知中心   | 站内通知：导航栏未读数、列表查询、标记已读 / 全部已读；按接收人隔离                                                                                                                                                              |
-| 在线用户   | 在线会话列表（按 sid 去重，刷新令牌不会翻倍）、强制下线（写入 Redis 黑名单，旧令牌立即失效）                                                                                                                                     |
-| 系统监控   | CPU（整体 / 分核，cgroup 配额感知）、内存、磁盘、系统负载、进程；**网络活动**（上下行速率、累计流量、错误 / 丢包）。网络口径：Linux 读 `/proc/net/dev`（与采样同频 3s），Windows 走网卡统计（15s，因需起子进程），均排除环回网卡 |
-| 仪表盘     | 统计卡片、近 7 日登录趋势、操作类型分布、各角色用户数（ECharts）                                                                                                                                                                 |
-| 个人中心   | 修改资料、修改密码（旧密码校验）、更换头像                                                                                                                                                                                       |
-| 多语言     | vue-i18n 中 / 英 双语，导航栏切换；语言包 key 由 `npm run guard:locale` 门禁对齐（缺 key / 占位符不一致直接拦截）                                                                                                                |
-| 布局与体验 | 侧边栏折叠、面包屑、标签页（tagsView）、keep-alive、暗黑模式、移动端响应式、403 / 404 / 500 错误页                                                                                                                               |
-
-## 「短句」业务功能
-
-在基座之上实现的产品侧能力（后端 `api/src/modules/client/*` + 「短句」运营页面 + 两个用户端）：
-
-| 模块       | 能力                                                                                                                                                             |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 刷题       | 视觉场景闪卡：看中文 → 默写英文 → 3D 翻转看答案 → 回车下一题。两种作答模式（默写 / 拼词打乱词块），切换模式沿用当前题；不做滑动                                  |
-| 判分与复习 | **服务端权威**判分（大小写与首尾标点归一化、支持等价表达）；8:2 新题/复习混抽 + 防重窗口；答错当天复现、答对按复习等级递进；**防重放**（重复提交只判分不发经验） |
-| 场景闪卡   | 14 类生活场景；每日 00:30 定时生成（生题 → 优化 → 审核 → 生图四段式，生题与生图并行），配图统一**扁平卡通插画**风格，转 webp ≤1280 入库；题目就绪才下发          |
-| 成长体系   | XP + CEFR 六级（A1~C2）；18 枚成就（坚持 / 行为两类）；场景探索地图（按已练句子解锁）；每日经验上限防刷                                                          |
-| 每日句签   | 完成每日目标领取当日 AI 句签闪卡，可回看、可设为主页背景                                                                                                         |
-| AI 拓展    | 流式「场景造句」（SSE，不用 EventSource）与「词根拆解」；按账号每日额度；输出退化时回退原文并重试                                                                |
-| 打卡       | 连续打卡与打卡海报（前端 html2canvas 生成，图片同源）                                                                                                            |
-| 反馈闭环   | 单题举报（题目/翻译/图片/其他）→ 后台处理留痕                                                                                                                    |
-| 用户端 Web | Nuxt 4 SSR + `@nuxt/ui`；令牌 Cookie + localStorage 双写（SSR 守卫可读）；SEO（sitemap / robots / og）；亮暗主题；私有页禁止抓取                                 |
-| 用户端 App | Flutter：与 Web **同源同契约**、交互按移动端重做（底部四 Tab + 七个底部弹窗）；**零新增运行时依赖**（彩带/极光/等级环等动效全自绘）                              |
-| 运营后台   | 题库管理（含**单题重新生图**）、场景分类、句签与词根、客户端用户与成长详情、举报处理、AI 调用日志与汇总、数据分析                                                |
-
-> 三端共同遵守同一条红线：**经验与判分只由后端按真实事件发放，客户端只上报「发生了什么」**，
-> 幂等键 + 每日上限双闸门，杜绝刷量。
-
-## 技术栈
-
-| 层             | 技术                                                                                                                                                                       |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 前端框架       | Vue 3.5 + Vue Router 5 + Pinia 4（`pinia-plugin-persistedstate`）                                                                                                          |
-| 前端 UI / 生态 | Element Plus 2.14 + Tailwind CSS 4.3 + `bootstrap-icons` + ECharts 6 + axios + dayjs + vue-i18n 11 + `@vueuse/core` + `lodash-es` + nprogress                              |
-| 前端工程       | Vite 8 + TypeScript 5.9 + vue-tsc；`unplugin-auto-import` + `unplugin-vue-components` 按需引入；`vite-plugin-compression2` 构建期 gzip / brotli 压缩                       |
-| 后端框架       | NestJS 12 + TypeScript（纯 ESM，Express 5 适配层）                                                                                                                         |
-| 后端数据层     | Prisma 7 + `@prisma/adapter-mariadb`（driver adapter 提供运行期连接；CLI 连接串见 `prisma.config.ts`）                                                                     |
-| 后端能力       | jose（JWT）+ @node-rs/bcrypt（口令）+ class-validator / class-transformer（校验）+ multer（上传）+ sharp（图片处理）+ redis（官方 node-redis：验证码 / 黑名单 / 限流）     |
-| 数据库 / 缓存  | MySQL 8.x（库 `ly_admin`，utf8mb4）；Redis（可选，留空 `REDIS_HOST` 即降级：验证码跨实例共享、黑名单、限流失效）                                                           |
-| 工程规范       | ESLint 10 + oxlint 1.88（后端）+ Prettier 3.9 + Stylelint 17 + husky 9 + lint-staged 17 + commitlint 21 + cz-git                                                           |
-| 用户端（Web）  | Nuxt 4（SSR）+ `@nuxt/ui` 4 + Tailwind 4 + Pinia 4 + `@vueuse/nuxt`；`@nuxt/icon` 构建期把用到的 lucide 图标打进静态包；`@nuxtjs/seo` 负责 sitemap / robots / og           |
-| 移动端         | Flutter 3.47（stable，Dart 3.13）+ Riverpod + Dio + go_router；`flutter analyze` / `flutter test` 门禁。**主要功能已完成、可日常使用**（刷题 / 语句库 / 成长 / AI / 句签） |
-
-> 代码规范由 ESLint / oxlint / Prettier / Stylelint 统一约束，提交信息由 commitlint 校验，均由 husky 钩子在提交前自动拦截。
-
-## 目录结构
-
-```
-short-sentence/
-├─ api/                      # 后端工程（NestJS 12 + Prisma 7，含 admin 中后台 + client 用户端两套接口域）
-├─ admin/                    # 中后台前端（Vue3 + Vite + Element Plus，即 ly-admin-web）
-├─ client-web/               # 「短句」用户端 Web（Nuxt 4 + @nuxt/ui + Tailwind，规范见 docs/client-nuxt-规范.md）
-├─ client-android/           # 「短句」App（Flutter，主要功能已完成；详见 client-android/README.md）
-├─ client-miniapp/           # 「短句」微信小程序（原生 WXML + TypeScript，共享同一套 /api/client/*；规范见 docs/miniapp-规范.md）
-├─ deploy/                   # Docker 部署（compose / Dockerfile / nginx 示例）
-├─ docs/                     # 代码开发规范与 Git 提交规范（本项目规范的事实来源）
-├─ knowledge/                # LYAdmin 基座历史规范（部分内容已被 docs/ 取代；其中目录名已更名为 api/admin）
-├─ .husky/                   # Git Hooks（pre-commit / commit-msg / pre-push）
-├─ scripts/                   # 工程门禁脚本：deps-guard（依赖基线）/ check-tracked-imports（导入可解析）/ check-locale-keys（语言包）/ check-native-scrollbar（禁滚动条）/ check-wrapped-components（封装组件）/ db-backup（数据库备份）
-├─ package.json               # 根脚本：lint / format / commit / dev（有序启动）
-├─ eslint.config.mjs          # ESLint flat config（覆盖 admin + api + client-web + client-miniapp）
-├─ .prettierrc.json           # Prettier 规则
-├─ .stylelintrc.json          # Stylelint 规则
-├─ commitlint.config.cjs      # 约定式提交校验规则
-├─ .czrc                      # cz-git 交互式提交配置
-├─ lint-staged.config.cjs     # 暂存区分派 lint / format
-├─ LICENSE                    # MIT
-└─ README.md
-```
-
-**前端 `admin/src`**
-
-```
-admin/src/
-├─ api/          # axios 实例(request.ts) + 各模块接口(auth/user/role/menu/dept/dict/config/log/file/gen/dashboard/profile/docs/notice/monitor)
-├─ assets/       # 静态资源
-├─ components/   # 通用组件：BasicDialog / ColumnSettings / ErrorPage / IconPicker / MenuTree / Pagination / SearchForm
-├─ directives/   # v-permission 按钮权限指令及注册
-├─ composables/  # 组合式复用逻辑（useTable / useTheme / useResponsiveSize / useDict）
-├─ layout/       # 主布局（AppMain / Navbar / Sidebar / TagsView）
-├─ locales/      # 语言包（zh-CN / en-US，key 由 guard:locale 校验）
-├─ router/       # 路由实例 / 静态路由表 / 全局守卫
-├─ store/        # Pinia（user / permission / app / tagsView / notice）
-├─ styles/       # index.css（Tailwind v4 入口 + @theme 令牌）/ element.scss（EP 覆盖）
-├─ types/        # 全局类型 / 接口 DTO / 路由 meta
-├─ utils/        # auth / format / permission / validate / echarts(按需注册) / chartTheme(图表配色与约定) / element(命令式 API 桶) 等
-├─ views/        # 页面：home / login / system（user、role、menu、dept、dict、config、notice）/ monitor（online、server）/ log / files / profile / tool / docs / redirect
-├─ App.vue       # 根组件
-└─ main.ts       # 入口：样式引入顺序、注册 Pinia/Router/指令
-```
-
-**后端 `api/`**
-
-```
-api/
-├─ prisma/
-│  ├─ schema/                 # 数据模型（目录式 schema，按域拆分；/// 是库内 COMMENT 的唯一来源）
-│  │  ├─ base.prisma          #   公共约定 + generator + datasource
-│  │  ├─ dict-config.prisma   #   字典类型 / 字典项 / 系统参数
-│  │  ├─ file.prisma          #   文件管理
-│  │  ├─ generated.prisma     #   代码生成器注入区（[GEN-ANCHOR]，勿手工放业务模型）
-│  │  ├─ log.prisma           #   登录 / 操作 / HTTP 访问日志
-│  │  └─ system.prisma        #   用户 / 角色 / 菜单 / 部门 + 三张关联表
-│  └─ seed.ts                 # CLI 种子（npm run seed）
-├─ scripts/
-│  ├─ prisma-comments.ts      # 把 schema 的 /// 同步为数据库表/字段 COMMENT
-│  ├─ gen-api-docs.mjs        # 扫描控制器生成接口文档数据（docs:gen / build 的 prebuild）
-│  └─ update-ip2region.ts     # 下载 / 校验 / 原子替换 IP 归属地数据文件
-├─ src/
-│  ├─ common/                 # 公共层（按职责分组）：config 配置常量 / utils 工具 / exception 异常 /
-│  │                          #   http 适配与响应 / auth 鉴权体系 / log 日志 / file 文件 / ip 归属地 / redis
-│  ├─ modules/                # 业务模块（各含 module / controller / service / dto）：
-│  │                          #   auth / menu / users / roles / depts / dict / config /
-│  │                          #   dashboard / gen / files / profile / logs / notice / monitor / docs / health
-│  ├─ prisma/                 # PrismaModule / PrismaService（driver adapter）/ seed.service（启动即幂等种子）
-│  ├─ generated/              # Prisma Client 生成产物（提交入库，勿手改）
-│  ├─ app.module.ts           # 根模块（全局守卫 / 拦截器 / 过滤器装配）
-│  └─ main.ts                 # 入口（响应适配器、全局管道、静态资源托管）
-├─ test/                      # vitest 单测（13 个 spec）+ e2e（冒烟 / 契约快照，需本地 MySQL）
-├─ prisma.config.ts           # Prisma CLI 的连接串与 schema 路径
-└─ package.json
-```
-
 ## 快速开始
 
-### 环境要求
+### 1. 环境
 
-| 项      | 要求                                                     |
-| ------- | -------------------------------------------------------- |
-| Node.js | >= 24.0.0（验证于 v24.x）                                |
-| npm     | >= 10                                                    |
-| MySQL   | 8.x 运行中，需提前创建数据库 `ly_admin`（utf8mb4）       |
-| Redis   | 可选。用于验证码共享、登出黑名单与登录限流；未配置时降级 |
-
-### 1. 准备数据库
-
-```sql
-CREATE DATABASE IF NOT EXISTS `ly_admin`
-  DEFAULT CHARACTER SET utf8mb4
-  DEFAULT COLLATE utf8mb4_general_ci;
-```
-
-> 表结构由 Prisma 管理：Prisma 7 不提供运行时 DDL，首次需执行一次 `npm run prisma:push` 建表；
-> 种子数据在每次服务启动时**幂等**执行，也可用 `npm run seed` 手动执行。
+- Node.js >= 24、npm（仓库 `.npmrc` 使用 npmmirror 镜像）
+- MySQL 8（需提前建库，库名与 `DB_NAME` / `DATABASE_URL` 一致）
+- Redis 7：可选但推荐；缺失时验证码共享、登录黑名单、限流、AI 配额等增强能力降级
+- 仅开发 Android 时需要 Flutter SDK；仅开发小程序时需要微信开发者工具
 
 ### 2. 安装依赖
 
-根依赖（工程规范工具 + husky 钩子）**务必先装**：
-
 ```bash
-npm install                   # 根目录（工程规范工具 + husky 钩子）
-cd api   && npm install       # 后端（NestJS 12 + Prisma 7）
-cd ../admin  && npm install   # 运营后台（Vue 3 + Vite）
-cd ../client && npm install   # 用户端 Web（Nuxt 4，postinstall 会跑 nuxt prepare）
+npm install                        # 根目录：规范工具 + husky 钩子（务必先装）
+cd api          && npm install     # 后端
+cd ../admin     && npm install     # 运营后台
+cd ../client-web && npm install    # 用户端 Web（postinstall 会跑 nuxt prepare）
+cd ../client-miniapp && npm install # 小程序（仅 typescript + miniprogram-api-typings）
+cd ../client-android && flutter pub get
 ```
 
-> 只做后端 + 运营后台时，`client-web/` 可以先不装；移动端另需本机 Flutter SDK（`cd client-android && flutter pub get`）。
+只做后端 + 运营后台时可以跳过 `client-web/` 与移动端依赖。
 
-### 3. 配置环境变量
+### 3. 配置
 
 ```bash
 cd api
 cp .env.example .env
 ```
 
-至少需要改两处：
+必须修改：
 
-- `DB_*`：数据库连接信息。
-- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`：**必填且必须互不相同**，缺失或为空将拒绝启动。生成方式：
+- `DB_*` / `DATABASE_URL`：`.env.example` 默认库名是 `ly_admin`，本地开发实际使用 `short_sentence`；以你自己 `.env` 的配置为准，建库名必须一致。
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`：必填、互不相同，缺失或为空后端拒绝启动。生成：`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`。
 
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+可选：AI 上游密钥（`AI_*`）缺失只禁用 AI 功能，不阻断启动；邮件（腾讯云 SES）凭证与模板在后台「邮件设置」写入 `sys_config`，不走环境变量。完整变量清单以 `api/.env.example` 为准。
 
-完整变量清单见 [环境变量](#环境变量)。
-
-### 4. 同步表结构并写入种子数据
+### 4. 建表与种子
 
 ```bash
 cd api
-npm run migrate:deploy    # 应用 prisma/migrations 下的全部迁移（首次必执行；改表必须同步补 migration）
-npm run prisma:migrations:check  # 门禁：全新影子库重放迁移后与 schema diff 必须为空（pre-push 也会跑）
-npm run prisma:comments   # 把 schema 里的 /// 文档注释同步为表/字段 COMMENT（幂等）
-npm run seed              # 写入默认数据（可选：服务启动时也会自动幂等执行）
+npm run migrate:deploy             # 应用 prisma/migrations 下全部迁移（首次必执行）
+npm run prisma:migrations:check    # 影子库重放迁移后与 schema diff 必须为空
+npm run prisma:comments            # 把 schema 的 /// 注释同步为库内 COMMENT（幂等）
+npm run seed                       # 可选：服务启动也会幂等执行种子
 ```
 
-> 改表**必须同步补 migration**（`prisma migrate dev` 或手写 migration.sql），不要只 `db push`：
-> 影子库只重放 migrations，push 出来的表在全新服务器上不存在，服务会因缺表直接起不来。
-> `guard:migrations` 会在本地 push 前拦截这种遗漏。
-> Prisma 不会把 schema 的 `///` 注释写进数据库，
-> 表/字段 COMMENT 由 `npm run prisma:comments` 负责落库——它从 `prisma/schema/` 下各文件的 `///` 生成 DDL，
-> 幂等可重复执行，改完注释或同步完表结构跑一次即可。用 `npm run prisma:comments:check` 可检查
-> 库内注释是否漂移（有差异时退出码 1，可用于 CI）。这些注释是运维与代码生成器的数据源。
+> 表结构变更必须同时改 `prisma/schema/*.prisma` 并补 `migration.sql`，**不要只用 `db push`**。
+> `schema` 改了没补迁移，全新部署会缺表/缺列，接口直接 500；`prisma:diff:check` 与提交前门禁会拦截。
 
 ### 5. 启动
 
 ```bash
-# 根目录：有序启动后端与 admin 中后台（后端 :3000，admin :5173）
-npm run dev
-
-# 需要一并启动「短句」用户端时（client-web :3001）
-npm run dev -- --client
+npm run dev                 # 后端 :3000 + 运营后台 :5173（后端就绪后才起前端）
+npm run dev -- --client     # 再加用户端 Web :3001
 ```
 
-> **三端端口互不重叠**：api `3000`、admin `5173`、client `3001`。
-> Nuxt 默认端口也是 3000，与后端硬冲突（且 devProxy 会把 `/api` 代理回自己），
-> 故 `client-web/nuxt.config.ts` 已固定为 3001 并开启 `strictPort`；改端口时须同步
-> `api/.env` 的 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`，否则接口跨域、图片被判外链。
+或分别启动：`npm run dev:api`、`npm run dev:web`、`npm run dev:client`。
 
-`npm run dev` 由 `scripts/dev.mjs` 编排（零第三方依赖），**保证前端一定在后端就绪之后才启动**：
+- 运营后台：<http://localhost:5173>
+- 用户端 Web：<http://localhost:3001>
+- 接口根：<http://localhost:3000/api>；探活 `/api/health/live`，含数据库检查的就绪探针 `/api/health/ready`
 
-1. 先探 `GET /api/health/live`——已有后端在跑就直接复用，只起前端（顺带避开端口占用报错）；
-2. 否则拉起 `nest start --watch`，轮询健康检查直到 200（进程已监听、路由已挂载）才继续；
-3. 前端 vite 端口是 `strictPort`，被占用必失败，故动工前先查，报错直接带 PID；
-4. 任一子进程退出即整棵进程树回收；Ctrl+C 干净退出，复用的后端不会被误杀。
+后端返回的图片地址是 `/static/...` 相对路径，两个前端的 dev proxy 都同时代理 `/api` 和 `/static`，不可省略后者。
 
-```bash
-npm run dev -- --fresh   # 忽略已在运行的后端，强制新起一个
-```
+默认超管账号 `admin`，初始口令取 `SEED_ADMIN_PASSWORD`，未配置时为开发默认口令（生产必须显式设置并首次登录后改密）。
 
-或分别启动：
+## 当前业务能力
 
-```bash
-npm run dev:api       # 后端 http://localhost:3000（等价 cd api && npm run start:dev）
-npm run dev:web       # admin 中后台 http://localhost:5173（等价 cd admin && npm run dev）
-npm run dev:client    # 「短句」用户端 http://localhost:3001（等价 cd client && npm run dev）
-```
+### 核心学习
 
-启动后可访问：
+- **题库与配图**：14 类生活场景；每日定时生成（AI 生题 → 审核 → 生图 → webp），题目就绪才下发；无配图题不进任何抽题池。
+- **作答**：看中文 → 输英文 → 后端权威判分 → 3D 翻转看答案；支持默写 / 拼词 / 盲听三种模式，切模式重新抽题；重复提交只判分不发经验。
+- **间隔重复**：答对按 1/3/7/15/30 天递进，答错回到当天；8:2 新题/复习混抽，防重窗口 10；今日复习计划按逾期优先展示，与一键开刷同口径。
+- **记忆可视化**：记忆健康页（待复习分布 / 遗忘曲线）、记忆星系；近 30 天错题按词自动归类的「弱点词根」报告。
+- **收藏与历史**：收藏夹（支持 Anki 导出）、学习记录、复习池，均支持筛选与分页。
 
-- admin 中后台：<http://localhost:5173>
-- 「短句」用户端：<http://localhost:3001>
-- 健康检查（探针）：`GET http://localhost:3000/api/health/live`（只证明进程可响应）、
-  `GET http://localhost:3000/api/health/ready`（探测 MySQL / Redis，MySQL 不可用返回 503）
-- 根探活：`GET http://localhost:3000/api`（返回服务名、状态、版本、uptime）
+### 成长与留存
 
-> 两个前端 dev server 都把 `/api`、`/static` 代理到 `http://localhost:3000`，开发期同源、无跨域；
-> `/static` 不可省——后端返回的图片地址是 `/static/...` 相对路径，不代理会 404（打卡海报也会因图裂失败）。
+- XP + CEFR 六级、33 枚成就、等级环与经验规则全部服务端发放；每日经验上限防刷。
+- 7 种排行榜（今日 / 近 7 天 / 近 30 天 × 答题数、答对数 + 累计打卡），60 秒缓存，前 100 竞赛排名。
+- 连续打卡与打卡海报、每日句签、学习热力图、每周学习报告（站内 + 可选邮件订阅，默认关闭）。
+- 留存六件套：间隔重复、记忆星系、弱连接组队、AI 私教、句子接龙（UGC 三闸审核）、情景闯关。
+- 每日学习提醒邮件与后台邮件设置（腾讯云 SES）；客户端公告、产品反馈、单句举报各有独立通道。
 
-## 默认账号
+### 运营后台
 
-| 账号    | 密码     | 角色                        |
-| ------- | -------- | --------------------------- |
-| `admin` | `123456` | 超级管理员（`super_admin`） |
+系统管理（用户 / 角色 / 菜单 / 部门 / 字典 / 参数）、三类日志、文件管理、代码生成器、接口文档、在线用户与系统监控；
+业务管理覆盖题库与单题重新生图、场景分类、句签与词根、客户端用户与成长详情、排行榜 / 接龙 / 闯关 / 小队、反馈与举报、AI 调用日志与预算、邮件设置。
 
-首次启动会自动写入上述超管账号、默认角色与完整菜单树。
+> 注意：微信支付 / 会员付费功能曾开发后被整体撤销，当前代码库**没有支付模块**。
 
-> **安全提示（部署前必读）**：`123456` 是种子内置的默认弱口令。**生产部署必须显式设置
-> `SEED_ADMIN_PASSWORD`** —— 留空时即便 `NODE_ENV=production` 也只会打一条 warn，
-> 超管仍是这个默认口令（它甚至不满足口令策略，只因种子直写哈希才绕过校验）。
-> 仓库是公开的，等于把口令写在明面上；首次登录后请立即改密。
+## 后端约定
 
-## 可用脚本
+- 分层：`module → controller → service`；controller 不碰 `PrismaService`，DTO 必须有 class-validator 装饰器。
+- 响应：成功恒 200 `{ code, message, data }`；分页 `{ list, total, page, pageSize }`；BigInt 出参转 `Number`、入参转 `BigInt()`。
+- 鉴权：后台走 `sys_user` + `tokenType=admin` + RBAC/数据权限；客户端走 `client_user` + `tokenType=client`，两套彻底隔离，黑名单也带 scope。
+- Prisma：目录式 schema 按文件名字典序合并，首行 `// use prisma-next`；列名 snake_case；`///` 注释经 `prisma:comments` 落库。
+- 新增 `@Injectable()` 服务必须登记到 `providers` / `exports`，跨模块共用放全局 `CommonModule`；漏登记只有启动或 e2e 会暴露。
+- AI：Provider 与业务解耦，Semaphore + 指数退避，调用落 `ai_call_log`；`AiBudgetService` 双闸预算，超额不写日志；默认每人每日额度 `10` 次（环境变量 `AI_DAILY_QUOTA`）。
+- 定时任务统一在 `modules/task/task.registry.ts` 注册（含执行体、cron、启停），后台「定时任务」页可见；新增端点后必须执行 `npm run docs:gen`。
+- 启动级验证：`npm run build` 后用 `Test.createTestingModule({ imports: [AppModule] }).compile()` 抓依赖注入错误；真实库冒烟用 dist 手工 new Service。
 
-### 根目录
+## 各端开发要点
 
-| 命令                        | 说明                                                             |
-| --------------------------- | ---------------------------------------------------------------- |
-| `npm run dev`               | 有序启动后端与 admin（后端就绪后才起前端，见 `scripts/dev.mjs`） |
-| `npm run dev -- --client`   | 同上，并额外启动「短句」用户端 client-web（:3001）               |
-| `npm run dev:api`           | 仅启动后端                                                       |
-| `npm run dev:web`           | 仅启动 admin 中后台                                              |
-| `npm run dev:client`        | 仅启动「短句」用户端                                             |
-| `npm run lint`              | 全仓 ESLint 检查（`--max-warnings 0`）                           |
-| `npm run lint:fix`          | 全仓 ESLint 自动修复                                             |
-| `npm run format`            | 全仓 Prettier 格式化                                             |
-| `npm run format:check`      | 全仓 Prettier 格式校验（不写文件）                               |
-| `npm run stylelint`         | 全仓 Stylelint 检查                                              |
-| `npm run stylelint:fix`     | 全仓 Stylelint 自动修复                                          |
-| `npm run guard:deps`        | 校验各端 `package.json` 的运行时依赖与基线一致                   |
-| `npm run guard:deps:update` | 依赖基线有变更时，先生成新基线再提交                             |
-| `npm run guard:imports`     | 校验已入库文件的相对导入可解析（干净克隆可构建）                 |
-| `npm run guard:locale`      | 校验 zh-CN / en-US 语言包 key 与占位符一致                       |
-| `npm run guard:scrollbar`   | 校验 `admin/src` 未手写原生滚动条（滚动统一走 `el-scrollbar`）   |
-| `npm run guard:components`  | 校验弹窗/分页统一走封装组件（BasicDialog / Pagination）          |
-| `npm run guard:migrations`  | 影子库重放迁移后与 schema diff 必须为空（防「改表没写迁移」）    |
-| `npm run commit`            | cz-git 交互式生成规范提交                                        |
-| `npm run prepare`           | 装配 husky 钩子（`npm install` 后自动执行）                      |
+**admin（Vue 3）**：`script setup` + TS，组件/API 自动导入；Element Plus 命令式 API 统一走 `src/utils/element` 桶，纵向滚动一律 `el-scrollbar`（禁止 `overflow-y-auto`），弹窗走 `BasicDialog`、分页走 `Pagination`。
 
-### 前端 `admin/`
+**client-web（Nuxt 4）**：`app.vue` 是 `<UApp><NuxtLayout><NuxtPage/></NuxtLayout></UApp>` 唯一入口，外壳在 `layouts/default.vue`，认证页走 `layouts/auth.vue`，禁止 `definePageMeta({ layout: false })`；令牌用 Cookie + localStorage 双写供 SSR 读取；私有页同步加入 `nuxt.config.ts` 的 `robots.disallow` 与 `sitemap.exclude`；`nuxt build` **不做类型检查**，必须单独跑 `npm run type-check`。
 
-| 命令                 | 说明                                |
-| -------------------- | ----------------------------------- |
-| `npm run dev`        | Vite 开发服务（:5173）              |
-| `npm run build`      | 类型检查 + 生产构建                 |
-| `npm run build:only` | 跳过类型检查，直接构建              |
-| `npm run preview`    | 本地预览构建产物                    |
-| `npm run type-check` | 仅类型检查（`vue-tsc --noEmit`）    |
-| `npm run test`       | vitest 单测（store / 权限等纯逻辑） |
+**client-miniapp**：页面四件套（ts/json/wxml/wxss）；`npm run check` 校验事件绑定、标签闭合、`wx:key` 与样式类；`utils/env.ts` 配置接口基址，真机预览改为电脑局域网 IP。
 
-### 用户端 `client-web/`
+**client-android**：页面为 `lib/pages/`，控制器在 `lib/state/`，API 与模型在 `lib/api/`；动效取 `Motion` 令牌，Widget 测试须设 `Motion.loopAnimations = false`；模拟器接口基址默认 `10.0.2.2:3000/api`，对外分发必须 `--dart-define=API_BASE_URL=https://<域名>/api` 重新构建。
 
-| 命令                 | 说明                                                        |
-| -------------------- | ----------------------------------------------------------- |
-| `npm run dev`        | Nuxt 开发服务（:3001，`strictPort`）                        |
-| `npm run build`      | 生产构建（SSR 产物在 `.output/`）                           |
-| `npm run preview`    | 本地预览构建产物                                            |
-| `npm run type-check` | 类型检查（`nuxt typecheck`；**`nuxt build` 不做类型检查**） |
-| `npm run test`       | vitest 单测（答案归一化 / AI 输出解析等纯逻辑）             |
+## 常用脚本
 
-### 移动端 `client-android/`
-
-| 命令                | 说明                                          |
-| ------------------- | --------------------------------------------- |
-| `flutter run`       | 连真机/模拟器运行（验证性能请加 `--release`） |
-| `flutter analyze`   | 静态检查（CI 门禁）                           |
-| `flutter test`      | Widget / 单元测试（CI 门禁）                  |
-| `flutter build apk` | 打包 Android 安装包                           |
-
-### 微信小程序 `client-miniapp/`
-
-| 命令                 | 说明                                                           |
-| -------------------- | -------------------------------------------------------------- |
-| `npm install`        | 仅装开发期类型依赖（`typescript` + `miniprogram-api-typings`） |
-| `npm run type-check` | 类型检查（`tsc --noEmit`，CI 门禁）                            |
-| `npm run check`      | 静态自检：页面四件套 / 事件绑定 / WXML 闭合 / `wx:key` / 图标  |
-
-用微信开发者工具「导入项目」选择 `client-miniapp/` 目录即可预览；
-开发期需在「详情 → 本地设置」勾选**不校验合法域名**，并保证后端 `:3000` 已启动。
-接口基地址见 `client-miniapp/utils/env.ts`（真机预览请改为电脑局域网 IP）。
-
-### 后端 `api/`
-
-| 命令                            | 说明                                                       |
-| ------------------------------- | ---------------------------------------------------------- |
-| `npm run start:dev`             | Nest watch 模式热重载（:3000）                             |
-| `npm run start:debug`           | 同样的 watch 模式，附带 Node 调试端口                      |
-| `npm run build`                 | 编译到 `dist/`                                             |
-| `npm run start:prod`            | 运行编译产物 `node dist/main`                              |
-| `npm run migrate:dev`           | 生成并应用迁移（开发环境，产出的 SQL 需入库）              |
-| `npm run migrate:deploy`        | 应用已有迁移（生产 / 容器）                                |
-| `npm run migrate:status`        | 查看迁移状态                                               |
-| `npm run prisma:push`           | 建表 / 同步表结构（首次必执行）                            |
-| `npm run prisma:comments`       | 把 schema 的 `///` 同步为库内表 / 字段 COMMENT             |
-| `npm run prisma:comments:check` | 检查库内注释是否漂移（有差异退出码 1）                     |
-| `npm run prisma:generate`       | 重新生成 Prisma Client                                     |
-| `npm run prisma:studio`         | 启动 Prisma Studio 可视化                                  |
-| `npm run docs:gen`              | 扫描控制器重新生成接口文档（`build` 的 prebuild 自动执行） |
-| `npm run ip2region:update`      | 下载 / 更新 IP 归属地数据文件（约 10MB，不入库）           |
-| `npm run seed`                  | 单独执行种子数据（幂等）                                   |
-| `npm run typecheck`             | 仅类型检查（`tsc --noEmit`）                               |
-| `npm run lint`                  | oxlint（type-aware）                                       |
-| `npm run test`                  | vitest 单元测试                                            |
-| `npm run test:e2e`              | vitest e2e 契约测试（需本地 MySQL；CI 与提交前建议跑）     |
+| 位置              | 命令                                                                                                                  | 说明                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| 根                | `npm run dev` / `npm run dev -- --client`                                                                             | 有序启动后端 + admin（+ 用户端 Web） |
+| 根                | `npm run lint` / `format:check` / `stylelint`                                                                         | 全仓规范检查                         |
+| 根                | `npm run guard:deps` / `guard:imports` / `guard:locale` / `guard:scrollbar` / `guard:components` / `guard:migrations` | 工程门禁                             |
+| 根                | `npm run check:miniapp` / `db:backup` / `db:drill`                                                                    | 小程序自检 / 数据库备份与恢复演练    |
+| `api/`            | `npm run typecheck` / `lint` / `test` / `test:e2e`                                                                    | 后端检查（e2e 需本地 MySQL + Redis） |
+| `api/`            | `migrate:deploy` / `migrate:status` / `prisma:diff:check` / `prisma:comments` / `docs:gen`                            | 迁移、结构门禁、注释同步、接口文档   |
+| `admin/`          | `npm run type-check` / `test` / `build`                                                                               | 后台检查与构建                       |
+| `client-web/`     | `npm run type-check` / `test` / `build`                                                                               | 用户端检查与构建                     |
+| `client-miniapp/` | `npm run type-check` / `check`                                                                                        | 小程序检查                           |
+| `client-android/` | `flutter analyze` / `flutter test` / `flutter build apk`                                                              | Android 检查与打包                   |
 
 ## 环境变量
 
-> **单一事实源**：模板以 `api/.env.example` 为准，逐项说明见
-> [后端开发规范/03-环境与配置](./knowledge/后端开发规范/03-环境与配置.md)。
-> 下表是「必填 + 高频」清单，新增变量请同步这三处（本表曾因三份清单并存而漂移）。
+以 `api/.env.example` 为唯一模板，高频项：
 
-### 后端 `api/.env`
-
-| 变量                                | 示例值                                        | 说明                                                                                                                                 |
-| ----------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `NODE_ENV`                          | `development`                                 | 运行环境                                                                                                                             |
-| `PORT`                              | `3000`                                        | 后端端口                                                                                                                             |
-| `DB_HOST` / `DB_PORT`               | `localhost` / `3306`                          | MySQL 主机 / 端口                                                                                                                    |
-| `DB_NAME` / `DB_USER`               | `ly_admin` / `root`                           | 数据库名 / 账号                                                                                                                      |
-| `DB_PASSWORD`                       | `your_password`                               | 数据库密码（改成实际值）                                                                                                             |
-| `DATABASE_URL`                      | `mysql://…`                                   | 可选。Prisma CLI 用的完整连接串（优先于 `DB_*` 拼装）                                                                                |
-| `DB_LOGGING`                        | `true`                                        | 是否订阅 Prisma 查询事件（慢 SQL 日志 `db-*.log`）                                                                                   |
-| `DB_CONNECTION_LIMIT`               | `10`                                          | 数据库连接池上限（1~100）                                                                                                            |
-| `JWT_ACCESS_SECRET`                 | `<32 字节随机 hex>`                           | accessToken 密钥（**必填**，无默认值）                                                                                               |
-| `JWT_REFRESH_SECRET`                | `<32 字节随机 hex>`                           | refreshToken 密钥（**必填**，须与上方不同）                                                                                          |
-| `JWT_ACCESS_EXPIRES_IN`             | `2h`                                          | accessToken 有效期                                                                                                                   |
-| `JWT_REFRESH_EXPIRES_IN`            | `7d`                                          | refreshToken 有效期                                                                                                                  |
-| `SEED_ADMIN_PASSWORD`               | 空                                            | 超管初始口令；留空用开发默认弱口令（production 打 warn 提示）                                                                        |
-| `CAPTCHA_ENABLED`                   | `true`                                        | 是否启用登录图形验证码                                                                                                               |
-| `CAPTCHA_TTL_MS` / `CAPTCHA_LENGTH` | `300000` / `4`                                | 验证码有效期（ms）/ 字符数                                                                                                           |
-| `TRUST_PROXY`                       | `1`                                           | 反向代理信任跳数（仅部署在代理后设置）                                                                                               |
-| `UPLOAD_DIR`                        | `uploads`                                     | 上传根目录（相对 `api/`）                                                                                                            |
-| `UPLOAD_MAX_SIZE`                   | `10485760`                                    | 单文件上限（字节，10MB）                                                                                                             |
-| `UPLOAD_MAX_COUNT`                  | `10`                                          | 单次最多文件数                                                                                                                       |
-| `UPLOAD_USER_QUOTA_MB`              | `512`                                         | 单用户累计上传配额（MB），`0` = 不限                                                                                                 |
-| `UPLOAD_CACHE_DIR`                  | `cache/images`                                | 图片缩放缓存目录（须位于 `UPLOAD_DIR` 之外）                                                                                         |
-| `UPLOAD_ALLOWED_REFERERS`           | `http://localhost:5173,http://localhost:3001` | 防盗链 Referer 白名单（逗号分隔；同源部署无需配置）                                                                                  |
-| `CORS_ORIGIN`                       | `http://localhost:5173,http://localhost:3001` | 允许的跨域来源（开发期含 admin :5173 与 client-web :3001）                                                                           |
-| `LOG_DIR`                           | `logs`                                        | 日志目录                                                                                                                             |
-| `LOG_ARCHIVE_DIR`                   | `logs/archive`                                | 归档根目录（默认 `<LOG_DIR>/archive`）                                                                                               |
-| `LOG_ARCHIVE_HOUR/MINUTE`           | `0` / `5`                                     | 日志归档时刻（本地时间）                                                                                                             |
-| `LOG_ARCHIVE_KEEP_SOURCE`           | `false`                                       | 归档后是否保留源 `.log`                                                                                                              |
-| `LOG_SLOW_SQL_MS`                   | `200`                                         | 慢 SQL 阈值（ms）                                                                                                                    |
-| `LOG_HTTP_RETENTION_DAYS`           | `7`                                           | HTTP 访问日志保留天数                                                                                                                |
-| `LOG_OPERATION_RETENTION_DAYS`      | `180`                                         | 操作日志保留天数                                                                                                                     |
-| `LOG_LOGIN_RETENTION_DAYS`          | `180`                                         | 登录日志保留天数                                                                                                                     |
-| `LOG_RETENTION_HOUR/MINUTE`         | `0` / `10`                                    | 保留清理触发时刻                                                                                                                     |
-| `LOG_RETENTION_ENABLED`             | `true`                                        | 是否启用日志保留清理                                                                                                                 |
-| `TAR_BIN`                           | `tar`                                         | 自定义 tar 可执行文件（默认取 PATH）                                                                                                 |
-| `IP2REGION_DB_PATH`                 | `data/ip2region_v4.xdb`                       | IP 归属地离线库路径（文件缺失时静默降级为空串）                                                                                      |
-| `REDIS_HOST` / `REDIS_PORT`         | `127.0.0.1` / `6379`                          | Redis 地址（留空 `REDIS_HOST` 即视为不启用）                                                                                         |
-| `REDIS_PASSWORD` / `REDIS_DB`       | 空 / `0`                                      | Redis 密码 / 库号                                                                                                                    |
-| `WEB_DIST_DIR`                      | `web`                                         | 前端产物托管目录（相对 `api/`；不存在则跳过托管）                                                                                    |
-| `SECURITY_HSTS`                     | 跟随 production                               | 是否下发 HSTS 头（默认 `NODE_ENV=production` 时开启）                                                                                |
-| `CSP_POLICY`                        | 空                                            | Content-Security-Policy 内容；留空不下发（SPA 需按实际配置）                                                                         |
-| `APP_VERSION` / `GIT_COMMIT`        | `dev` / 空                                    | 版本与提交号，出现在 `/api` 与 `/api/health/live` 响应里                                                                             |
-| `NET_DEV_PATH`                      | 空                                            | 网卡计数文件路径覆盖（默认 Linux 读 `/proc/net/dev`）。用于非 Linux 集成测试，或容器使用 host 网络命名空间时指向挂载进来的宿主机文件 |
-
-### 前端 `admin/.env.development` / `.env.production`
-
-| 变量                   | 示例值             | 说明                              |
-| ---------------------- | ------------------ | --------------------------------- |
-| `VITE_APP_TITLE`       | `蓝云后台管理系统` | 站点标题                          |
-| `VITE_API_BASE_URL`    | `/api`             | axios baseURL（走代理 / 同源）    |
-| `VITE_UPLOAD_BASE_URL` | `/static`          | 静态资源前缀                      |
-| `VITE_PORT`            | `5173`             | dev server 端口（仅 development） |
+| 变量                                                          | 说明                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `PORT`                                                        | 后端端口，固定 `3000`                                      |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | MySQL 连接（`DATABASE_URL` 可整体覆盖）                    |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`                    | 必填且互不相同                                             |
+| `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN`            | 默认 `2h` / `7d`                                           |
+| `SEED_ADMIN_PASSWORD`                                         | 种子超管口令，生产必须显式设置                             |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`                | 留空 `REDIS_HOST` 视为不启用并降级                         |
+| `CORS_ORIGIN` / `UPLOAD_ALLOWED_REFERERS`                     | 含 admin `:5173` 与 client-web `:3001`，图片防盗链依赖后者 |
+| `AI_DAILY_QUOTA`                                              | 每人每日 AI 调用额度，默认 `10`                            |
+| `UPLOAD_DIR` / `WEB_DIST_DIR`                                 | 上传与前端同源托管目录（相对 `api/`）                      |
+| `LOG_*` / `IP2REGION_DB_PATH` / `NET_DEV_PATH`                | 日志、IP 归属地、网卡统计（详见 `.env.example`）           |
 
 ## 部署
 
-### 方式一：同源部署（推荐）
+- **同源部署**：`cd admin && npm run build:only -- --outDir ../api/web --emptyOutDir`，后端启动时自动托管 `api/web/` 并对 SPA history 回退；产物目录可用 `WEB_DIST_DIR` 覆盖。
+- **分离部署**：前端静态服务器 + 后端独立进程；后端配置 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`，网关必须转发 `/api` 与 `/static`。
+- **用户端 Web**：SSR 常驻进程，`cd client-web && npm ci && npm run build && node .output/server/index.mjs`；服务端注入 `NUXT_API_INTERNAL_URL`（如 `http://api:3000/api`），`NUXT_PUBLIC_SITE_URL` 用于 canonical/sitemap/og。
+- **Android**：`cd client-android && flutter build apk --release`；正式包必须改 `lib/config/app_config.dart` 的接口基址并自带 `INTERNET` 权限。
+- **Docker**：`deploy/docker-compose.yml` 一条命令起 MySQL / Redis / 迁移 / API；部署环境变量模板见 `deploy/.env.example`。
 
-前端产物直接构建进后端目录，由后端一并托管：
+## CI 与提交前自检
 
-```bash
-cd admin
-# 产物必须落在 api/web/：后端按 path.resolve(ROOT_DIR, 'web') 读取（ROOT_DIR 即 api/），
-# 写到仓库根 web/ 会导致后端找不到产物、跳过静态托管。
-npm run build:only -- --outDir ../api/web --emptyOutDir
+`.github/workflows/ci.yml` 覆盖：`guards`（格式 / lint / 依赖基线 / 导入追踪 / 语言包 / 滚动条）、`api`（类型 / lint / 单测 / 迁移 / 结构 diff / 注释 / e2e）、`web`、`client`、`miniapp`、`android`、镜像构建与 compose 冒烟。
 
-cd ../api
-npm run build
-NODE_ENV=production node dist/main.js
-```
-
-- 后端启动时若 `web/` 存在，会自动托管该目录，并对前端 history 路由做 `index.html` 回退。
-- 产物目录可用 `WEB_DIST_DIR` 覆盖（相对 `api/`）。
-- 同源部署下静态资源的防盗链「同源放行」天然成立，无需配置 `UPLOAD_ALLOWED_REFERERS`。
-- 后端已内置响应压缩与静态缓存：构建产物优先返回 `.br` / `.gz`（1 年 immutable），上传文件缓存 30 天，`index.html` 每次校验；无需再为预压缩单独配置 Nginx。
-
-### 方式二：前后端分离部署
-
-- 前端产物部署到任意静态服务器 / Nginx。
-- 后端配置：`CORS_ORIGIN` 填前端地址；`UPLOAD_ALLOWED_REFERERS` 填前端 origin（否则 `/static` 静态资源会被判为外链 403）。
-- 前端 `VITE_API_BASE_URL` 指向后端地址（或由网关统一前缀）。
-
-> 生产环境建议将 `NODE_ENV=production`，并通过进程管理器（systemd / pm2 / 容器）托管；`UPLOAD_DIR`、`LOG_DIR`、`cache` 目录需保证可写与持久化。
-> 首次部署记得执行 `npm run prisma:push` 与 `npm run prisma:comments`（Prisma 7 不在启动时建表）。
-
-### 方式三：「短句」用户端（Nuxt SSR）
-
-用户端是**服务端渲染**应用，需要 Node 常驻进程（不是静态文件）：
+推送前建议本地跑：
 
 ```bash
-cd client
-npm ci
-npm run build                                  # 产物在 client-web/.output/
-NUXT_API_INTERNAL_URL=http://127.0.0.1:3000/api \
-NUXT_PUBLIC_SITE_URL=https://your-domain.com \
-node .output/server/index.mjs                   # 默认 :3000，可用 PORT 覆盖
+npm run format:check && npm run lint && npm run stylelint
+npm run guard:deps && npm run guard:imports && npm run guard:locale \
+  && npm run guard:scrollbar && npm run guard:components && npm run guard:migrations
+(cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
+(cd admin && npm run type-check && npm run test)
+(cd client-web && npm run type-check && npm run test)
+(cd client-miniapp && npm run type-check && npm run check)
+(cd client-android && flutter analyze && flutter test)
 ```
 
-> - `NUXT_API_INTERNAL_URL`：SSR 在服务端发请求，**相对路径 `/api` 走不通**，必须直连后端；
-> - `NUXT_PUBLIC_SITE_URL`：canonical / sitemap / og 的绝对地址来源，不配则运行时按请求头推断；
-> - 前端 nginx / 网关需把 `/api`、`/static` 转发到后端（`/static` 不可省，配图与海报都依赖它）。
-
-### Android App
-
-```bash
-cd client-android
-flutter build apk --release      # 产物：build/app/outputs/flutter-apk/app-release.apk
-```
-
-> 接口基址在 `client-android/lib/config/app_config.dart`（默认 `10.0.2.2` = 模拟器访问宿主机）。
-> 打包正式包前记得按实际后端域名修改；**正式包必须自带 `INTERNET` 权限**（Flutter 模板只给 debug/profile）。
-
-## 接口约定
-
-- **统一响应体**：成功 `{ "code": 200, "message": "success", "data": <T> }`；失败 `{ "code": <业务码>, "message": "<描述>", "data": null }`。
-- **分页**：请求 `{ page, pageSize }`；响应 `data = { list, total, page, pageSize }`。
-- **错误码**（节选）：`400` 参数校验失败 · `401` 未认证 / 账密错误 / 账号禁用 · `403` 无权限 · `404` 资源不存在 · `409` 数据冲突 · `500` 服务器错误。
-- **鉴权**：除登录 / 刷新令牌 / 验证码等公开接口外，均需在请求头携带 `Authorization: Bearer <accessToken>`。
-- **静态资源**：`GET /static/:filename`（启用防盗链与图片按需缩放）。
-
-接口清单以代码为准：后端各模块的 `src/modules/*/*.controller.ts`，前端调用见 `admin/src/api/*.ts`。
-
-在线接口文档：`GET /api/docs` 返回结构化接口清单（公开接口），前端「接口文档」页可视化检索浏览。
-清单由控制器源码自动生成（详见 [后端开发规范/14-接口文档](./knowledge/后端开发规范/14-接口文档.md)）。
-
-## 贡献指南
-
-欢迎提交 Issue 与 Pull Request。
-
-1. **环境**：按[快速开始](#快速开始)拉起项目；根目录 `npm install` 以装配 husky 钩子。
-2. **分支**：从 `main` 切出特性分支（命名 `feature/*` / `fix/*` / `hotfix/*`）。
-3. **编码**：遵循 [前端开发规范](./knowledge/前端开发规范/00-导读.md)、[后端开发规范](./knowledge/后端开发规范/00-导读.md) 与 [Git 提交规范](./knowledge/Git提交规范/00-导读.md)；提交信息使用 Conventional Commits（`npm run commit` 可交互生成）。
-4. **提交前自检**（务必全绿）：
-
-   ```bash
-   npm run format:check      # Prettier
-   npm run lint              # ESLint（--max-warnings 0）
-   npm run stylelint         # Stylelint
-   npm run guard:deps        # 依赖基线
-   npm run guard:locale      # 语言包 key / 占位符一致
-   npm run guard:scrollbar   # 没有手写原生滚动条
-   npm run guard:components  # 弹窗 / 分页封装
-   npm run guard:migrations  # migrations 与 schema 一致（也会在 pre-push 自动跑）
-   (cd api && npm run typecheck && npm run lint && npm run test && npm run test:e2e)
-   (cd admin && npm run type-check && npm run test)
-   (cd client-web && npm run type-check && npm run test)   # 注意：nuxt build 不做类型检查
-   (cd client-android && flutter analyze && flutter test)
-   ```
-
-5. **PR**：说明背景与改动点，关联相关 Issue，并确保上述检查通过。
-6. **推送**：本仓库是**双远端**（`origin` = Gitee，主远端；`github` = GitHub 镜像），
-   用 `git pushall` 一次推两边；fetch / pull 只走 `origin`。`pushall` 是本地别名，
-   新克隆后按 [02-分支与发布 §2.3](./knowledge/Git提交规范/02-分支与发布.md) 配一次。
-
-> 新增后端业务模块请遵循 NestJS 分层（module → controller → service → dto），数据访问统一走 `PrismaService`；
-> 表结构变更改 `prisma/schema/` 下对应的模型文件（按域分文件，见 base.prisma 的「文件划分」）后，
-> 依次执行 `npm run prisma:push` 与 `npm run prisma:comments`（后者把 `///` 同步为库内表/字段 COMMENT）。
+本仓库双远端：`origin` = Gitee（主），`github` = GitHub（镜像），提交后两边都要推。
 
 ## 常见问题
 
-**Q1：端口被占用（3000 / 5173）？**
-后端改 `api/.env` 的 `PORT`；前端改 `admin/.env.development` 的 `VITE_PORT`（`vite.config.ts` 为 `strictPort: true`，端口占用会直接报错而非自动切换）；同时同步 `vite.config.ts` 中 proxy 的 `target` 端口。
+**Q：JWT 相关错误导致启动失败？** `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` 必填且必须不同，见快速开始第 3 步。
 
-**Q2：启动即报 JWT 相关错误？**
-`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` 为**必填**且需互不相同。按[第 3 步](#3-配置环境变量)生成随机值填入 `api/.env`。
+**Q：服务起来了但接口 500 / 报缺表？** 先查 `cd api && npm run migrate:status` 是否有 pending 迁移，再 `npm run migrate:deploy`；不要先查编译。改了 schema 没补迁移是最常见原因。
 
-**Q3：数据库连不上（`ECONNREFUSED` / `Access denied` / `Unknown database`）？**
-确认 MySQL 已启动、`ly_admin` 库已创建；核对 `api/.env` 的 `DB_*`（或 `DATABASE_URL`）。库不存在时执行[第 1 步](#1-准备数据库)的建库 SQL。
+**Q：Redis 连接失败？** 主流程不阻断，验证码共享 / 黑名单 / 限流 / AI 配额会降级；本机没装 Redis 时属预期，装好并配置 `REDIS_HOST` 即恢复。
 
-**Q4：报缺表 / `Table 'ly_admin.xxx' doesn't exist`？**
-Prisma 7 不在启动时建表。执行 `cd api && npm run prisma:push`（表结构同步后如需恢复注释，再跑 `npm run prisma:comments`）。
+**Q：端口冲突？** api `3000`、admin `5173`、client-web `3001` 均固定并 `strictPort`；改端口须同步 `api/.env` 的 `CORS_ORIGIN` 与 `UPLOAD_ALLOWED_REFERERS`，以及前端 proxy 目标。
 
-**Q5：登录 / 鉴权正常，但登出黑名单、登录限流没生效？**
-这两项依赖 Redis。未配置 `REDIS_HOST` 时视为不启用，主流程不受影响但增强失效。需要时启动 Redis 并配置 `REDIS_*`。
+**Q：admin 改样式后门禁失败？** 纵向滚动必须用 `el-scrollbar`，弹窗用 `BasicDialog`，分页用 `Pagination`；门禁为 `guard:scrollbar` / `guard:components`。
 
-**Q6：Tailwind 样式不生效？**
-本项目 Tailwind 采用 v4 的 CSS 优先配置，**刻意不引入 preflight**（避免破坏 Element Plus），**不做全局重置**属预期行为。若工具类整体失效，检查 `admin/src/styles/index.css` 是否含 `@import url('tailwindcss/utilities.css')`、是否在 `main.ts` 末尾引入。改动 `@theme` 令牌后建议重启一次 dev server 确保产物刷新。
+**Q：Nuxt 构建通过但类型报错？** `nuxt build` 不做类型检查，必须单独跑 `npm run type-check`。
 
-**Q7：提交时 husky 钩子不执行？**
-在**根目录**执行 `npm install`（会触发 `prepare` → `husky`），确认 `.husky/` 下存在 `pre-commit` 与 `commit-msg`。只在 `admin/` 或 `api/` 装依赖不会装配钩子。
+**Q：图片 404？** 确认后端 `UPLOAD_DIR` 可写、前端代理了 `/static`；分离部署时把前端 origin 加进 `UPLOAD_ALLOWED_REFERERS`。
 
-**Q8：登录成功但菜单为空？**
-菜单由后端按当前用户角色下发。`super_admin` 仍为空说明种子未写入，执行 `cd api && npm run seed`（幂等）；普通角色请在「角色管理 → 菜单授权」中勾选。
-
-**Q9：上传文件后访问 404？**
-确认 `api/uploads/` 存在且可写；确保后端已启动、前端代理已转发 `/static`。分离部署时还需把前端 origin 配进 `UPLOAD_ALLOWED_REFERERS`。
-
-**Q10：接口 401 且反复跳登录？**
-accessToken 过期会由前端自动刷新（`admin/src/api/request.ts`）；refreshToken 也失效则登出。检查 `JWT_*` 配置一致性与服务器时间是否准确。
+**Q：新增了接口但文档页看不到？** 执行 `npm run docs:gen`（`api` 的 `build` 会自动跑），接口清单由控制器源码生成。
 
 ## 许可
 
-本项目基于 [MIT 许可证](./LICENSE) 开源。
+[MIT](./LICENSE)
